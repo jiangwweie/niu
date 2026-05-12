@@ -300,8 +300,6 @@ CREATE TABLE work_order (
     battery_no_snapshot VARCHAR(128) NULL COMMENT 'Battery number snapshot',
     repair_item VARCHAR(512) NOT NULL COMMENT 'Repair item',
     status VARCHAR(32) NOT NULL COMMENT 'Work order status',
-    labor_fee DECIMAL(18,2) NOT NULL DEFAULT 0.00 COMMENT 'Deprecated labor fee snapshot',
-    other_fee DECIMAL(18,2) NOT NULL DEFAULT 0.00 COMMENT 'Deprecated other fee snapshot',
     receivable_amount DECIMAL(18,2) NOT NULL DEFAULT 0.00 COMMENT 'Receivable amount snapshot',
     submitted_by BIGINT NULL COMMENT 'Submitted by',
     submitted_at DATETIME NULL COMMENT 'Submitted at',
