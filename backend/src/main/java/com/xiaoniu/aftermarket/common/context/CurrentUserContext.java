@@ -18,6 +18,7 @@ public final class CurrentUserContext {
     }
 
     public static void clear() {
+        // TODO: Clear ThreadLocal at request completion once auth/interceptor is implemented.
         CURRENT_USER.remove();
     }
 }

@@ -5,7 +5,7 @@ import jakarta.validation.constraints.Min;
 
 public record PageRequest(
         @Min(1) Integer pageNo,
-        @Min(1) @Max(200) Integer pageSize
+        @Min(1) @Max(100) Integer pageSize
 ) {
 
     private static final int DEFAULT_PAGE_NO = 1;
