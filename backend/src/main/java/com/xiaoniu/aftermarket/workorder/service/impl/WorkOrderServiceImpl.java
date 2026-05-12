@@ -97,7 +97,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     @Transactional
     public WorkOrderEntity updateDraft(Long workOrderId, UpdateWorkOrderDraftCommand command) {
         WorkOrderEntity entity = workOrderMapper.selectById(workOrderId);
-        if (entity == null) {
+        if (entity == null || !command.getStoreId().equals(entity.getStoreId())) {
             throw new BusinessException(ErrorCode.WORK_ORDER_NOT_FOUND);
         }
         if (!WorkOrderStatus.DRAFT.getCode().equals(entity.getStatus())) {
@@ -201,7 +201,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     @Override
     @Transactional
     public Long addChargeItem(Long workOrderId, AddWorkOrderChargeItemCommand command) {
-        WorkOrderEntity workOrder = loadAndValidateDraft(workOrderId);
+        WorkOrderEntity workOrder = loadAndValidateDraft(workOrderId, command.getStoreId());
 
         WorkOrderChargeItemEntity entity = new WorkOrderChargeItemEntity();
         entity.setStoreId(workOrder.getStoreId());
@@ -213,7 +213,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         entity.setUnitPrice(command.getUnitPrice());
         entity.setRemark(command.getRemark());
 
-        validateChargeItemFields(command);
+        validateChargeItemFields(command, workOrder.getStoreId());
         populateChargeItemByType(entity, command);
 
         BigDecimal lineAmount = new BigDecimal(command.getQuantity())
@@ -232,7 +232,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     @Transactional
     public void updateChargeItem(Long workOrderId, Long chargeItemId,
                                  UpdateWorkOrderChargeItemCommand command) {
-        loadAndValidateDraft(workOrderId);
+        loadAndValidateDraft(workOrderId, command.getStoreId());
 
         WorkOrderChargeItemEntity entity = chargeItemMapper.selectById(chargeItemId);
         if (entity == null || !workOrderId.equals(entity.getWorkOrderId())
@@ -280,8 +280,8 @@ public class WorkOrderServiceImpl implements WorkOrderService {
 
     @Override
     @Transactional
-    public void removeChargeItem(Long workOrderId, Long chargeItemId) {
-        loadAndValidateDraft(workOrderId);
+    public void removeChargeItem(Long storeId, Long workOrderId, Long chargeItemId) {
+        loadAndValidateDraft(workOrderId, storeId);
 
         WorkOrderChargeItemEntity entity = chargeItemMapper.selectById(chargeItemId);
         if (entity == null || !workOrderId.equals(entity.getWorkOrderId())
@@ -294,9 +294,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         recalculateReceivableAmount(workOrderId);
     }
 
-    @Override
-    @Transactional
-    public void recalculateReceivableAmount(Long workOrderId) {
+    private void recalculateReceivableAmount(Long workOrderId) {
         List<WorkOrderChargeItemEntity> items = chargeItemMapper.selectByWorkOrderId(workOrderId);
         BigDecimal total = items.stream()
                 .map(WorkOrderChargeItemEntity::getLineAmount)
@@ -345,9 +343,9 @@ public class WorkOrderServiceImpl implements WorkOrderService {
 
     // --- private helpers ---
 
-    private WorkOrderEntity loadAndValidateDraft(Long workOrderId) {
+    private WorkOrderEntity loadAndValidateDraft(Long workOrderId, Long storeId) {
         WorkOrderEntity entity = workOrderMapper.selectById(workOrderId);
-        if (entity == null) {
+        if (entity == null || !storeId.equals(entity.getStoreId())) {
             throw new BusinessException(ErrorCode.WORK_ORDER_NOT_FOUND);
         }
         if (!WorkOrderStatus.DRAFT.getCode().equals(entity.getStatus())) {
@@ -356,7 +354,8 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         return entity;
     }
 
-    private void validateChargeItemFields(AddWorkOrderChargeItemCommand command) {
+    private void validateChargeItemFields(AddWorkOrderChargeItemCommand command,
+                                           Long storeId) {
         if (!StringUtils.hasText(command.getChargeType())) {
             throw new BusinessException(ErrorCode.CHARGE_TYPE_INVALID);
         }
@@ -381,8 +380,11 @@ public class WorkOrderServiceImpl implements WorkOrderService {
                 throw new BusinessException(ErrorCode.PART_REQUIRED_FOR_PART_CHARGE);
             }
             PartEntity part = partMapper.selectById(command.getPartId());
-            if (part == null) {
+            if (part == null || (part.getDeleted() != null && part.getDeleted() == 1)) {
                 throw new BusinessException(ErrorCode.PART_NOT_FOUND);
+            }
+            if (!storeId.equals(part.getStoreId())) {
+                throw new BusinessException(ErrorCode.PART_NOT_FOUND, "配件不属于当前门店");
             }
             if (!CommonStatus.ENABLED.getCode().equals(part.getStatus())) {
                 throw new BusinessException(ErrorCode.PART_DISABLED);
@@ -432,7 +434,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         command.setUnitPrice(input.getUnitPrice());
         command.setRemark(input.getRemark());
 
-        validateChargeItemFields(command);
+        validateChargeItemFields(command, storeId);
 
         WorkOrderChargeItemEntity entity = new WorkOrderChargeItemEntity();
         entity.setStoreId(storeId);

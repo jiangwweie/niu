@@ -44,6 +44,7 @@ import org.springframework.test.context.ActiveProfiles;
 class WorkOrderServiceTest {
 
     private static final Long STORE_ID = 1L;
+    private static final Long OTHER_STORE_ID = 99L;
     private static final Long OPERATOR_ID = 1L;
 
     @Autowired
@@ -143,6 +144,7 @@ class WorkOrderServiceTest {
                 buildCreateCommand("赵六", "13800004444", "小牛N1"));
 
         UpdateWorkOrderDraftCommand updateCmd = new UpdateWorkOrderDraftCommand();
+        updateCmd.setStoreId(STORE_ID);
         updateCmd.setCustomerNameSnapshot("赵六_已更新");
         updateCmd.setRepairItem("更换刹车片");
         updateCmd.setOperatorId(OPERATOR_ID);
@@ -165,6 +167,7 @@ class WorkOrderServiceTest {
         workOrderMapper.updateById(entity);
 
         UpdateWorkOrderDraftCommand updateCmd = new UpdateWorkOrderDraftCommand();
+        updateCmd.setStoreId(STORE_ID);
         updateCmd.setCustomerNameSnapshot("不应该成功");
         updateCmd.setOperatorId(OPERATOR_ID);
 
@@ -209,6 +212,7 @@ class WorkOrderServiceTest {
                 buildCreateCommand("客户B", "13900002222", "小牛N1"));
 
         AddWorkOrderChargeItemCommand cmd = new AddWorkOrderChargeItemCommand();
+        cmd.setStoreId(STORE_ID);
         cmd.setChargeType("PART");
         cmd.setItemName("配件费");
         cmd.setQuantity(1);
@@ -337,6 +341,7 @@ class WorkOrderServiceTest {
                 buildPartItem(part.getId(), "更换刹车片", 2, new BigDecimal("80.00")));
 
         UpdateWorkOrderChargeItemCommand updateCmd = new UpdateWorkOrderChargeItemCommand();
+        updateCmd.setStoreId(STORE_ID);
         updateCmd.setItemName("更换刹车片(更新)");
         updateCmd.setQuantity(3);
         updateCmd.setUnitPrice(new BigDecimal("100.00"));
@@ -368,7 +373,7 @@ class WorkOrderServiceTest {
         WorkOrderEntity woBefore = workOrderMapper.selectById(woId);
         assertEquals(0, new BigDecimal("80.00").compareTo(woBefore.getReceivableAmount()));
 
-        workOrderService.removeChargeItem(woId, itemId);
+        workOrderService.removeChargeItem(STORE_ID, woId, itemId);
 
         WorkOrderChargeItemEntity item = chargeItemMapper.selectById(itemId);
         assertEquals(1, item.getDeleted());
@@ -452,6 +457,95 @@ class WorkOrderServiceTest {
         assertEquals(0, new BigDecimal("280.00").compareTo(detail.getReceivableAmount()));
     }
 
+    // --- cross-store boundary tests ---
+
+    @Test
+    void addChargeItemWithCrossStorePartFails() {
+        // Create part in OTHER_STORE_ID
+        CreatePartCommand partCmd = new CreatePartCommand();
+        partCmd.setStoreId(OTHER_STORE_ID);
+        partCmd.setOperatorId(OPERATOR_ID);
+        partCmd.setPartName("刹车片");
+        partCmd.setOfficialPartNo("XS-WO-001");
+        partCmd.setReferenceCostPrice(new BigDecimal("50.00"));
+        PartEntity part = partService.createOfficialPart(partCmd);
+
+        Long woId = workOrderService.createDraft(
+                buildCreateCommand("客户XS1", "13900020001", "小牛N1"));
+
+        AddWorkOrderChargeItemCommand cmd = buildPartItemForStore(
+                STORE_ID, part.getId(), "跨店配件", 1, new BigDecimal("80.00"));
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> workOrderService.addChargeItem(woId, cmd));
+        assertEquals(ErrorCode.PART_NOT_FOUND, ex.getErrorCode());
+    }
+
+    @Test
+    void createDraftWithCrossStorePartInInitialItemsFails() {
+        PartEntity part = createPart("刹车片", "XS-WO-002", new BigDecimal("50.00"));
+
+        CreateDraftWorkOrderCommand command = buildCreateCommand(
+                "客户XS2", "13900020002", "小牛N1");
+        command.setChargeItems(List.of(
+                buildPartInput(part.getId(), "跨店配件", 1, new BigDecimal("80.00"))));
+
+        // Part is in STORE_ID, work order is in STORE_ID -> should succeed
+        Long id = workOrderService.createDraft(command);
+        assertNotNull(id);
+
+        // Now create a work order in OTHER_STORE and try to reference the same part
+        CreateDraftWorkOrderCommand crossStoreCmd = buildCreateCommand(
+                "客户XS3", "13900020003", "小牛N1");
+        crossStoreCmd.setStoreId(OTHER_STORE_ID);
+        crossStoreCmd.setChargeItems(List.of(
+                buildPartInput(part.getId(), "跨店配件", 1, new BigDecimal("80.00"))));
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> workOrderService.createDraft(crossStoreCmd));
+        assertEquals(ErrorCode.PART_NOT_FOUND, ex.getErrorCode());
+    }
+
+    @Test
+    void updateDraftWithCrossStoreWorkOrderFails() {
+        Long woId = workOrderService.createDraft(
+                buildCreateCommand("客户XS4", "13900020004", "小牛N1"));
+
+        UpdateWorkOrderDraftCommand updateCmd = new UpdateWorkOrderDraftCommand();
+        updateCmd.setStoreId(OTHER_STORE_ID);
+        updateCmd.setCustomerNameSnapshot("不应该成功");
+        updateCmd.setOperatorId(OPERATOR_ID);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> workOrderService.updateDraft(woId, updateCmd));
+        assertEquals(ErrorCode.WORK_ORDER_NOT_FOUND, ex.getErrorCode());
+    }
+
+    @Test
+    void addChargeItemToCrossStoreWorkOrderFails() {
+        Long woId = workOrderService.createDraft(
+                buildCreateCommand("客户XS5", "13900020005", "小牛N1"));
+
+        AddWorkOrderChargeItemCommand cmd = buildLaborItem("工时费", 1, new BigDecimal("100.00"));
+        cmd.setStoreId(OTHER_STORE_ID);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> workOrderService.addChargeItem(woId, cmd));
+        assertEquals(ErrorCode.WORK_ORDER_NOT_FOUND, ex.getErrorCode());
+    }
+
+    @Test
+    void removeChargeItemToCrossStoreWorkOrderFails() {
+        Long woId = workOrderService.createDraft(
+                buildCreateCommand("客户XS6", "13900020006", "小牛N1"));
+        Long itemId = workOrderService.addChargeItem(woId,
+                buildLaborItem("工时费", 1, new BigDecimal("100.00")));
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> workOrderService.removeChargeItem(OTHER_STORE_ID, woId, itemId));
+        assertEquals(ErrorCode.WORK_ORDER_NOT_FOUND, ex.getErrorCode());
+    }
+
     // --- helpers ---
 
     private PartEntity createPart(String name, String partCode, BigDecimal costPrice) {
@@ -479,6 +573,7 @@ class WorkOrderServiceTest {
     private AddWorkOrderChargeItemCommand buildPartItem(Long partId, String itemName,
                                                          int quantity, BigDecimal unitPrice) {
         AddWorkOrderChargeItemCommand cmd = new AddWorkOrderChargeItemCommand();
+        cmd.setStoreId(STORE_ID);
         cmd.setChargeType("PART");
         cmd.setItemName(itemName);
         cmd.setPartId(partId);
@@ -490,6 +585,7 @@ class WorkOrderServiceTest {
     private AddWorkOrderChargeItemCommand buildLaborItem(String itemName, int quantity,
                                                           BigDecimal unitPrice) {
         AddWorkOrderChargeItemCommand cmd = new AddWorkOrderChargeItemCommand();
+        cmd.setStoreId(STORE_ID);
         cmd.setChargeType("LABOR");
         cmd.setItemName(itemName);
         cmd.setQuantity(quantity);
@@ -500,10 +596,19 @@ class WorkOrderServiceTest {
     private AddWorkOrderChargeItemCommand buildOtherItem(String itemName, int quantity,
                                                           BigDecimal unitPrice) {
         AddWorkOrderChargeItemCommand cmd = new AddWorkOrderChargeItemCommand();
+        cmd.setStoreId(STORE_ID);
         cmd.setChargeType("OTHER");
         cmd.setItemName(itemName);
         cmd.setQuantity(quantity);
         cmd.setUnitPrice(unitPrice);
+        return cmd;
+    }
+
+    private AddWorkOrderChargeItemCommand buildPartItemForStore(Long storeId, Long partId,
+                                                                String itemName, int quantity,
+                                                                BigDecimal unitPrice) {
+        AddWorkOrderChargeItemCommand cmd = buildPartItem(partId, itemName, quantity, unitPrice);
+        cmd.setStoreId(storeId);
         return cmd;
     }
 

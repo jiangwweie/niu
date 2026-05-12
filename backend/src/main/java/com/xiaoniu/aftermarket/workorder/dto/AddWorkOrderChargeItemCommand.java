@@ -5,6 +5,7 @@ import lombok.Data;
 @Data
 public class AddWorkOrderChargeItemCommand {
 
+    private Long storeId;
     private String chargeType;
     private String itemName;
     private Long partId;

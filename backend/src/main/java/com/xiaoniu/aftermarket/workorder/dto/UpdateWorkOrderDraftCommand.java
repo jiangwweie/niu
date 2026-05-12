@@ -5,6 +5,7 @@ import lombok.Data;
 @Data
 public class UpdateWorkOrderDraftCommand {
 
+    private Long storeId;
     private String customerNameSnapshot;
     private String customerPhoneSnapshot;
     private String vehicleModelSnapshot;

@@ -31,9 +31,7 @@ public interface WorkOrderService {
     void updateChargeItem(Long workOrderId, Long chargeItemId,
                           UpdateWorkOrderChargeItemCommand command);
 
-    void removeChargeItem(Long workOrderId, Long chargeItemId);
-
-    void recalculateReceivableAmount(Long workOrderId);
+    void removeChargeItem(Long storeId, Long workOrderId, Long chargeItemId);
 
     void submit(SubmitWorkOrderCommand command);
 
