@@ -1,8 +1,12 @@
 package com.xiaoniu.aftermarket.inventory.service;
 
+import com.xiaoniu.aftermarket.common.pagination.PageResponse;
 import com.xiaoniu.aftermarket.inventory.dto.InventoryAdjustCommand;
+import com.xiaoniu.aftermarket.inventory.dto.InventoryFlowQueryRequest;
+import com.xiaoniu.aftermarket.inventory.dto.InventoryFlowQueryResponse;
 import com.xiaoniu.aftermarket.inventory.dto.InventoryInboundCommand;
-import com.xiaoniu.aftermarket.workorder.dto.AdjustChargeItemsCommand;
+import com.xiaoniu.aftermarket.inventory.dto.InventoryStockQueryResponse;
+import com.xiaoniu.aftermarket.inventory.entity.InventoryStockEntity;
 
 public interface InventoryService {
 
@@ -10,11 +14,11 @@ public interface InventoryService {
 
     void adjust(InventoryAdjustCommand command);
 
-    void reserveForWorkOrder(Long workOrderId, Long operatorId);
+    InventoryStockEntity getByPartId(Long storeId, Long partId);
 
-    void releaseForWorkOrder(Long workOrderId, Long operatorId);
+    PageResponse<InventoryStockQueryResponse> pageQuery(Long storeId, String partCode,
+                                                        String partName, Integer pageNo,
+                                                        Integer pageSize);
 
-    void consumeForWorkOrder(Long workOrderId, Long operatorId);
-
-    void adjustReservationForChargeItems(AdjustChargeItemsCommand command);
+    PageResponse<InventoryFlowQueryResponse> pageFlowQuery(InventoryFlowQueryRequest request);
 }

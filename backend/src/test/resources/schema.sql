@@ -118,3 +118,92 @@ CREATE TABLE IF NOT EXISTS sys_role_permission (
     PRIMARY KEY (id),
     UNIQUE (role_id, permission_id)
 );
+
+CREATE TABLE IF NOT EXISTS part (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    store_id BIGINT NOT NULL,
+    part_code VARCHAR(64) NOT NULL,
+    official_part_no VARCHAR(128) NULL,
+    part_name VARCHAR(128) NOT NULL,
+    model VARCHAR(128) NULL,
+    source VARCHAR(32) NOT NULL,
+    category_code VARCHAR(64) NULL,
+    reference_cost_price DECIMAL(18,4) NULL,
+    default_barcode VARCHAR(128) NULL,
+    location_remark VARCHAR(255) NULL,
+    create_source VARCHAR(32) NOT NULL,
+    status VARCHAR(32) NOT NULL,
+    remark VARCHAR(512) NULL,
+    created_by BIGINT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by BIGINT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (id),
+    UNIQUE (store_id, part_code)
+);
+
+CREATE TABLE IF NOT EXISTS part_barcode (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    store_id BIGINT NOT NULL,
+    part_id BIGINT NOT NULL,
+    barcode VARCHAR(128) NOT NULL,
+    barcode_type VARCHAR(32) NULL,
+    is_primary INTEGER NOT NULL DEFAULT 0,
+    status VARCHAR(32) NOT NULL,
+    remark VARCHAR(512) NULL,
+    created_by BIGINT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by BIGINT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (id),
+    UNIQUE (store_id, barcode)
+);
+
+CREATE TABLE IF NOT EXISTS inventory_stock (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    store_id BIGINT NOT NULL,
+    part_id BIGINT NOT NULL,
+    actual_qty INTEGER NOT NULL DEFAULT 0,
+    available_qty INTEGER NOT NULL DEFAULT 0,
+    reserved_qty INTEGER NOT NULL DEFAULT 0,
+    last_flow_id BIGINT NULL,
+    last_changed_at TIMESTAMP NULL,
+    remark VARCHAR(512) NULL,
+    created_by BIGINT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by BIGINT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (id),
+    UNIQUE (store_id, part_id)
+);
+
+CREATE TABLE IF NOT EXISTS inventory_flow (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    store_id BIGINT NOT NULL,
+    inventory_stock_id BIGINT NOT NULL,
+    part_id BIGINT NOT NULL,
+    flow_type VARCHAR(32) NOT NULL,
+    quantity_delta INTEGER NOT NULL,
+    actual_before INTEGER NOT NULL,
+    actual_after INTEGER NOT NULL,
+    available_before INTEGER NOT NULL,
+    available_after INTEGER NOT NULL,
+    reserved_before INTEGER NOT NULL,
+    reserved_after INTEGER NOT NULL,
+    business_type VARCHAR(64) NOT NULL,
+    business_id BIGINT NULL,
+    work_order_id BIGINT NULL,
+    work_order_charge_item_id BIGINT NULL,
+    operator_id BIGINT NOT NULL,
+    operated_at TIMESTAMP NOT NULL,
+    reason VARCHAR(255) NULL,
+    remark VARCHAR(512) NULL,
+    created_by BIGINT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by BIGINT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id)
+);
