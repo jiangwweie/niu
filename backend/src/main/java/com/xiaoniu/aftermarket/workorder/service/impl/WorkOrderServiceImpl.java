@@ -96,6 +96,9 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     @Override
     @Transactional
     public WorkOrderEntity updateDraft(Long workOrderId, UpdateWorkOrderDraftCommand command) {
+        if (command.getStoreId() == null) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "storeId不能为空");
+        }
         WorkOrderEntity entity = workOrderMapper.selectById(workOrderId);
         if (entity == null || !command.getStoreId().equals(entity.getStoreId())) {
             throw new BusinessException(ErrorCode.WORK_ORDER_NOT_FOUND);
@@ -344,6 +347,9 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     // --- private helpers ---
 
     private WorkOrderEntity loadAndValidateDraft(Long workOrderId, Long storeId) {
+        if (storeId == null) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "storeId不能为空");
+        }
         WorkOrderEntity entity = workOrderMapper.selectById(workOrderId);
         if (entity == null || !storeId.equals(entity.getStoreId())) {
             throw new BusinessException(ErrorCode.WORK_ORDER_NOT_FOUND);
@@ -409,16 +415,13 @@ public class WorkOrderServiceImpl implements WorkOrderService {
             entity.setInventoryAffecting(true);
 
             BigDecimal costPrice = part.getReferenceCostPrice();
-            entity.setCostPriceSnapshot(costPrice);
-            if (costPrice != null) {
-                entity.setLineCostAmount(new BigDecimal(command.getQuantity())
-                        .multiply(costPrice).setScale(2, RoundingMode.HALF_UP));
-            } else {
-                entity.setLineCostAmount(BigDecimal.ZERO);
-            }
+            entity.setCostPriceSnapshot(costPrice != null ? costPrice : BigDecimal.ZERO);
+            entity.setLineCostAmount(new BigDecimal(command.getQuantity())
+                    .multiply(costPrice != null ? costPrice : BigDecimal.ZERO)
+                    .setScale(2, RoundingMode.HALF_UP));
         } else {
             entity.setInventoryAffecting(false);
-            entity.setCostPriceSnapshot(null);
+            entity.setCostPriceSnapshot(BigDecimal.ZERO);
             entity.setLineCostAmount(BigDecimal.ZERO);
         }
     }

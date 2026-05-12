@@ -252,7 +252,7 @@ class WorkOrderServiceTest {
         assertEquals("LABOR", item.getChargeType());
         assertFalse(item.getInventoryAffecting());
         assertNull(item.getPartId());
-        assertNull(item.getCostPriceSnapshot());
+        assertEquals(0, BigDecimal.ZERO.compareTo(item.getCostPriceSnapshot()));
         assertEquals(0, BigDecimal.ZERO.compareTo(item.getLineCostAmount()));
         assertEquals(0, new BigDecimal("200.00").compareTo(item.getLineAmount()));
 
@@ -544,6 +544,128 @@ class WorkOrderServiceTest {
         BusinessException ex = assertThrows(BusinessException.class,
                 () -> workOrderService.removeChargeItem(OTHER_STORE_ID, woId, itemId));
         assertEquals(ErrorCode.WORK_ORDER_NOT_FOUND, ex.getErrorCode());
+    }
+
+    // --- storeId null tests ---
+
+    @Test
+    void updateDraftWithNullStoreIdFails() {
+        Long woId = workOrderService.createDraft(
+                buildCreateCommand("客户NPE1", "13900030001", "小牛N1"));
+
+        UpdateWorkOrderDraftCommand updateCmd = new UpdateWorkOrderDraftCommand();
+        updateCmd.setStoreId(null);
+        updateCmd.setCustomerNameSnapshot("不应该成功");
+        updateCmd.setOperatorId(OPERATOR_ID);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> workOrderService.updateDraft(woId, updateCmd));
+        assertEquals(ErrorCode.COMMON_BAD_REQUEST, ex.getErrorCode());
+    }
+
+    @Test
+    void addChargeItemWithNullStoreIdFails() {
+        Long woId = workOrderService.createDraft(
+                buildCreateCommand("客户NPE2", "13900030002", "小牛N1"));
+
+        AddWorkOrderChargeItemCommand cmd = buildLaborItem("工时费", 1, new BigDecimal("100.00"));
+        cmd.setStoreId(null);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> workOrderService.addChargeItem(woId, cmd));
+        assertEquals(ErrorCode.COMMON_BAD_REQUEST, ex.getErrorCode());
+    }
+
+    @Test
+    void updateChargeItemWithNullStoreIdFails() {
+        Long woId = workOrderService.createDraft(
+                buildCreateCommand("客户NPE3", "13900030003", "小牛N1"));
+        Long itemId = workOrderService.addChargeItem(woId,
+                buildLaborItem("工时费", 1, new BigDecimal("100.00")));
+
+        UpdateWorkOrderChargeItemCommand updateCmd = new UpdateWorkOrderChargeItemCommand();
+        updateCmd.setStoreId(null);
+        updateCmd.setQuantity(2);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> workOrderService.updateChargeItem(woId, itemId, updateCmd));
+        assertEquals(ErrorCode.COMMON_BAD_REQUEST, ex.getErrorCode());
+    }
+
+    @Test
+    void removeChargeItemWithNullStoreIdFails() {
+        Long woId = workOrderService.createDraft(
+                buildCreateCommand("客户NPE4", "13900030004", "小牛N1"));
+        Long itemId = workOrderService.addChargeItem(woId,
+                buildLaborItem("工时费", 1, new BigDecimal("100.00")));
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> workOrderService.removeChargeItem(null, woId, itemId));
+        assertEquals(ErrorCode.COMMON_BAD_REQUEST, ex.getErrorCode());
+    }
+
+    // --- cost snapshot normalization ---
+
+    @Test
+    void laborChargeItemCostPriceIsZero() {
+        Long woId = workOrderService.createDraft(
+                buildCreateCommand("客户COST1", "13900031001", "小牛N1"));
+        Long itemId = workOrderService.addChargeItem(woId,
+                buildLaborItem("工时费", 1, new BigDecimal("200.00")));
+
+        WorkOrderChargeItemEntity item = chargeItemMapper.selectById(itemId);
+        assertEquals(0, BigDecimal.ZERO.compareTo(item.getCostPriceSnapshot()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(item.getLineCostAmount()));
+    }
+
+    @Test
+    void otherChargeItemCostPriceIsZero() {
+        Long woId = workOrderService.createDraft(
+                buildCreateCommand("客户COST2", "13900031002", "小牛N1"));
+        Long itemId = workOrderService.addChargeItem(woId,
+                buildOtherItem("拖车费", 1, new BigDecimal("100.00")));
+
+        WorkOrderChargeItemEntity item = chargeItemMapper.selectById(itemId);
+        assertEquals(0, BigDecimal.ZERO.compareTo(item.getCostPriceSnapshot()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(item.getLineCostAmount()));
+    }
+
+    @Test
+    void partChargeItemWithNullCostPriceUsesZero() {
+        // Create part with null referenceCostPrice
+        CreatePartCommand partCmd = new CreatePartCommand();
+        partCmd.setStoreId(STORE_ID);
+        partCmd.setOperatorId(OPERATOR_ID);
+        partCmd.setPartName("无成本价配件");
+        partCmd.setOfficialPartNo("COST-NULL-001");
+        partCmd.setReferenceCostPrice(null);
+        PartEntity part = partService.createOfficialPart(partCmd);
+
+        Long woId = workOrderService.createDraft(
+                buildCreateCommand("客户COST3", "13900031003", "小牛N1"));
+        Long itemId = workOrderService.addChargeItem(woId,
+                buildPartItem(part.getId(), "更换无成本配件", 3, new BigDecimal("50.00")));
+
+        WorkOrderChargeItemEntity item = chargeItemMapper.selectById(itemId);
+        assertEquals(0, BigDecimal.ZERO.compareTo(item.getCostPriceSnapshot()));
+        // lineCostAmount = 3 * 0 = 0
+        assertEquals(0, BigDecimal.ZERO.compareTo(item.getLineCostAmount()));
+        // lineAmount = 3 * 50 = 150
+        assertEquals(0, new BigDecimal("150.00").compareTo(item.getLineAmount()));
+        assertTrue(item.getInventoryAffecting());
+    }
+
+    @Test
+    void createDraftWithInitialItemsNoInventoryFlow() {
+        PartEntity part = createPart("刹车片", "NF-001", new BigDecimal("50.00"));
+        CreateDraftWorkOrderCommand command = buildCreateCommand("客户NF", "13900032001", "小牛N1");
+        command.setChargeItems(List.of(
+                buildPartInput(part.getId(), "刹车片更换", 2, new BigDecimal("80.00")),
+                buildLaborInput("工时费", 1, new BigDecimal("200.00"))));
+
+        workOrderService.createDraft(command);
+
+        assertEquals(0, inventoryFlowMapper.selectCount(null));
     }
 
     // --- helpers ---
