@@ -161,6 +161,7 @@ class PartServiceTest {
 
         UpdatePartCommand command = new UpdatePartCommand();
         command.setPartId(part.getId());
+        command.setStoreId(STORE_ID);
         command.setPartName("更新后名称");
         command.setModel("V2");
         partService.updatePart(command);
@@ -401,6 +402,21 @@ class PartServiceTest {
         command.setPartId(part.getId());
         command.setStoreId(OTHER_STORE_ID);
         command.setPartName("试图跨门店修改");
+
+        assertThrows(BusinessException.class, () -> partService.updatePart(command));
+
+        PartEntity unchanged = partService.getById(part.getId());
+        assertEquals("刹车片", unchanged.getPartName());
+    }
+
+    @Test
+    void updatePartWithNullStoreIdFails() {
+        PartEntity part = partService.createOfficialPart(buildOfficialCommand("刹车片", "XS-UPD-003"));
+
+        UpdatePartCommand command = new UpdatePartCommand();
+        command.setPartId(part.getId());
+        command.setStoreId(null);
+        command.setPartName("试图绕过门店校验");
 
         assertThrows(BusinessException.class, () -> partService.updatePart(command));
 

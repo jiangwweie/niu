@@ -119,7 +119,7 @@ public class PartServiceImpl implements PartService {
         if (existing == null) {
             throw new BusinessException(ErrorCode.PART_NOT_FOUND);
         }
-        if (command.getStoreId() != null && !command.getStoreId().equals(existing.getStoreId())) {
+        if (command.getStoreId() == null || !command.getStoreId().equals(existing.getStoreId())) {
             throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "配件不属于当前门店");
         }
 
