@@ -107,12 +107,18 @@ public class InventoryServiceImpl implements InventoryService {
         flow.setOperatedAt(now);
         flow.setReason(command.getReason());
         flow.setRemark(command.getRemark());
+        flow.setUnitCost(command.getUnitCost());
         flow.setCreatedBy(command.getOperatorId());
         inventoryFlowMapper.insert(flow);
 
         stock.setLastFlowId(flow.getId());
         stock.setLastChangedAt(now);
         inventoryStockMapper.updateById(stock);
+
+        if (command.getUnitCost() != null) {
+            part.setReferenceCostPrice(command.getUnitCost());
+            partMapper.updateById(part);
+        }
     }
 
     @Override
@@ -297,6 +303,9 @@ public class InventoryServiceImpl implements InventoryService {
         if (command.getQuantity() == null || command.getQuantity() <= 0) {
             throw new BusinessException(ErrorCode.INVENTORY_QTY_MUST_POSITIVE);
         }
+        if (command.getUnitCost() != null && command.getUnitCost().signum() < 0) {
+            throw new BusinessException(ErrorCode.INBOUND_UNIT_COST_NEGATIVE);
+        }
     }
 
     private void validateAdjust(InventoryAdjustCommand command) {
@@ -353,6 +362,7 @@ public class InventoryServiceImpl implements InventoryService {
         response.setOperatedAt(flow.getOperatedAt());
         response.setReason(flow.getReason());
         response.setRemark(flow.getRemark());
+        response.setUnitCost(flow.getUnitCost());
         if (part != null) {
             response.setPartCode(part.getPartCode());
             response.setPartName(part.getPartName());

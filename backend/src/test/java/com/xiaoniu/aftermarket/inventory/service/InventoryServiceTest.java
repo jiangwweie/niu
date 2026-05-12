@@ -2,6 +2,7 @@ package com.xiaoniu.aftermarket.inventory.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -22,6 +23,7 @@ import com.xiaoniu.aftermarket.inventory.mapper.InventoryFlowMapper;
 import com.xiaoniu.aftermarket.inventory.mapper.InventoryStockMapper;
 import com.xiaoniu.aftermarket.part.dto.CreatePartCommand;
 import com.xiaoniu.aftermarket.part.entity.PartEntity;
+import com.xiaoniu.aftermarket.part.mapper.PartMapper;
 import com.xiaoniu.aftermarket.part.service.PartService;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,6 +52,9 @@ class InventoryServiceTest {
 
     @Autowired
     private InventoryFlowMapper inventoryFlowMapper;
+
+    @Autowired
+    private PartMapper partMapper;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -306,6 +311,79 @@ class InventoryServiceTest {
         assertEquals("SRC-001", response.records().get(0).getPartCode());
     }
 
+    // --- unitCost persistence tests (Task 6.1) ---
+
+    @Test
+    void inboundWithUnitCostPersistsToFlow() {
+        PartEntity part = createOfficialPart("刹车片", "UC-001");
+        BigDecimal unitCost = new BigDecimal("25.50");
+
+        inventoryService.inbound(buildInboundCommand(part.getId(), 10, unitCost));
+
+        InventoryStockEntity stock = inventoryService.getByPartId(STORE_ID, part.getId());
+        InventoryFlowEntity flow = inventoryFlowMapper.selectById(stock.getLastFlowId());
+        assertNotNull(flow.getUnitCost());
+        assertEquals(0, unitCost.compareTo(flow.getUnitCost()));
+    }
+
+    @Test
+    void inboundWithUnitCostUpdatesPartCostPrice() {
+        PartEntity part = createOfficialPart("刹车片", "UC-002");
+        BigDecimal newCost = new BigDecimal("33.00");
+
+        inventoryService.inbound(buildInboundCommand(part.getId(), 10, newCost));
+
+        PartEntity updated = partMapper.selectById(part.getId());
+        assertNotNull(updated.getReferenceCostPrice());
+        assertEquals(0, newCost.compareTo(updated.getReferenceCostPrice()));
+    }
+
+    @Test
+    void inboundWithoutUnitCostDoesNotUpdatePartCostPrice() {
+        PartEntity part = createOfficialPart("刹车片", "UC-003");
+        BigDecimal originalCost = part.getReferenceCostPrice();
+
+        inventoryService.inbound(buildInboundCommand(part.getId(), 10));
+
+        PartEntity afterInbound = partMapper.selectById(part.getId());
+        if (originalCost != null) {
+            assertEquals(0, originalCost.compareTo(afterInbound.getReferenceCostPrice()));
+        } else {
+            assertNull(afterInbound.getReferenceCostPrice());
+        }
+    }
+
+    @Test
+    void inboundWithNegativeUnitCostFails() {
+        PartEntity part = createOfficialPart("刹车片", "UC-004");
+
+        InventoryInboundCommand command = buildInboundCommand(part.getId(), 10,
+                new BigDecimal("-1.00"));
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> inventoryService.inbound(command));
+        assertEquals(ErrorCode.INBOUND_UNIT_COST_NEGATIVE, ex.getErrorCode());
+    }
+
+    @Test
+    void flowQueryReturnsUnitCost() {
+        PartEntity part = createOfficialPart("刹车片", "UC-005");
+        BigDecimal unitCost = new BigDecimal("18.75");
+        inventoryService.inbound(buildInboundCommand(part.getId(), 5, unitCost));
+
+        InventoryFlowQueryRequest request = new InventoryFlowQueryRequest();
+        request.setStoreId(STORE_ID);
+        request.setFlowType(InventoryFlowType.INBOUND.getCode());
+        request.setPageNo(1);
+        request.setPageSize(10);
+
+        PageResponse<InventoryFlowQueryResponse> response =
+                inventoryService.pageFlowQuery(request);
+
+        assertEquals(1, response.total());
+        assertNotNull(response.records().get(0).getUnitCost());
+        assertEquals(0, unitCost.compareTo(response.records().get(0).getUnitCost()));
+    }
+
     private PartEntity createOfficialPart(String name, String partCode) {
         CreatePartCommand command = new CreatePartCommand();
         command.setStoreId(STORE_ID);
@@ -323,6 +401,13 @@ class InventoryServiceTest {
         command.setQuantity(quantity);
         command.setOperatorId(OPERATOR_ID);
         command.setReason("普通入库");
+        return command;
+    }
+
+    private InventoryInboundCommand buildInboundCommand(Long partId, int quantity,
+                                                         BigDecimal unitCost) {
+        InventoryInboundCommand command = buildInboundCommand(partId, quantity);
+        command.setUnitCost(unitCost);
         return command;
     }
 

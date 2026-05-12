@@ -1,5 +1,6 @@
 package com.xiaoniu.aftermarket.inventory.dto;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.Data;
 
@@ -25,4 +26,5 @@ public class InventoryFlowQueryResponse {
     private LocalDateTime operatedAt;
     private String reason;
     private String remark;
+    private BigDecimal unitCost;
 }

@@ -201,6 +201,7 @@ CREATE TABLE IF NOT EXISTS inventory_flow (
     operated_at TIMESTAMP NOT NULL,
     reason VARCHAR(255) NULL,
     remark VARCHAR(512) NULL,
+    unit_cost DECIMAL(18,4) NULL,
     created_by BIGINT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_by BIGINT NULL,

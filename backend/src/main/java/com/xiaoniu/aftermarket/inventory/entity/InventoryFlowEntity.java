@@ -2,6 +2,7 @@ package com.xiaoniu.aftermarket.inventory.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.xiaoniu.aftermarket.common.persistence.entity.AuditableEntity;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.Getter;
 import lombok.Setter;
@@ -30,4 +31,5 @@ public class InventoryFlowEntity extends AuditableEntity {
     private LocalDateTime operatedAt;
     private String reason;
     private String remark;
+    private BigDecimal unitCost;
 }
