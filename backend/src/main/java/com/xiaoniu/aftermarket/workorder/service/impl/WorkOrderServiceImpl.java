@@ -92,6 +92,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         entity.setRepairItem(command.getRepairItem());
         entity.setStatus(WorkOrderStatus.DRAFT.getCode());
         entity.setReceivableAmount(BigDecimal.ZERO);
+        entity.setReceivedAmount(BigDecimal.ZERO);
         entity.setRemark(command.getRemark());
         entity.setCreatedBy(command.getOperatorId());
         workOrderMapper.insert(entity);
@@ -174,6 +175,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         response.setRepairItem(entity.getRepairItem());
         response.setStatus(entity.getStatus());
         response.setReceivableAmount(entity.getReceivableAmount());
+        response.setReceivedAmount(entity.getReceivedAmount());
         response.setRemark(entity.getRemark());
         response.setCreatedAt(entity.getCreatedAt());
         response.setChargeItems(items.stream().map(this::toChargeItemResponse).toList());
@@ -658,6 +660,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         response.setVehicleModelSnapshot(entity.getVehicleModelSnapshot());
         response.setStatus(entity.getStatus());
         response.setReceivableAmount(entity.getReceivableAmount());
+        response.setReceivedAmount(entity.getReceivedAmount());
         response.setCreatedAt(entity.getCreatedAt());
         return response;
     }

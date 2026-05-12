@@ -24,6 +24,7 @@ public class WorkOrderEntity extends SoftDeleteEntity {
     private String repairItem;
     private String status;
     private BigDecimal receivableAmount;
+    private BigDecimal receivedAmount;
     private Long submittedBy;
     private LocalDateTime submittedAt;
     private Long settledBy;

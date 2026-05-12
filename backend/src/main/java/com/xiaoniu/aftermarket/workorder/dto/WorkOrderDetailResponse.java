@@ -21,6 +21,7 @@ public class WorkOrderDetailResponse {
     private String repairItem;
     private String status;
     private BigDecimal receivableAmount;
+    private BigDecimal receivedAmount;
     private String remark;
     private LocalDateTime createdAt;
     private List<WorkOrderChargeItemResponse> chargeItems;

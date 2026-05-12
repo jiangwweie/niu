@@ -13,5 +13,6 @@ public class WorkOrderQueryResponse {
     private String vehicleModelSnapshot;
     private String status;
     private BigDecimal receivableAmount;
+    private BigDecimal receivedAmount;
     private LocalDateTime createdAt;
 }

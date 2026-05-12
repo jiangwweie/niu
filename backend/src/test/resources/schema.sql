@@ -223,6 +223,7 @@ CREATE TABLE IF NOT EXISTS work_order (
     repair_item VARCHAR(512) NOT NULL,
     status VARCHAR(32) NOT NULL,
     receivable_amount DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+    received_amount DECIMAL(18,2) NOT NULL DEFAULT 0.00,
     submitted_by BIGINT NULL,
     submitted_at TIMESTAMP NULL,
     settled_by BIGINT NULL,
@@ -284,4 +285,44 @@ CREATE TABLE IF NOT EXISTS work_order_status_log (
     updated_by BIGINT NULL,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS payment_record (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    store_id BIGINT NOT NULL,
+    work_order_id BIGINT NOT NULL,
+    payment_no VARCHAR(64) NOT NULL,
+    amount DECIMAL(18,2) NOT NULL,
+    payment_method VARCHAR(32) NOT NULL,
+    paid_at TIMESTAMP NOT NULL,
+    receiver_id BIGINT NULL,
+    operator_id BIGINT NOT NULL,
+    remark VARCHAR(512) NULL,
+    created_by BIGINT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by BIGINT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (id),
+    UNIQUE (payment_no)
+);
+
+CREATE TABLE IF NOT EXISTS refund_record (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    store_id BIGINT NOT NULL,
+    work_order_id BIGINT NOT NULL,
+    refund_no VARCHAR(64) NOT NULL,
+    amount DECIMAL(18,2) NOT NULL,
+    refund_method VARCHAR(32) NOT NULL,
+    refunded_at TIMESTAMP NOT NULL,
+    operator_id BIGINT NOT NULL,
+    reason VARCHAR(255) NOT NULL,
+    remark VARCHAR(512) NULL,
+    created_by BIGINT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by BIGINT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (id),
+    UNIQUE (refund_no)
 );
