@@ -32,7 +32,7 @@ import org.springframework.test.context.ActiveProfiles;
 class PartServiceTest {
 
     private static final Long STORE_ID = 1L;
-    private static final Long OTHER_STORE_ID = 2L;
+    private static final Long OTHER_STORE_ID = 99L;
     private static final Long OPERATOR_ID = 1L;
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
 
@@ -339,6 +339,88 @@ class PartServiceTest {
 
         PartEntity notFound = partService.getByBarcode(STORE_ID, "NON-EXISTENT");
         assertNull(notFound);
+    }
+
+    // --- updateDefaultBarcode(null) demote scenario (Fix for round 3) ---
+
+    @Test
+    void updateDefaultBarcodeToNullDemotesOldPrimary() {
+        PartEntity part = partService.createOfficialPart(buildOfficialCommand("刹车片", "NULL-001"));
+        partService.createBarcode(STORE_ID, part.getId(), "TO-BE-DEMOTED", OPERATOR_ID);
+
+        PartEntity afterCreate = partService.getById(part.getId());
+        assertEquals("TO-BE-DEMOTED", afterCreate.getDefaultBarcode());
+        PartBarcodeEntity primary = findBarcode(STORE_ID, "TO-BE-DEMOTED");
+        assertTrue(primary.getPrimaryBarcode());
+
+        partService.updateDefaultBarcode(part.getId(), null);
+
+        PartEntity afterNull = partService.getById(part.getId());
+        assertNull(afterNull.getDefaultBarcode());
+
+        PartBarcodeEntity afterDemote = findBarcode(STORE_ID, "TO-BE-DEMOTED");
+        assertEquals(false, afterDemote.getPrimaryBarcode());
+    }
+
+    @Test
+    void updateDefaultBarcodeToNullThenCreateNewAutoPromotes() {
+        PartEntity part = partService.createOfficialPart(buildOfficialCommand("刹车片", "NULL-002"));
+        partService.createBarcode(STORE_ID, part.getId(), "OLD-BC", OPERATOR_ID);
+
+        partService.updateDefaultBarcode(part.getId(), null);
+
+        PartBarcodeEntity afterDemote = findBarcode(STORE_ID, "OLD-BC");
+        assertFalse(afterDemote.getPrimaryBarcode());
+
+        PartBarcodeEntity newBc = partService.createBarcode(
+                STORE_ID, part.getId(), "FRESH-BC", OPERATOR_ID);
+        assertTrue(newBc.getPrimaryBarcode());
+
+        PartEntity afterFresh = partService.getById(part.getId());
+        assertEquals("FRESH-BC", afterFresh.getDefaultBarcode());
+    }
+
+    @Test
+    void updateDefaultBarcodeNullWhenNoPrimaryIsNoop() {
+        PartEntity part = partService.createOfficialPart(buildOfficialCommand("刹车片", "NULL-003"));
+        assertNull(part.getDefaultBarcode());
+
+        partService.updateDefaultBarcode(part.getId(), null);
+
+        PartEntity after = partService.getById(part.getId());
+        assertNull(after.getDefaultBarcode());
+    }
+
+    // --- updatePart cross-store rejection ---
+
+    @Test
+    void updatePartWithWrongStoreIdFails() {
+        PartEntity part = partService.createOfficialPart(buildOfficialCommand("刹车片", "XS-UPD-001"));
+
+        UpdatePartCommand command = new UpdatePartCommand();
+        command.setPartId(part.getId());
+        command.setStoreId(OTHER_STORE_ID);
+        command.setPartName("试图跨门店修改");
+
+        assertThrows(BusinessException.class, () -> partService.updatePart(command));
+
+        PartEntity unchanged = partService.getById(part.getId());
+        assertEquals("刹车片", unchanged.getPartName());
+    }
+
+    @Test
+    void updatePartWithCorrectStoreIdSucceeds() {
+        PartEntity part = partService.createOfficialPart(buildOfficialCommand("刹车片", "XS-UPD-002"));
+
+        UpdatePartCommand command = new UpdatePartCommand();
+        command.setPartId(part.getId());
+        command.setStoreId(STORE_ID);
+        command.setPartName("正确门店修改");
+
+        partService.updatePart(command);
+
+        PartEntity updated = partService.getById(part.getId());
+        assertEquals("正确门店修改", updated.getPartName());
     }
 
     // --- helpers ---

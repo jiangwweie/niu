@@ -1,6 +1,7 @@
 package com.xiaoniu.aftermarket.part.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.common.enums.CommonStatus;
 import com.xiaoniu.aftermarket.common.enums.PartSource;
@@ -118,6 +119,9 @@ public class PartServiceImpl implements PartService {
         if (existing == null) {
             throw new BusinessException(ErrorCode.PART_NOT_FOUND);
         }
+        if (command.getStoreId() != null && !command.getStoreId().equals(existing.getStoreId())) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "配件不属于当前门店");
+        }
 
         if (StringUtils.hasText(command.getPartName())) {
             existing.setPartName(command.getPartName());
@@ -218,8 +222,14 @@ public class PartServiceImpl implements PartService {
         }
 
         if (newDefaultBarcode == null) {
-            part.setDefaultBarcode(null);
-            partMapper.updateById(part);
+            PartBarcodeEntity oldPrimary = findPrimaryBarcode(partId);
+            if (oldPrimary != null) {
+                oldPrimary.setPrimaryBarcode(false);
+                partBarcodeMapper.updateById(oldPrimary);
+            }
+            UpdateWrapper<PartEntity> uw = new UpdateWrapper<>();
+            uw.eq("id", partId).set("default_barcode", null);
+            partMapper.update(null, uw);
             return;
         }
 
