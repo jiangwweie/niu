@@ -17,7 +17,11 @@ import com.xiaoniu.aftermarket.inventory.mapper.InventoryStockMapper;
 import com.xiaoniu.aftermarket.part.entity.PartEntity;
 import com.xiaoniu.aftermarket.part.mapper.PartMapper;
 import com.xiaoniu.aftermarket.workorder.dto.AddWorkOrderChargeItemCommand;
+import com.xiaoniu.aftermarket.workorder.dto.AdjustChargeItemsCommand;
+import com.xiaoniu.aftermarket.workorder.dto.CancelWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.CreateDraftWorkOrderCommand;
+import com.xiaoniu.aftermarket.workorder.dto.SettleWorkOrderCommand;
+import com.xiaoniu.aftermarket.workorder.dto.SubmitWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.UpdateWorkOrderChargeItemCommand;
 import com.xiaoniu.aftermarket.workorder.dto.UpdateWorkOrderDraftCommand;
 import com.xiaoniu.aftermarket.workorder.dto.WorkOrderChargeItemResponse;
@@ -322,7 +326,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
 
     @Override
     @Transactional
-    public void submit(com.xiaoniu.aftermarket.workorder.dto.SubmitWorkOrderCommand command) {
+    public void submit(SubmitWorkOrderCommand command) {
         if (command.getStoreId() == null) {
             throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "storeId不能为空");
         }
@@ -356,22 +360,21 @@ public class WorkOrderServiceImpl implements WorkOrderService {
 
         writeStatusLog(workOrder.getStoreId(), workOrder.getId(),
                 WorkOrderStatus.DRAFT.getCode(), WorkOrderStatus.PENDING_ACCEPT.getCode(),
-                "SUBMIT", command.getOperatorId(), "提交工单", command.getRemark());
+                "SUBMIT", command.getOperatorId(), now, "提交工单", command.getRemark());
     }
 
     @Override
-    public void cancel(com.xiaoniu.aftermarket.workorder.dto.CancelWorkOrderCommand command) {
+    public void cancel(CancelWorkOrderCommand command) {
         throw new UnsupportedOperationException("TODO: implement cancel flow");
     }
 
     @Override
-    public void settle(com.xiaoniu.aftermarket.workorder.dto.SettleWorkOrderCommand command) {
+    public void settle(SettleWorkOrderCommand command) {
         throw new UnsupportedOperationException("TODO: implement settlement flow");
     }
 
     @Override
-    public void adjustChargeItems(
-            com.xiaoniu.aftermarket.workorder.dto.AdjustChargeItemsCommand command) {
+    public void adjustChargeItems(AdjustChargeItemsCommand command) {
         throw new UnsupportedOperationException("TODO: implement charge item adjustment");
     }
 
@@ -417,6 +420,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
                     if (item.getQuantity() == null || item.getQuantity() <= 0) {
                         throw new BusinessException(ErrorCode.CHARGE_QUANTITY_INVALID);
                     }
+                    // TODO: Batch-load parts when submit volume grows beyond the single-store MVP.
                     PartEntity part = partMapper.selectById(item.getPartId());
                     if (part == null || (part.getDeleted() != null && part.getDeleted() == 1)
                             || !storeId.equals(part.getStoreId())) {
@@ -431,7 +435,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     }
 
     private void reservePartStock(WorkOrderEntity workOrder, Long partId, Integer quantity,
-                                  com.xiaoniu.aftermarket.workorder.dto.SubmitWorkOrderCommand command,
+                                  SubmitWorkOrderCommand command,
                                   LocalDateTime operatedAt) {
         InventoryStockEntity stock = inventoryStockMapper.selectByStoreIdAndPartIdForUpdate(
                 workOrder.getStoreId(), partId);
@@ -598,12 +602,13 @@ public class WorkOrderServiceImpl implements WorkOrderService {
 
     private void writeStatusLog(Long storeId, Long workOrderId, String fromStatus,
                                 String toStatus, String actionType, Long operatorId) {
-        writeStatusLog(storeId, workOrderId, fromStatus, toStatus, actionType, operatorId, null, null);
+        writeStatusLog(storeId, workOrderId, fromStatus, toStatus, actionType, operatorId,
+                LocalDateTime.now(), null, null);
     }
 
     private void writeStatusLog(Long storeId, Long workOrderId, String fromStatus,
                                 String toStatus, String actionType, Long operatorId,
-                                String reason, String remark) {
+                                LocalDateTime operatedAt, String reason, String remark) {
         WorkOrderStatusLogEntity log = new WorkOrderStatusLogEntity();
         log.setStoreId(storeId);
         log.setWorkOrderId(workOrderId);
@@ -611,7 +616,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         log.setToStatus(toStatus);
         log.setActionType(actionType);
         log.setOperatorId(operatorId);
-        log.setOperatedAt(LocalDateTime.now());
+        log.setOperatedAt(operatedAt);
         log.setReason(reason);
         log.setRemark(remark);
         log.setCreatedBy(operatorId);

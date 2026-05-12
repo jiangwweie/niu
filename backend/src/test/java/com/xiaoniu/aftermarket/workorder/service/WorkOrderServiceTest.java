@@ -756,6 +756,21 @@ class WorkOrderServiceTest {
     }
 
     @Test
+    void submitWithWrongStoreIdFails() {
+        Long woId = workOrderService.createDraft(
+                buildCreateCommand("提交客户XS", "13900040014", "小牛N1"));
+
+        SubmitWorkOrderCommand command = buildSubmitCommand(woId);
+        command.setStoreId(OTHER_STORE_ID);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> workOrderService.submit(command));
+        assertEquals(ErrorCode.WORK_ORDER_NOT_FOUND, ex.getErrorCode());
+        assertEquals(WorkOrderStatus.DRAFT.getCode(), workOrderMapper.selectById(woId).getStatus());
+        assertEquals(0, countReserveFlows());
+    }
+
+    @Test
     void submitNonDraftFailsWithoutInventoryChangeOrFlow() {
         PartEntity part = createPart("刹车盘", "SUB-002", new BigDecimal("50.00"));
         inbound(part.getId(), 5);
