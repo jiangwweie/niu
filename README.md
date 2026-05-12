@@ -250,3 +250,25 @@ Codex 自行扩展 MVP 以外能力
 - 禁止把可配置项写死在代码里
 - MVP 不做过度基础设施
 - AI 不能擅自扩大范围
+
+## 10. 后端启动
+
+后端工程位于 `backend/`，当前为 Spring Boot 基础骨架。
+
+```bash
+cd backend
+mvn test
+mvn package -DskipTests
+mvn spring-boot:run
+curl http://localhost:8080/api/health
+```
+
+`application-dev.yml` 默认读取 MySQL 环境变量：
+
+```bash
+MYSQL_URL
+MYSQL_USERNAME
+MYSQL_PASSWORD
+```
+
+本阶段未生成数据库 migration，也未创建业务表。
