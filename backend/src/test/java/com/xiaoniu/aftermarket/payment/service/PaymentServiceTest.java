@@ -1,6 +1,7 @@
 package com.xiaoniu.aftermarket.payment.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -207,6 +208,20 @@ class PaymentServiceTest {
     }
 
     @Test
+    void settledWorkOrderCannotRecordPayment() {
+        Long workOrderId = createSubmittedWorkOrder(new BigDecimal("100.00"));
+        WorkOrderEntity workOrder = workOrderMapper.selectById(workOrderId);
+        workOrder.setStatus(WorkOrderStatus.SETTLED.getCode());
+        workOrderMapper.updateById(workOrder);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> paymentService.recordPayment(buildPaymentCommand(workOrderId, new BigDecimal("10.00"), "WECHAT")));
+
+        assertEquals(ErrorCode.PAYMENT_WORK_ORDER_STATUS_INVALID, ex.getErrorCode());
+        assertPaymentFailureNoChange(workOrderId);
+    }
+
+    @Test
     void paymentDoesNotSettleOrConsumeInventory() {
         Long workOrderId = createSubmittedWorkOrder(new BigDecimal("100.00"));
 
@@ -249,6 +264,17 @@ class PaymentServiceTest {
         assertEquals(2, refundService.listByWorkOrderId(workOrderId).size());
         assertEquals(0, new BigDecimal("120.00")
                 .compareTo(workOrderMapper.selectById(workOrderId).getReceivedAmount()));
+    }
+
+    @Test
+    void fullRefundReducesReceivedAmountToZero() {
+        Long workOrderId = createSubmittedWorkOrder(new BigDecimal("300.00"));
+        paymentService.recordPayment(buildPaymentCommand(workOrderId, new BigDecimal("100.00"), "WECHAT"));
+
+        refundService.recordRefund(buildRefundCommand(workOrderId, new BigDecimal("100.00"), "WECHAT", "全额退款"));
+
+        assertEquals(0, BigDecimal.ZERO.compareTo(workOrderMapper.selectById(workOrderId).getReceivedAmount()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(refundService.calculateRefundableAmount(workOrderId)));
     }
 
     @Test
@@ -349,6 +375,22 @@ class PaymentServiceTest {
     }
 
     @Test
+    void settledWorkOrderCannotRecordRefund() {
+        Long workOrderId = createSubmittedWorkOrder(new BigDecimal("300.00"));
+        paymentService.recordPayment(buildPaymentCommand(workOrderId, new BigDecimal("100.00"), "WECHAT"));
+        WorkOrderEntity workOrder = workOrderMapper.selectById(workOrderId);
+        workOrder.setStatus(WorkOrderStatus.SETTLED.getCode());
+        workOrderMapper.updateById(workOrder);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> refundService.recordRefund(buildRefundCommand(workOrderId,
+                        new BigDecimal("10.00"), "WECHAT", "已结算退款")));
+
+        assertEquals(ErrorCode.PAYMENT_WORK_ORDER_STATUS_INVALID, ex.getErrorCode());
+        assertRefundFailureNoChange(workOrderId, new BigDecimal("100.00"));
+    }
+
+    @Test
     void paymentSummaryShowsTotalsAndCanSettle() {
         Long workOrderId = createSubmittedWorkOrder(new BigDecimal("300.00"));
         paymentService.recordPayment(buildPaymentCommand(workOrderId, new BigDecimal("200.00"), "WECHAT"));
@@ -362,6 +404,26 @@ class PaymentServiceTest {
         assertEquals(0, new BigDecimal("50.00").compareTo(summary.getRefundTotal()));
         assertEquals(0, new BigDecimal("300.00").compareTo(summary.getReceivedAmount()));
         assertTrue(summary.getCanSettle());
+    }
+
+    @Test
+    void paymentSummaryRequiresPayableStatusToSettle() {
+        Long workOrderId = createDraftWorkOrder(new BigDecimal("100.00"));
+        PaymentRecordEntity payment = new PaymentRecordEntity();
+        payment.setStoreId(STORE_ID);
+        payment.setWorkOrderId(workOrderId);
+        payment.setPaymentNo("PAY-MANUAL-001");
+        payment.setAmount(new BigDecimal("100.00"));
+        payment.setPaymentMethod("WECHAT");
+        payment.setPaidAt(java.time.LocalDateTime.now());
+        payment.setReceiverId(RECEIVER_ID);
+        payment.setOperatorId(OPERATOR_ID);
+        paymentRecordMapper.insert(payment);
+
+        PaymentSummaryResponse summary = paymentService.getPaymentSummary(STORE_ID, workOrderId);
+
+        assertEquals(0, new BigDecimal("100.00").compareTo(summary.getReceivedAmount()));
+        assertFalse(summary.getCanSettle());
     }
 
     private Long createSubmittedWorkOrder(BigDecimal receivableAmount) {

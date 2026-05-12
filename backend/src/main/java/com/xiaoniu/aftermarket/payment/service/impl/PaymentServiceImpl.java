@@ -1,6 +1,5 @@
 package com.xiaoniu.aftermarket.payment.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.common.enums.PaymentMethod;
 import com.xiaoniu.aftermarket.common.enums.WorkOrderStatus;
@@ -11,12 +10,10 @@ import com.xiaoniu.aftermarket.payment.dto.PaymentSummaryResponse;
 import com.xiaoniu.aftermarket.payment.dto.RecordPaymentCommand;
 import com.xiaoniu.aftermarket.payment.entity.PaymentRecordEntity;
 import com.xiaoniu.aftermarket.payment.mapper.PaymentRecordMapper;
-import com.xiaoniu.aftermarket.payment.mapper.RefundRecordMapper;
 import com.xiaoniu.aftermarket.payment.service.PaymentService;
 import com.xiaoniu.aftermarket.workorder.entity.WorkOrderEntity;
 import com.xiaoniu.aftermarket.workorder.mapper.WorkOrderMapper;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
@@ -31,20 +28,26 @@ public class PaymentServiceImpl implements PaymentService {
     private static final Set<String> PAYMENT_METHOD_CODES = Arrays.stream(PaymentMethod.values())
             .map(PaymentMethod::getCode)
             .collect(Collectors.toUnmodifiableSet());
+    private static final Set<String> PAYABLE_STATUSES = Set.of(
+            WorkOrderStatus.PENDING_ACCEPT.getCode(),
+            WorkOrderStatus.ACCEPTED.getCode(),
+            WorkOrderStatus.PART_ORDERED.getCode(),
+            WorkOrderStatus.PART_ARRIVED.getCode()
+    );
 
     private final PaymentRecordMapper paymentRecordMapper;
-    private final RefundRecordMapper refundRecordMapper;
     private final WorkOrderMapper workOrderMapper;
     private final SequenceService sequenceService;
+    private final PaymentAmountService paymentAmountService;
 
     public PaymentServiceImpl(PaymentRecordMapper paymentRecordMapper,
-                              RefundRecordMapper refundRecordMapper,
                               WorkOrderMapper workOrderMapper,
-                              SequenceService sequenceService) {
+                              SequenceService sequenceService,
+                              PaymentAmountService paymentAmountService) {
         this.paymentRecordMapper = paymentRecordMapper;
-        this.refundRecordMapper = refundRecordMapper;
         this.workOrderMapper = workOrderMapper;
         this.sequenceService = sequenceService;
+        this.paymentAmountService = paymentAmountService;
     }
 
     @Override
@@ -59,7 +62,7 @@ public class PaymentServiceImpl implements PaymentService {
         entity.setStoreId(workOrder.getStoreId());
         entity.setWorkOrderId(workOrder.getId());
         entity.setPaymentNo(sequenceService.next("PAYMENT"));
-        entity.setAmount(normalizeAmount(command.getAmount()));
+        entity.setAmount(paymentAmountService.normalizeAmount(command.getAmount()));
         entity.setPaymentMethod(command.getPaymentMethod());
         entity.setPaidAt(command.getPaidAt() != null ? command.getPaidAt() : LocalDateTime.now());
         entity.setReceiverId(command.getReceiverId());
@@ -68,18 +71,18 @@ public class PaymentServiceImpl implements PaymentService {
         entity.setCreatedBy(command.getOperatorId());
         paymentRecordMapper.insert(entity);
 
-        updateReceivedAmount(workOrder.getId());
+        paymentAmountService.updateReceivedAmount(workOrder.getId());
         return entity.getId();
     }
 
     @Override
     public BigDecimal sumPaidAmount(Long workOrderId) {
-        return normalizeAmount(paymentRecordMapper.sumAmountByWorkOrderId(workOrderId));
+        return paymentAmountService.sumPaidAmount(workOrderId);
     }
 
     @Override
     public BigDecimal calculateReceivedAmount(Long workOrderId) {
-        return sumPaidAmount(workOrderId).subtract(sumRefundAmount(workOrderId)).setScale(2, RoundingMode.HALF_UP);
+        return paymentAmountService.calculateReceivedAmount(workOrderId);
     }
 
     @Override
@@ -99,17 +102,18 @@ public class PaymentServiceImpl implements PaymentService {
             throw new BusinessException(ErrorCode.WORK_ORDER_NOT_FOUND);
         }
 
-        BigDecimal paymentTotal = sumPaidAmount(workOrderId);
-        BigDecimal refundTotal = sumRefundAmount(workOrderId);
-        BigDecimal receivedAmount = paymentTotal.subtract(refundTotal).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal paymentTotal = paymentAmountService.sumPaidAmount(workOrderId);
+        BigDecimal refundTotal = paymentAmountService.sumRefundAmount(workOrderId);
+        BigDecimal receivedAmount = paymentAmountService.calculateReceivedAmount(workOrderId);
 
         PaymentSummaryResponse response = new PaymentSummaryResponse();
         response.setWorkOrderId(workOrderId);
-        response.setReceivableAmount(normalizeAmount(workOrder.getReceivableAmount()));
+        response.setReceivableAmount(paymentAmountService.normalizeAmount(workOrder.getReceivableAmount()));
         response.setPaymentTotal(paymentTotal);
         response.setRefundTotal(refundTotal);
         response.setReceivedAmount(receivedAmount);
-        response.setCanSettle(receivedAmount.compareTo(response.getReceivableAmount()) >= 0);
+        response.setCanSettle(PAYABLE_STATUSES.contains(workOrder.getStatus())
+                && receivedAmount.compareTo(response.getReceivableAmount()) >= 0);
         return response;
     }
 
@@ -140,22 +144,9 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     private void validatePayableStatus(WorkOrderEntity workOrder) {
-        if (WorkOrderStatus.DRAFT.getCode().equals(workOrder.getStatus())
-                || WorkOrderStatus.CANCELLED.getCode().equals(workOrder.getStatus())
-                || WorkOrderStatus.SETTLED.getCode().equals(workOrder.getStatus())) {
+        if (!PAYABLE_STATUSES.contains(workOrder.getStatus())) {
             throw new BusinessException(ErrorCode.PAYMENT_WORK_ORDER_STATUS_INVALID);
         }
-    }
-
-    private BigDecimal sumRefundAmount(Long workOrderId) {
-        return normalizeAmount(refundRecordMapper.sumAmountByWorkOrderId(workOrderId));
-    }
-
-    private void updateReceivedAmount(Long workOrderId) {
-        BigDecimal receivedAmount = calculateReceivedAmount(workOrderId);
-        UpdateWrapper<WorkOrderEntity> wrapper = new UpdateWrapper<>();
-        wrapper.eq("id", workOrderId).set("received_amount", receivedAmount);
-        workOrderMapper.update(null, wrapper);
     }
 
     private PaymentRecordResponse toPaymentRecordResponse(PaymentRecordEntity entity) {
@@ -172,7 +163,4 @@ public class PaymentServiceImpl implements PaymentService {
         return response;
     }
 
-    private BigDecimal normalizeAmount(BigDecimal amount) {
-        return (amount != null ? amount : BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
-    }
 }
