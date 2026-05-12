@@ -36,6 +36,7 @@ import org.springframework.test.context.ActiveProfiles;
 class InventoryServiceTest {
 
     private static final Long STORE_ID = 1L;
+    private static final Long OTHER_STORE_ID = 99L;
     private static final Long OPERATOR_ID = 1L;
 
     @Autowired
@@ -333,5 +334,48 @@ class InventoryServiceTest {
         command.setOperatorId(OPERATOR_ID);
         command.setReason(reason);
         return command;
+    }
+
+    // --- Cross-store boundary tests (Fix #2) ---
+
+    @Test
+    void inboundWithCrossStorePartIdFails() {
+        PartEntity part = createOfficialPart("刹车片", "XS-001");
+
+        InventoryInboundCommand command = buildInboundCommand(part.getId(), 10);
+        command.setStoreId(OTHER_STORE_ID);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> inventoryService.inbound(command));
+        assertTrue(ex.getMessage().contains("配件不属于当前门店"));
+    }
+
+    @Test
+    void adjustWithCrossStorePartIdFails() {
+        PartEntity part = createOfficialPart("刹车片", "XS-002");
+        inventoryService.inbound(buildInboundCommand(part.getId(), 10));
+
+        InventoryAdjustCommand command = buildAdjustCommand(part.getId(), -5, "调整");
+        command.setStoreId(OTHER_STORE_ID);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> inventoryService.adjust(command));
+        assertTrue(ex.getMessage().contains("配件不属于当前门店"));
+    }
+
+    @Test
+    void inboundWithWrongStoreDoesNotCreateStock() {
+        PartEntity part = createOfficialPart("刹车片", "XS-003");
+
+        InventoryInboundCommand command = buildInboundCommand(part.getId(), 10);
+        command.setStoreId(OTHER_STORE_ID);
+
+        assertThrows(BusinessException.class,
+                () -> inventoryService.inbound(command));
+
+        InventoryStockEntity stock = inventoryService.getByPartId(STORE_ID, part.getId());
+        if (stock != null) {
+            assertEquals(0, stock.getActualQty());
+        }
     }
 }

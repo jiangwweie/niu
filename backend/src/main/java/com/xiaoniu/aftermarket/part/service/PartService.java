@@ -5,6 +5,7 @@ import com.xiaoniu.aftermarket.part.dto.CreatePartCommand;
 import com.xiaoniu.aftermarket.part.dto.PartQueryRequest;
 import com.xiaoniu.aftermarket.part.dto.PartQueryResponse;
 import com.xiaoniu.aftermarket.part.dto.UpdatePartCommand;
+import com.xiaoniu.aftermarket.part.entity.PartBarcodeEntity;
 import com.xiaoniu.aftermarket.part.entity.PartEntity;
 
 public interface PartService {
@@ -24,6 +25,10 @@ public interface PartService {
     void enablePart(Long partId);
 
     void disablePart(Long partId);
+
+    PartBarcodeEntity createBarcode(Long storeId, Long partId, String barcode, Long operatorId);
+
+    void updateDefaultBarcode(Long partId, String newDefaultBarcode);
 
     PageResponse<PartQueryResponse> pageQuery(PartQueryRequest request);
 }

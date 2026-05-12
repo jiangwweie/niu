@@ -2,6 +2,7 @@ package com.xiaoniu.aftermarket.part.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -14,6 +15,7 @@ import com.xiaoniu.aftermarket.part.dto.CreatePartCommand;
 import com.xiaoniu.aftermarket.part.dto.PartQueryRequest;
 import com.xiaoniu.aftermarket.part.dto.PartQueryResponse;
 import com.xiaoniu.aftermarket.part.dto.UpdatePartCommand;
+import com.xiaoniu.aftermarket.part.entity.PartBarcodeEntity;
 import com.xiaoniu.aftermarket.part.entity.PartEntity;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -30,6 +32,7 @@ import org.springframework.test.context.ActiveProfiles;
 class PartServiceTest {
 
     private static final Long STORE_ID = 1L;
+    private static final Long OTHER_STORE_ID = 2L;
     private static final Long OPERATOR_ID = 1L;
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
 
@@ -60,6 +63,7 @@ class PartServiceTest {
         assertEquals("官方刹车片", result.getPartName());
         assertEquals(PartSource.OFFICIAL.getCode(), result.getSource());
         assertEquals(CommonStatus.ENABLED.getCode(), result.getStatus());
+        assertNull(result.getDefaultBarcode());
     }
 
     @Test
@@ -207,6 +211,153 @@ class PartServiceTest {
         assertEquals(PartSource.THIRD_PARTY.getCode(), response.records().get(0).getSource());
     }
 
+    // --- Barcode consistency tests (Fix #1 and #3) ---
+
+    @Test
+    void createBarcodeSuccessfully() {
+        PartEntity part = partService.createOfficialPart(buildOfficialCommand("刹车片", "BC-001"));
+
+        PartBarcodeEntity barcode = partService.createBarcode(
+                STORE_ID, part.getId(), "BARCODE-001", OPERATOR_ID);
+
+        assertNotNull(barcode);
+        assertEquals("BARCODE-001", barcode.getBarcode());
+        assertTrue(barcode.getPrimaryBarcode());
+
+        PartEntity found = partService.getByBarcode(STORE_ID, "BARCODE-001");
+        assertNotNull(found);
+        assertEquals(part.getId(), found.getId());
+    }
+
+    @Test
+    void createBarcodeSetsDefaultBarcodeOnPart() {
+        PartEntity part = partService.createOfficialPart(buildOfficialCommand("刹车片", "BC-002"));
+        assertNull(part.getDefaultBarcode());
+
+        partService.createBarcode(STORE_ID, part.getId(), "BARCODE-002", OPERATOR_ID);
+
+        PartEntity updated = partService.getById(part.getId());
+        assertEquals("BARCODE-002", updated.getDefaultBarcode());
+    }
+
+    @Test
+    void createBarcodeDuplicateFailsAndPartStillExists() {
+        PartEntity part1 = partService.createOfficialPart(buildOfficialCommand("刹车片A", "BC-DUP-001"));
+        partService.createBarcode(STORE_ID, part1.getId(), "DUP-BC", OPERATOR_ID);
+
+        PartEntity part2 = partService.createOfficialPart(buildOfficialCommand("刹车片B", "BC-DUP-002"));
+
+        assertThrows(BusinessException.class,
+                () -> partService.createBarcode(STORE_ID, part2.getId(), "DUP-BC", OPERATOR_ID));
+
+        PartEntity checkPart2 = partService.getById(part2.getId());
+        assertNotNull(checkPart2, "part2 should still exist after barcode failure");
+    }
+
+    @Test
+    void createBarcodeForNonExistentPartFails() {
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> partService.createBarcode(STORE_ID, 99999L, "BC-NO-PART", OPERATOR_ID));
+        assertEquals(ErrorCode.PART_NOT_FOUND, ex.getErrorCode());
+    }
+
+    @Test
+    void createSecondBarcodeIsNotPrimary() {
+        PartEntity part = partService.createOfficialPart(buildOfficialCommand("刹车片", "BC-2ND"));
+
+        partService.createBarcode(STORE_ID, part.getId(), "PRIMARY-BC", OPERATOR_ID);
+        PartBarcodeEntity second = partService.createBarcode(
+                STORE_ID, part.getId(), "SECONDARY-BC", OPERATOR_ID);
+
+        assertFalse(second.getPrimaryBarcode());
+    }
+
+    @Test
+    void updateDefaultBarcodeSyncsWithPartBarcodeTable() {
+        PartEntity part = partService.createOfficialPart(buildOfficialCommand("刹车片", "UB-001"));
+        partService.createBarcode(STORE_ID, part.getId(), "OLD-BC", OPERATOR_ID);
+
+        PartEntity afterCreate = partService.getById(part.getId());
+        assertEquals("OLD-BC", afterCreate.getDefaultBarcode());
+
+        partService.updateDefaultBarcode(part.getId(), "NEW-BC");
+
+        PartEntity afterUpdate = partService.getById(part.getId());
+        assertEquals("NEW-BC", afterUpdate.getDefaultBarcode());
+
+        PartBarcodeEntity oldPrimary = findBarcode(STORE_ID, "OLD-BC");
+        assertNotNull(oldPrimary);
+        assertEquals(false, oldPrimary.getPrimaryBarcode());
+
+        PartBarcodeEntity newPrimary = findBarcode(STORE_ID, "NEW-BC");
+        assertNotNull(newPrimary);
+        assertEquals(true, newPrimary.getPrimaryBarcode());
+
+        PartEntity found = partService.getByBarcode(STORE_ID, "NEW-BC");
+        assertNotNull(found);
+        assertEquals(part.getId(), found.getId());
+    }
+
+    @Test
+    void updateDefaultBarcodeToExistingBarcodeReusesIt() {
+        PartEntity part = partService.createOfficialPart(buildOfficialCommand("刹车片", "UB-002"));
+        partService.createBarcode(STORE_ID, part.getId(), "OLD-BC2", OPERATOR_ID);
+
+        PartBarcodeEntity extra = partService.createBarcode(
+                STORE_ID, part.getId(), "EXTRA-BC", OPERATOR_ID);
+        assertFalse(extra.getPrimaryBarcode());
+
+        partService.updateDefaultBarcode(part.getId(), "EXTRA-BC");
+
+        PartEntity afterUpdate = partService.getById(part.getId());
+        assertEquals("EXTRA-BC", afterUpdate.getDefaultBarcode());
+
+        PartBarcodeEntity reused = findBarcode(STORE_ID, "EXTRA-BC");
+        assertTrue(reused.getPrimaryBarcode());
+    }
+
+    @Test
+    void updateDefaultBarcodeToOtherPartBarcodeFails() {
+        PartEntity part1 = partService.createOfficialPart(buildOfficialCommand("刹车片A", "UB-003"));
+        partService.createBarcode(STORE_ID, part1.getId(), "PART1-BC", OPERATOR_ID);
+
+        PartEntity part2 = partService.createOfficialPart(buildOfficialCommand("刹车片B", "UB-004"));
+        partService.createBarcode(STORE_ID, part2.getId(), "PART2-BC", OPERATOR_ID);
+
+        assertThrows(BusinessException.class,
+                () -> partService.updateDefaultBarcode(part1.getId(), "PART2-BC"));
+    }
+
+    @Test
+    void getBarcodeReturnsCorrectPartAcrossOperations() {
+        PartEntity part = partService.createOfficialPart(buildOfficialCommand("刹车片", "GS-001"));
+        partService.createBarcode(STORE_ID, part.getId(), "FIND-BC", OPERATOR_ID);
+
+        PartEntity found = partService.getByBarcode(STORE_ID, "FIND-BC");
+        assertEquals(part.getId(), found.getId());
+        assertEquals("FIND-BC", found.getDefaultBarcode());
+
+        PartEntity notFound = partService.getByBarcode(STORE_ID, "NON-EXISTENT");
+        assertNull(notFound);
+    }
+
+    // --- helpers ---
+
+    private PartBarcodeEntity findBarcode(Long storeId, String barcode) {
+        return jdbcTemplate.queryForObject(
+                "SELECT * FROM part_barcode WHERE store_id = ? AND barcode = ? AND deleted = 0",
+                (rs, rowNum) -> {
+                    PartBarcodeEntity e = new PartBarcodeEntity();
+                    e.setId(rs.getLong("id"));
+                    e.setStoreId(rs.getLong("store_id"));
+                    e.setPartId(rs.getLong("part_id"));
+                    e.setBarcode(rs.getString("barcode"));
+                    e.setPrimaryBarcode(rs.getInt("is_primary") == 1);
+                    return e;
+                },
+                storeId, barcode);
+    }
+
     private CreatePartCommand buildOfficialCommand(String name, String officialPartNo) {
         CreatePartCommand command = new CreatePartCommand();
         command.setStoreId(STORE_ID);
@@ -224,5 +375,9 @@ class PartServiceTest {
         command.setPartName(name);
         command.setReferenceCostPrice(new BigDecimal("5.00"));
         return command;
+    }
+
+    private static void assertFalse(Boolean value) {
+        org.junit.jupiter.api.Assertions.assertFalse(value);
     }
 }

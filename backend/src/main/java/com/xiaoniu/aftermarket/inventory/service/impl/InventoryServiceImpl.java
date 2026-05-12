@@ -53,6 +53,7 @@ public class InventoryServiceImpl implements InventoryService {
         if (!CommonStatus.ENABLED.getCode().equals(part.getStatus())) {
             throw new BusinessException(ErrorCode.PART_DISABLED);
         }
+        validatePartInStore(part, command.getStoreId());
 
         InventoryStockEntity stock = inventoryStockMapper.selectByStoreIdAndPartIdForUpdate(
                 command.getStoreId(), command.getPartId());
@@ -120,6 +121,7 @@ public class InventoryServiceImpl implements InventoryService {
         if (part == null) {
             throw new BusinessException(ErrorCode.PART_NOT_FOUND);
         }
+        validatePartInStore(part, command.getStoreId());
 
         InventoryStockEntity stock = inventoryStockMapper.selectByStoreIdAndPartIdForUpdate(
                 command.getStoreId(), command.getPartId());
@@ -300,6 +302,12 @@ public class InventoryServiceImpl implements InventoryService {
         }
         if (!StringUtils.hasText(command.getReason())) {
             throw new BusinessException(ErrorCode.INVENTORY_ADJUST_REASON_REQUIRED);
+        }
+    }
+
+    private void validatePartInStore(PartEntity part, Long storeId) {
+        if (!storeId.equals(part.getStoreId())) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "配件不属于当前门店");
         }
     }
 
