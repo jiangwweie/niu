@@ -1,0 +1,77 @@
+package com.xiaoniu.aftermarket.user.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.xiaoniu.aftermarket.common.enums.CommonStatus;
+import com.xiaoniu.aftermarket.user.entity.SysPermissionEntity;
+import com.xiaoniu.aftermarket.user.entity.SysRoleEntity;
+import com.xiaoniu.aftermarket.user.entity.SysRolePermissionEntity;
+import com.xiaoniu.aftermarket.user.entity.SysUserRoleEntity;
+import com.xiaoniu.aftermarket.user.mapper.SysPermissionMapper;
+import com.xiaoniu.aftermarket.user.mapper.SysRoleMapper;
+import com.xiaoniu.aftermarket.user.mapper.SysRolePermissionMapper;
+import com.xiaoniu.aftermarket.user.mapper.SysUserRoleMapper;
+import com.xiaoniu.aftermarket.user.service.PermissionQueryService;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+import org.springframework.stereotype.Service;
+
+@Service
+public class PermissionQueryServiceImpl implements PermissionQueryService {
+
+    private final SysUserRoleMapper userRoleMapper;
+    private final SysRoleMapper roleMapper;
+    private final SysRolePermissionMapper rolePermissionMapper;
+    private final SysPermissionMapper permissionMapper;
+
+    public PermissionQueryServiceImpl(SysUserRoleMapper userRoleMapper,
+                                      SysRoleMapper roleMapper,
+                                      SysRolePermissionMapper rolePermissionMapper,
+                                      SysPermissionMapper permissionMapper) {
+        this.userRoleMapper = userRoleMapper;
+        this.roleMapper = roleMapper;
+        this.rolePermissionMapper = rolePermissionMapper;
+        this.permissionMapper = permissionMapper;
+    }
+
+    @Override
+    public List<String> listPermissionCodesByUserId(Long userId) {
+        List<Long> roleIds = userRoleMapper.selectList(
+                new LambdaQueryWrapper<SysUserRoleEntity>()
+                        .eq(SysUserRoleEntity::getUserId, userId)
+        ).stream()
+                .map(SysUserRoleEntity::getRoleId)
+                .toList();
+
+        if (roleIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Long> rolePermissionIds = rolePermissionMapper.selectList(
+                new LambdaQueryWrapper<SysRolePermissionEntity>()
+                        .in(SysRolePermissionEntity::getRoleId, roleIds)
+        ).stream()
+                .map(SysRolePermissionEntity::getPermissionId)
+                .distinct()
+                .toList();
+
+        if (rolePermissionIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<SysPermissionEntity> permissions = permissionMapper.selectList(
+                new LambdaQueryWrapper<SysPermissionEntity>()
+                        .in(SysPermissionEntity::getId, rolePermissionIds)
+                        .eq(SysPermissionEntity::getStatus, CommonStatus.ENABLED.name())
+        );
+
+        return permissions.stream()
+                .map(SysPermissionEntity::getPermissionCode)
+                .toList();
+    }
+
+    @Override
+    public boolean hasPermission(Long userId, String permissionCode) {
+        return listPermissionCodesByUserId(userId).contains(permissionCode);
+    }
+}
