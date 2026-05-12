@@ -46,10 +46,12 @@ export MYSQL_USERNAME=root
 export MYSQL_PASSWORD=root
 ```
 
-This task does not create migrations or business tables. If local startup needs a database before the migration task, create only the empty schema:
+Flyway runs automatically on application startup for non-test profiles. Create the empty schema first, then let Flyway apply versioned migrations:
 
 ```sql
 CREATE DATABASE IF NOT EXISTS xiaoniu_aftermarket
   DEFAULT CHARACTER SET utf8mb4
   COLLATE utf8mb4_0900_ai_ci;
 ```
+
+Migration files live under `src/main/resources/db/migration/`.
