@@ -333,9 +333,13 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         if (command.getWorkOrderId() == null) {
             throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "workOrderId不能为空");
         }
+        if (command.getOperatorId() == null) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "operatorId不能为空");
+        }
 
         WorkOrderEntity workOrder = workOrderMapper.selectByIdForUpdate(command.getWorkOrderId());
-        if (workOrder == null || !command.getStoreId().equals(workOrder.getStoreId())) {
+        if (workOrder == null || workOrder.getStoreId() == null
+                || !command.getStoreId().equals(workOrder.getStoreId())) {
             throw new BusinessException(ErrorCode.WORK_ORDER_NOT_FOUND);
         }
         if (!WorkOrderStatus.DRAFT.getCode().equals(workOrder.getStatus())) {

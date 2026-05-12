@@ -757,8 +757,13 @@ class WorkOrderServiceTest {
 
     @Test
     void submitWithWrongStoreIdFails() {
+        PartEntity part = createPart("跨店提交配件", "SUB-XS-001", new BigDecimal("30.00"));
+        inbound(part.getId(), 10);
         Long woId = workOrderService.createDraft(
                 buildCreateCommand("提交客户XS", "13900040014", "小牛N1"));
+        workOrderService.addChargeItem(woId,
+                buildPartItem(part.getId(), "跨店提交配件", 2, new BigDecimal("80.00")));
+        int statusLogCountBefore = statusLogMapper.selectByWorkOrderId(woId).size();
 
         SubmitWorkOrderCommand command = buildSubmitCommand(woId);
         command.setStoreId(OTHER_STORE_ID);
@@ -767,7 +772,59 @@ class WorkOrderServiceTest {
                 () -> workOrderService.submit(command));
         assertEquals(ErrorCode.WORK_ORDER_NOT_FOUND, ex.getErrorCode());
         assertEquals(WorkOrderStatus.DRAFT.getCode(), workOrderMapper.selectById(woId).getStatus());
+        InventoryStockEntity stock = inventoryStockMapper.selectByStoreIdAndPartId(STORE_ID, part.getId());
+        assertEquals(10, stock.getAvailableQty());
+        assertEquals(0, stock.getReservedQty());
         assertEquals(0, countReserveFlows());
+        assertEquals(statusLogCountBefore, statusLogMapper.selectByWorkOrderId(woId).size());
+    }
+
+    @Test
+    void submitWithNullStoreIdFails() {
+        PartEntity part = createPart("空门店提交配件", "SUB-NULL-STORE-001", new BigDecimal("30.00"));
+        inbound(part.getId(), 10);
+        Long woId = workOrderService.createDraft(
+                buildCreateCommand("提交客户NS", "13900040015", "小牛N1"));
+        workOrderService.addChargeItem(woId,
+                buildPartItem(part.getId(), "空门店提交配件", 2, new BigDecimal("80.00")));
+        int statusLogCountBefore = statusLogMapper.selectByWorkOrderId(woId).size();
+
+        SubmitWorkOrderCommand command = buildSubmitCommand(woId);
+        command.setStoreId(null);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> workOrderService.submit(command));
+        assertEquals(ErrorCode.COMMON_BAD_REQUEST, ex.getErrorCode());
+        assertEquals(WorkOrderStatus.DRAFT.getCode(), workOrderMapper.selectById(woId).getStatus());
+        InventoryStockEntity stock = inventoryStockMapper.selectByStoreIdAndPartId(STORE_ID, part.getId());
+        assertEquals(10, stock.getAvailableQty());
+        assertEquals(0, stock.getReservedQty());
+        assertEquals(0, countReserveFlows());
+        assertEquals(statusLogCountBefore, statusLogMapper.selectByWorkOrderId(woId).size());
+    }
+
+    @Test
+    void submitWithNullOperatorIdFails() {
+        PartEntity part = createPart("空操作人提交配件", "SUB-NULL-OP-001", new BigDecimal("30.00"));
+        inbound(part.getId(), 10);
+        Long woId = workOrderService.createDraft(
+                buildCreateCommand("提交客户NO", "13900040016", "小牛N1"));
+        workOrderService.addChargeItem(woId,
+                buildPartItem(part.getId(), "空操作人提交配件", 2, new BigDecimal("80.00")));
+        int statusLogCountBefore = statusLogMapper.selectByWorkOrderId(woId).size();
+
+        SubmitWorkOrderCommand command = buildSubmitCommand(woId);
+        command.setOperatorId(null);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> workOrderService.submit(command));
+        assertEquals(ErrorCode.COMMON_BAD_REQUEST, ex.getErrorCode());
+        assertEquals(WorkOrderStatus.DRAFT.getCode(), workOrderMapper.selectById(woId).getStatus());
+        InventoryStockEntity stock = inventoryStockMapper.selectByStoreIdAndPartId(STORE_ID, part.getId());
+        assertEquals(10, stock.getAvailableQty());
+        assertEquals(0, stock.getReservedQty());
+        assertEquals(0, countReserveFlows());
+        assertEquals(statusLogCountBefore, statusLogMapper.selectByWorkOrderId(woId).size());
     }
 
     @Test
