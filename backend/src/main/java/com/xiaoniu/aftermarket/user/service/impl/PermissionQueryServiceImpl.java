@@ -36,20 +36,34 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
 
     @Override
     public List<String> listPermissionCodesByUserId(Long userId) {
-        List<Long> roleIds = userRoleMapper.selectList(
+        List<Long> allRoleIds = userRoleMapper.selectList(
                 new LambdaQueryWrapper<SysUserRoleEntity>()
                         .eq(SysUserRoleEntity::getUserId, userId)
         ).stream()
                 .map(SysUserRoleEntity::getRoleId)
                 .toList();
 
-        if (roleIds.isEmpty()) {
+        if (allRoleIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // Filter to only enabled, non-deleted roles
+        List<Long> enabledRoleIds = roleMapper.selectList(
+                new LambdaQueryWrapper<SysRoleEntity>()
+                        .in(SysRoleEntity::getId, allRoleIds)
+                        .eq(SysRoleEntity::getStatus, CommonStatus.ENABLED.name())
+                        .eq(SysRoleEntity::getDeleted, 0)
+        ).stream()
+                .map(SysRoleEntity::getId)
+                .toList();
+
+        if (enabledRoleIds.isEmpty()) {
             return Collections.emptyList();
         }
 
         List<Long> rolePermissionIds = rolePermissionMapper.selectList(
                 new LambdaQueryWrapper<SysRolePermissionEntity>()
-                        .in(SysRolePermissionEntity::getRoleId, roleIds)
+                        .in(SysRolePermissionEntity::getRoleId, enabledRoleIds)
         ).stream()
                 .map(SysRolePermissionEntity::getPermissionId)
                 .distinct()
@@ -63,6 +77,7 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
                 new LambdaQueryWrapper<SysPermissionEntity>()
                         .in(SysPermissionEntity::getId, rolePermissionIds)
                         .eq(SysPermissionEntity::getStatus, CommonStatus.ENABLED.name())
+                        .eq(SysPermissionEntity::getDeleted, 0)
         );
 
         return permissions.stream()

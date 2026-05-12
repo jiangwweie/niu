@@ -86,4 +86,16 @@ class DictServiceTest {
     void existsEnabledItemReturnsFalseForDisabledType() {
         assertFalse(dictService.existsEnabledItem("REPAIR_TYPE", "ANY"));
     }
+
+    @Test
+    void listItemsByTypeCodeReturnsEmptyForSoftDeletedType() {
+        // PRIORITY is ENABLED but deleted=1
+        List<SysDictItemEntity> items = dictService.listItemsByTypeCode("PRIORITY");
+        assertTrue(items.isEmpty());
+    }
+
+    @Test
+    void getEnabledItemReturnsNullForSoftDeletedType() {
+        assertNull(dictService.getEnabledItem("PRIORITY", "ANY"));
+    }
 }

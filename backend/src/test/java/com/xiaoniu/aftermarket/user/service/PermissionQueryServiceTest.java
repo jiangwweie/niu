@@ -68,4 +68,14 @@ class PermissionQueryServiceTest {
         assertTrue(permissionQueryService.hasPermission(1L, "work_order:settle"));
         assertTrue(permissionQueryService.hasPermission(1L, "inventory:manage"));
     }
+
+    @Test
+    void disabledRolePermissionsAreExcluded() {
+        // user 1 also has role 3 (DISCOUNT_STAFF, DISABLED) which grants report:view
+        // Disabled role should not grant any permissions
+        List<String> codes = permissionQueryService.listPermissionCodesByUserId(1L);
+        assertFalse(codes.contains("report:view"),
+                "Permissions from disabled roles must not be included");
+        assertEquals(3, codes.size());
+    }
 }

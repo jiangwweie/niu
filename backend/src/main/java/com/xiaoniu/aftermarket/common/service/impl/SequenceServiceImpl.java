@@ -12,6 +12,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 
 @Service
 public class SequenceServiceImpl implements SequenceService {
@@ -33,7 +34,7 @@ public class SequenceServiceImpl implements SequenceService {
     }
 
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public String next(String seqType) {
         String prefix = PREFIX_MAP.get(seqType);
         if (prefix == null) {

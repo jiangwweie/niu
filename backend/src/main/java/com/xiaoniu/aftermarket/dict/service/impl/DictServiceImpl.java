@@ -27,6 +27,7 @@ public class DictServiceImpl implements DictService {
                 new LambdaQueryWrapper<SysDictTypeEntity>()
                         .eq(SysDictTypeEntity::getTypeCode, typeCode)
                         .eq(SysDictTypeEntity::getStatus, CommonStatus.ENABLED.name())
+                        .eq(SysDictTypeEntity::getDeleted, 0)
                         .last("LIMIT 1")
         );
         if (dictType == null) {
@@ -36,6 +37,7 @@ public class DictServiceImpl implements DictService {
                 new LambdaQueryWrapper<SysDictItemEntity>()
                         .eq(SysDictItemEntity::getTypeId, dictType.getId())
                         .eq(SysDictItemEntity::getStatus, CommonStatus.ENABLED.name())
+                        .eq(SysDictItemEntity::getDeleted, 0)
                         .orderByAsc(SysDictItemEntity::getSortOrder)
         );
     }
@@ -46,6 +48,7 @@ public class DictServiceImpl implements DictService {
                 new LambdaQueryWrapper<SysDictTypeEntity>()
                         .eq(SysDictTypeEntity::getTypeCode, typeCode)
                         .eq(SysDictTypeEntity::getStatus, CommonStatus.ENABLED.name())
+                        .eq(SysDictTypeEntity::getDeleted, 0)
                         .last("LIMIT 1")
         );
         if (dictType == null) {
@@ -56,6 +59,7 @@ public class DictServiceImpl implements DictService {
                         .eq(SysDictItemEntity::getTypeId, dictType.getId())
                         .eq(SysDictItemEntity::getItemCode, itemCode)
                         .eq(SysDictItemEntity::getStatus, CommonStatus.ENABLED.name())
+                        .eq(SysDictItemEntity::getDeleted, 0)
                         .last("LIMIT 1")
         );
     }
