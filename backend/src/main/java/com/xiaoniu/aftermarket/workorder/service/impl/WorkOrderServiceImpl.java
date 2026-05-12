@@ -5,10 +5,15 @@ import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.common.enums.ChargeType;
 import com.xiaoniu.aftermarket.common.enums.CommonStatus;
+import com.xiaoniu.aftermarket.common.enums.InventoryFlowType;
 import com.xiaoniu.aftermarket.common.enums.WorkOrderStatus;
 import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
 import com.xiaoniu.aftermarket.common.service.SequenceService;
+import com.xiaoniu.aftermarket.inventory.entity.InventoryFlowEntity;
+import com.xiaoniu.aftermarket.inventory.entity.InventoryStockEntity;
+import com.xiaoniu.aftermarket.inventory.mapper.InventoryFlowMapper;
+import com.xiaoniu.aftermarket.inventory.mapper.InventoryStockMapper;
 import com.xiaoniu.aftermarket.part.entity.PartEntity;
 import com.xiaoniu.aftermarket.part.mapper.PartMapper;
 import com.xiaoniu.aftermarket.workorder.dto.AddWorkOrderChargeItemCommand;
@@ -31,7 +36,10 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,17 +53,23 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     private final WorkOrderStatusLogMapper statusLogMapper;
     private final SequenceService sequenceService;
     private final PartMapper partMapper;
+    private final InventoryStockMapper inventoryStockMapper;
+    private final InventoryFlowMapper inventoryFlowMapper;
 
     public WorkOrderServiceImpl(WorkOrderMapper workOrderMapper,
                                 WorkOrderChargeItemMapper chargeItemMapper,
                                 WorkOrderStatusLogMapper statusLogMapper,
                                 SequenceService sequenceService,
-                                PartMapper partMapper) {
+                                PartMapper partMapper,
+                                InventoryStockMapper inventoryStockMapper,
+                                InventoryFlowMapper inventoryFlowMapper) {
         this.workOrderMapper = workOrderMapper;
         this.chargeItemMapper = chargeItemMapper;
         this.statusLogMapper = statusLogMapper;
         this.sequenceService = sequenceService;
         this.partMapper = partMapper;
+        this.inventoryStockMapper = inventoryStockMapper;
+        this.inventoryFlowMapper = inventoryFlowMapper;
     }
 
     @Override
@@ -299,9 +313,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
 
     private void recalculateReceivableAmount(Long workOrderId) {
         List<WorkOrderChargeItemEntity> items = chargeItemMapper.selectByWorkOrderId(workOrderId);
-        BigDecimal total = items.stream()
-                .map(WorkOrderChargeItemEntity::getLineAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal total = calculateReceivableAmount(items);
 
         UpdateWrapper<WorkOrderEntity> uw = new UpdateWrapper<>();
         uw.eq("id", workOrderId).set("receivable_amount", total);
@@ -309,8 +321,42 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     }
 
     @Override
+    @Transactional
     public void submit(com.xiaoniu.aftermarket.workorder.dto.SubmitWorkOrderCommand command) {
-        throw new UnsupportedOperationException("TODO: implement submit flow");
+        if (command.getStoreId() == null) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "storeId不能为空");
+        }
+        if (command.getWorkOrderId() == null) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "workOrderId不能为空");
+        }
+
+        WorkOrderEntity workOrder = workOrderMapper.selectByIdForUpdate(command.getWorkOrderId());
+        if (workOrder == null || !command.getStoreId().equals(workOrder.getStoreId())) {
+            throw new BusinessException(ErrorCode.WORK_ORDER_NOT_FOUND);
+        }
+        if (!WorkOrderStatus.DRAFT.getCode().equals(workOrder.getStatus())) {
+            throw new BusinessException(ErrorCode.WORK_ORDER_NOT_DRAFT);
+        }
+
+        List<WorkOrderChargeItemEntity> items = chargeItemMapper.selectByWorkOrderId(workOrder.getId());
+        BigDecimal receivableAmount = calculateReceivableAmount(items);
+        Map<Long, Integer> reserveQuantities = summarizeReserveQuantities(items, workOrder.getStoreId());
+
+        LocalDateTime now = LocalDateTime.now();
+        for (Map.Entry<Long, Integer> entry : reserveQuantities.entrySet()) {
+            reservePartStock(workOrder, entry.getKey(), entry.getValue(), command, now);
+        }
+
+        workOrder.setStatus(WorkOrderStatus.PENDING_ACCEPT.getCode());
+        workOrder.setReceivableAmount(receivableAmount);
+        workOrder.setSubmittedBy(command.getOperatorId());
+        workOrder.setSubmittedAt(now);
+        workOrder.setUpdatedBy(command.getOperatorId());
+        workOrderMapper.updateById(workOrder);
+
+        writeStatusLog(workOrder.getStoreId(), workOrder.getId(),
+                WorkOrderStatus.DRAFT.getCode(), WorkOrderStatus.PENDING_ACCEPT.getCode(),
+                "SUBMIT", command.getOperatorId(), "提交工单", command.getRemark());
     }
 
     @Override
@@ -345,6 +391,95 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     }
 
     // --- private helpers ---
+
+    private BigDecimal calculateReceivableAmount(List<WorkOrderChargeItemEntity> items) {
+        return items.stream()
+                .filter(item -> item.getDeleted() == null || item.getDeleted() == 0)
+                .map(WorkOrderChargeItemEntity::getLineAmount)
+                .filter(amount -> amount != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private Map<Long, Integer> summarizeReserveQuantities(List<WorkOrderChargeItemEntity> items,
+                                                           Long storeId) {
+        Map<Long, Integer> quantities = new LinkedHashMap<>();
+        items.stream()
+                .filter(item -> ChargeType.PART.getCode().equals(item.getChargeType()))
+                .filter(item -> Boolean.TRUE.equals(item.getInventoryAffecting()))
+                .filter(item -> item.getDeleted() == null || item.getDeleted() == 0)
+                .sorted(Comparator.comparing(WorkOrderChargeItemEntity::getPartId,
+                        Comparator.nullsLast(Long::compareTo)))
+                .forEach(item -> {
+                    if (item.getPartId() == null) {
+                        throw new BusinessException(ErrorCode.PART_REQUIRED_FOR_PART_CHARGE);
+                    }
+                    if (item.getQuantity() == null || item.getQuantity() <= 0) {
+                        throw new BusinessException(ErrorCode.CHARGE_QUANTITY_INVALID);
+                    }
+                    PartEntity part = partMapper.selectById(item.getPartId());
+                    if (part == null || (part.getDeleted() != null && part.getDeleted() == 1)
+                            || !storeId.equals(part.getStoreId())) {
+                        throw new BusinessException(ErrorCode.PART_NOT_FOUND);
+                    }
+                    if (!CommonStatus.ENABLED.getCode().equals(part.getStatus())) {
+                        throw new BusinessException(ErrorCode.PART_DISABLED);
+                    }
+                    quantities.merge(item.getPartId(), item.getQuantity(), Integer::sum);
+                });
+        return quantities;
+    }
+
+    private void reservePartStock(WorkOrderEntity workOrder, Long partId, Integer quantity,
+                                  com.xiaoniu.aftermarket.workorder.dto.SubmitWorkOrderCommand command,
+                                  LocalDateTime operatedAt) {
+        InventoryStockEntity stock = inventoryStockMapper.selectByStoreIdAndPartIdForUpdate(
+                workOrder.getStoreId(), partId);
+        if (stock == null) {
+            throw new BusinessException(ErrorCode.PART_STOCK_NOT_FOUND);
+        }
+
+        int beforeActual = stock.getActualQty();
+        int beforeAvailable = stock.getAvailableQty();
+        int beforeReserved = stock.getReservedQty();
+        if (beforeAvailable < quantity) {
+            throw new BusinessException(ErrorCode.INVENTORY_AVAILABLE_NOT_ENOUGH);
+        }
+
+        int afterAvailable = beforeAvailable - quantity;
+        int afterReserved = beforeReserved + quantity;
+
+        stock.setAvailableQty(afterAvailable);
+        stock.setReservedQty(afterReserved);
+        stock.setUpdatedBy(command.getOperatorId());
+        inventoryStockMapper.updateById(stock);
+
+        InventoryFlowEntity flow = new InventoryFlowEntity();
+        flow.setStoreId(workOrder.getStoreId());
+        flow.setInventoryStockId(stock.getId());
+        flow.setPartId(partId);
+        flow.setFlowType(InventoryFlowType.RESERVE.getCode());
+        flow.setQuantityDelta(quantity);
+        flow.setActualBefore(beforeActual);
+        flow.setActualAfter(beforeActual);
+        flow.setAvailableBefore(beforeAvailable);
+        flow.setAvailableAfter(afterAvailable);
+        flow.setReservedBefore(beforeReserved);
+        flow.setReservedAfter(afterReserved);
+        flow.setBusinessType("WORK_ORDER");
+        flow.setBusinessId(workOrder.getId());
+        flow.setWorkOrderId(workOrder.getId());
+        flow.setOperatorId(command.getOperatorId());
+        flow.setOperatedAt(operatedAt);
+        flow.setReason("提交工单预占库存");
+        flow.setRemark(command.getRemark());
+        flow.setCreatedBy(command.getOperatorId());
+        inventoryFlowMapper.insert(flow);
+
+        stock.setLastFlowId(flow.getId());
+        stock.setLastChangedAt(operatedAt);
+        inventoryStockMapper.updateById(stock);
+    }
 
     private WorkOrderEntity loadAndValidateDraft(Long workOrderId, Long storeId) {
         if (storeId == null) {
@@ -463,6 +598,12 @@ public class WorkOrderServiceImpl implements WorkOrderService {
 
     private void writeStatusLog(Long storeId, Long workOrderId, String fromStatus,
                                 String toStatus, String actionType, Long operatorId) {
+        writeStatusLog(storeId, workOrderId, fromStatus, toStatus, actionType, operatorId, null, null);
+    }
+
+    private void writeStatusLog(Long storeId, Long workOrderId, String fromStatus,
+                                String toStatus, String actionType, Long operatorId,
+                                String reason, String remark) {
         WorkOrderStatusLogEntity log = new WorkOrderStatusLogEntity();
         log.setStoreId(storeId);
         log.setWorkOrderId(workOrderId);
@@ -471,6 +612,9 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         log.setActionType(actionType);
         log.setOperatorId(operatorId);
         log.setOperatedAt(LocalDateTime.now());
+        log.setReason(reason);
+        log.setRemark(remark);
+        log.setCreatedBy(operatorId);
         statusLogMapper.insert(log);
     }
 

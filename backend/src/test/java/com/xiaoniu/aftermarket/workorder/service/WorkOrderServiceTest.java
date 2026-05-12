@@ -9,16 +9,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.common.enums.CommonStatus;
+import com.xiaoniu.aftermarket.common.enums.InventoryFlowType;
 import com.xiaoniu.aftermarket.common.enums.WorkOrderStatus;
 import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
+import com.xiaoniu.aftermarket.inventory.dto.InventoryInboundCommand;
 import com.xiaoniu.aftermarket.inventory.entity.InventoryFlowEntity;
+import com.xiaoniu.aftermarket.inventory.entity.InventoryStockEntity;
 import com.xiaoniu.aftermarket.inventory.mapper.InventoryFlowMapper;
+import com.xiaoniu.aftermarket.inventory.mapper.InventoryStockMapper;
+import com.xiaoniu.aftermarket.inventory.service.InventoryService;
 import com.xiaoniu.aftermarket.part.dto.CreatePartCommand;
 import com.xiaoniu.aftermarket.part.entity.PartEntity;
 import com.xiaoniu.aftermarket.part.service.PartService;
 import com.xiaoniu.aftermarket.workorder.dto.AddWorkOrderChargeItemCommand;
 import com.xiaoniu.aftermarket.workorder.dto.CreateDraftWorkOrderCommand;
+import com.xiaoniu.aftermarket.workorder.dto.SubmitWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.UpdateWorkOrderChargeItemCommand;
 import com.xiaoniu.aftermarket.workorder.dto.UpdateWorkOrderDraftCommand;
 import com.xiaoniu.aftermarket.workorder.dto.WorkOrderChargeItemInput;
@@ -28,8 +34,10 @@ import com.xiaoniu.aftermarket.workorder.dto.WorkOrderQueryRequest;
 import com.xiaoniu.aftermarket.workorder.dto.WorkOrderQueryResponse;
 import com.xiaoniu.aftermarket.workorder.entity.WorkOrderChargeItemEntity;
 import com.xiaoniu.aftermarket.workorder.entity.WorkOrderEntity;
+import com.xiaoniu.aftermarket.workorder.entity.WorkOrderStatusLogEntity;
 import com.xiaoniu.aftermarket.workorder.mapper.WorkOrderChargeItemMapper;
 import com.xiaoniu.aftermarket.workorder.mapper.WorkOrderMapper;
+import com.xiaoniu.aftermarket.workorder.mapper.WorkOrderStatusLogMapper;
 import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,10 +62,19 @@ class WorkOrderServiceTest {
     private PartService partService;
 
     @Autowired
+    private InventoryService inventoryService;
+
+    @Autowired
     private WorkOrderMapper workOrderMapper;
 
     @Autowired
     private WorkOrderChargeItemMapper chargeItemMapper;
+
+    @Autowired
+    private WorkOrderStatusLogMapper statusLogMapper;
+
+    @Autowired
+    private InventoryStockMapper inventoryStockMapper;
 
     @Autowired
     private InventoryFlowMapper inventoryFlowMapper;
@@ -668,6 +685,288 @@ class WorkOrderServiceTest {
         assertEquals(0, inventoryFlowMapper.selectCount(null));
     }
 
+    // --- submit ---
+
+    @Test
+    void submitDraftSuccessfullyChangesStatusAndWritesLog() {
+        Long woId = workOrderService.createDraft(
+                buildCreateCommand("提交客户1", "13900040001", "小牛N1"));
+
+        workOrderService.submit(buildSubmitCommand(woId));
+
+        WorkOrderEntity workOrder = workOrderMapper.selectById(woId);
+        assertEquals(WorkOrderStatus.PENDING_ACCEPT.getCode(), workOrder.getStatus());
+        assertEquals(OPERATOR_ID, workOrder.getSubmittedBy());
+        assertNotNull(workOrder.getSubmittedAt());
+
+        List<WorkOrderStatusLogEntity> logs = statusLogMapper.selectByWorkOrderId(woId);
+        WorkOrderStatusLogEntity submitLog = logs.get(logs.size() - 1);
+        assertEquals(WorkOrderStatus.DRAFT.getCode(), submitLog.getFromStatus());
+        assertEquals(WorkOrderStatus.PENDING_ACCEPT.getCode(), submitLog.getToStatus());
+        assertEquals("SUBMIT", submitLog.getActionType());
+        assertEquals("提交工单", submitLog.getReason());
+    }
+
+    @Test
+    void submitWithPartChargeItemReservesInventoryAndWritesFlow() {
+        PartEntity part = createPart("轮胎", "SUB-001", new BigDecimal("30.00"));
+        inbound(part.getId(), 10);
+        Long woId = workOrderService.createDraft(
+                buildCreateCommand("提交客户2", "13900040002", "小牛N1"));
+        workOrderService.addChargeItem(woId,
+                buildPartItem(part.getId(), "更换轮胎", 3, new BigDecimal("80.00")));
+
+        workOrderService.submit(buildSubmitCommand(woId));
+
+        InventoryStockEntity stock = inventoryStockMapper.selectByStoreIdAndPartId(STORE_ID, part.getId());
+        assertEquals(10, stock.getActualQty());
+        assertEquals(7, stock.getAvailableQty());
+        assertEquals(3, stock.getReservedQty());
+
+        List<InventoryFlowEntity> flows = inventoryFlowMapper.selectList(null);
+        InventoryFlowEntity reserveFlow = flows.stream()
+                .filter(flow -> InventoryFlowType.RESERVE.getCode().equals(flow.getFlowType()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(3, reserveFlow.getQuantityDelta());
+        assertEquals(10, reserveFlow.getActualBefore());
+        assertEquals(10, reserveFlow.getActualAfter());
+        assertEquals(10, reserveFlow.getAvailableBefore());
+        assertEquals(7, reserveFlow.getAvailableAfter());
+        assertEquals(0, reserveFlow.getReservedBefore());
+        assertEquals(3, reserveFlow.getReservedAfter());
+        assertEquals("WORK_ORDER", reserveFlow.getBusinessType());
+        assertEquals(woId, reserveFlow.getBusinessId());
+        assertEquals(woId, reserveFlow.getWorkOrderId());
+    }
+
+    @Test
+    void submitWithOnlyLaborAndOtherDoesNotWriteInventoryFlow() {
+        Long woId = workOrderService.createDraft(
+                buildCreateCommand("提交客户3", "13900040003", "小牛N1"));
+        workOrderService.addChargeItem(woId,
+                buildLaborItem("工时费", 1, new BigDecimal("200.00")));
+        workOrderService.addChargeItem(woId,
+                buildOtherItem("拖车费", 1, new BigDecimal("100.00")));
+
+        workOrderService.submit(buildSubmitCommand(woId));
+
+        assertEquals(WorkOrderStatus.PENDING_ACCEPT.getCode(), workOrderMapper.selectById(woId).getStatus());
+        assertEquals(0, countReserveFlows());
+    }
+
+    @Test
+    void submitNonDraftFailsWithoutInventoryChangeOrFlow() {
+        PartEntity part = createPart("刹车盘", "SUB-002", new BigDecimal("50.00"));
+        inbound(part.getId(), 5);
+        Long woId = workOrderService.createDraft(
+                buildCreateCommand("提交客户4", "13900040004", "小牛N1"));
+        workOrderService.addChargeItem(woId,
+                buildPartItem(part.getId(), "更换刹车盘", 2, new BigDecimal("100.00")));
+
+        WorkOrderEntity entity = workOrderMapper.selectById(woId);
+        entity.setStatus(WorkOrderStatus.PENDING_ACCEPT.getCode());
+        workOrderMapper.updateById(entity);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> workOrderService.submit(buildSubmitCommand(woId)));
+        assertEquals(ErrorCode.WORK_ORDER_NOT_DRAFT, ex.getErrorCode());
+
+        InventoryStockEntity stock = inventoryStockMapper.selectByStoreIdAndPartId(STORE_ID, part.getId());
+        assertEquals(5, stock.getAvailableQty());
+        assertEquals(0, stock.getReservedQty());
+        assertEquals(0, countReserveFlows());
+    }
+
+    @Test
+    void submitFailsWhenInventoryNotEnoughAndRollsBack() {
+        PartEntity part = createPart("控制器", "SUB-003", new BigDecimal("200.00"));
+        inbound(part.getId(), 2);
+        Long woId = workOrderService.createDraft(
+                buildCreateCommand("提交客户5", "13900040005", "小牛N1"));
+        workOrderService.addChargeItem(woId,
+                buildPartItem(part.getId(), "更换控制器", 3, new BigDecimal("300.00")));
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> workOrderService.submit(buildSubmitCommand(woId)));
+        assertEquals(ErrorCode.INVENTORY_AVAILABLE_NOT_ENOUGH, ex.getErrorCode());
+
+        assertEquals(WorkOrderStatus.DRAFT.getCode(), workOrderMapper.selectById(woId).getStatus());
+        InventoryStockEntity stock = inventoryStockMapper.selectByStoreIdAndPartId(STORE_ID, part.getId());
+        assertEquals(2, stock.getAvailableQty());
+        assertEquals(0, stock.getReservedQty());
+        assertEquals(0, countReserveFlows());
+    }
+
+    @Test
+    void submitFailsWhenInventoryStockMissing() {
+        PartEntity part = createPart("灯泡", "SUB-004", new BigDecimal("10.00"));
+        Long woId = workOrderService.createDraft(
+                buildCreateCommand("提交客户6", "13900040006", "小牛N1"));
+        workOrderService.addChargeItem(woId,
+                buildPartItem(part.getId(), "更换灯泡", 1, new BigDecimal("30.00")));
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> workOrderService.submit(buildSubmitCommand(woId)));
+        assertEquals(ErrorCode.PART_STOCK_NOT_FOUND, ex.getErrorCode());
+        assertEquals(WorkOrderStatus.DRAFT.getCode(), workOrderMapper.selectById(woId).getStatus());
+        assertEquals(0, countReserveFlows());
+    }
+
+    @Test
+    void submitFailsWhenPartDisabledAfterDraft() {
+        PartEntity part = createPart("轴承", "SUB-005", new BigDecimal("20.00"));
+        inbound(part.getId(), 5);
+        Long woId = workOrderService.createDraft(
+                buildCreateCommand("提交客户7", "13900040007", "小牛N1"));
+        workOrderService.addChargeItem(woId,
+                buildPartItem(part.getId(), "更换轴承", 1, new BigDecimal("60.00")));
+        partService.disablePart(part.getId());
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> workOrderService.submit(buildSubmitCommand(woId)));
+        assertEquals(ErrorCode.PART_DISABLED, ex.getErrorCode());
+        assertEquals(WorkOrderStatus.DRAFT.getCode(), workOrderMapper.selectById(woId).getStatus());
+        assertEquals(0, countReserveFlows());
+    }
+
+    @Test
+    void submitAggregatesSamePartChargeItemsBeforeReserve() {
+        PartEntity part = createPart("把手", "SUB-006", new BigDecimal("15.00"));
+        inbound(part.getId(), 5);
+        Long woId = workOrderService.createDraft(
+                buildCreateCommand("提交客户8", "13900040008", "小牛N1"));
+        workOrderService.addChargeItem(woId,
+                buildPartItem(part.getId(), "左把手", 2, new BigDecimal("40.00")));
+        workOrderService.addChargeItem(woId,
+                buildPartItem(part.getId(), "右把手", 3, new BigDecimal("40.00")));
+
+        workOrderService.submit(buildSubmitCommand(woId));
+
+        InventoryStockEntity stock = inventoryStockMapper.selectByStoreIdAndPartId(STORE_ID, part.getId());
+        assertEquals(0, stock.getAvailableQty());
+        assertEquals(5, stock.getReservedQty());
+        InventoryFlowEntity reserveFlow = inventoryFlowMapper.selectList(null).stream()
+                .filter(flow -> InventoryFlowType.RESERVE.getCode().equals(flow.getFlowType()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(5, reserveFlow.getQuantityDelta());
+        assertEquals(1, countReserveFlows());
+    }
+
+    @Test
+    void submitAggregatedSamePartFailsWhenTotalQuantityNotEnough() {
+        PartEntity part = createPart("坐垫", "SUB-007", new BigDecimal("50.00"));
+        inbound(part.getId(), 4);
+        Long woId = workOrderService.createDraft(
+                buildCreateCommand("提交客户9", "13900040009", "小牛N1"));
+        workOrderService.addChargeItem(woId,
+                buildPartItem(part.getId(), "坐垫A", 2, new BigDecimal("80.00")));
+        workOrderService.addChargeItem(woId,
+                buildPartItem(part.getId(), "坐垫B", 3, new BigDecimal("80.00")));
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> workOrderService.submit(buildSubmitCommand(woId)));
+        assertEquals(ErrorCode.INVENTORY_AVAILABLE_NOT_ENOUGH, ex.getErrorCode());
+        InventoryStockEntity stock = inventoryStockMapper.selectByStoreIdAndPartId(STORE_ID, part.getId());
+        assertEquals(4, stock.getAvailableQty());
+        assertEquals(0, stock.getReservedQty());
+        assertEquals(WorkOrderStatus.DRAFT.getCode(), workOrderMapper.selectById(woId).getStatus());
+        assertEquals(0, countReserveFlows());
+    }
+
+    @Test
+    void repeatedSubmitFailsWithoutDuplicateReserve() {
+        PartEntity part = createPart("脚撑", "SUB-008", new BigDecimal("25.00"));
+        inbound(part.getId(), 5);
+        Long woId = workOrderService.createDraft(
+                buildCreateCommand("提交客户10", "13900040010", "小牛N1"));
+        workOrderService.addChargeItem(woId,
+                buildPartItem(part.getId(), "更换脚撑", 2, new BigDecimal("70.00")));
+
+        workOrderService.submit(buildSubmitCommand(woId));
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> workOrderService.submit(buildSubmitCommand(woId)));
+
+        assertEquals(ErrorCode.WORK_ORDER_NOT_DRAFT, ex.getErrorCode());
+        InventoryStockEntity stock = inventoryStockMapper.selectByStoreIdAndPartId(STORE_ID, part.getId());
+        assertEquals(3, stock.getAvailableQty());
+        assertEquals(2, stock.getReservedQty());
+        assertEquals(1, countReserveFlows());
+    }
+
+    @Test
+    void submitRecalculatesReceivableAmountFromActiveChargeItems() {
+        Long woId = workOrderService.createDraft(
+                buildCreateCommand("提交客户11", "13900040011", "小牛N1"));
+        workOrderService.addChargeItem(woId,
+                buildLaborItem("工时费", 2, new BigDecimal("100.00")));
+        WorkOrderEntity workOrder = workOrderMapper.selectById(woId);
+        workOrder.setReceivableAmount(new BigDecimal("999.00"));
+        workOrderMapper.updateById(workOrder);
+
+        workOrderService.submit(buildSubmitCommand(woId));
+
+        assertEquals(0, new BigDecimal("200.00")
+                .compareTo(workOrderMapper.selectById(woId).getReceivableAmount()));
+    }
+
+    @Test
+    void submitFailureRollsBackPreviousPartReserveInSameTransaction() {
+        PartEntity enoughPart = createPart("后视镜", "SUB-009", new BigDecimal("20.00"));
+        PartEntity shortPart = createPart("电机", "SUB-010", new BigDecimal("500.00"));
+        inbound(enoughPart.getId(), 5);
+        inbound(shortPart.getId(), 1);
+        Long woId = workOrderService.createDraft(
+                buildCreateCommand("提交客户12", "13900040012", "小牛N1"));
+        workOrderService.addChargeItem(woId,
+                buildPartItem(enoughPart.getId(), "更换后视镜", 2, new BigDecimal("60.00")));
+        workOrderService.addChargeItem(woId,
+                buildPartItem(shortPart.getId(), "更换电机", 2, new BigDecimal("800.00")));
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> workOrderService.submit(buildSubmitCommand(woId)));
+        assertEquals(ErrorCode.INVENTORY_AVAILABLE_NOT_ENOUGH, ex.getErrorCode());
+
+        InventoryStockEntity enoughStock = inventoryStockMapper.selectByStoreIdAndPartId(STORE_ID, enoughPart.getId());
+        InventoryStockEntity shortStock = inventoryStockMapper.selectByStoreIdAndPartId(STORE_ID, shortPart.getId());
+        assertEquals(5, enoughStock.getAvailableQty());
+        assertEquals(0, enoughStock.getReservedQty());
+        assertEquals(1, shortStock.getAvailableQty());
+        assertEquals(0, shortStock.getReservedQty());
+        assertEquals(WorkOrderStatus.DRAFT.getCode(), workOrderMapper.selectById(woId).getStatus());
+        assertEquals(0, countReserveFlows());
+    }
+
+    @Test
+    void submittedWorkOrderCannotUseDraftEditMethods() {
+        Long woId = workOrderService.createDraft(
+                buildCreateCommand("提交客户13", "13900040013", "小牛N1"));
+        Long itemId = workOrderService.addChargeItem(woId,
+                buildLaborItem("工时费", 1, new BigDecimal("100.00")));
+        workOrderService.submit(buildSubmitCommand(woId));
+
+        UpdateWorkOrderDraftCommand updateDraftCommand = new UpdateWorkOrderDraftCommand();
+        updateDraftCommand.setStoreId(STORE_ID);
+        updateDraftCommand.setCustomerNameSnapshot("不应成功");
+        updateDraftCommand.setOperatorId(OPERATOR_ID);
+        assertEquals(ErrorCode.WORK_ORDER_NOT_DRAFT, assertThrows(BusinessException.class,
+                () -> workOrderService.updateDraft(woId, updateDraftCommand)).getErrorCode());
+
+        assertEquals(ErrorCode.WORK_ORDER_NOT_DRAFT, assertThrows(BusinessException.class,
+                () -> workOrderService.addChargeItem(woId,
+                        buildLaborItem("追加工时", 1, new BigDecimal("50.00")))).getErrorCode());
+
+        UpdateWorkOrderChargeItemCommand updateItemCommand = new UpdateWorkOrderChargeItemCommand();
+        updateItemCommand.setStoreId(STORE_ID);
+        updateItemCommand.setQuantity(2);
+        assertEquals(ErrorCode.WORK_ORDER_NOT_DRAFT, assertThrows(BusinessException.class,
+                () -> workOrderService.updateChargeItem(woId, itemId, updateItemCommand)).getErrorCode());
+
+        assertEquals(ErrorCode.WORK_ORDER_NOT_DRAFT, assertThrows(BusinessException.class,
+                () -> workOrderService.removeChargeItem(STORE_ID, woId, itemId)).getErrorCode());
+    }
+
     // --- helpers ---
 
     private PartEntity createPart(String name, String partCode, BigDecimal costPrice) {
@@ -678,6 +977,32 @@ class WorkOrderServiceTest {
         cmd.setOfficialPartNo(partCode);
         cmd.setReferenceCostPrice(costPrice);
         return partService.createOfficialPart(cmd);
+    }
+
+    private void inbound(Long partId, int quantity) {
+        InventoryInboundCommand command = new InventoryInboundCommand();
+        command.setStoreId(STORE_ID);
+        command.setPartId(partId);
+        command.setQuantity(quantity);
+        command.setUnitCost(new BigDecimal("10.00"));
+        command.setOperatorId(OPERATOR_ID);
+        command.setReason("测试入库");
+        inventoryService.inbound(command);
+    }
+
+    private SubmitWorkOrderCommand buildSubmitCommand(Long workOrderId) {
+        SubmitWorkOrderCommand command = new SubmitWorkOrderCommand();
+        command.setStoreId(STORE_ID);
+        command.setWorkOrderId(workOrderId);
+        command.setOperatorId(OPERATOR_ID);
+        command.setRemark("测试提交");
+        return command;
+    }
+
+    private long countReserveFlows() {
+        return inventoryFlowMapper.selectList(null).stream()
+                .filter(flow -> InventoryFlowType.RESERVE.getCode().equals(flow.getFlowType()))
+                .count();
     }
 
     private CreateDraftWorkOrderCommand buildCreateCommand(String name, String phone,
