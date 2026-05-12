@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>维修工单详情页</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-fixed": "#410001",
+                        "surface-tint": "#006d33",
+                        "surface-bright": "#f3fcf0",
+                        "tertiary": "#a23d33",
+                        "surface-dim": "#d4ddd1",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-highest": "#dce5d9",
+                        "inverse-primary": "#45e17c",
+                        "primary-fixed": "#66ff95",
+                        "on-tertiary-container": "#741c16",
+                        "surface": "#f3fcf0",
+                        "tertiary-container": "#ff8475",
+                        "on-primary": "#ffffff",
+                        "surface-variant": "#dce5d9",
+                        "secondary-fixed-dim": "#90cdff",
+                        "primary-container": "#07c160",
+                        "outline": "#6c7b6c",
+                        "outline-variant": "#bbcbba",
+                        "secondary-fixed": "#cbe6ff",
+                        "on-tertiary": "#ffffff",
+                        "on-error": "#ffffff",
+                        "secondary": "#006495",
+                        "surface-container": "#e8f0e4",
+                        "primary": "#006d33",
+                        "background": "#f3fcf0",
+                        "surface-container-high": "#e2ebdf",
+                        "on-surface": "#161d16",
+                        "on-secondary-fixed-variant": "#004b72",
+                        "secondary-container": "#05acfd",
+                        "on-background": "#161d16",
+                        "inverse-on-surface": "#eaf3e7",
+                        "tertiary-fixed-dim": "#ffb4aa",
+                        "tertiary-fixed": "#ffdad5",
+                        "on-secondary-container": "#003d5d",
+                        "surface-container-low": "#edf6ea",
+                        "on-primary-fixed-variant": "#005225",
+                        "error": "#ba1a1a",
+                        "on-tertiary-fixed-variant": "#82261e",
+                        "on-surface-variant": "#3d4a3d",
+                        "on-primary-container": "#00471f",
+                        "on-primary-fixed": "#00210b",
+                        "on-secondary-fixed": "#001e31",
+                        "on-error-container": "#93000a",
+                        "primary-fixed-dim": "#45e17c",
+                        "inverse-surface": "#2a322b",
+                        "on-secondary": "#ffffff",
+                        "error-container": "#ffdad6"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "cell-padding-h": "16px",
+                        "safe-area-bottom": "34px",
+                        "edge-margin": "16px",
+                        "cell-padding-v": "16px",
+                        "section-gap": "24px",
+                        "card-gap": "12px"
+                    },
+                    "fontFamily": {
+                        "button-text": ["Inter"],
+                        "nav-title": ["Inter"],
+                        "body-main": ["Inter"],
+                        "body-bold": ["Inter"],
+                        "cell-title": ["Inter"],
+                        "cell-value": ["Inter"],
+                        "label-desc": ["Inter"]
+                    },
+                    "fontSize": {
+                        "button-text": ["17px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "nav-title": ["17px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "body-main": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "body-bold": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "cell-title": ["17px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "cell-value": ["17px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "label-desc": ["14px", { "lineHeight": "20px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #F7F7F7;
+        }
+        .hairline-b {
+            border-bottom: 0.5px solid #E5E5E5;
+        }
+        .hairline-t {
+            border-top: 0.5px solid #E5E5E5;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-[#F7F7F7] font-body-main text-on-surface pb-[100px]">
+<!-- TopAppBar Component -->
+<header class="bg-surface dark:bg-background fixed top-0 w-full z-50 border-b-[0.5px] border-outline-variant flex items-center h-12 px-cell-padding-h">
+<button class="active:opacity-70 transition-opacity duration-200 text-on-surface mr-4">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-nav-title text-nav-title text-on-surface flex-1 text-center pr-8">工单详情</h1>
+</header>
+<main class="pt-[60px] px-edge-margin space-y-card-gap">
+<!-- 状态进度条 (Status Progress) -->
+<section class="bg-surface-container-lowest rounded-lg p-cell-padding-v flex justify-between items-center relative z-0">
+<!-- Background line -->
+<div class="absolute left-8 right-8 top-1/2 -translate-y-1/2 h-0.5 bg-surface-variant -z-10"></div>
+<!-- Step 1: 草稿 (Active) -->
+<div class="flex flex-col items-center">
+<div class="w-4 h-4 rounded-full bg-primary-container z-10"></div>
+<span class="font-label-desc text-label-desc text-on-surface mt-2">草稿</span>
+</div>
+<!-- Step 2: 待处理 -->
+<div class="flex flex-col items-center">
+<div class="w-4 h-4 rounded-full bg-surface-variant z-10"></div>
+<span class="font-label-desc text-label-desc text-on-surface-variant mt-2">待处理</span>
+</div>
+<!-- Step 3: 已接受 -->
+<div class="flex flex-col items-center">
+<div class="w-4 h-4 rounded-full bg-surface-variant z-10"></div>
+<span class="font-label-desc text-label-desc text-on-surface-variant mt-2">已接受</span>
+</div>
+<!-- Step 4: 维修中 -->
+<div class="flex flex-col items-center">
+<div class="w-4 h-4 rounded-full bg-surface-variant z-10"></div>
+<span class="font-label-desc text-label-desc text-on-surface-variant mt-2">维修中</span>
+</div>
+<!-- Step 5: 已结算 -->
+<div class="flex flex-col items-center">
+<div class="w-4 h-4 rounded-full bg-surface-variant z-10"></div>
+<span class="font-label-desc text-label-desc text-on-surface-variant mt-2">已结算</span>
+</div>
+</section>
+<!-- 车辆信息卡片 (Vehicle Info Card - WeUI Cell) -->
+<section class="bg-surface-container-lowest rounded-lg overflow-hidden">
+<div class="px-cell-padding-h py-cell-padding-v flex justify-between items-center hairline-b">
+<span class="font-cell-title text-cell-title text-on-surface">工单编号</span>
+<span class="font-cell-value text-cell-value text-on-surface-variant">WO-2023-0824</span>
+</div>
+<div class="px-cell-padding-h py-cell-padding-v flex justify-between items-center hairline-b">
+<span class="font-cell-title text-cell-title text-on-surface">车辆型号</span>
+<span class="font-cell-value text-cell-value text-on-surface-variant">Niu NQi</span>
+</div>
+<div class="px-cell-padding-h py-cell-padding-v flex justify-between items-center">
+<span class="font-cell-title text-cell-title text-on-surface">车架号</span>
+<span class="font-cell-value text-cell-value text-on-surface-variant">NIU778899X</span>
+</div>
+</section>
+<!-- 配件与工时卡片 (Parts & Labor Card) -->
+<section class="bg-surface-container-lowest rounded-lg overflow-hidden">
+<div class="px-cell-padding-h py-3 bg-surface-container-low hairline-b">
+<h2 class="font-body-bold text-body-bold text-on-surface">配件与工时项目</h2>
+</div>
+<div class="px-cell-padding-h py-cell-padding-v flex justify-between items-center hairline-b">
+<div class="flex flex-col">
+<span class="font-cell-title text-cell-title text-on-surface">前刹车片</span>
+<span class="font-label-desc text-label-desc text-on-surface-variant">x1</span>
+</div>
+<span class="font-cell-value text-cell-value text-on-surface">$15.00</span>
+</div>
+<div class="px-cell-padding-h py-cell-padding-v flex justify-between items-center hairline-b">
+<div class="flex flex-col">
+<span class="font-cell-title text-cell-title text-on-surface">电池接线柱</span>
+<span class="font-label-desc text-label-desc text-on-surface-variant">x2, $2.50/ea</span>
+</div>
+<span class="font-cell-value text-cell-value text-on-surface">$5.00</span>
+</div>
+<div class="px-cell-padding-h py-cell-padding-v flex justify-between items-center hairline-b">
+<span class="font-cell-title text-cell-title text-on-surface">工时费</span>
+<span class="font-cell-value text-cell-value text-on-surface">$20.00</span>
+</div>
+<div class="px-cell-padding-h py-cell-padding-v flex justify-between items-center">
+<span class="font-cell-title text-cell-title text-on-surface">其他费用</span>
+<span class="font-cell-value text-cell-value text-on-surface">$0.00</span>
+</div>
+</section>
+<!-- 金额统计卡片 (Financial Summary Card) -->
+<section class="bg-surface-container-lowest rounded-lg overflow-hidden mb-section-gap">
+<div class="px-cell-padding-h py-cell-padding-v flex justify-between items-center hairline-b">
+<span class="font-cell-title text-cell-title text-on-surface">合计金额</span>
+<span class="font-cell-value text-cell-value text-on-surface">$45.00</span>
+</div>
+<div class="px-cell-padding-h py-cell-padding-v flex justify-between items-center hairline-b">
+<span class="font-cell-title text-cell-title text-on-surface">已收金额</span>
+<span class="font-cell-value text-cell-value text-on-surface">$0.00</span>
+</div>
+<div class="px-cell-padding-h py-cell-padding-v flex justify-between items-center">
+<span class="font-cell-title text-cell-title text-on-surface font-semibold">应收金额</span>
+<span class="font-cell-value text-cell-value text-primary-container font-semibold">$45.00</span>
+</div>
+</section>
+</main>
+<!-- BottomNavBar Component -->
+<footer class="bg-surface dark:bg-surface-container fixed bottom-0 w-full z-50 pb-safe-area-bottom border-t-[0.5px] border-outline-variant flex justify-between items-center p-4">
+<button class="flex-1 bg-surface-container-highest text-on-surface py-3 mx-2 rounded-lg flex justify-center items-center active:opacity-80 scale-95 duration-150 font-button-text text-button-text">
+<span class="material-symbols-outlined mr-2" data-icon="close">close</span>
+            取消工单
+        </button>
+<button class="flex-1 bg-primary text-on-primary py-3 mx-2 rounded-lg flex justify-center items-center active:opacity-80 scale-95 duration-150 font-button-text text-button-text">
+<span class="material-symbols-outlined mr-2" data-icon="check_circle">check_circle</span>
+            立即处理
+        </button>
+</footer>
+</body></html>

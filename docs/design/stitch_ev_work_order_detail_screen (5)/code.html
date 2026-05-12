@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/>
+<title>WeChat Mini-program QR Code Payment</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-low": "#edf6ea",
+                        "outline": "#6c7b6c",
+                        "on-primary-fixed-variant": "#005225",
+                        "surface-bright": "#f3fcf0",
+                        "surface-container": "#e8f0e4",
+                        "on-primary-fixed": "#00210b",
+                        "on-background": "#161d16",
+                        "surface": "#f3fcf0",
+                        "surface-tint": "#006d33",
+                        "surface-container-highest": "#dce5d9",
+                        "primary": "#006d33",
+                        "on-error": "#ffffff",
+                        "tertiary-fixed-dim": "#ffb4aa",
+                        "surface-container-high": "#e2ebdf",
+                        "primary-container": "#07c160",
+                        "error": "#ba1a1a",
+                        "secondary-container": "#05acfd",
+                        "on-tertiary-fixed-variant": "#82261e",
+                        "on-secondary": "#ffffff",
+                        "inverse-primary": "#45e17c",
+                        "primary-fixed": "#66ff95",
+                        "on-error-container": "#93000a",
+                        "on-secondary-fixed-variant": "#004b72",
+                        "inverse-surface": "#2a322b",
+                        "secondary-fixed-dim": "#90cdff",
+                        "on-secondary-fixed": "#001e31",
+                        "secondary-fixed": "#cbe6ff",
+                        "on-primary": "#ffffff",
+                        "on-surface-variant": "#3d4a3d",
+                        "tertiary": "#a23d33",
+                        "outline-variant": "#bbcbba",
+                        "primary-fixed-dim": "#45e17c",
+                        "on-surface": "#161d16",
+                        "error-container": "#ffdad6",
+                        "background": "#f3fcf0",
+                        "tertiary-container": "#ff8475",
+                        "on-secondary-container": "#003d5d",
+                        "surface-variant": "#dce5d9",
+                        "surface-dim": "#d4ddd1",
+                        "secondary": "#006495",
+                        "on-primary-container": "#00471f",
+                        "tertiary-fixed": "#ffdad5",
+                        "on-tertiary": "#ffffff",
+                        "on-tertiary-container": "#741c16",
+                        "inverse-on-surface": "#eaf3e7",
+                        "on-tertiary-fixed": "#410001"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "safe-area-bottom": "34px",
+                        "section-gap": "24px",
+                        "edge-margin": "16px",
+                        "cell-padding-v": "16px",
+                        "cell-padding-h": "16px",
+                        "card-gap": "12px"
+                    },
+                    "fontFamily": {
+                        "nav-title": ["Inter"],
+                        "label-desc": ["Inter"],
+                        "body-main": ["Inter"],
+                        "cell-title": ["Inter"],
+                        "body-bold": ["Inter"],
+                        "cell-value": ["Inter"],
+                        "button-text": ["Inter"]
+                    },
+                    "fontSize": {
+                        "nav-title": ["17px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "label-desc": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "body-main": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "cell-title": ["17px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "body-bold": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "cell-value": ["17px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "button-text": ["17px", {"lineHeight": "24px", "fontWeight": "600"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #F7F7F7; /* WeUI standard background */
+            -webkit-tap-highlight-color: transparent;
+        }
+        .weui-toast {
+            display: none; /* Hidden by default, shown for demonstration */
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-surface dark:bg-background border-b-[0.5px] border-outline-variant flex items-center h-12 px-cell-padding-h transition-opacity duration-200">
+<div class="flex items-center text-primary active:opacity-70 cursor-pointer">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</div>
+<div class="flex-1 text-center font-nav-title text-nav-title text-on-surface pr-[24px]">
+            发起收款
+        </div>
+</header>
+<!-- Main Content -->
+<main class="flex-1 mt-[48px] px-edge-margin pt-section-gap pb-[100px] flex flex-col items-center">
+<!-- Payment Card -->
+<div class="bg-surface-container-lowest rounded-xl w-full max-w-md flex flex-col items-center p-8 border-[0.5px] border-outline-variant relative overflow-hidden">
+<!-- Decorative top band -->
+<div class="absolute top-0 left-0 w-full h-2 bg-primary-container"></div>
+<h2 class="font-cell-title text-cell-title text-on-surface-variant mb-2">收款金额</h2>
+<div class="flex items-baseline mb-8">
+<span class="text-xl font-bold text-on-surface mr-1">￥</span>
+<span class="text-[40px] font-bold text-on-surface leading-none tracking-tight">1,270.00</span>
+</div>
+<!-- QR Code Placeholder -->
+<div class="w-64 h-64 bg-white p-4 border border-outline-variant rounded-lg mb-6 flex items-center justify-center relative">
+<img alt="QR Code" class="w-full h-full object-cover" data-alt="A clean, high-contrast, black and white geometric QR code pattern centered in a pristine white frame. The lighting is flat and even, characteristic of a digital screen display. The aesthetic is purely functional, modern, and perfectly aligned with a light-mode mobile interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCU9bA7xwehDpSGZNTehfyq6qCilcRW2bX2TeI8Zp2SVVteYQfG_1CSCY7HmhB_WTC2ZqwXdoDqh2gPclVz3U9Bv7G-Iz_fkxMcm0LVtbCKdjYp_iXaPbKTxU3x1tFyoPle5bZqzLjfMjhJRAlKIcqG691utiQFfqfr4IWGW8-I04ivDjtvTxed6_cvVMbXOJh7nm6ZCOhK3edls4UG5eJWQYEzH8QQGK9nYP54JOwyCAepv-QFPH9hRvZ0oB2Ok4bJvHu5awpaSOs"/>
+<!-- Central Logo in QR -->
+<div class="absolute inset-0 flex items-center justify-center">
+<div class="w-12 h-12 bg-white rounded flex items-center justify-center p-1">
+<div class="w-full h-full bg-primary-container rounded-sm flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-[24px]" data-icon="payments">payments</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Status -->
+<div class="flex items-center text-on-surface-variant bg-surface-container-low px-4 py-2 rounded-full mb-4">
+<span class="material-symbols-outlined mr-2 animate-spin text-[20px]" data-icon="progress_activity">progress_activity</span>
+<span class="font-body-main text-body-main">等待客户付款...</span>
+</div>
+<p class="font-label-desc text-label-desc text-outline text-center mt-2">请提示客户使用微信扫一扫</p>
+</div>
+<!-- Order Details Cell -->
+<div class="bg-surface-container-lowest rounded-lg w-full max-w-md mt-section-gap border-[0.5px] border-outline-variant">
+<div class="flex justify-between items-center px-cell-padding-h py-cell-padding-v border-b-[0.5px] border-outline-variant last:border-b-0">
+<span class="font-cell-title text-cell-title text-on-surface-variant">订单编号</span>
+<span class="font-cell-value text-cell-value text-on-surface">WX2023102488992</span>
+</div>
+<div class="flex justify-between items-center px-cell-padding-h py-cell-padding-v border-b-[0.5px] border-outline-variant last:border-b-0">
+<span class="font-cell-title text-cell-title text-on-surface-variant">服务项目</span>
+<span class="font-cell-value text-cell-value text-on-surface">高级设备维修保养</span>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 pb-safe-area-bottom border-t-[0.5px] border-outline-variant flex justify-between items-center p-4 bg-surface dark:bg-surface-container">
+<button class="flex-1 bg-surface-container-highest text-on-surface py-3 mx-2 rounded-lg flex justify-center items-center font-button-text text-button-text active:opacity-80 scale-95 duration-150">
+<span class="material-symbols-outlined mr-2" data-icon="refresh">refresh</span>
+            [继续收款]
+        </button>
+<button class="flex-1 bg-primary text-on-primary py-3 mx-2 rounded-lg flex justify-center items-center font-button-text text-button-text active:opacity-80 scale-95 duration-150">
+<span class="material-symbols-outlined mr-2" data-icon="check_circle">check_circle</span>
+            [完成结算]
+        </button>
+</nav>
+<!-- Success Toast (Hidden by default, structure provided for spec) -->
+<div class="weui-toast fixed inset-0 z-[100] flex items-center justify-center pointer-events-none">
+<div class="bg-inverse-surface/90 text-inverse-on-surface rounded-lg p-6 flex flex-col items-center">
+<span class="material-symbols-outlined text-[48px] text-primary-container mb-2" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="font-body-main text-body-main">付款完成</span>
+</div>
+</div>
+</body></html>

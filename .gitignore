@@ -1,0 +1,62 @@
+# OS temporary files
+.DS_Store
+Thumbs.db
+
+# IDE and editor files
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Java / Spring Boot build artifacts
+target/
+build/
+out/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+
+# Maven
+.mvn/wrapper/maven-wrapper.jar
+
+# Gradle
+.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Node / web frontend
+node_modules/
+dist/
+dist-ssr/
+coverage/
+.nyc_output/
+
+# Vite / Vue local env
+.env.local
+.env.*.local
+
+# Miniprogram build artifacts
+miniprogram_npm/
+unpackage/
+.hbuilderx/
+project.private.config.json
+
+# Runtime / temporary files
+tmp/
+temp/
+*.tmp
+*.swp
+*.swo

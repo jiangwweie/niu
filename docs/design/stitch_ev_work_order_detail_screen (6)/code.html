@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/>
+<title>配件库存</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-container": "#741c16",
+                        "on-error": "#ffffff",
+                        "secondary-fixed-dim": "#90cdff",
+                        "outline": "#6c7b6c",
+                        "inverse-surface": "#2a322b",
+                        "surface-container-highest": "#dce5d9",
+                        "secondary": "#006495",
+                        "primary-container": "#07c160",
+                        "on-primary-fixed-variant": "#005225",
+                        "error": "#ba1a1a",
+                        "surface-bright": "#f3fcf0",
+                        "on-surface": "#161d16",
+                        "surface-container-low": "#edf6ea",
+                        "on-secondary-fixed-variant": "#004b72",
+                        "tertiary-fixed-dim": "#ffb4aa",
+                        "on-primary-container": "#00471f",
+                        "error-container": "#ffdad6",
+                        "on-background": "#161d16",
+                        "inverse-primary": "#45e17c",
+                        "on-error-container": "#93000a",
+                        "inverse-on-surface": "#eaf3e7",
+                        "tertiary-fixed": "#ffdad5",
+                        "outline-variant": "#bbcbba",
+                        "on-primary-fixed": "#00210b",
+                        "background": "#f3fcf0",
+                        "surface-dim": "#d4ddd1",
+                        "surface-container-high": "#e2ebdf",
+                        "primary-fixed": "#66ff95",
+                        "surface-tint": "#006d33",
+                        "secondary-fixed": "#cbe6ff",
+                        "primary-fixed-dim": "#45e17c",
+                        "on-primary": "#ffffff",
+                        "surface": "#f3fcf0",
+                        "on-secondary-fixed": "#001e31",
+                        "surface-container-lowest": "#ffffff",
+                        "on-surface-variant": "#3d4a3d",
+                        "surface-variant": "#dce5d9",
+                        "surface-container": "#e8f0e4",
+                        "tertiary-container": "#ff8475",
+                        "on-tertiary-fixed-variant": "#82261e",
+                        "secondary-container": "#05acfd",
+                        "on-tertiary-fixed": "#410001",
+                        "tertiary": "#a23d33",
+                        "primary": "#006d33",
+                        "on-secondary-container": "#003d5d",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "section-gap": "24px",
+                        "edge-margin": "16px",
+                        "safe-area-bottom": "34px",
+                        "cell-padding-v": "16px",
+                        "card-gap": "12px",
+                        "cell-padding-h": "16px"
+                    },
+                    "fontFamily": {
+                        "cell-title": ["Inter"],
+                        "body-bold": ["Inter"],
+                        "label-desc": ["Inter"],
+                        "cell-value": ["Inter"],
+                        "nav-title": ["Inter"],
+                        "button-text": ["Inter"],
+                        "body-main": ["Inter"]
+                    },
+                    "fontSize": {
+                        "cell-title": ["17px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "body-bold": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "label-desc": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "cell-value": ["17px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "nav-title": ["17px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "button-text": ["17px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "body-main": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: #F7F7F7; }
+        .hairline-b { border-bottom: 0.5px solid #E5E5E5; }
+        .hairline-t { border-top: 0.5px solid #E5E5E5; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="antialiased pb-safe-area-bottom">
+<!-- TopAppBar from JSON -->
+<header class="bg-surface dark:bg-surface-dim font-nav-title text-nav-title fixed top-0 w-full z-50 border-b border-outline-variant dark:border-outline flat no shadows flex justify-between items-center px-edge-margin h-12 w-full text-primary dark:text-primary-fixed">
+<button class="active:opacity-70 transition-opacity duration-150 flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant dark:text-on-surface-variant" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="text-nav-title font-nav-title text-on-surface dark:text-on-surface-variant">库存清单</h1>
+<button class="active:opacity-70 transition-opacity duration-150 flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant dark:text-on-surface-variant" data-icon="qr_code_scanner">qr_code_scanner</span>
+</button>
+</header>
+<!-- Main Content -->
+<main class="pt-[60px] pb-[130px] px-edge-margin flex flex-col gap-card-gap">
+<!-- Search Bar Area -->
+<div class="bg-surface-container-lowest rounded-lg px-cell-padding-h py-3 flex items-center gap-2 mb-2 hairline-b">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">search</span>
+<input class="flex-1 bg-transparent border-none focus:ring-0 font-body-main text-body-main text-on-surface placeholder:text-on-surface-variant p-0" placeholder="搜索配件名称或型号" type="text"/>
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">barcode_scanner</span>
+</div>
+<!-- Part Card 1 -->
+<div class="bg-surface-container-lowest rounded-lg p-cell-padding-h hairline-b flex flex-col gap-3">
+<div class="flex justify-between items-start">
+<div>
+<h2 class="font-body-bold text-body-bold text-on-surface">前减震器</h2>
+<p class="font-label-desc text-label-desc text-on-surface-variant mt-1">小牛 NQi 系列</p>
+</div>
+<span class="bg-surface-container text-primary font-label-desc text-[12px] px-2 py-1 rounded">官方</span>
+</div>
+<div class="flex justify-between items-center pt-2 hairline-t">
+<div class="flex flex-col items-center">
+<span class="font-label-desc text-label-desc text-on-surface-variant">实际</span>
+<span class="font-body-bold text-body-bold text-on-surface">12</span>
+</div>
+<div class="flex flex-col items-center">
+<span class="font-label-desc text-label-desc text-on-surface-variant">可用</span>
+<span class="font-body-bold text-body-bold text-on-surface">10</span>
+</div>
+<div class="flex flex-col items-center">
+<span class="font-label-desc text-label-desc text-on-surface-variant">预占</span>
+<span class="font-body-bold text-body-bold text-on-surface">2</span>
+</div>
+</div>
+</div>
+<!-- Part Card 2 -->
+<div class="bg-surface-container-lowest rounded-lg p-cell-padding-h hairline-b flex flex-col gap-3">
+<div class="flex justify-between items-start">
+<div>
+<h2 class="font-body-bold text-body-bold text-on-surface">后刹车片</h2>
+<p class="font-label-desc text-label-desc text-on-surface-variant mt-1">通用款</p>
+</div>
+<span class="bg-surface-variant text-on-surface-variant font-label-desc text-[12px] px-2 py-1 rounded">第三方</span>
+</div>
+<div class="flex justify-between items-center pt-2 hairline-t">
+<div class="flex flex-col items-center">
+<span class="font-label-desc text-label-desc text-on-surface-variant">实际</span>
+<span class="font-body-bold text-body-bold text-on-surface">4</span>
+</div>
+<div class="flex flex-col items-center">
+<span class="font-label-desc text-label-desc text-error">可用</span>
+<span class="font-body-bold text-body-bold text-error">3</span>
+</div>
+<div class="flex flex-col items-center">
+<span class="font-label-desc text-label-desc text-on-surface-variant">预占</span>
+<span class="font-body-bold text-body-bold text-on-surface">1</span>
+</div>
+</div>
+</div>
+<!-- Part Card 3 -->
+<div class="bg-surface-container-lowest rounded-lg p-cell-padding-h hairline-b flex flex-col gap-3">
+<div class="flex justify-between items-start">
+<div>
+<h2 class="font-body-bold text-body-bold text-on-surface">原装电池</h2>
+<p class="font-label-desc text-label-desc text-on-surface-variant mt-1">60V26Ah</p>
+</div>
+<span class="bg-surface-container text-primary font-label-desc text-[12px] px-2 py-1 rounded">官方</span>
+</div>
+<div class="flex justify-between items-center pt-2 hairline-t">
+<div class="flex flex-col items-center">
+<span class="font-label-desc text-label-desc text-on-surface-variant">实际</span>
+<span class="font-body-bold text-body-bold text-on-surface">8</span>
+</div>
+<div class="flex flex-col items-center">
+<span class="font-label-desc text-label-desc text-on-surface-variant">可用</span>
+<span class="font-body-bold text-body-bold text-on-surface">8</span>
+</div>
+<div class="flex flex-col items-center">
+<span class="font-label-desc text-label-desc text-on-surface-variant">预占</span>
+<span class="font-body-bold text-body-bold text-on-surface">0</span>
+</div>
+</div>
+</div>
+<!-- Part Card 4 -->
+<div class="bg-surface-container-lowest rounded-lg p-cell-padding-h hairline-b flex flex-col gap-3">
+<div class="flex justify-between items-start">
+<div>
+<h2 class="font-body-bold text-body-bold text-on-surface">后视镜</h2>
+<p class="font-label-desc text-label-desc text-on-surface-variant mt-1">小牛 UQi 系列</p>
+</div>
+<span class="bg-surface-container text-primary font-label-desc text-[12px] px-2 py-1 rounded">官方</span>
+</div>
+<div class="flex justify-between items-center pt-2 hairline-t">
+<div class="flex flex-col items-center">
+<span class="font-label-desc text-label-desc text-on-surface-variant">实际</span>
+<span class="font-body-bold text-body-bold text-on-surface">2</span>
+</div>
+<div class="flex flex-col items-center">
+<span class="font-label-desc text-label-desc text-error">可用</span>
+<span class="font-body-bold text-body-bold text-error">1</span>
+</div>
+<div class="flex flex-col items-center">
+<span class="font-label-desc text-label-desc text-on-surface-variant">预占</span>
+<span class="font-body-bold text-body-bold text-on-surface">1</span>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar from JSON -->
+<nav class="bg-surface dark:bg-surface-dim font-label-desc text-label-desc fixed bottom-0 w-full z-50 pb-safe-area-bottom border-t border-outline-variant dark:border-outline flat no shadows flex justify-around items-center h-14 w-full">
+<button class="flex flex-col items-center justify-center text-primary dark:text-primary-fixed scale-95 active:transition-transform active:bg-surface-container dark:active:bg-surface-container-low w-full h-full">
+<span class="material-symbols-outlined" data-icon="inventory_2" style="font-variation-settings: 'FILL' 1;">inventory_2</span>
+<span>库存</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant scale-95 active:transition-transform active:bg-surface-container dark:active:bg-surface-container-low w-full h-full">
+<span class="material-symbols-outlined" data-icon="build">build</span>
+<span>维修</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant scale-95 active:transition-transform active:bg-surface-container dark:active:bg-surface-container-low w-full h-full">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span>我的</span>
+</button>
+</nav>
+<!-- FAB / Floating Action Button equivalent (Fixed Bottom Action) -->
+<div class="fixed bottom-[56px] w-full px-edge-margin pb-4 z-40 pointer-events-none">
+<div class="bg-surface/80 backdrop-blur-md pt-4 pb-2 w-full hairline-t flex pointer-events-auto">
+<button class="w-full bg-primary-container text-on-primary font-button-text text-button-text py-3 rounded-lg active:opacity-80 transition-opacity">
+                扫码入库
+            </button>
+</div>
+</div>
+</body></html>
