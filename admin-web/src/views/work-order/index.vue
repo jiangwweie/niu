@@ -18,9 +18,10 @@
         </el-form-item>
         <el-form-item label="工单状态">
           <el-select v-model="queryParams.status" placeholder="全部" clearable style="width: 160px">
-            <el-option label="待接单" value="PENDING" />
+            <el-option label="草稿" value="DRAFT" />
+            <el-option label="待接单" value="PENDING_ACCEPT" />
             <el-option label="已接单" value="ACCEPTED" />
-            <el-option label="已定件" value="PARTS_ORDERED" />
+            <el-option label="已定件" value="PART_ORDERED" />
             <el-option label="已到件" value="PART_ARRIVED" />
             <el-option label="已结算" value="SETTLED" />
             <el-option label="已取消" value="CANCELLED" />
@@ -116,7 +117,7 @@
       <div class="pagination-wrapper">
         <el-pagination
           v-model:current-page="queryParams.pageNo"
-          v-model:page-size="queryParams.pageNoSize"
+          v-model:page-size="queryParams.pageSize"
           :page-sizes="[10, 20, 50, 100]"
           layout="total, sizes, prev, pager, next, jumper"
           :total="total"
@@ -138,6 +139,7 @@
           <el-descriptions-item label="车型">{{ currentOrder.scooterModel }}</el-descriptions-item>
           <el-descriptions-item label="车架号">{{ currentOrder.vin }}</el-descriptions-item>
           <el-descriptions-item label="电池号">{{ currentOrder.batteryNo || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="维修项目" :span="2">{{ currentOrder.repairItem || '-' }}</el-descriptions-item>
           <el-descriptions-item label="创建时间">{{ currentOrder.createdAt }}</el-descriptions-item>
           <el-descriptions-item label="备注" :span="2">{{ currentOrder.remark || '-' }}</el-descriptions-item>
         </el-descriptions>
@@ -191,7 +193,7 @@
         <el-descriptions :column="2" border size="small">
           <el-descriptions-item label="是否官方售后">{{ currentOrder.isOfficial ? '是' : '否' }}</el-descriptions-item>
           <el-descriptions-item label="官方订单号">{{ currentOrder.officialOrderNo || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="官方结算状态">{{ currentOrder.officialSettlementStatus === 'settled' ? '已结算' : (currentOrder.officialSettlementStatus === 'unsettled' ? '未结算' : '-') }}</el-descriptions-item>
+          <el-descriptions-item label="官方结算状态">{{ getOfficialSettlementLabel(currentOrder.officialSettlementStatus) }}</el-descriptions-item>
           <el-descriptions-item label="官方结算金额"><MoneyText :amount="currentOrder.officialSettlementAmount || 0" /></el-descriptions-item>
         </el-descriptions>
       </template>
@@ -275,12 +277,12 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import PageContainer from '@/components/PageContainer.vue';
 import StatusTag from '@/components/StatusTag.vue';
 import MoneyText from '@/components/MoneyText.vue';
-import { getWorkOrderList } from '@/api/workOrder';
+import { getWorkOrderList, getWorkOrderDetail } from '@/api/workOrder';
 import type { WorkOrderRecord, WorkOrderQuery } from '@/types/workOrder';
 
 // 查询参数
 const queryParams = reactive<WorkOrderQuery>({
-  page: 1,
+  pageNo: 1,
   pageSize: 10,
   orderNo: '',
   customerName: '',
@@ -288,7 +290,7 @@ const queryParams = reactive<WorkOrderQuery>({
   vin: '',
   status: '',
   isOfficial: '',
-  dateRange: undefined
+  dateRange: undefined,
 });
 
 const loading = ref(false);
@@ -298,12 +300,15 @@ const total = ref(0);
 // 枚举映射
 const getStatusLabel = (status: string) => {
   const map: Record<string, string> = {
+    DRAFT: '草稿',
+    PENDING_ACCEPT: '待接单',
     PENDING: '待接单',
     ACCEPTED: '已接单',
+    PART_ORDERED: '已定件',
     PARTS_ORDERED: '已定件',
     PART_ARRIVED: '已到件',
     SETTLED: '已结算',
-    CANCELLED: '已取消'
+    CANCELLED: '已取消',
   };
   return map[status] || status;
 };
@@ -312,9 +317,19 @@ const getFeeTypeLabel = (type: string) => {
   const map: Record<string, string> = {
     PART: '配件费',
     LABOR: '工时费',
-    OTHER: '其他费用'
+    OTHER: '其他费用',
   };
   return map[type] || type;
+};
+
+const getOfficialSettlementLabel = (status?: string) => {
+  if (!status) return '-';
+  const map: Record<string, string> = {
+    NOT_REQUIRED: '无需结算',
+    PENDING: '待结算',
+    SETTLED: '已结算',
+  };
+  return map[status] || status;
 };
 
 // 获取列表数据
@@ -322,12 +337,10 @@ const fetchData = async () => {
   loading.value = true;
   try {
     const res = await getWorkOrderList(queryParams);
-    if (res.code === 'SUCCESS') {
-      tableData.value = res.data.records;
-      total.value = res.data.total;
-    }
-  } catch (error) {
-    ElMessage.error('加载失败');
+    tableData.value = res.records;
+    total.value = res.total;
+  } catch {
+    // request interceptor already shows error
   } finally {
     loading.value = false;
   }
@@ -357,9 +370,14 @@ const handleNewOrder = () => {
 const drawerVisible = ref(false);
 const currentOrder = ref<WorkOrderRecord | null>(null);
 
-const handleView = (row: WorkOrderRecord) => {
-  currentOrder.value = row;
+const handleView = async (row: WorkOrderRecord) => {
   drawerVisible.value = true;
+  currentOrder.value = null;
+  try {
+    currentOrder.value = await getWorkOrderDetail(row.id);
+  } catch {
+    // request interceptor already shows error
+  }
 };
 
 // 交互操作

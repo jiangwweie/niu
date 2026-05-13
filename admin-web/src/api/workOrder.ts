@@ -1,84 +1,112 @@
-import type { BaseHttpResponse, PaginatedResult } from '@/types';
-import type { WorkOrderRecord, WorkOrderQuery } from '@/types/workOrder';
-import { mockWorkOrders } from '@/mock/workOrder';
+import request from '@/utils/request';
+import type { PaginatedResult } from '@/types';
+import type {
+  WorkOrderQuery,
+  WorkOrderRecord,
+  WorkOrderListResp,
+  WorkOrderDetailResp,
+  WorkOrderChargeItemResp,
+} from '@/types/workOrder';
 
-/**
- * 获取工单列表
- */
-export const getWorkOrderList = (params: WorkOrderQuery): Promise<BaseHttpResponse<PaginatedResult<WorkOrderRecord>>> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      let filtered = [...mockWorkOrders];
-      
-      if (params.orderNo) {
-        filtered = filtered.filter(item => item.orderNo.includes(params.orderNo!));
-      }
-      if (params.customerName) {
-        filtered = filtered.filter(item => item.customerName.includes(params.customerName!));
-      }
-      if (params.phone) {
-        filtered = filtered.filter(item => item.phone.includes(params.phone!));
-      }
-      if (params.vin) {
-        filtered = filtered.filter(item => item.vin.includes(params.vin!));
-      }
-      if (params.status) {
-        filtered = filtered.filter(item => item.status === params.status);
-      }
-      if (params.isOfficial !== undefined && params.isOfficial !== '') {
-        filtered = filtered.filter(item => item.isOfficial === params.isOfficial);
-      }
-      
-      const pageNo = params.pageNo || 1;
-      const pageSize = params.pageSize || 10;
-      const start = (pageNo - 1) * pageSize;
-      const pagedData = filtered.slice(start, start + pageSize);
+/* ── Adapters: backend → view ── */
 
-      resolve({
-        code: 'SUCCESS',
-        message: 'success',
-        data: {
-          records: pagedData,
-          total: filtered.length,
-          pageNo,
-          pageSize
-        }
-      });
-    }, 400);
-  });
-};
+function adaptChargeItem(resp: WorkOrderChargeItemResp) {
+  return {
+    id: String(resp.id),
+    type: resp.chargeType as WorkOrderRecord['chargeItems'][number]['type'],
+    itemName: resp.itemName,
+    partCode: resp.partCodeSnapshot || undefined,
+    quantity: resp.quantity,
+    unitPrice: resp.unitPrice,
+    lineAmount: resp.lineAmount,
+    costAmount: resp.lineCostAmount ?? undefined,
+    affectsInventory: resp.inventoryAffecting,
+  };
+}
 
-/**
- * 获取工单详情
- */
-export const getWorkOrderDetail = (id: string | number): Promise<BaseHttpResponse<WorkOrderRecord>> => {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      const order = mockWorkOrders.find(item => item.id === id || item.orderNo === id);
-      if (order) {
-        resolve({
-          code: 'SUCCESS',
-          message: 'success',
-          data: order
-        });
-      } else {
-        reject(new Error('Work order not found'));
-      }
-    }, 300);
-  });
-};
+function adaptWorkOrderList(resp: WorkOrderListResp): WorkOrderRecord {
+  return {
+    id: String(resp.id),
+    orderNo: resp.workOrderNo,
+    customerName: resp.customerNameSnapshot,
+    phone: resp.customerPhoneSnapshot || '',
+    scooterModel: resp.vehicleModelSnapshot,
+    vin: resp.frameNoSnapshot || '',
+    status: resp.status,
+    receivableAmount: resp.receivableAmount,
+    actualAmount: resp.receivedAmount,
+    paidAmount: 0,
+    refundedAmount: 0,
+    isOfficial: resp.officialAfterSales,
+    officialOrderNo: resp.officialOrderNo || undefined,
+    createdAt: resp.createdAt,
+    chargeItems: [],
+  };
+}
 
-/**
- * 创建工单
- */
-export const createWorkOrder = (data: any): Promise<BaseHttpResponse<any>> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        code: 'SUCCESS',
-        message: 'success',
-        data: null
-      });
-    }, 300);
-  });
-};
+function adaptWorkOrderDetail(resp: WorkOrderDetailResp): WorkOrderRecord {
+  const ps = resp.paymentSummary;
+  return {
+    id: String(resp.id),
+    orderNo: resp.workOrderNo,
+    customerName: resp.customerNameSnapshot,
+    phone: resp.customerPhoneSnapshot || '',
+    scooterModel: resp.vehicleModelSnapshot,
+    vin: resp.frameNoSnapshot || '',
+    batteryNo: resp.batteryNoSnapshot || undefined,
+    status: resp.status,
+    receivableAmount: resp.receivableAmount,
+    actualAmount: resp.receivedAmount,
+    paidAmount: ps?.paymentTotal ?? 0,
+    refundedAmount: ps?.refundTotal ?? 0,
+    isOfficial: resp.officialAfterSales !== null,
+    officialOrderNo: resp.officialAfterSales?.officialOrderNo || undefined,
+    officialSettlementStatus: resp.officialAfterSales?.settlementStatus || undefined,
+    officialSettlementAmount: resp.officialAfterSales?.settlementAmount || undefined,
+    createdAt: resp.createdAt,
+    remark: resp.remark || undefined,
+    repairItem: resp.repairItem || undefined,
+    chargeItems: (resp.chargeItems || []).map(adaptChargeItem),
+  };
+}
+
+/* ── API calls ── */
+
+/** GET /api/admin/work-orders */
+export async function getWorkOrderList(
+  params: WorkOrderQuery,
+): Promise<PaginatedResult<WorkOrderRecord>> {
+  const backendParams: Record<string, string | number | boolean> = {
+    pageNo: params.pageNo,
+    pageSize: params.pageSize,
+  };
+  if (params.orderNo) backendParams.workOrderNo = params.orderNo;
+  if (params.customerName) backendParams.customerName = params.customerName;
+  if (params.phone) backendParams.customerPhone = params.phone;
+  if (params.vin) backendParams.vehicleFrameNo = params.vin;
+  if (params.status) backendParams.status = params.status;
+  if (params.isOfficial === true) backendParams.officialOnly = true;
+  if (params.dateRange?.[0]) backendParams.startTime = params.dateRange[0];
+  if (params.dateRange?.[1]) backendParams.endTime = params.dateRange[1];
+
+  const page: PaginatedResult<WorkOrderListResp> = await request.get(
+    '/api/admin/work-orders',
+    { params: backendParams },
+  );
+  return {
+    records: page.records.map(adaptWorkOrderList),
+    total: page.total,
+    pageNo: page.pageNo,
+    pageSize: page.pageSize,
+  };
+}
+
+/** GET /api/admin/work-orders/{id} */
+export async function getWorkOrderDetail(
+  id: string | number,
+): Promise<WorkOrderRecord> {
+  const resp: WorkOrderDetailResp = await request.get(
+    `/api/admin/work-orders/${id}`,
+  );
+  return adaptWorkOrderDetail(resp);
+}
