@@ -13,6 +13,8 @@ import com.xiaoniu.aftermarket.payment.dto.RefundQueryRequest;
 import com.xiaoniu.aftermarket.payment.dto.RefundQueryResponse;
 import com.xiaoniu.aftermarket.payment.dto.RefundRecordResponse;
 import com.xiaoniu.aftermarket.payment.service.RefundService;
+import com.xiaoniu.aftermarket.workorder.entity.WorkOrderEntity;
+import com.xiaoniu.aftermarket.workorder.mapper.WorkOrderMapper;
 import jakarta.validation.Valid;
 import java.time.LocalDateTime;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -23,11 +25,14 @@ public class RefundController {
 
     private final RefundService refundService;
     private final RecordRefundApplicationService recordRefundService;
+    private final WorkOrderMapper workOrderMapper;
 
     public RefundController(RefundService refundService,
-                            RecordRefundApplicationService recordRefundService) {
+                            RecordRefundApplicationService recordRefundService,
+                            WorkOrderMapper workOrderMapper) {
         this.refundService = refundService;
         this.recordRefundService = recordRefundService;
+        this.workOrderMapper = workOrderMapper;
     }
 
     // ========== Work-order scoped ==========
@@ -35,7 +40,8 @@ public class RefundController {
     @GetMapping("/api/admin/work-orders/{workOrderId}/refunds")
     public ApiResponse<java.util.List<RefundRecordResponse>> listRefundsByWorkOrder(
             @PathVariable Long workOrderId) {
-        requireCurrentUser();
+        CurrentUser user = requireCurrentUser();
+        requireWorkOrderInStore(workOrderId, user.storeId());
         return ApiResponse.success(refundService.listByWorkOrderId(workOrderId));
     }
 
@@ -44,6 +50,7 @@ public class RefundController {
             @PathVariable Long workOrderId,
             @Valid @RequestBody RecordRefundRequest request) {
         CurrentUser user = requireCurrentUser();
+        requireWorkOrderInStore(workOrderId, user.storeId());
         RecordRefundCommand command = new RecordRefundCommand();
         command.setStoreId(user.storeId());
         command.setWorkOrderId(workOrderId);
@@ -84,5 +91,12 @@ public class RefundController {
     private CurrentUser requireCurrentUser() {
         return CurrentUserContext.get()
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "缺少用户上下文"));
+    }
+
+    private void requireWorkOrderInStore(Long workOrderId, Long storeId) {
+        WorkOrderEntity workOrder = workOrderMapper.selectById(workOrderId);
+        if (workOrder == null || !storeId.equals(workOrder.getStoreId())) {
+            throw new BusinessException(ErrorCode.WORK_ORDER_NOT_FOUND, "工单不存在");
+        }
     }
 }

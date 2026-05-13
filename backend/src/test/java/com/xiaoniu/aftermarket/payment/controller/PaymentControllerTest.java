@@ -103,6 +103,13 @@ class PaymentControllerTest {
                                         paid_at, receiver_id, operator_id)
             VALUES (8102, 1, 6003, 'PAY-TEST-002', 100.00, 'WECHAT', CURRENT_TIMESTAMP, 1, 1)
             """);
+
+        // Payment record (id=8199) for store 2 work order 6099 — cross-store test
+        jdbcTemplate.execute("""
+            INSERT INTO payment_record (id, store_id, work_order_id, payment_no, amount, payment_method,
+                                        paid_at, receiver_id, operator_id)
+            VALUES (8199, 2, 6099, 'PAY-STORE2-001', 50.00, 'CASH', CURRENT_TIMESTAMP, 2, 2)
+            """);
     }
 
     // ========== 1. GET /api/admin/work-orders/{workOrderId}/payments ==========
@@ -326,5 +333,47 @@ class PaymentControllerTest {
                 .andExpect(jsonPath("$.data.pageNo").exists())
                 .andExpect(jsonPath("$.data.pageSize").exists())
                 .andExpect(jsonPath("$.data.total").exists());
+    }
+
+    // ========== 8. Store isolation: list payments cross-store returns not found ==========
+
+    @Test
+    void listPaymentsByWorkOrderCrossStoreReturnsNotFound() throws Exception {
+        mockMvc.perform(get("/api/admin/work-orders/6099/payments")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("WORK_ORDER_NOT_FOUND"));
+    }
+
+    // ========== 9. Store isolation: record payment cross-store returns not found ==========
+
+    @Test
+    void recordPaymentCrossStoreReturnsNotFound() throws Exception {
+        String body = """
+                {
+                    "amount": 50.00,
+                    "paymentMethod": "CASH",
+                    "receiverId": 1
+                }
+                """;
+        mockMvc.perform(post("/api/admin/work-orders/6099/payments")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("WORK_ORDER_NOT_FOUND"));
+    }
+
+    // ========== 10. Store isolation: payment summary cross-store returns not found ==========
+
+    @Test
+    void getPaymentSummaryCrossStoreReturnsNotFound() throws Exception {
+        mockMvc.perform(get("/api/admin/work-orders/6099/payment-summary")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("WORK_ORDER_NOT_FOUND"));
     }
 }

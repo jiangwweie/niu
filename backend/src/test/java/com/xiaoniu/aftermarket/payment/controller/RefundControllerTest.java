@@ -100,6 +100,13 @@ class RefundControllerTest {
             VALUES (7099, 2, 'WR-0099', '其他门店', '13900009999', 'NQi', 'FRAME099', '其他维修',
                     'PENDING_ACCEPT', 50.00, 0.00, 2, CURRENT_TIMESTAMP)
             """);
+
+        // Refund record for store 2 work order 7099
+        jdbcTemplate.execute("""
+            INSERT INTO refund_record (id, store_id, work_order_id, refund_no, amount, refund_method,
+                                       refunded_at, operator_id, reason)
+            VALUES (8399, 2, 7099, 'REF-STORE2-001', 10.00, 'CASH', CURRENT_TIMESTAMP, 2, '门店2退款')
+            """);
     }
 
     // ========== 1. GET /api/admin/work-orders/{workOrderId}/refunds ==========
@@ -358,5 +365,36 @@ class RefundControllerTest {
                 .andExpect(jsonPath("$.data.pageNo").exists())
                 .andExpect(jsonPath("$.data.pageSize").exists())
                 .andExpect(jsonPath("$.data.total").exists());
+    }
+
+    // ========== 8. Store isolation: list refunds cross-store returns not found ==========
+
+    @Test
+    void listRefundsByWorkOrderCrossStoreReturnsNotFound() throws Exception {
+        mockMvc.perform(get("/api/admin/work-orders/7099/refunds")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("WORK_ORDER_NOT_FOUND"));
+    }
+
+    // ========== 9. Store isolation: record refund cross-store returns not found ==========
+
+    @Test
+    void recordRefundCrossStoreReturnsNotFound() throws Exception {
+        String body = """
+                {
+                    "amount": 10.00,
+                    "refundMethod": "CASH",
+                    "reason": "跨门店测试"
+                }
+                """;
+        mockMvc.perform(post("/api/admin/work-orders/7099/refunds")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("WORK_ORDER_NOT_FOUND"));
     }
 }

@@ -14,6 +14,8 @@ import com.xiaoniu.aftermarket.payment.dto.PaymentRecordResponse;
 import com.xiaoniu.aftermarket.payment.dto.PaymentSummaryResponse;
 import com.xiaoniu.aftermarket.payment.dto.RecordPaymentCommand;
 import com.xiaoniu.aftermarket.payment.service.PaymentService;
+import com.xiaoniu.aftermarket.workorder.entity.WorkOrderEntity;
+import com.xiaoniu.aftermarket.workorder.mapper.WorkOrderMapper;
 import jakarta.validation.Valid;
 import java.time.LocalDateTime;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -24,11 +26,14 @@ public class PaymentController {
 
     private final PaymentService paymentService;
     private final RecordPaymentApplicationService recordPaymentService;
+    private final WorkOrderMapper workOrderMapper;
 
     public PaymentController(PaymentService paymentService,
-                             RecordPaymentApplicationService recordPaymentService) {
+                             RecordPaymentApplicationService recordPaymentService,
+                             WorkOrderMapper workOrderMapper) {
         this.paymentService = paymentService;
         this.recordPaymentService = recordPaymentService;
+        this.workOrderMapper = workOrderMapper;
     }
 
     // ========== Work-order scoped ==========
@@ -36,7 +41,8 @@ public class PaymentController {
     @GetMapping("/api/admin/work-orders/{workOrderId}/payments")
     public ApiResponse<java.util.List<PaymentRecordResponse>> listPaymentsByWorkOrder(
             @PathVariable Long workOrderId) {
-        requireCurrentUser();
+        CurrentUser user = requireCurrentUser();
+        requireWorkOrderInStore(workOrderId, user.storeId());
         return ApiResponse.success(paymentService.listByWorkOrderId(workOrderId));
     }
 
@@ -45,6 +51,7 @@ public class PaymentController {
             @PathVariable Long workOrderId,
             @Valid @RequestBody RecordPaymentRequest request) {
         CurrentUser user = requireCurrentUser();
+        requireWorkOrderInStore(workOrderId, user.storeId());
         RecordPaymentCommand command = new RecordPaymentCommand();
         command.setStoreId(user.storeId());
         command.setWorkOrderId(workOrderId);
@@ -62,6 +69,7 @@ public class PaymentController {
     public ApiResponse<PaymentSummaryResponse> getPaymentSummary(
             @PathVariable Long workOrderId) {
         CurrentUser user = requireCurrentUser();
+        requireWorkOrderInStore(workOrderId, user.storeId());
         return ApiResponse.success(paymentService.getPaymentSummary(user.storeId(), workOrderId));
     }
 
@@ -92,5 +100,12 @@ public class PaymentController {
     private CurrentUser requireCurrentUser() {
         return CurrentUserContext.get()
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "缺少用户上下文"));
+    }
+
+    private void requireWorkOrderInStore(Long workOrderId, Long storeId) {
+        WorkOrderEntity workOrder = workOrderMapper.selectById(workOrderId);
+        if (workOrder == null || !storeId.equals(workOrder.getStoreId())) {
+            throw new BusinessException(ErrorCode.WORK_ORDER_NOT_FOUND, "工单不存在");
+        }
     }
 }

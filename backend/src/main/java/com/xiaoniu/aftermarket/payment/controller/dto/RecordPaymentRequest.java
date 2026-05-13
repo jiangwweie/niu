@@ -19,6 +19,7 @@ public class RecordPaymentRequest {
 
     private LocalDateTime paidAt;
 
+    @NotNull(message = "收款人不能为空")
     private Long receiverId;
 
     private String remark;
