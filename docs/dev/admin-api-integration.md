@@ -195,6 +195,47 @@ POST   /api/admin/inventory/adjust               库存调整
 GET    /api/admin/inventory/flows                库存流水查询
 ```
 
+库存流水查询参数：
+
+| 参数 | 类型 | 必填 | 匹配方式 | 说明 |
+| --- | --- | --- | --- | --- |
+| partId | Long | 否 | 精确 | 按配件 ID 筛选 |
+| partCode | String | 否 | 精确 | 按配件编码筛选（通过 Part 表关联） |
+| partName | String | 否 | 模糊 | 按配件名称筛选（通过 Part 表关联） |
+| flowType | String | 否 | 精确 | 按流水类型筛选：INBOUND / RESERVE / RELEASE / CONSUME / ADJUST |
+| pageNo | Integer | 否 | — | 页码，默认 1 |
+| pageSize | Integer | 否 | — | 每页数量，默认 20 |
+
+库存流水响应字段（`InventoryFlowQueryResponse`）：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | Long | 流水 ID |
+| partCode | String | 配件编码 |
+| partName | String | 配件名称 |
+| flowType | String | 流水类型 |
+| quantityDelta | Integer | 数量变化 |
+| actualBefore | Integer | 变化前实际库存 |
+| actualAfter | Integer | 变化后实际库存 |
+| availableBefore | Integer | 变化前可用库存 |
+| availableAfter | Integer | 变化后可用库存 |
+| reservedBefore | Integer | 变化前预占库存 |
+| reservedAfter | Integer | 变化后预占库存 |
+| businessType | String | 业务类型：MANUAL_INBOUND / MANUAL_ADJUST |
+| operatorId | Long | 操作人 ID |
+| operatedAt | LocalDateTime | 操作时间 |
+| unitCost | BigDecimal | 入库单价（仅 INBOUND 有值） |
+| reason | String | 原因 |
+| remark | String | 备注 |
+
+`storeId` 从 `CurrentUserContext` 注入，不接受请求体覆盖，storeId 隔离完整。
+
+入库 `unitCost` 语义：本次入库成本单价（可选），持久化到 `inventory_flow.unit_cost`，同时更新 `part.reference_cost_price`（直接覆盖，非加权平均）。
+
+库存调整 `quantityDelta` 边界：不能为 0；调整后库存不能为负数（返回 `INVENTORY_ADJUST_WOULD_NEGATIVE` 或 `INVENTORY_ADJUST_ACTUAL_NEGATIVE`）。
+
+详细契约见：`docs/api/admin-api-v0.2-delta.md` §7。
+
 ### 6.4 WorkOrder（工单管理）
 
 ```

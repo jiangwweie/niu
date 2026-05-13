@@ -235,7 +235,121 @@ GET /api/admin/parts?categoryCode=BRAKE&pageNo=1&pageSize=20
 - `storeId` 隔离保持不变。
 - 不改变现有分页逻辑。
 
-## 7. Task 14B Controller 对接提示
+## 7. Inventory API 契约
+
+### 7.1 GET /api/admin/inventory/flows 响应字段
+
+`InventoryFlowQueryResponse` 完整字段清单：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | Long | 流水 ID |
+| storeId | Long | 门店 ID |
+| partId | Long | 配件 ID |
+| partCode | String | 配件编码（从 Part 表关联获取） |
+| partName | String | 配件名称（从 Part 表关联获取） |
+| flowType | String | 流水类型：INBOUND / RESERVE / RELEASE / CONSUME / ADJUST |
+| quantityDelta | Integer | 数量变化（正值入库/调增，负值出库/调减） |
+| actualBefore | Integer | 变化前实际库存 |
+| actualAfter | Integer | 变化后实际库存 |
+| availableBefore | Integer | 变化前可用库存 |
+| availableAfter | Integer | 变化后可用库存 |
+| reservedBefore | Integer | 变化前预占库存 |
+| reservedAfter | Integer | 变化后预占库存 |
+| businessType | String | 业务类型：MANUAL_INBOUND / MANUAL_ADJUST（工单场景后续扩展） |
+| businessId | Long | 业务 ID（当前为 null，工单场景后续填充） |
+| operatorId | Long | 操作人 ID |
+| operatedAt | LocalDateTime | 操作时间 |
+| reason | String | 原因 |
+| remark | String | 备注 |
+| unitCost | BigDecimal | 入库单价（仅 INBOUND 流水有值，其他为 null） |
+
+响应示例：
+
+```json
+{
+  "code": "SUCCESS",
+  "data": {
+    "records": [
+      {
+        "id": 1,
+        "storeId": 1,
+        "partId": 1,
+        "partCode": "P-BRAKE-001",
+        "partName": "刹车片",
+        "flowType": "INBOUND",
+        "quantityDelta": 100,
+        "actualBefore": 0,
+        "actualAfter": 100,
+        "availableBefore": 0,
+        "availableAfter": 100,
+        "reservedBefore": 0,
+        "reservedAfter": 0,
+        "businessType": "MANUAL_INBOUND",
+        "businessId": null,
+        "operatorId": 1,
+        "operatedAt": "2026-05-13T10:00:00",
+        "reason": "首次入库",
+        "remark": null,
+        "unitCost": 45.50
+      }
+    ],
+    "pageNo": 1,
+    "pageSize": 50,
+    "total": 1
+  }
+}
+```
+
+说明：
+
+- `actualBefore/actualAfter` 即"变化前后实际库存"，对应前端 beforeQty / afterQty。
+- `availableBefore/availableAfter` 即"变化前后可用库存"。
+- `reservedBefore/reservedAfter` 即"变化前后预占库存"。
+- `businessType` 当前值为 `MANUAL_INBOUND`（入库）和 `MANUAL_ADJUST`（调整），工单场景后续扩展为 `WORK_ORDER_RESERVE` 等。
+- 不返回 `flowNo`、`operatorName` 等字段。当前无流水号生成机制，无用户系统联表查询。
+
+### 7.2 GET /api/admin/inventory/flows 查询参数
+
+| 参数 | 类型 | 必填 | 匹配方式 | 说明 |
+| --- | --- | --- | --- | --- |
+| partId | Long | 否 | 精确匹配 | 按配件 ID 筛选 |
+| partCode | String | 否 | 精确匹配 | 按配件编码筛选（通过 Part 表关联） |
+| partName | String | 否 | 模糊匹配 | 按配件名称筛选（通过 Part 表关联） |
+| flowType | String | 否 | 精确匹配 | 按流水类型筛选 |
+| pageNo | Integer | 否 | -- | 页码，默认 1 |
+| pageSize | Integer | 否 | -- | 每页数量，默认 20 |
+
+说明：
+
+- `storeId` 从 `CurrentUserContext` 注入，不接受请求体覆盖，storeId 隔离完整。
+- 支持 `partId + pageNo + pageSize` 组合查询。
+- 按 `id DESC` 排序（最新流水在前）。
+
+### 7.3 unitCost 语义
+
+`unitCost` 是本次入库的成本单价，业务规则：
+
+1. 可选字段，允许为 null。
+2. 持久化到 `inventory_flow.unit_cost`。
+3. 入库时若提供 `unitCost`，同步更新 `part.reference_cost_price`（直接覆盖，非加权平均）。
+4. 调整（ADJUST）不写入 `unitCost`。
+5. 不引入 FIFO / 加权平均库存成本算法。
+6. 值不能为负数，否则返回 `INBOUND_UNIT_COST_NEGATIVE`。
+
+### 7.4 adjust quantityDelta 边界行为
+
+| 场景 | 行为 | 错误码 |
+| --- | --- | --- |
+| quantityDelta = 0 | 拒绝 | `INVENTORY_ADJUST_ZERO`（调整数量不能为0） |
+| 调整后 availableQty < 0 | 拒绝 | `INVENTORY_ADJUST_WOULD_NEGATIVE`（调整后可用库存不能为负数） |
+| 调整后 actualQty < 0 | 拒绝 | `INVENTORY_ADJUST_ACTUAL_NEGATIVE`（调整后实际库存不能为负数） |
+| 无库存记录 | 拒绝 | `PART_STOCK_NOT_FOUND`（库存记录不存在） |
+| reason 为空 | 拒绝 | `INVENTORY_ADJUST_REASON_REQUIRED`（调整原因不能为空） |
+
+检查顺序：先检 `availableAfter < 0`，再检 `actualAfter < 0`。两个检查相互独立。
+
+## 8. Task 14B Controller 对接提示
 
 - Controller 仍应从 `CurrentUserContext` 获取 `storeId/operatorId`。
 - 前端不得传入可信 `storeId/operatorId`。

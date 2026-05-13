@@ -81,7 +81,7 @@ X-User-Id: {{userId}}
 X-Store-Id: {{storeId}}
 
 ### ========== Inventory ==========
-### 入库
+### 入库（带单价，更新 part.reference_cost_price）
 POST {{baseUrl}}/api/admin/inventory/inbound
 Content-Type: application/json
 X-User-Id: {{userId}}
@@ -104,7 +104,7 @@ GET {{baseUrl}}/api/admin/inventory/stocks/1
 X-User-Id: {{userId}}
 X-Store-Id: {{storeId}}
 
-### 库存调整
+### 库存调整（负 delta 不跨零，允许）
 POST {{baseUrl}}/api/admin/inventory/adjust
 Content-Type: application/json
 X-User-Id: {{userId}}
@@ -116,8 +116,42 @@ X-Store-Id: {{storeId}}
   "reason": "盘点损耗"
 }
 
-### 查询库存流水
+### 库存调整（负 delta 跨零，返回 INVENTORY_ADJUST_WOULD_NEGATIVE）
+POST {{baseUrl}}/api/admin/inventory/adjust
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+{
+  "partId": 1,
+  "quantityDelta": -999,
+  "reason": "盘点损耗"
+}
+
+### 库存调整（delta = 0，返回 INVENTORY_ADJUST_ZERO）
+POST {{baseUrl}}/api/admin/inventory/adjust
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+{
+  "partId": 1,
+  "quantityDelta": 0,
+  "reason": "测试"
+}
+
+### 查询库存流水（全量）
 GET {{baseUrl}}/api/admin/inventory/flows?pageNo=1&pageSize=10
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### 查询库存流水（按 partId 筛选）
+GET {{baseUrl}}/api/admin/inventory/flows?partId=1&pageNo=1&pageSize=50
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### 查询库存流水（按 flowType 筛选）
+GET {{baseUrl}}/api/admin/inventory/flows?flowType=INBOUND&pageNo=1&pageSize=10
 X-User-Id: {{userId}}
 X-Store-Id: {{storeId}}
 
