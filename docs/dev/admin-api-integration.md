@@ -320,6 +320,9 @@ POST   /api/admin/work-orders/{id}/official-after-sales/no-settlement-required  
 
 - 金额字段：`BigDecimal`，JSON 中为 number（如 `120.00`）
 - 时间字段：`LocalDateTime`，JSON 格式为 ISO-8601（如 `2026-05-13T10:30:00`）
+- 日期筛选参数（`startTime`/`endTime`）：支持 `yyyy-MM-dd` 和 `yyyy-MM-dd'T'HH:mm:ss` 两种格式
+  - date-only 格式 `yyyy-MM-dd`：`startTime` 转为当天 `00:00:00`，`endTime` 转为当天 `23:59:59`
+  - 无法解析的日期参数返回 `COMMON_BAD_REQUEST`（400）
 
 ## 11. API 契约文档
 

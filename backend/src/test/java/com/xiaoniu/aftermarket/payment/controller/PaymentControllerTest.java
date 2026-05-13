@@ -376,4 +376,49 @@ class PaymentControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("WORK_ORDER_NOT_FOUND"));
     }
+
+    // ========== 11. Date-only startTime/endTime query ==========
+
+    @Test
+    void listPaymentsWithDateOnlyStartTimeEnd() throws Exception {
+        // Seed a payment with a fixed known date
+        jdbcTemplate.execute("""
+            INSERT INTO payment_record (id, store_id, work_order_id, payment_no, amount, payment_method,
+                                        paid_at, receiver_id, operator_id)
+            VALUES (8110, 1, 6002, 'PAY-DATE-001', 75.00, 'CASH',
+                    TIMESTAMP '2026-05-01 10:30:00', 1, 1)
+            """);
+
+        // Query with date-only range that includes the seeded record
+        mockMvc.perform(get("/api/admin/payments")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .param("startTime", "2026-05-01")
+                        .param("endTime", "2026-05-01"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.records").isArray())
+                .andExpect(jsonPath("$.data.records", hasSize(1)))
+                .andExpect(jsonPath("$.data.records[0].paymentNo").value("PAY-DATE-001"));
+
+        // Query with range that excludes the seeded record
+        mockMvc.perform(get("/api/admin/payments")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .param("startTime", "2026-06-01")
+                        .param("endTime", "2026-06-30"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.total").value(0));
+    }
+
+    @Test
+    void listPaymentsWithInvalidDateReturnsBadRequest() throws Exception {
+        mockMvc.perform(get("/api/admin/payments")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .param("startTime", "not-a-date"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
+    }
 }

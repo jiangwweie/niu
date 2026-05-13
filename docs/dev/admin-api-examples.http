@@ -244,6 +244,11 @@ GET {{baseUrl}}/api/admin/payments?pageNo=1&pageSize=10
 X-User-Id: {{userId}}
 X-Store-Id: {{storeId}}
 
+### 全局支付查询（日期范围筛选，yyyy-MM-dd 格式）
+GET {{baseUrl}}/api/admin/payments?startTime=2026-05-01&endTime=2026-05-31&pageNo=1&pageSize=10
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
 ### ========== Settle ==========
 ### 结算工单（触发 CONSUME）
 POST {{baseUrl}}/api/admin/work-orders/1/settle
@@ -276,6 +281,11 @@ X-Store-Id: {{storeId}}
 
 ### 全局退款查询
 GET {{baseUrl}}/api/admin/refunds?pageNo=1&pageSize=10
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### 全局退款查询（日期范围筛选，yyyy-MM-dd 格式）
+GET {{baseUrl}}/api/admin/refunds?startTime=2026-05-01&endTime=2026-05-31&pageNo=1&pageSize=10
 X-User-Id: {{userId}}
 X-Store-Id: {{storeId}}
 

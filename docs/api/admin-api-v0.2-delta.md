@@ -81,10 +81,17 @@ GET /api/admin/payments
 | workOrderNo | String | 按工单号模糊查询 |
 | customerName | String | 按客户姓名快照模糊查询 |
 | paymentMethod | String | 支付方式 |
-| startTime | LocalDateTime | 按支付时间起始过滤 |
-| endTime | LocalDateTime | 按支付时间结束过滤 |
+| startTime | String | 按支付时间起始过滤（格式 `yyyy-MM-dd` 或 `yyyy-MM-dd'T'HH:mm:ss`） |
+| endTime | String | 按支付时间结束过滤（格式 `yyyy-MM-dd` 或 `yyyy-MM-dd'T'HH:mm:ss`） |
 | pageNo | Integer | 页码，默认 1 |
 | pageSize | Integer | 每页数量，默认 20 |
+
+日期范围语义：
+
+- `startTime`/`endTime` 支持两种格式：`yyyy-MM-dd`（date-only）和 `yyyy-MM-dd'T'HH:mm:ss`（datetime）。
+- date-only 格式：`startTime` 转为当天 `00:00:00`，`endTime` 转为当天 `23:59:59`。
+- 查询结果包含开始日期和结束日期当天的全部记录。
+- 无法解析的日期参数返回 `COMMON_BAD_REQUEST`（400），不会暴露 500 错误。
 
 `PaymentQueryResponse` 字段：
 
@@ -125,10 +132,17 @@ GET /api/admin/refunds
 | workOrderNo | String | 按工单号模糊查询 |
 | customerName | String | 按客户姓名快照模糊查询 |
 | refundMethod | String | 退款方式 |
-| startTime | LocalDateTime | 按退款时间起始过滤 |
-| endTime | LocalDateTime | 按退款时间结束过滤 |
+| startTime | String | 按退款时间起始过滤（格式 `yyyy-MM-dd` 或 `yyyy-MM-dd'T'HH:mm:ss`） |
+| endTime | String | 按退款时间结束过滤（格式 `yyyy-MM-dd` 或 `yyyy-MM-dd'T'HH:mm:ss`） |
 | pageNo | Integer | 页码，默认 1 |
 | pageSize | Integer | 每页数量，默认 20 |
+
+日期范围语义：
+
+- `startTime`/`endTime` 支持两种格式：`yyyy-MM-dd`（date-only）和 `yyyy-MM-dd'T'HH:mm:ss`（datetime）。
+- date-only 格式：`startTime` 转为当天 `00:00:00`，`endTime` 转为当天 `23:59:59`。
+- 查询结果包含开始日期和结束日期当天的全部记录。
+- 无法解析的日期参数返回 `COMMON_BAD_REQUEST`（400），不会暴露 500 错误。
 
 `RefundQueryResponse` 字段：
 

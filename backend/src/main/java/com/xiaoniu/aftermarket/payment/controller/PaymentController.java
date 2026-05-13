@@ -16,9 +16,9 @@ import com.xiaoniu.aftermarket.payment.dto.RecordPaymentCommand;
 import com.xiaoniu.aftermarket.payment.service.PaymentService;
 import com.xiaoniu.aftermarket.workorder.entity.WorkOrderEntity;
 import com.xiaoniu.aftermarket.workorder.mapper.WorkOrderMapper;
+import com.xiaoniu.aftermarket.common.util.DateParamParser;
 import jakarta.validation.Valid;
 import java.time.LocalDateTime;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -80,18 +80,26 @@ public class PaymentController {
             @RequestParam(required = false) String workOrderNo,
             @RequestParam(required = false) String customerName,
             @RequestParam(required = false) String paymentMethod,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startTime,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endTime,
+            @RequestParam(required = false) String startTime,
+            @RequestParam(required = false) String endTime,
             @RequestParam(required = false) Integer pageNo,
             @RequestParam(required = false) Integer pageSize) {
         CurrentUser user = requireCurrentUser();
+        LocalDateTime parsedStart;
+        LocalDateTime parsedEnd;
+        try {
+            parsedStart = DateParamParser.parseStartDateTime(startTime);
+            parsedEnd = DateParamParser.parseEndDateTime(endTime);
+        } catch (IllegalArgumentException e) {
+            return ApiResponse.failure(ErrorCode.COMMON_BAD_REQUEST, e.getMessage());
+        }
         PaymentQueryRequest request = new PaymentQueryRequest();
         request.setStoreId(user.storeId());
         request.setWorkOrderNo(workOrderNo);
         request.setCustomerName(customerName);
         request.setPaymentMethod(paymentMethod);
-        request.setStartTime(startTime);
-        request.setEndTime(endTime);
+        request.setStartTime(parsedStart);
+        request.setEndTime(parsedEnd);
         request.setPageNo(pageNo);
         request.setPageSize(pageSize);
         return ApiResponse.success(paymentService.pageQuery(request));
