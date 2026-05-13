@@ -45,6 +45,7 @@ interface PageResp<T> {
 function adaptOfficialAfterSalesList(resp: OfficialAfterSalesListResp): OfficialSettlementRecord {
   return {
     id: String(resp.id),
+    workOrderId: resp.workOrderId,
     orderNo: resp.workOrderNo || '',
     customerName: resp.customerNameSnapshot || '',
     phone: resp.customerPhoneSnapshot || '',

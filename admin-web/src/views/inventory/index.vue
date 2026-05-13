@@ -203,8 +203,8 @@ import PageContainer from '@/components/PageContainer.vue';
 import {
   getInventoryList,
   getInventoryFlows,
-  submitInbound,
-  submitAdjust,
+  submitInbound as submitInboundApi,
+  submitAdjust as submitAdjustApi,
 } from '@/api/inventory';
 import type { InventoryQuery, InventoryRecord, InventoryLogRecord } from '@/types/inventory';
 
@@ -283,7 +283,7 @@ const submitInbound = async () => {
   }
   inboundDialog.submitting = true;
   try {
-    await submitInbound({
+    await submitInboundApi({
       partId: inboundDialog.partId,
       quantity: inboundDialog.form.quantity,
       unitCost: inboundDialog.form.unitCost || undefined,
@@ -334,7 +334,7 @@ const submitAdjust = async () => {
   }
   adjustDialog.submitting = true;
   try {
-    await submitAdjust({
+    await submitAdjustApi({
       partId: adjustDialog.partId,
       quantityDelta: adjustDialog.form.quantityDelta,
       reason: adjustDialog.form.reason,

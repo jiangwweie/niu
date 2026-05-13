@@ -1,5 +1,6 @@
 export interface OfficialSettlementRecord {
   id: string;
+  workOrderId: number;
   orderNo: string;
   customerName: string;
   phone: string;

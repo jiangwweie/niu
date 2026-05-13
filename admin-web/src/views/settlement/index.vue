@@ -298,9 +298,8 @@ const viewDrawer = reactive({
 });
 
 const handleView = async (row: OfficialSettlementRecord) => {
-  const workOrderId = Number(row.id);
   try {
-    const detail = await getOfficialAfterSalesDetail(workOrderId);
+    const detail = await getOfficialAfterSalesDetail(row.workOrderId);
     viewDrawer.detail = detail;
     viewDrawer.visible = true;
   } catch {
@@ -317,7 +316,7 @@ const orderNoDialog = reactive({
 });
 
 const handleRecordOrderNo = (row: OfficialSettlementRecord) => {
-  orderNoDialog.workOrderId = Number(row.id);
+  orderNoDialog.workOrderId = row.workOrderId;
   orderNoDialog.form.officialOrderNo = row.officialOrderNo || '';
   orderNoDialog.form.remark = '';
   orderNoDialog.visible = true;
@@ -353,7 +352,7 @@ const settleDialog = reactive({
 });
 
 const handleSettle = (row: OfficialSettlementRecord) => {
-  settleDialog.workOrderId = Number(row.id);
+  settleDialog.workOrderId = row.workOrderId;
   settleDialog.form.settlementAmount = 0;
   settleDialog.form.remark = '';
   settleDialog.visible = true;
@@ -389,7 +388,7 @@ const noSettleDialog = reactive({
 });
 
 const handleNoSettlementRequired = (row: OfficialSettlementRecord) => {
-  noSettleDialog.workOrderId = Number(row.id);
+  noSettleDialog.workOrderId = row.workOrderId;
   noSettleDialog.form.reason = '';
   noSettleDialog.form.remark = '';
   noSettleDialog.visible = true;

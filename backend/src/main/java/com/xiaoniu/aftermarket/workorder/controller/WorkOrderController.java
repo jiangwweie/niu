@@ -6,6 +6,7 @@ import com.xiaoniu.aftermarket.common.context.CurrentUserContext;
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
+import com.xiaoniu.aftermarket.common.util.DateParamParser;
 import com.xiaoniu.aftermarket.workorder.application.CancelWorkOrderApplicationService;
 import com.xiaoniu.aftermarket.workorder.application.SettleWorkOrderApplicationService;
 import com.xiaoniu.aftermarket.workorder.application.SubmitWorkOrderApplicationService;
@@ -22,7 +23,6 @@ import com.xiaoniu.aftermarket.workorder.dto.WorkOrderQueryResponse;
 import com.xiaoniu.aftermarket.workorder.service.WorkOrderService;
 import jakarta.validation.Valid;
 import java.time.LocalDateTime;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -52,12 +52,20 @@ public class WorkOrderController {
             @RequestParam(required = false) String vehicleFrameNo,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Boolean officialOnly,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startTime,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endTime,
+            @RequestParam(required = false) String startTime,
+            @RequestParam(required = false) String endTime,
             @RequestParam(required = false) Integer pageNo,
             @RequestParam(required = false) Integer pageSize) {
 
         CurrentUser user = requireCurrentUser();
+        LocalDateTime parsedStart;
+        LocalDateTime parsedEnd;
+        try {
+            parsedStart = DateParamParser.parseStartDateTime(startTime);
+            parsedEnd = DateParamParser.parseEndDateTime(endTime);
+        } catch (IllegalArgumentException e) {
+            return ApiResponse.failure(ErrorCode.COMMON_BAD_REQUEST, e.getMessage());
+        }
         WorkOrderQueryRequest request = new WorkOrderQueryRequest();
         request.setStoreId(user.storeId());
         request.setWorkOrderNo(workOrderNo);
@@ -66,8 +74,8 @@ public class WorkOrderController {
         request.setVehicleFrameNo(vehicleFrameNo);
         request.setStatus(status);
         request.setOfficialOnly(officialOnly);
-        request.setStartTime(startTime);
-        request.setEndTime(endTime);
+        request.setStartTime(parsedStart);
+        request.setEndTime(parsedEnd);
         request.setPageNo(pageNo);
         request.setPageSize(pageSize);
         return ApiResponse.success(workOrderService.pageQuery(request));
