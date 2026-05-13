@@ -1,6 +1,13 @@
 <template>
-  <PageContainer title="工单管理" description="查看维修工单、客户支付状态、官方售后标记与结算操作入口">
-    
+  <PageContainer title="工单管理" description="查看维修工单、客户支付状态与官方售后标记">
+    <el-alert
+      title="当前管理端仅支持工单查看。创建工单、记录支付/退款、提交/结算/取消等现场操作后续由员工小程序端承接。"
+      type="info"
+      show-icon
+      :closable="false"
+      style="margin-bottom: 20px;"
+    />
+
     <!-- 查询过滤区 -->
     <el-card shadow="never" class="search-card">
       <el-form :inline="true" :model="queryParams" class="search-form" size="default">
@@ -47,7 +54,6 @@
         <el-form-item class="search-actions">
           <el-button type="primary" @click="handleSearch" :loading="loading">查询</el-button>
           <el-button @click="handleReset">重置</el-button>
-          <el-button type="success" @click="handleNewOrder">新建工单</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -55,8 +61,8 @@
     <!-- 列表区 -->
     <el-card shadow="never" class="table-card">
       <el-alert
-        title="当前页面仅展示操作入口，是否允许结算、取消、退款，最终以后端校验为准。"
-        type="warning"
+        title="当前管理端仅支持工单查看。创建工单、记录支付/退款、提交/结算/取消等现场操作后续由员工小程序端承接。"
+        type="info"
         show-icon
         :closable="false"
         style="margin-bottom: 16px;"
@@ -102,13 +108,9 @@
           </template>
         </el-table-column>
         <el-table-column prop="createdAt" label="创建时间" width="160" />
-        <el-table-column label="操作" min-width="340" fixed="right">
+        <el-table-column label="操作" width="100" fixed="right" align="center">
           <template #default="{ row }">
             <el-button link type="primary" @click="handleView(row)">查看</el-button>
-            <el-button link type="success" @click="openPaymentDialog(row)">记录支付</el-button>
-            <el-button link type="warning" @click="openRefundDialog(row)">记录退款</el-button>
-            <el-button link type="primary" @click="handleSettle(row)">完成结算</el-button>
-            <el-button link type="danger" @click="handleCancel(row)">取消工单</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -199,81 +201,11 @@
       </template>
     </el-drawer>
 
-    <!-- 记录支付弹窗 -->
-    <el-dialog v-model="paymentDialog.visible" title="记录支付 (Mock)" width="500px">
-      <el-form :model="paymentDialog.form" label-width="100px" size="default">
-        <el-form-item label="工单编号">
-          <el-input v-model="paymentDialog.form.orderNo" readonly disabled />
-        </el-form-item>
-        <el-form-item label="支付金额">
-          <el-input-number v-model="paymentDialog.form.amount" :min="0" :precision="2" :step="10" />
-        </el-form-item>
-        <el-form-item label="支付方式">
-          <el-select v-model="paymentDialog.form.method" style="width: 100%">
-            <el-option label="微信支付" value="wechat" />
-            <el-option label="支付宝" value="alipay" />
-            <el-option label="现金" value="cash" />
-            <el-option label="POS刷卡" value="pos" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="支付时间">
-          <el-date-picker v-model="paymentDialog.form.time" type="datetime" style="width: 100%" />
-        </el-form-item>
-        <el-form-item label="收款人">
-          <el-input v-model="paymentDialog.form.payee" placeholder="请输入收款人" />
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="paymentDialog.form.remark" type="textarea" :rows="2" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="paymentDialog.visible = false">取消</el-button>
-        <el-button type="primary" @click="submitPayment">保存 mock</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 记录退款弹窗 -->
-    <el-dialog v-model="refundDialog.visible" title="记录退款 (Mock)" width="500px">
-      <el-form :model="refundDialog.form" label-width="100px" size="default">
-        <el-form-item label="工单编号">
-          <el-input v-model="refundDialog.form.orderNo" readonly disabled />
-        </el-form-item>
-        <el-form-item label="退款金额">
-          <el-input-number v-model="refundDialog.form.amount" :min="0" :precision="2" :step="10" />
-        </el-form-item>
-        <el-form-item label="退款方式">
-          <el-select v-model="refundDialog.form.method" style="width: 100%">
-            <el-option label="原路退回" value="original" />
-            <el-option label="微信转账" value="wechat" />
-            <el-option label="支付宝转账" value="alipay" />
-            <el-option label="现金退款" value="cash" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="退款时间">
-          <el-date-picker v-model="refundDialog.form.time" type="datetime" style="width: 100%" />
-        </el-form-item>
-        <el-form-item label="操作人">
-          <el-input v-model="refundDialog.form.operator" placeholder="请输入操作人姓名" />
-        </el-form-item>
-        <el-form-item label="退款原因">
-          <el-input v-model="refundDialog.form.reason" placeholder="请输入退款原因" />
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="refundDialog.form.remark" type="textarea" :rows="2" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="refundDialog.visible = false">取消</el-button>
-        <el-button type="primary" @click="submitRefund">保存 mock</el-button>
-      </template>
-    </el-dialog>
-
   </PageContainer>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
-import { ElMessage, ElMessageBox } from 'element-plus';
 import PageContainer from '@/components/PageContainer.vue';
 import StatusTag from '@/components/StatusTag.vue';
 import MoneyText from '@/components/MoneyText.vue';
@@ -362,10 +294,6 @@ const handleReset = () => {
   handleSearch();
 };
 
-const handleNewOrder = () => {
-  ElMessage.info('后续接入新建工单页面');
-};
-
 // 查看详情抽屉
 const drawerVisible = ref(false);
 const currentOrder = ref<WorkOrderRecord | null>(null);
@@ -378,81 +306,6 @@ const handleView = async (row: WorkOrderRecord) => {
   } catch {
     // request interceptor already shows error
   }
-};
-
-// 交互操作
-const paymentDialog = reactive({
-  visible: false,
-  form: {
-    orderNo: '',
-    amount: 0,
-    method: 'wechat',
-    time: new Date(),
-    payee: '门店收银员',
-    remark: ''
-  }
-});
-
-const openPaymentDialog = (row: WorkOrderRecord) => {
-  paymentDialog.form.orderNo = row.orderNo;
-  paymentDialog.form.amount = 0;
-  paymentDialog.form.method = 'wechat';
-  paymentDialog.form.time = new Date();
-  paymentDialog.form.remark = '';
-  paymentDialog.visible = true;
-};
-
-const submitPayment = () => {
-  ElMessage.success('mock 支付记录已填写，真实保存以后端接口为准。');
-  paymentDialog.visible = false;
-};
-
-const refundDialog = reactive({
-  visible: false,
-  form: {
-    orderNo: '',
-    amount: 0,
-    method: 'original',
-    time: new Date(),
-    operator: '店长',
-    reason: '',
-    remark: ''
-  }
-});
-
-const openRefundDialog = (row: WorkOrderRecord) => {
-  refundDialog.form.orderNo = row.orderNo;
-  refundDialog.form.amount = 0;
-  refundDialog.form.method = 'original';
-  refundDialog.form.time = new Date();
-  refundDialog.form.reason = '';
-  refundDialog.form.remark = '';
-  refundDialog.visible = true;
-};
-
-const submitRefund = () => {
-  ElMessage.success('mock 退款记录已填写，真实保存以后端接口为准。');
-  refundDialog.visible = false;
-};
-
-const handleSettle = (row: WorkOrderRecord) => {
-  ElMessageBox.confirm(
-    '这是 mock 操作。真实结算将由后端校验实收金额、工单状态、库存预占和幂等规则。',
-    '提示',
-    { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
-  ).then(() => {
-    ElMessage.success('mock: 已提交结算');
-  }).catch(() => {});
-};
-
-const handleCancel = (row: WorkOrderRecord) => {
-  ElMessageBox.confirm(
-    '这是 mock 操作。真实取消将由后端校验工单状态并释放预占库存。',
-    '警告',
-    { confirmButtonText: '确定', cancelButtonText: '取消', type: 'error' }
-  ).then(() => {
-    ElMessage.success('mock: 已下发取消指令');
-  }).catch(() => {});
 };
 
 onMounted(() => {

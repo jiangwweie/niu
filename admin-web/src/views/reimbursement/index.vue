@@ -1,6 +1,13 @@
 <template>
   <PageContainer title="报销台账" description="查看员工报销申请，老板确认后才计入运营成本">
     <el-alert
+      title="报销提交由员工小程序端完成；管理端后续负责报销确认/驳回。当前后端尚未实现。"
+      type="info"
+      show-icon
+      :closable="false"
+      style="margin-bottom: 10px;"
+    />
+    <el-alert
       title="只有已确认的报销记录才计入运营成本。待确认、已驳回、已取消的报销不计入成本。"
       type="warning"
       show-icon
@@ -34,7 +41,6 @@
         <el-form-item class="search-actions">
           <el-button type="primary" @click="handleSearch" :loading="loading">查询</el-button>
           <el-button @click="handleReset">重置</el-button>
-          <el-button type="success" @click="openAddDialog">新增报销</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -42,7 +48,7 @@
     <!-- 列表区 -->
     <el-card shadow="never" class="table-card">
       <el-alert
-        title="当前页面仅展示操作入口，真实报销状态流转、成本入账与权限校验以后端为准。"
+        title="管理端后续负责报销确认/驳回。当前后端尚未实现，相关操作暂不可用。"
         type="info"
         show-icon
         :closable="false"
@@ -95,9 +101,9 @@
         <el-table-column label="操作" width="220" fixed="right" align="center">
           <template #default="{ row }">
             <el-button link type="primary" @click="handleView(row)">查看</el-button>
-            <el-button v-if="row.status === 'PENDING'" link type="success" @click="openConfirmDialog(row)">确认</el-button>
-            <el-button v-if="row.status === 'PENDING'" link type="warning" @click="openRejectDialog(row)">驳回</el-button>
-            <el-button v-if="row.status === 'PENDING'" link type="danger" @click="handleCancel(row)">取消</el-button>
+            <el-button v-if="row.status === 'PENDING'" link type="success" disabled title="后端待实现">确认</el-button>
+            <el-button v-if="row.status === 'PENDING'" link type="warning" disabled title="后端待实现">驳回</el-button>
+            <el-button v-if="row.status === 'PENDING'" link type="danger" disabled title="后端待实现">取消</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -159,96 +165,12 @@
       </div>
     </el-drawer>
 
-    <!-- 新增报销弹窗 -->
-    <el-dialog v-model="addDialog.visible" title="新增报销 (Mock)" width="500px">
-      <el-form :model="addDialog.form" label-width="100px" size="default">
-        <el-form-item label="报销人" required>
-          <el-input v-model="addDialog.form.applicant" placeholder="请输入报销人姓名" />
-        </el-form-item>
-        <el-form-item label="用途" required>
-          <el-input v-model="addDialog.form.purpose" placeholder="请输入用途，如：采购宽带" />
-        </el-form-item>
-        <el-form-item label="申请金额" required>
-          <el-input-number v-model="addDialog.form.amount" :min="0" :precision="2" :step="10" />
-        </el-form-item>
-        <el-form-item label="提交时间">
-          <el-date-picker v-model="addDialog.form.createdAt" type="datetime" style="width: 100%" />
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="addDialog.form.remark" type="textarea" :rows="2" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="addDialog.visible = false">取消</el-button>
-        <el-button type="primary" @click="submitAdd">保存 mock</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 确认报销弹窗 -->
-    <el-dialog v-model="confirmDialog.visible" title="确认报销 (Mock)" width="500px">
-      <el-form :model="confirmDialog.form" label-width="100px" size="default">
-        <el-form-item label="报销编号">
-          <el-input v-model="confirmDialog.form.reimbursementNo" readonly disabled />
-        </el-form-item>
-        <el-form-item label="报销人">
-          <el-input v-model="confirmDialog.form.applicant" readonly disabled />
-        </el-form-item>
-        <el-form-item label="申请金额">
-          <el-input-number v-model="confirmDialog.form.amount" disabled :precision="2" />
-        </el-form-item>
-        <el-form-item label="确认金额" required>
-          <el-input-number v-model="confirmDialog.form.approvedAmount" :min="0" :precision="2" :step="10" />
-        </el-form-item>
-        <el-form-item label="确认人" required>
-          <el-input v-model="confirmDialog.form.confirmer" value="老板" />
-        </el-form-item>
-        <el-form-item label="确认时间">
-          <el-date-picker v-model="confirmDialog.form.confirmedAt" type="datetime" style="width: 100%" />
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="confirmDialog.form.remark" type="textarea" :rows="2" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="confirmDialog.visible = false">取消</el-button>
-        <el-button type="success" @click="submitConfirm">确认 mock</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 驳回报销弹窗 -->
-    <el-dialog v-model="rejectDialog.visible" title="驳回报销 (Mock)" width="500px">
-      <el-form :model="rejectDialog.form" label-width="100px" size="default">
-        <el-form-item label="报销编号">
-          <el-input v-model="rejectDialog.form.reimbursementNo" readonly disabled />
-        </el-form-item>
-        <el-form-item label="报销人">
-          <el-input v-model="rejectDialog.form.applicant" readonly disabled />
-        </el-form-item>
-        <el-form-item label="申请金额">
-          <el-input-number v-model="rejectDialog.form.amount" disabled :precision="2" />
-        </el-form-item>
-        <el-form-item label="驳回原因" required>
-          <el-input v-model="rejectDialog.form.rejectReason" type="textarea" :rows="2" placeholder="请输入驳回原因" />
-        </el-form-item>
-        <el-form-item label="处理人" required>
-          <el-input v-model="rejectDialog.form.processor" value="老板" />
-        </el-form-item>
-        <el-form-item label="处理时间">
-          <el-date-picker v-model="rejectDialog.form.processedAt" type="datetime" style="width: 100%" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="rejectDialog.visible = false">取消</el-button>
-        <el-button type="warning" @click="submitReject">保存驳回 mock</el-button>
-      </template>
-    </el-dialog>
-
   </PageContainer>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
-import { ElMessage, ElMessageBox } from 'element-plus';
+import { ElMessage } from 'element-plus';
 import PageContainer from '@/components/PageContainer.vue';
 import MoneyText from '@/components/MoneyText.vue';
 import { getReimbursementList } from '@/api/reimbursement';
@@ -327,113 +249,6 @@ const viewDrawer = reactive({
 const handleView = (row: ReimbursementRecord) => {
   viewDrawer.current = row;
   viewDrawer.visible = true;
-};
-
-// 新增
-const addDialog = reactive({
-  visible: false,
-  form: {
-    applicant: '',
-    purpose: '',
-    amount: 0,
-    createdAt: new Date(),
-    remark: ''
-  }
-});
-
-const openAddDialog = () => {
-  addDialog.form = {
-    applicant: '',
-    purpose: '',
-    amount: 0,
-    createdAt: new Date(),
-    remark: ''
-  };
-  addDialog.visible = true;
-};
-
-const submitAdd = () => {
-  ElMessage.success('mock 报销记录已填写，真实保存以后端接口为准。');
-  addDialog.visible = false;
-};
-
-// 确认
-const confirmDialog = reactive({
-  visible: false,
-  form: {
-    reimbursementNo: '',
-    applicant: '',
-    amount: 0,
-    approvedAmount: 0,
-    confirmer: '老板',
-    confirmedAt: new Date(),
-    remark: ''
-  }
-});
-
-const openConfirmDialog = (row: ReimbursementRecord) => {
-  confirmDialog.form = {
-    reimbursementNo: row.reimbursementNo,
-    applicant: row.applicant,
-    amount: row.amount,
-    approvedAmount: row.amount, // 默认和申请金额一致
-    confirmer: '老板',
-    confirmedAt: new Date(),
-    remark: ''
-  };
-  confirmDialog.visible = true;
-};
-
-const submitConfirm = () => {
-  ElMessage.success('mock 报销确认信息已填写。真实确认后，只有后端确认的 CONFIRMED 记录才会计入运营成本。');
-  confirmDialog.visible = false;
-};
-
-// 驳回
-const rejectDialog = reactive({
-  visible: false,
-  form: {
-    reimbursementNo: '',
-    applicant: '',
-    amount: 0,
-    rejectReason: '',
-    processor: '老板',
-    processedAt: new Date()
-  }
-});
-
-const openRejectDialog = (row: ReimbursementRecord) => {
-  rejectDialog.form = {
-    reimbursementNo: row.reimbursementNo,
-    applicant: row.applicant,
-    amount: row.amount,
-    rejectReason: '',
-    processor: '老板',
-    processedAt: new Date()
-  };
-  rejectDialog.visible = true;
-};
-
-const submitReject = () => {
-  if (!rejectDialog.form.rejectReason) {
-    ElMessage.warning('请输入驳回原因');
-    return;
-  }
-  ElMessage.success('mock 报销驳回信息已填写，真实状态变更以后端接口为准。');
-  rejectDialog.visible = false;
-};
-
-// 取消
-const handleCancel = (row: ReimbursementRecord) => {
-  ElMessageBox.prompt('请输入取消原因', '这是 mock 操作。真实取消将由后端校验状态、权限并记录处理原因。', {
-    confirmButtonText: '确定取消',
-    cancelButtonText: '关闭',
-    inputPattern: /.+/,
-    inputErrorMessage: '取消原因不能为空',
-    type: 'warning'
-  }).then(({ value }) => {
-    ElMessage.success(`mock 记录取消成功 (原因: ${value})`);
-  }).catch(() => {});
 };
 
 onMounted(() => {

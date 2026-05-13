@@ -1,7 +1,7 @@
 <template>
-  <PageContainer title="用户与权限" description="展示员工账号、角色与权限点 mock 信息，不实现真实认证与权限拦截">
+  <PageContainer title="用户与权限" description="展示员工账号、角色与权限点 mock 信息">
     <el-alert
-      title="当前页面仅展示用户、角色、权限点 mock UI。真实登录认证、JWT、权限拦截和后端授权校验后续单独实现。"
+      title="当前页面仅展示用户、角色、权限点 mock 数据。真实登录认证、JWT、权限拦截和后端授权校验后续单独实现。"
       type="warning"
       show-icon
       :closable="false"
@@ -33,7 +33,7 @@
             <el-form-item class="search-actions">
               <el-button type="primary" @click="handleUserSearch" :loading="userLoading">查询</el-button>
               <el-button @click="handleUserReset">重置</el-button>
-              <el-button type="success" @click="openAddUserDialog">新增用户</el-button>
+              <el-button type="success" disabled title="后端待实现">新增用户</el-button>
             </el-form-item>
           </el-form>
         </el-card>
@@ -60,9 +60,9 @@
             <el-table-column label="操作" width="260" fixed="right" align="center">
               <template #default="{ row }">
                 <el-button link type="primary" @click="handleViewUser(row)">查看</el-button>
-                <el-button link type="primary" @click="openEditUserDialog(row)">编辑</el-button>
-                <el-button link type="primary" @click="openAssignRoleDialog(row)">分配角色</el-button>
-                <el-button link :type="row.enabled ? 'danger' : 'success'" @click="toggleUserEnable(row)">
+                <el-button link type="primary" disabled title="后端待实现">编辑</el-button>
+                <el-button link type="primary" disabled title="后端待实现">分配角色</el-button>
+                <el-button link :type="row.enabled ? 'danger' : 'success'" disabled title="后端待实现">
                   {{ row.enabled ? '停用' : '启用' }}
                 </el-button>
               </template>
@@ -100,8 +100,8 @@
             </el-table-column>
             <el-table-column label="操作" width="180" fixed="right" align="center">
               <template #default="{ row }">
-                <el-button link type="primary" @click="handleMockInfo('查看详情')">查看</el-button>
-                <el-button link type="primary" @click="handleMockInfo('配置权限点')">配置权限</el-button>
+                <el-button link type="primary" disabled title="后端待实现">查看</el-button>
+                <el-button link type="primary" disabled title="后端待实现">配置权限</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -166,66 +166,12 @@
       </div>
     </el-drawer>
 
-    <!-- 用户编辑弹窗 -->
-    <el-dialog v-model="editUserDialog.visible" :title="editUserDialog.isEdit ? '编辑用户 (Mock)' : '新增用户 (Mock)'" width="500px">
-      <el-form :model="editUserDialog.form" label-width="100px" size="default">
-        <el-form-item label="姓名" required>
-          <el-input v-model="editUserDialog.form.name" placeholder="请输入姓名" />
-        </el-form-item>
-        <el-form-item label="手机号" required>
-          <el-input v-model="editUserDialog.form.phone" placeholder="请输入手机号" />
-        </el-form-item>
-        <el-form-item label="当前门店" required>
-          <el-select v-model="editUserDialog.form.store" style="width: 100%">
-            <el-option label="天河总店" value="天河总店" />
-            <el-option label="岗顶分店" value="岗顶分店" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="角色" required>
-          <el-select v-model="editUserDialog.form.roleCode" style="width: 100%">
-            <el-option v-for="role in roleList" :key="role.roleCode" :label="role.roleName" :value="role.roleCode" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-switch v-model="editUserDialog.form.enabled" active-text="启用" inactive-text="停用" />
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="editUserDialog.form.remark" type="textarea" :rows="2" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="editUserDialog.visible = false">取消</el-button>
-        <el-button type="primary" @click="submitEditUser">保存 mock</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 分配角色弹窗 -->
-    <el-dialog v-model="assignDialog.visible" title="分配角色 (Mock)" width="400px">
-      <el-form :model="assignDialog.form" label-width="100px" size="default">
-        <el-form-item label="用户姓名">
-          <el-input v-model="assignDialog.form.name" disabled />
-        </el-form-item>
-        <el-form-item label="当前角色">
-          <el-input v-model="assignDialog.form.currentRole" disabled />
-        </el-form-item>
-        <el-form-item label="新角色" required>
-          <el-select v-model="assignDialog.form.newRoleCode" style="width: 100%">
-            <el-option v-for="role in roleList" :key="role.roleCode" :label="role.roleName" :value="role.roleCode" />
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="assignDialog.visible = false">取消</el-button>
-        <el-button type="primary" @click="submitAssignRole">保存 mock</el-button>
-      </template>
-    </el-dialog>
-
   </PageContainer>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
-import { ElMessage, ElMessageBox } from 'element-plus';
+import { ElMessage } from 'element-plus';
 import PageContainer from '@/components/PageContainer.vue';
 import { getUserList, getRoleList, getPermissionList } from '@/api/userPermission';
 import type { SystemUser, RoleInfo, PermissionNode, UserQuery } from '@/types/userPermission';
@@ -296,20 +242,6 @@ const handleUserReset = () => {
   handleUserSearch();
 };
 
-const toggleUserEnable = (row: SystemUser) => {
-  const action = row.enabled ? '停用' : '启用';
-  ElMessageBox.confirm(`确定要${action}该用户吗？这是 mock 操作。`, '提示', {
-    type: 'warning'
-  }).then(() => {
-    ElMessage.success(`mock 用户已${action}`);
-    row.enabled = !row.enabled;
-  }).catch(() => {});
-};
-
-const handleMockInfo = (action: string) => {
-  ElMessage.info(`mock 操作: ${action}`);
-};
-
 const viewDrawer = reactive({
   visible: false,
   current: null as SystemUser | null
@@ -332,75 +264,6 @@ const getUserPermissions = (roleCode: string) => {
 const handleViewUser = (row: SystemUser) => {
   viewDrawer.current = row;
   viewDrawer.visible = true;
-};
-
-// 新增/编辑用户
-const editUserDialog = reactive({
-  visible: false,
-  isEdit: false,
-  form: {
-    name: '',
-    phone: '',
-    store: '天河总店',
-    roleCode: '',
-    enabled: true,
-    remark: ''
-  }
-});
-
-const openAddUserDialog = () => {
-  editUserDialog.isEdit = false;
-  editUserDialog.form = {
-    name: '',
-    phone: '',
-    store: '天河总店',
-    roleCode: '',
-    enabled: true,
-    remark: ''
-  };
-  editUserDialog.visible = true;
-};
-
-const openEditUserDialog = (row: SystemUser) => {
-  editUserDialog.isEdit = true;
-  editUserDialog.form = {
-    name: row.name,
-    phone: row.phone,
-    store: row.store,
-    roleCode: row.roleCode,
-    enabled: row.enabled,
-    remark: row.remark || ''
-  };
-  editUserDialog.visible = true;
-};
-
-const submitEditUser = () => {
-  ElMessage.success('mock 用户信息已填写，真实保存以后端接口为准。');
-  editUserDialog.visible = false;
-};
-
-// 分配角色
-const assignDialog = reactive({
-  visible: false,
-  form: {
-    name: '',
-    currentRole: '',
-    newRoleCode: ''
-  }
-});
-
-const openAssignRoleDialog = (row: SystemUser) => {
-  assignDialog.form = {
-    name: row.name,
-    currentRole: row.roleName,
-    newRoleCode: row.roleCode
-  };
-  assignDialog.visible = true;
-};
-
-const submitAssignRole = () => {
-  ElMessage.success('mock 角色分配已填写，真实权限变更以后端接口为准。');
-  assignDialog.visible = false;
 };
 
 onMounted(() => {

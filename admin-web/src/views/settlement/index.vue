@@ -1,6 +1,12 @@
 <template>
-  <PageContainer title="官方售后结算" description="手动维护官方售后订单结算信息，官方结算金额与客户支付金额分开统计">
-    
+  <PageContainer title="官方售后结算" description="查看官方售后订单结算信息，官方结算金额与客户支付金额分开统计">
+    <el-alert
+      title="官方售后结算是管理端功能，后续将接入真实后端 API。当前页面仍为 mock 展示。"
+      type="info"
+      show-icon
+      :closable="false"
+      style="margin-bottom: 10px;"
+    />
     <el-alert
       title="官方结算金额不是客户支付金额。客户支付记录与官方售后结算必须分开统计。"
       type="warning"
@@ -94,8 +100,8 @@
         <el-table-column label="操作" width="200" fixed="right" align="center">
           <template #default="{ row }">
             <el-button link type="primary" @click="handleView(row)">查看</el-button>
-            <el-button link type="primary" @click="openEditDialog(row)">录入结算</el-button>
-            <el-button v-if="row.settlementStatus !== 'SETTLED' && row.settlementStatus !== 'NOT_REQUIRED'" link type="success" @click="handleMarkSettled(row)">标记已结算</el-button>
+            <el-button link type="primary" disabled title="后续接入">录入结算</el-button>
+            <el-button v-if="row.settlementStatus !== 'SETTLED' && row.settlementStatus !== 'NOT_REQUIRED'" link type="success" disabled title="后续接入">标记已结算</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -161,45 +167,12 @@
       </div>
     </el-drawer>
 
-    <!-- 录入结算弹窗 -->
-    <el-dialog v-model="editDialog.visible" title="录入/编辑官方结算 (Mock)" width="500px">
-      <el-form :model="editDialog.form" label-width="120px" size="default">
-        <el-form-item label="工单编号">
-          <el-input v-model="editDialog.form.orderNo" readonly disabled />
-        </el-form-item>
-        <el-form-item label="官方订单号">
-          <el-input v-model="editDialog.form.officialOrderNo" placeholder="请输入官方订单号" />
-        </el-form-item>
-        <el-form-item label="官方结算金额">
-          <el-input-number v-model="editDialog.form.settlementAmount" :min="0" :precision="2" :step="10" />
-        </el-form-item>
-        <el-form-item label="官方结算状态">
-          <el-select v-model="editDialog.form.settlementStatus" style="width: 100%">
-            <el-option label="未录入" value="NOT_RECORDED" />
-            <el-option label="待结算" value="PENDING" />
-            <el-option label="已结算" value="SETTLED" />
-            <el-option label="无需结算" value="NOT_REQUIRED" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="官方结算时间">
-          <el-date-picker v-model="editDialog.form.settlementTime" type="datetime" style="width: 100%" />
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="editDialog.form.remark" type="textarea" :rows="2" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="editDialog.visible = false">取消</el-button>
-        <el-button type="primary" @click="submitEdit">保存 mock</el-button>
-      </template>
-    </el-dialog>
-
   </PageContainer>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
-import { ElMessage, ElMessageBox } from 'element-plus';
+import { ElMessage } from 'element-plus';
 import PageContainer from '@/components/PageContainer.vue';
 import MoneyText from '@/components/MoneyText.vue';
 import StatusTag from '@/components/StatusTag.vue';
@@ -291,51 +264,6 @@ const viewDrawer = reactive({
 const handleView = (row: OfficialSettlementRecord) => {
   viewDrawer.current = row;
   viewDrawer.visible = true;
-};
-
-// 弹窗
-const editDialog = reactive({
-  visible: false,
-  form: {
-    orderNo: '',
-    officialOrderNo: '',
-    settlementAmount: 0 as number | undefined,
-    settlementStatus: 'PENDING',
-    settlementTime: null as any,
-    remark: ''
-  }
-});
-
-const openEditDialog = (row: OfficialSettlementRecord) => {
-  editDialog.form = {
-    orderNo: row.orderNo,
-    officialOrderNo: row.officialOrderNo || '',
-    settlementAmount: row.settlementAmount,
-    settlementStatus: row.settlementStatus,
-    settlementTime: row.settlementTime ? new Date(row.settlementTime) : null,
-    remark: row.remark || ''
-  };
-  editDialog.visible = true;
-};
-
-const submitEdit = () => {
-  ElMessage.success('mock 官方结算信息已填写，真实保存以后端接口为准。');
-  editDialog.visible = false;
-};
-
-// 标记已结算
-const handleMarkSettled = (row: OfficialSettlementRecord) => {
-  ElMessageBox.confirm(
-    '这是 mock 操作。真实官方结算状态变更将由后端保存，且不会改变客户支付记录。确定继续吗？',
-    '提示',
-    {
-      confirmButtonText: '确定标记',
-      cancelButtonText: '取消',
-      type: 'warning'
-    }
-  ).then(() => {
-    ElMessage.success('mock 标记成功');
-  }).catch(() => {});
 };
 
 onMounted(() => {

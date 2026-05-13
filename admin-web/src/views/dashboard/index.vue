@@ -1,5 +1,12 @@
 <template>
   <PageContainer title="Dashboard 首页" description="门店今日经营概览">
+    <el-alert
+      title="当前 Dashboard 为 mock 展示，真实统计数据 API 尚未实现。"
+      type="info"
+      show-icon
+      :closable="false"
+      style="margin-bottom: 20px;"
+    />
     <div v-if="loading" class="loading-state">
       <el-icon class="is-loading"><Loading /></el-icon> 加载中...
     </div>

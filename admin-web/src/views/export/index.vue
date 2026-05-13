@@ -1,6 +1,13 @@
 <template>
   <PageContainer title="Excel 导出中心" description="集中展示工单、库存、财务、报销等数据导出入口，仅做 mock UI">
     <el-alert
+      title="Excel 导出后端尚未实现，当前页面仅为占位展示。"
+      type="info"
+      show-icon
+      :closable="false"
+      style="margin-bottom: 10px;"
+    />
+    <el-alert
       title="当前页面仅展示 Excel 导出中心 mock UI。真实导出将由后端根据权限、查询条件和业务明细生成文件。"
       type="warning"
       show-icon
@@ -37,7 +44,7 @@
               </div>
             </div>
             <div class="card-actions">
-              <el-button type="primary" size="small" @click="openCreateTaskDialog(type)">创建 mock 导出任务</el-button>
+              <el-button type="primary" size="small" disabled title="后续接入">创建导出任务</el-button>
             </div>
           </el-card>
         </el-col>
@@ -68,7 +75,7 @@
         <el-form-item class="search-actions">
           <el-button type="primary" @click="handleSearch" :loading="loading">查询</el-button>
           <el-button @click="handleReset">重置</el-button>
-          <el-button type="success" @click="handleMockExportAction('手动创建导出任务')">创建 mock 导出任务</el-button>
+          <el-button type="success" disabled title="后续接入">创建导出任务</el-button>
         </el-form-item>
       </el-form>
 
@@ -94,19 +101,20 @@
         <el-table-column label="操作" width="220" fixed="right" align="center">
           <template #default="{ row }">
             <el-button link type="primary" @click="handleViewDetail(row)">查看</el-button>
-            <el-button 
-              link 
-              type="primary" 
-              :disabled="row.status !== 'SUCCESS'" 
-              @click="handleMockDownload(row)">
-              下载 mock，不生成真实文件
+            <el-button
+              link
+              type="primary"
+              disabled
+              title="后续接入">
+              下载
             </el-button>
-            <el-button 
-              link 
-              type="primary" 
-              v-if="row.status === 'FAILED'" 
-              @click="handleMockExportAction('重新导出 mock')">
-              重新导出 mock
+            <el-button
+              link
+              type="primary"
+              v-if="row.status === 'FAILED'"
+              disabled
+              title="后续接入">
+              重新导出
             </el-button>
           </template>
         </el-table-column>
@@ -125,77 +133,6 @@
         />
       </div>
     </el-card>
-
-    <!-- 新建导出任务 mock 弹窗 -->
-    <el-dialog v-model="createDialog.visible" title="新建导出任务 (Mock)" width="600px">
-      <el-form :model="createDialog.form" label-width="120px" size="default">
-        <el-form-item label="导出类型">
-          <el-input :value="createDialog.currentType?.name || ''" disabled />
-        </el-form-item>
-
-        <!-- 动态查询条件 -->
-        <el-form-item label="日期范围" required>
-          <el-date-picker
-            v-model="createDialog.form.dateRange"
-            type="daterange"
-            range-separator="至"
-            start-placeholder="开始日期"
-            end-placeholder="结束日期"
-            format="YYYY-MM-DD"
-            value-format="YYYY-MM-DD"
-            style="width: 100%"
-          />
-        </el-form-item>
-
-        <template v-if="createDialog.currentType?.code === 'WORK_ORDER_LIST'">
-          <el-form-item label="工单状态">
-            <el-select v-model="createDialog.form.workOrderStatus" placeholder="全部状态" clearable style="width: 100%">
-              <el-option label="待处理" value="PENDING" />
-              <el-option label="维修中" value="IN_PROGRESS" />
-              <el-option label="已完成" value="COMPLETED" />
-              <el-option label="已取消" value="CANCELLED" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="官方售后">
-            <el-select v-model="createDialog.form.isOfficial" placeholder="全部" clearable style="width: 100%">
-              <el-option label="是" :value="true" />
-              <el-option label="否" :value="false" />
-            </el-select>
-          </el-form-item>
-        </template>
-
-        <template v-if="createDialog.currentType?.code === 'REIMBURSEMENT_LEDGER'">
-          <el-form-item label="报销状态">
-            <el-select v-model="createDialog.form.reimbursementStatus" placeholder="全部" clearable style="width: 100%">
-              <el-option label="待确认" value="PENDING" />
-              <el-option label="已确认" value="CONFIRMED" />
-              <el-option label="已驳回" value="REJECTED" />
-            </el-select>
-          </el-form-item>
-        </template>
-
-        <template v-if="createDialog.currentType?.code === 'INVENTORY_REPORT'">
-          <el-form-item label="库存来源">
-            <el-select v-model="createDialog.form.inventorySource" placeholder="全部" clearable style="width: 100%">
-              <el-option label="官方商城供货" value="OFFICIAL" />
-              <el-option label="第三方采购" value="THIRD_PARTY" />
-            </el-select>
-          </el-form-item>
-        </template>
-        <!-- /动态查询条件 -->
-
-        <el-form-item label="操作人">
-          <el-input value="当前登录用户 (Mock)" disabled />
-        </el-form-item>
-        <el-form-item label="导出备注">
-          <el-input v-model="createDialog.form.remark" type="textarea" :rows="2" placeholder="请输入备注可选" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="createDialog.visible = false">取消</el-button>
-        <el-button type="primary" @click="submitCreateTask">保存 mock 导出</el-button>
-      </template>
-    </el-dialog>
 
     <!-- 查看任务详情抽屉 -->
     <el-drawer v-model="detailDrawer.visible" title="查看任务详情 (Mock)" size="500px">
@@ -233,7 +170,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
-import { ElMessage, ElMessageBox } from 'element-plus';
+import { ElMessage } from 'element-plus';
 import PageContainer from '@/components/PageContainer.vue';
 import { getExportTypes, getExportTasks } from '@/api/exportCenter';
 import type { ExportTask, ExportTypeInfo, ExportTaskQuery } from '@/types/exportCenter';
@@ -291,14 +228,6 @@ const handleReset = () => {
   handleSearch();
 };
 
-const handleMockDownload = (row: ExportTask) => {
-  ElMessage.success('这是 mock 下载操作，当前不生成真实 Excel 文件。');
-};
-
-const handleMockExportAction = (action: string) => {
-  ElMessage.info(`mock 操作: ${action}`);
-};
-
 const detailDrawer = reactive({
   visible: false,
   current: null as ExportTask | null
@@ -312,40 +241,6 @@ const handleViewDetail = (row: ExportTask) => {
 const getDataSourceDescForTask = (typeCode: string) => {
   const t = exportTypes.value.find(x => x.code === typeCode);
   return t ? t.dataSourceDesc : '后台生成数据';
-};
-
-const createDialog = reactive({
-  visible: false,
-  currentType: null as ExportTypeInfo | null,
-  form: {
-    dateRange: [],
-    workOrderStatus: '',
-    isOfficial: undefined,
-    reimbursementStatus: '',
-    inventorySource: '',
-    remark: ''
-  }
-});
-
-const openCreateTaskDialog = (type: ExportTypeInfo) => {
-  createDialog.currentType = type;
-  createDialog.form = {
-    dateRange: [],
-    workOrderStatus: '',
-    isOfficial: undefined,
-    reimbursementStatus: '',
-    inventorySource: '',
-    remark: ''
-  };
-  createDialog.visible = true;
-};
-
-const submitCreateTask = () => {
-  ElMessageBox.alert('mock 导出任务已创建。真实 Excel 文件将由后端生成。', '提示', {
-    confirmButtonText: '确定'
-  }).then(() => {
-    createDialog.visible = false;
-  });
 };
 
 onMounted(() => {

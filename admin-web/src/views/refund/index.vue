@@ -1,6 +1,13 @@
 <template>
   <PageContainer title="退款记录" description="查看客户退款明细，退款不得删除原支付记录">
-    
+    <el-alert
+      title="当前页面为退款记录查看模块，真实列表接口待接入。记录客户退款属于员工小程序端现场操作。"
+      type="info"
+      show-icon
+      :closable="false"
+      style="margin-bottom: 20px;"
+    />
+
     <!-- 查询过滤区 -->
     <el-card shadow="never" class="search-card">
       <el-form :inline="true" :model="queryParams" class="search-form" size="default">
@@ -30,7 +37,6 @@
         <el-form-item class="search-actions">
           <el-button type="primary" @click="handleSearch" :loading="loading">查询</el-button>
           <el-button @click="handleReset">重置</el-button>
-          <el-button type="warning" @click="openAddDialog">新增退款记录</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -109,52 +115,6 @@
         <el-descriptions-item label="创建时间">{{ viewDrawer.current.createdAt }}</el-descriptions-item>
       </el-descriptions>
     </el-drawer>
-
-    <!-- 新增退款记录 -->
-    <el-dialog v-model="addDialog.visible" title="新增退款记录 (Mock)" width="500px">
-      <el-alert
-        title="退款必须生成退款记录，不得删除原支付记录。退款金额是否允许、可退金额是多少，最终以后端校验为准。"
-        type="warning"
-        show-icon
-        :closable="false"
-        style="margin-bottom: 20px;"
-      />
-      <el-form :model="addDialog.form" label-width="100px" size="default">
-        <el-form-item label="工单编号" required>
-          <el-input v-model="addDialog.form.orderNo" placeholder="请输入关联工单编号" />
-        </el-form-item>
-        <el-form-item label="客户姓名" required>
-          <el-input v-model="addDialog.form.customerName" placeholder="请输入客户姓名" />
-        </el-form-item>
-        <el-form-item label="退款金额" required>
-          <el-input-number v-model="addDialog.form.amount" :min="0" :precision="2" :step="10" />
-        </el-form-item>
-        <el-form-item label="退款方式" required>
-          <el-select v-model="addDialog.form.method" style="width: 100%">
-            <el-option label="微信" value="wechat" />
-            <el-option label="支付宝" value="alipay" />
-            <el-option label="银联" value="unionpay" />
-            <el-option label="现金" value="cash" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="退款时间">
-          <el-date-picker v-model="addDialog.form.time" type="datetime" style="width: 100%" />
-        </el-form-item>
-        <el-form-item label="操作人">
-          <el-input v-model="addDialog.form.operator" placeholder="请输入操作人" />
-        </el-form-item>
-        <el-form-item label="退款原因" required>
-          <el-input v-model="addDialog.form.reason" placeholder="例如：定金退还、多收退回" />
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="addDialog.form.remark" type="textarea" :rows="2" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="addDialog.visible = false">取消</el-button>
-        <el-button type="primary" @click="submitAdd">保存 mock</el-button>
-      </template>
-    </el-dialog>
 
   </PageContainer>
 </template>
@@ -242,44 +202,6 @@ const viewDrawer = reactive({
 const handleView = (row: RefundRecord) => {
   viewDrawer.current = row;
   viewDrawer.visible = true;
-};
-
-// 新增
-const addDialog = reactive({
-  visible: false,
-  form: {
-    orderNo: '',
-    customerName: '',
-    amount: 0,
-    method: 'wechat',
-    time: new Date(),
-    operator: '店长',
-    reason: '',
-    remark: ''
-  }
-});
-
-const openAddDialog = () => {
-  addDialog.form = {
-    orderNo: '',
-    customerName: '',
-    amount: 0,
-    method: 'wechat',
-    time: new Date(),
-    operator: '店长',
-    reason: '',
-    remark: ''
-  };
-  addDialog.visible = true;
-};
-
-const submitAdd = () => {
-  if (!addDialog.form.reason) {
-    ElMessage.warning('退款原因不能为空');
-    return;
-  }
-  ElMessage.success('mock 退款记录已填写，真实保存以后端接口为准。');
-  addDialog.visible = false;
 };
 
 onMounted(() => {

@@ -1,6 +1,13 @@
 <template>
   <PageContainer title="支付记录" description="查看客户付款明细，支持多次付款与混合付款记录展示">
-    
+    <el-alert
+      title="当前页面为支付记录查看模块，真实列表接口待接入。记录客户支付属于员工小程序端现场操作。"
+      type="info"
+      show-icon
+      :closable="false"
+      style="margin-bottom: 20px;"
+    />
+
     <!-- 查询过滤区 -->
     <el-card shadow="never" class="search-card">
       <el-form :inline="true" :model="queryParams" class="search-form" size="default">
@@ -28,7 +35,6 @@
         <el-form-item class="search-actions">
           <el-button type="primary" @click="handleSearch" :loading="loading">查询</el-button>
           <el-button @click="handleReset">重置</el-button>
-          <el-button type="success" @click="openAddDialog">新增支付记录</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -103,49 +109,6 @@
         <el-descriptions-item label="创建时间">{{ viewDrawer.current.createdAt }}</el-descriptions-item>
       </el-descriptions>
     </el-drawer>
-
-    <!-- 新增支付记录 -->
-    <el-dialog v-model="addDialog.visible" title="新增支付记录 (Mock)" width="500px">
-      <el-alert
-        title="支付记录只表示客户付款明细，支付完成不等于工单已结算。工单是否允许结算，最终以后端校验为准。"
-        type="warning"
-        show-icon
-        :closable="false"
-        style="margin-bottom: 20px;"
-      />
-      <el-form :model="addDialog.form" label-width="100px" size="default">
-        <el-form-item label="工单编号" required>
-          <el-input v-model="addDialog.form.orderNo" placeholder="请输入关联工单编号" />
-        </el-form-item>
-        <el-form-item label="客户姓名" required>
-          <el-input v-model="addDialog.form.customerName" placeholder="请输入客户姓名" />
-        </el-form-item>
-        <el-form-item label="支付金额" required>
-          <el-input-number v-model="addDialog.form.amount" :min="0" :precision="2" :step="10" />
-        </el-form-item>
-        <el-form-item label="支付方式" required>
-          <el-select v-model="addDialog.form.method" style="width: 100%">
-            <el-option label="微信支付" value="wechat" />
-            <el-option label="支付宝支付" value="alipay" />
-            <el-option label="银联支付" value="unionpay" />
-            <el-option label="现金支付" value="cash" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="支付时间">
-          <el-date-picker v-model="addDialog.form.time" type="datetime" style="width: 100%" />
-        </el-form-item>
-        <el-form-item label="收款人">
-          <el-input v-model="addDialog.form.payee" placeholder="请输入收款人" />
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="addDialog.form.remark" type="textarea" :rows="2" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="addDialog.visible = false">取消</el-button>
-        <el-button type="primary" @click="submitAdd">保存 mock</el-button>
-      </template>
-    </el-dialog>
 
   </PageContainer>
 </template>
@@ -231,38 +194,6 @@ const viewDrawer = reactive({
 const handleView = (row: PaymentRecord) => {
   viewDrawer.current = row;
   viewDrawer.visible = true;
-};
-
-// 新增
-const addDialog = reactive({
-  visible: false,
-  form: {
-    orderNo: '',
-    customerName: '',
-    amount: 0,
-    method: 'wechat',
-    time: new Date(),
-    payee: '店长',
-    remark: ''
-  }
-});
-
-const openAddDialog = () => {
-  addDialog.form = {
-    orderNo: '',
-    customerName: '',
-    amount: 0,
-    method: 'wechat',
-    time: new Date(),
-    payee: '店长',
-    remark: ''
-  };
-  addDialog.visible = true;
-};
-
-const submitAdd = () => {
-  ElMessage.success('mock 支付记录已填写，真实保存以后端接口为准。');
-  addDialog.visible = false;
 };
 
 onMounted(() => {

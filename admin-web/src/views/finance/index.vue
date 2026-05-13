@@ -1,6 +1,13 @@
 <template>
   <PageContainer title="财务报表" description="查看客户支付收入、官方结算收入、成本与利润 mock 报表">
     <el-alert
+      title="当前财务报表为 mock 展示，真实统计 API 尚未实现。"
+      type="info"
+      show-icon
+      :closable="false"
+      style="margin-bottom: 10px;"
+    />
+    <el-alert
       title="财务报表应由后端从工单明细、支付记录、退款记录、官方结算记录、库存成本和已确认报销中汇总生成。当前页面仅展示 mock 数据，不执行真实财务计算。"
       type="warning"
       show-icon
@@ -38,15 +45,15 @@
         </el-form-item>
         <el-form-item class="shortcuts" v-if="queryParams.reportType !== 'CUSTOM'">
           快捷选择：
-          <el-button link type="primary" @click="setShortcut('today')">今日</el-button>
-          <el-button link type="primary" @click="setShortcut('month')">本月</el-button>
-          <el-button link type="primary" @click="setShortcut('7days')">近 7 天</el-button>
-          <el-button link type="primary" @click="setShortcut('30days')">近 30 天</el-button>
+          <el-button link type="primary" disabled title="后续接入">今日</el-button>
+          <el-button link type="primary" disabled title="后续接入">本月</el-button>
+          <el-button link type="primary" disabled title="后续接入">近 7 天</el-button>
+          <el-button link type="primary" disabled title="后续接入">近 30 天</el-button>
         </el-form-item>
         <el-form-item class="search-actions">
           <el-button type="primary" @click="handleSearch" :loading="loading">查询</el-button>
           <el-button @click="handleReset">重置</el-button>
-          <el-button type="success" @click="handleExport">导出 mock</el-button>
+          <el-button type="success" disabled title="后续接入">导出</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -280,14 +287,6 @@ const handleReset = () => {
   queryParams.reportType = 'DAILY';
   queryParams.dateRange = undefined;
   handleSearch();
-};
-
-const setShortcut = (type: string) => {
-  ElMessage.info(`mock 切换快捷日期: ${type}`);
-};
-
-const handleExport = () => {
-  ElMessage.info('mock 导出操作，真实 Excel 导出将在导出中心或后端接口中实现。');
 };
 
 onMounted(() => {

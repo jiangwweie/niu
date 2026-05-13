@@ -80,7 +80,7 @@
           </el-table-column>
           <el-table-column label="操作" width="160" fixed="right">
             <template #default="{ row }">
-              <el-button link type="primary" @click="handleView(row)">查看</el-button>
+              <el-button link type="primary" disabled title="详情弹窗后续接入">查看</el-button>
               <el-button link :type="row.status ? 'danger' : 'success'" @click="handleToggleStatus(row)">
                 {{ row.status ? '停用' : '启用' }}
               </el-button>
@@ -268,10 +268,6 @@ const submitEdit = async () => {
   } finally {
     editDialog.saving = false;
   }
-};
-
-const handleView = (row: PartViewRecord) => {
-  ElMessage.info('查看配件: ' + row.partName);
 };
 
 const handleToggleStatus = async (row: PartViewRecord) => {
