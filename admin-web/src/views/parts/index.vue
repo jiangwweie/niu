@@ -78,9 +78,10 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="160" fixed="right">
+          <el-table-column label="操作" width="200" fixed="right">
             <template #default="{ row }">
-              <el-button link type="primary" disabled title="详情弹窗后续接入">查看</el-button>
+              <el-button link type="primary" @click="handleView(row)">查看</el-button>
+              <el-button link type="primary" @click="openEditDialog(row)">编辑</el-button>
               <el-button link :type="row.status ? 'danger' : 'success'" @click="handleToggleStatus(row)">
                 {{ row.status ? '停用' : '启用' }}
               </el-button>
@@ -102,10 +103,37 @@
       </div>
     </el-card>
 
+    <!-- 配件详情弹窗 -->
+    <el-drawer v-model="detailDrawer.visible" title="配件详情" size="560px">
+      <div v-if="detailDrawer.data">
+        <el-descriptions :column="2" border size="small">
+          <el-descriptions-item label="配件编码">{{ detailDrawer.data.partCode }}</el-descriptions-item>
+          <el-descriptions-item label="配件名称">{{ detailDrawer.data.partName }}</el-descriptions-item>
+          <el-descriptions-item label="来源">
+            <el-tag :type="detailDrawer.data.source === 'official' ? 'danger' : 'info'" size="small">
+              {{ detailDrawer.data.source === 'official' ? '官方' : '第三方' }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="官方品号">{{ detailDrawer.data.officialCode || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="型号">{{ detailDrawer.data.model || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="分类">{{ detailDrawer.data.category || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="成本价"><MoneyText :amount="detailDrawer.data.costPrice" /></el-descriptions-item>
+          <el-descriptions-item label="条形码">{{ detailDrawer.data.barcode || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="库存位置" :span="2">{{ detailDrawer.data.location || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="状态">
+            <el-tag :type="detailDrawer.data.status ? 'success' : 'info'" size="small">
+              {{ detailDrawer.data.status ? '启用' : '停用' }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="备注">{{ detailDrawer.data.remark || '-' }}</el-descriptions-item>
+        </el-descriptions>
+      </div>
+    </el-drawer>
+
     <!-- 新增配件弹窗 -->
     <el-dialog v-model="editDialog.visible" :title="editDialog.isEdit ? '编辑配件' : '新增配件'" width="600px">
       <el-form :model="editDialog.form" label-width="100px" size="default">
-        <el-form-item label="配件来源">
+        <el-form-item label="配件来源" v-if="!editDialog.isEdit">
           <el-radio-group v-model="editDialog.form.source">
             <el-radio label="official">官方配件</el-radio>
             <el-radio label="third_party">第三方配件</el-radio>
@@ -117,11 +145,17 @@
         <el-form-item label="官方品号" v-if="editDialog.form.source === 'official'" required>
           <el-input v-model="editDialog.form.officialPartNo" placeholder="请输入官方品号" />
         </el-form-item>
-        <el-form-item label="型号" required>
+        <el-form-item label="型号">
           <el-input v-model="editDialog.form.model" placeholder="请输入适用型号，如 NQi, 通用" />
+        </el-form-item>
+        <el-form-item label="分类">
+          <el-input v-model="editDialog.form.categoryCode" placeholder="请输入分类编码" />
         </el-form-item>
         <el-form-item label="成本价">
           <el-input-number v-model="editDialog.form.referenceCostPrice" :min="0" :precision="2" :step="10" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="条形码">
+          <el-input v-model="editDialog.form.defaultBarcode" placeholder="请输入条形码" />
         </el-form-item>
         <el-form-item label="库存位置">
           <el-input v-model="editDialog.form.locationRemark" placeholder="例如：A区-01架-02层" />
@@ -146,8 +180,10 @@ import PageContainer from '@/components/PageContainer.vue';
 import MoneyText from '@/components/MoneyText.vue';
 import {
   getPartsList,
+  getPartDetail,
   createOfficialPart,
   createThirdPartyPart,
+  updatePart,
   enablePart,
   disablePart,
 } from '@/api/parts';
@@ -199,17 +235,36 @@ const handleReset = () => {
   handleSearch();
 };
 
-// 新增配件弹窗
+// 配件详情抽屉
+const detailDrawer = reactive({
+  visible: false,
+  data: null as PartViewRecord | null,
+});
+
+const handleView = async (row: PartViewRecord) => {
+  try {
+    const detail = await getPartDetail(row.id);
+    detailDrawer.data = detail;
+    detailDrawer.visible = true;
+  } catch {
+    ElMessage.error('加载配件详情失败');
+  }
+};
+
+// 新增 / 编辑配件弹窗
 const editDialog = reactive({
   visible: false,
   isEdit: false,
   saving: false,
+  editPartId: '',
   form: {
     source: 'official',
     partName: '',
     officialPartNo: '',
     model: '',
+    categoryCode: '',
     referenceCostPrice: 0,
+    defaultBarcode: '',
     locationRemark: '',
     remark: '',
   },
@@ -217,14 +272,34 @@ const editDialog = reactive({
 
 const openAddDialog = () => {
   editDialog.isEdit = false;
+  editDialog.editPartId = '';
   editDialog.form = {
     source: 'official',
     partName: '',
     officialPartNo: '',
     model: '',
+    categoryCode: '',
     referenceCostPrice: 0,
+    defaultBarcode: '',
     locationRemark: '',
     remark: '',
+  };
+  editDialog.visible = true;
+};
+
+const openEditDialog = (row: PartViewRecord) => {
+  editDialog.isEdit = true;
+  editDialog.editPartId = row.id;
+  editDialog.form = {
+    source: row.source,
+    partName: row.partName,
+    officialPartNo: row.officialCode,
+    model: row.model,
+    categoryCode: row.category,
+    referenceCostPrice: row.costPrice,
+    defaultBarcode: row.barcode,
+    locationRemark: row.location,
+    remark: row.remark,
   };
   editDialog.visible = true;
 };
@@ -237,30 +312,44 @@ const submitEdit = async () => {
 
   editDialog.saving = true;
   try {
-    if (editDialog.form.source === 'official') {
-      if (!editDialog.form.officialPartNo) {
-        ElMessage.warning('官方配件必须填写品号');
-        editDialog.saving = false;
-        return;
-      }
-      await createOfficialPart({
+    if (editDialog.isEdit) {
+      await updatePart(editDialog.editPartId, {
         partName: editDialog.form.partName,
-        officialPartNo: editDialog.form.officialPartNo,
+        officialPartNo: editDialog.form.officialPartNo || undefined,
         model: editDialog.form.model || undefined,
+        categoryCode: editDialog.form.categoryCode || undefined,
         referenceCostPrice: editDialog.form.referenceCostPrice || undefined,
+        defaultBarcode: editDialog.form.defaultBarcode || undefined,
         locationRemark: editDialog.form.locationRemark || undefined,
         remark: editDialog.form.remark || undefined,
       });
+      ElMessage.success('配件更新成功');
     } else {
-      await createThirdPartyPart({
-        partName: editDialog.form.partName,
-        model: editDialog.form.model || undefined,
-        referenceCostPrice: editDialog.form.referenceCostPrice || undefined,
-        locationRemark: editDialog.form.locationRemark || undefined,
-        remark: editDialog.form.remark || undefined,
-      });
+      if (editDialog.form.source === 'official') {
+        if (!editDialog.form.officialPartNo) {
+          ElMessage.warning('官方配件必须填写品号');
+          editDialog.saving = false;
+          return;
+        }
+        await createOfficialPart({
+          partName: editDialog.form.partName,
+          officialPartNo: editDialog.form.officialPartNo,
+          model: editDialog.form.model || undefined,
+          referenceCostPrice: editDialog.form.referenceCostPrice || undefined,
+          locationRemark: editDialog.form.locationRemark || undefined,
+          remark: editDialog.form.remark || undefined,
+        });
+      } else {
+        await createThirdPartyPart({
+          partName: editDialog.form.partName,
+          model: editDialog.form.model || undefined,
+          referenceCostPrice: editDialog.form.referenceCostPrice || undefined,
+          locationRemark: editDialog.form.locationRemark || undefined,
+          remark: editDialog.form.remark || undefined,
+        });
+      }
+      ElMessage.success('配件创建成功');
     }
-    ElMessage.success('配件创建成功');
     editDialog.visible = false;
     fetchData();
   } catch {

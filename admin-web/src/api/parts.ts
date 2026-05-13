@@ -168,3 +168,20 @@ export function enablePart(partId: string | number) {
 export function disablePart(partId: string | number) {
   return request.post(`/api/admin/parts/${partId}/disable`);
 }
+
+/**
+ * PUT /api/admin/parts/{partId}
+ * Updates a part. Returns void.
+ */
+export function updatePart(partId: string | number, body: {
+  partName: string;
+  officialPartNo?: string;
+  model?: string;
+  categoryCode?: string;
+  referenceCostPrice?: number;
+  defaultBarcode?: string;
+  locationRemark?: string;
+  remark?: string;
+}) {
+  return request.put(`/api/admin/parts/${partId}`, body);
+}
