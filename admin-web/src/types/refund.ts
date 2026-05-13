@@ -1,25 +1,24 @@
+/** View-compatible refund row (what the table template binds to) */
 export interface RefundRecord {
-  id: string;
+  id: number;
   refundNo: string;
-  orderNo: string;
+  workOrderNo: string;
   customerName: string;
   amount: number;
-  method: 'wechat' | 'alipay' | 'unionpay' | 'cash';
-  refundTime: string;
-  operator: string;
+  refundMethod: string;
+  refundedAt: string;
+  operatorId: number | null;
   reason: string;
   remark?: string;
-  createdAt: string;
 }
 
+/** View-layer query params for the refund list page */
 export interface RefundQuery {
-  refundNo?: string;
-  orderNo?: string;
+  workOrderNo?: string;
   customerName?: string;
-  method?: string;
-  dateRange?: [string, string];
-  operator?: string;
-  reason?: string;
+  refundMethod?: string;
+  startTime?: string;
+  endTime?: string;
   pageNo: number;
   pageSize: number;
 }

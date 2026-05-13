@@ -1,8 +1,8 @@
 <template>
   <PageContainer title="支付记录" description="查看客户付款明细，支持多次付款与混合付款记录展示">
     <el-alert
-      title="当前页面为支付记录查看模块，真实列表接口待接入。记录客户支付属于员工小程序端现场操作。"
-      type="info"
+      title="列表已接入真实后端，记录支付属于员工小程序端现场操作。"
+      type="success"
       show-icon
       :closable="false"
       style="margin-bottom: 20px;"
@@ -11,27 +11,32 @@
     <!-- 查询过滤区 -->
     <el-card shadow="never" class="search-card">
       <el-form :inline="true" :model="queryParams" class="search-form" size="default">
-        <el-form-item label="支付编号">
-          <el-input v-model="queryParams.paymentNo" placeholder="请输入" clearable />
-        </el-form-item>
         <el-form-item label="工单编号">
-          <el-input v-model="queryParams.orderNo" placeholder="请输入" clearable />
+          <el-input v-model="queryParams.workOrderNo" placeholder="请输入" clearable />
         </el-form-item>
         <el-form-item label="客户姓名">
           <el-input v-model="queryParams.customerName" placeholder="请输入" clearable />
         </el-form-item>
         <el-form-item label="支付方式">
-          <el-select v-model="queryParams.method" placeholder="全部" clearable style="width: 120px">
-            <el-option label="微信支付" value="wechat" />
-            <el-option label="支付宝支付" value="alipay" />
-            <el-option label="银联支付" value="unionpay" />
-            <el-option label="现金支付" value="cash" />
+          <el-select v-model="queryParams.paymentMethod" placeholder="全部" clearable style="width: 120px">
+            <el-option label="微信支付" value="WECHAT" />
+            <el-option label="支付宝支付" value="ALIPAY" />
+            <el-option label="银联支付" value="UNIONPAY" />
+            <el-option label="现金支付" value="CASH" />
           </el-select>
         </el-form-item>
-        <el-form-item label="收款人">
-          <el-input v-model="queryParams.payee" placeholder="请输入" clearable />
+        <el-form-item label="支付时间">
+          <el-date-picker
+            v-model="dateRange"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
+            style="width: 260px"
+          />
         </el-form-item>
-        <!-- 支付日期范围如果需要可以加上 date-picker -->
         <el-form-item class="search-actions">
           <el-button type="primary" @click="handleSearch" :loading="loading">查询</el-button>
           <el-button @click="handleReset">重置</el-button>
@@ -42,46 +47,45 @@
     <!-- 列表区 -->
     <el-card shadow="never" class="table-card">
       <div class="table-wrapper">
-<el-table
-        v-loading="loading"
-        :data="tableData"
-        style="width: 100%; min-width: 1000px"
-        border
-      >
-        <el-table-column prop="paymentNo" label="支付编号" width="160" />
-        <el-table-column prop="orderNo" label="工单编号" width="160" />
-        <el-table-column prop="customerName" label="客户姓名" width="110" />
-        <el-table-column label="支付金额" width="120" align="right">
-          <template #default="{ row }">
-            <MoneyText :amount="row.amount" />
-          </template>
-        </el-table-column>
-        <el-table-column label="支付方式" width="100" align="center">
-          <template #default="{ row }">
-            <el-tag :type="getMethodTag(row.method)" size="small">
-              {{ getMethodLabel(row.method) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="paymentTime" label="支付时间" width="160" />
-        <el-table-column prop="payee" label="收款人" width="100" />
-        <el-table-column label="备注" min-width="120" show-overflow-tooltip>
-          <template #default="{ row }">
-            {{ row.remark || '-' }}
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="90" fixed="right" align="center">
-          <template #default="{ row }">
-            <el-button link type="primary" @click="handleView(row)">查看</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-</div>
+        <el-table
+          v-loading="loading"
+          :data="tableData"
+          style="width: 100%; min-width: 1000px"
+          border
+        >
+          <el-table-column prop="paymentNo" label="支付编号" width="180" />
+          <el-table-column prop="workOrderNo" label="工单编号" width="160" />
+          <el-table-column prop="customerName" label="客户姓名" width="110" />
+          <el-table-column label="支付金额" width="120" align="right">
+            <template #default="{ row }">
+              <MoneyText :amount="row.amount" />
+            </template>
+          </el-table-column>
+          <el-table-column label="支付方式" width="100" align="center">
+            <template #default="{ row }">
+              <el-tag :type="getMethodTag(row.paymentMethod)" size="small">
+                {{ getMethodLabel(row.paymentMethod) }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="paidAt" label="支付时间" width="170" />
+          <el-table-column label="备注" min-width="120" show-overflow-tooltip>
+            <template #default="{ row }">
+              {{ row.remark || '-' }}
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="90" fixed="right" align="center">
+            <template #default="{ row }">
+              <el-button link type="primary" @click="handleView(row)">查看</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
 
       <div class="pagination-wrapper">
         <el-pagination
           v-model:current-page="queryParams.pageNo"
-          v-model:page-size="queryParams.pageNoSize"
+          v-model:page-size="queryParams.pageSize"
           :page-sizes="[10, 20, 50, 100]"
           layout="total, sizes, prev, pager, next, jumper"
           :total="total"
@@ -95,18 +99,18 @@
     <el-drawer v-model="viewDrawer.visible" title="支付详情" size="500px">
       <el-descriptions v-if="viewDrawer.current" :column="1" border>
         <el-descriptions-item label="支付编号">{{ viewDrawer.current.paymentNo }}</el-descriptions-item>
-        <el-descriptions-item label="工单编号">{{ viewDrawer.current.orderNo }}</el-descriptions-item>
+        <el-descriptions-item label="工单编号">{{ viewDrawer.current.workOrderNo }}</el-descriptions-item>
         <el-descriptions-item label="客户姓名">{{ viewDrawer.current.customerName }}</el-descriptions-item>
         <el-descriptions-item label="支付金额"><MoneyText :amount="viewDrawer.current.amount" /></el-descriptions-item>
         <el-descriptions-item label="支付方式">
-          <el-tag :type="getMethodTag(viewDrawer.current.method)" size="small">
-            {{ getMethodLabel(viewDrawer.current.method) }}
+          <el-tag :type="getMethodTag(viewDrawer.current.paymentMethod)" size="small">
+            {{ getMethodLabel(viewDrawer.current.paymentMethod) }}
           </el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="支付时间">{{ viewDrawer.current.paymentTime }}</el-descriptions-item>
-        <el-descriptions-item label="收款人">{{ viewDrawer.current.payee }}</el-descriptions-item>
+        <el-descriptions-item label="支付时间">{{ viewDrawer.current.paidAt }}</el-descriptions-item>
+        <el-descriptions-item label="操作人ID">{{ viewDrawer.current.operatorId ?? '-' }}</el-descriptions-item>
+        <el-descriptions-item label="收款人ID">{{ viewDrawer.current.receiverId ?? '-' }}</el-descriptions-item>
         <el-descriptions-item label="备注">{{ viewDrawer.current.remark || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="创建时间">{{ viewDrawer.current.createdAt }}</el-descriptions-item>
       </el-descriptions>
     </el-drawer>
 
@@ -121,14 +125,14 @@ import MoneyText from '@/components/MoneyText.vue';
 import { getPaymentList } from '@/api/payment';
 import type { PaymentQuery, PaymentRecord } from '@/types/payment';
 
+const dateRange = ref<[string, string] | null>(null);
+
 const queryParams = reactive<PaymentQuery>({
-  page: 1,
+  pageNo: 1,
   pageSize: 10,
-  paymentNo: '',
-  orderNo: '',
+  workOrderNo: '',
   customerName: '',
-  method: '',
-  payee: ''
+  paymentMethod: '',
 });
 
 const loading = ref(false);
@@ -138,13 +142,16 @@ const total = ref(0);
 const fetchData = async () => {
   loading.value = true;
   try {
-    const res = await getPaymentList(queryParams);
-    if (res.code === 'SUCCESS') {
-      tableData.value = res.data.records;
-      total.value = res.data.total;
+    const params: PaymentQuery = { ...queryParams };
+    if (dateRange.value && dateRange.value.length === 2) {
+      params.startTime = dateRange.value[0];
+      params.endTime = dateRange.value[1];
     }
-  } catch (error) {
-    ElMessage.error('加载失败');
+    const res = await getPaymentList(params);
+    tableData.value = res.records;
+    total.value = res.total;
+  } catch {
+    ElMessage.error('加载支付记录失败');
   } finally {
     loading.value = false;
   }
@@ -156,39 +163,36 @@ const handleSearch = () => {
 };
 
 const handleReset = () => {
-  queryParams.paymentNo = '';
-  queryParams.orderNo = '';
+  queryParams.workOrderNo = '';
   queryParams.customerName = '';
-  queryParams.method = '';
-  queryParams.payee = '';
+  queryParams.paymentMethod = '';
+  dateRange.value = null;
   handleSearch();
 };
 
-// 标签与文字映射
 const getMethodLabel = (method: string) => {
   const map: Record<string, string> = {
-    wechat: '微信',
-    alipay: '支付宝',
-    unionpay: '银联',
-    cash: '现金'
+    WECHAT: '微信',
+    ALIPAY: '支付宝',
+    UNIONPAY: '银联',
+    CASH: '现金',
   };
   return map[method] || method;
 };
 
 const getMethodTag = (method: string) => {
   const map: Record<string, string> = {
-    wechat: 'success',
-    alipay: 'primary',
-    unionpay: 'warning',
-    cash: 'info'
+    WECHAT: 'success',
+    ALIPAY: 'primary',
+    UNIONPAY: 'warning',
+    CASH: 'info',
   };
   return map[method] || '';
 };
 
-// 详情
 const viewDrawer = reactive({
   visible: false,
-  current: null as PaymentRecord | null
+  current: null as PaymentRecord | null,
 });
 
 const handleView = (row: PaymentRecord) => {

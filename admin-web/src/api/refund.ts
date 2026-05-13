@@ -1,38 +1,64 @@
-import type { BaseHttpResponse, PaginatedResult } from '@/types';
+import request from '@/utils/request';
 import type { RefundQuery, RefundRecord } from '@/types/refund';
-import { mockRefunds } from '@/mock/refund';
 
-export const getRefundList = (params: RefundQuery): Promise<BaseHttpResponse<PaginatedResult<RefundRecord>>> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      let filtered = [...mockRefunds];
-      
-      if (params.refundNo) filtered = filtered.filter(p => p.refundNo.includes(params.refundNo!));
-      if (params.orderNo) filtered = filtered.filter(p => p.orderNo.includes(params.orderNo!));
-      if (params.customerName) filtered = filtered.filter(p => p.customerName.includes(params.customerName!));
-      if (params.method !== undefined && params.method !== '') filtered = filtered.filter(p => p.method === params.method);
-      if (params.operator) filtered = filtered.filter(p => p.operator.includes(params.operator!));
-      if (params.reason) filtered = filtered.filter(p => p.reason.includes(params.reason!));
-      
-      if (params.dateRange && params.dateRange.length === 2) {
-        filtered = filtered.filter(p => p.refundTime >= params.dateRange![0] && p.refundTime <= params.dateRange![1]);
-      }
-      
-      const pageNo = params.pageNo || 1;
-      const pageSize = params.pageSize || 10;
-      const start = (pageNo - 1) * pageSize;
-      const pagedData = filtered.slice(start, start + pageSize);
+/** Backend RefundQueryResponse shape */
+interface RefundResp {
+  id: number;
+  workOrderId: number;
+  workOrderNo: string;
+  customerNameSnapshot: string;
+  refundNo: string;
+  amount: number;
+  refundMethod: string;
+  refundedAt: string;
+  operatorId: number | null;
+  reason: string | null;
+  remark: string | null;
+}
 
-      resolve({
-        code: 'SUCCESS',
-        message: 'success',
-        data: {
-          records: pagedData,
-          total: filtered.length,
-          pageNo,
-          pageSize
-        }
-      });
-    }, 300);
-  });
-};
+function adaptRefund(resp: RefundResp): RefundRecord {
+  return {
+    id: resp.id,
+    refundNo: resp.refundNo || '',
+    workOrderNo: resp.workOrderNo || '',
+    customerName: resp.customerNameSnapshot || '',
+    amount: resp.amount || 0,
+    refundMethod: resp.refundMethod || '',
+    refundedAt: resp.refundedAt || '',
+    operatorId: resp.operatorId,
+    reason: resp.reason || '',
+    remark: resp.remark || undefined,
+  };
+}
+
+interface PageResp<T> {
+  records: T[];
+  pageNo: number;
+  pageSize: number;
+  total: number;
+}
+
+/**
+ * GET /api/admin/refunds
+ * Fetches paginated refund list from the real backend.
+ */
+export async function getRefundList(params: RefundQuery): Promise<{
+  records: RefundRecord[];
+  total: number;
+}> {
+  const backendParams: Record<string, string | number> = {
+    pageNo: params.pageNo,
+    pageSize: params.pageSize,
+  };
+  if (params.workOrderNo) backendParams.workOrderNo = params.workOrderNo;
+  if (params.customerName) backendParams.customerName = params.customerName;
+  if (params.refundMethod) backendParams.refundMethod = params.refundMethod;
+  if (params.startTime) backendParams.startTime = params.startTime;
+  if (params.endTime) backendParams.endTime = params.endTime;
+
+  const page: PageResp<RefundResp> = await request.get('/api/admin/refunds', { params: backendParams });
+  return {
+    records: page.records.map(adaptRefund),
+    total: page.total,
+  };
+}

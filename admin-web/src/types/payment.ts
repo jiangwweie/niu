@@ -1,23 +1,24 @@
+/** View-compatible payment row (what the table template binds to) */
 export interface PaymentRecord {
-  id: string;
+  id: number;
   paymentNo: string;
-  orderNo: string;
+  workOrderNo: string;
   customerName: string;
   amount: number;
-  method: 'wechat' | 'alipay' | 'unionpay' | 'cash';
-  paymentTime: string;
-  payee: string;
+  paymentMethod: string;
+  paidAt: string;
+  receiverId: number | null;
+  operatorId: number | null;
   remark?: string;
-  createdAt: string;
 }
 
+/** View-layer query params for the payment list page */
 export interface PaymentQuery {
-  paymentNo?: string;
-  orderNo?: string;
+  workOrderNo?: string;
   customerName?: string;
-  method?: string;
-  dateRange?: [string, string];
-  payee?: string;
+  paymentMethod?: string;
+  startTime?: string;
+  endTime?: string;
   pageNo: number;
   pageSize: number;
 }
