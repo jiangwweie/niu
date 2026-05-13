@@ -56,7 +56,7 @@ public class PartController {
     public ApiResponse<PartDetailResponse> getPart(@PathVariable Long partId) {
         CurrentUser user = requireCurrentUser();
         PartEntity entity = partService.getById(partId);
-        if (!user.storeId().equals(entity.getStoreId())) {
+        if (entity == null || !user.storeId().equals(entity.getStoreId())) {
             throw new BusinessException(ErrorCode.PART_NOT_FOUND, "配件不存在");
         }
         PartQueryResponse qr = new PartQueryResponse();

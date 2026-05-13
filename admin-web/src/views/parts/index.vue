@@ -313,6 +313,11 @@ const submitEdit = async () => {
   editDialog.saving = true;
   try {
     if (editDialog.isEdit) {
+      if (editDialog.form.source === 'official' && !editDialog.form.officialPartNo) {
+        ElMessage.warning('官方配件必须填写品号');
+        editDialog.saving = false;
+        return;
+      }
       await updatePart(editDialog.editPartId, {
         partName: editDialog.form.partName,
         officialPartNo: editDialog.form.officialPartNo || undefined,
@@ -335,6 +340,7 @@ const submitEdit = async () => {
           partName: editDialog.form.partName,
           officialPartNo: editDialog.form.officialPartNo,
           model: editDialog.form.model || undefined,
+          categoryCode: editDialog.form.categoryCode || undefined,
           referenceCostPrice: editDialog.form.referenceCostPrice || undefined,
           locationRemark: editDialog.form.locationRemark || undefined,
           remark: editDialog.form.remark || undefined,
@@ -343,6 +349,7 @@ const submitEdit = async () => {
         await createThirdPartyPart({
           partName: editDialog.form.partName,
           model: editDialog.form.model || undefined,
+          categoryCode: editDialog.form.categoryCode || undefined,
           referenceCostPrice: editDialog.form.referenceCostPrice || undefined,
           locationRemark: editDialog.form.locationRemark || undefined,
           remark: editDialog.form.remark || undefined,
