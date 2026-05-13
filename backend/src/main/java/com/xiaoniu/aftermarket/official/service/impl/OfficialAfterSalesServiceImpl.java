@@ -345,6 +345,12 @@ public class OfficialAfterSalesServiceImpl implements OfficialAfterSalesService 
         response.setStoreId(entity.getStoreId());
         response.setWorkOrderId(entity.getWorkOrderId());
         response.setWorkOrderNo(workOrder == null ? null : workOrder.getWorkOrderNo());
+        response.setCustomerNameSnapshot(workOrder == null ? null : workOrder.getCustomerNameSnapshot());
+        response.setCustomerPhoneSnapshot(workOrder == null ? null : workOrder.getCustomerPhoneSnapshot());
+        response.setVehicleModelSnapshot(workOrder == null ? null : workOrder.getVehicleModelSnapshot());
+        response.setFrameNoSnapshot(workOrder == null ? null : workOrder.getFrameNoSnapshot());
+        response.setReceivedAmount(workOrder == null ? null : workOrder.getReceivedAmount());
+        response.setWorkOrderStatus(workOrder == null ? null : workOrder.getStatus());
         response.setOfficialOrderNo(entity.getOfficialOrderNo());
         response.setSettlementAmount(entity.getOfficialSettlementAmount());
         response.setSettlementStatus(entity.getOfficialSettlementStatus());

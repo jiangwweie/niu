@@ -1,11 +1,15 @@
 package com.xiaoniu.aftermarket.payment.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.common.enums.PaymentMethod;
 import com.xiaoniu.aftermarket.common.enums.WorkOrderStatus;
 import com.xiaoniu.aftermarket.common.exception.BusinessException;
+import com.xiaoniu.aftermarket.common.pagination.PageResponse;
 import com.xiaoniu.aftermarket.common.service.SequenceService;
 import com.xiaoniu.aftermarket.payment.dto.RecordRefundCommand;
+import com.xiaoniu.aftermarket.payment.dto.RefundQueryRequest;
+import com.xiaoniu.aftermarket.payment.dto.RefundQueryResponse;
 import com.xiaoniu.aftermarket.payment.dto.RefundRecordResponse;
 import com.xiaoniu.aftermarket.payment.entity.RefundRecordEntity;
 import com.xiaoniu.aftermarket.payment.mapper.RefundRecordMapper;
@@ -15,8 +19,11 @@ import com.xiaoniu.aftermarket.workorder.mapper.WorkOrderMapper;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -98,6 +105,52 @@ public class RefundServiceImpl implements RefundService {
                 .toList();
     }
 
+    @Override
+    public PageResponse<RefundQueryResponse> pageQuery(RefundQueryRequest request) {
+        if (request == null || request.getStoreId() == null) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST);
+        }
+
+        int pageNo = request.normalizedPageNo();
+        int pageSize = request.normalizedPageSize();
+        List<Long> filteredWorkOrderIds = findWorkOrderIds(request.getStoreId(),
+                request.getWorkOrderNo(), request.getCustomerName());
+        if (filteredWorkOrderIds != null && filteredWorkOrderIds.isEmpty()) {
+            return new PageResponse<>(List.of(), pageNo, pageSize, 0);
+        }
+
+        QueryWrapper<RefundRecordEntity> wrapper = new QueryWrapper<>();
+        wrapper.eq("store_id", request.getStoreId()).eq("deleted", 0);
+        if (filteredWorkOrderIds != null) {
+            wrapper.in("work_order_id", filteredWorkOrderIds);
+        }
+        if (StringUtils.hasText(request.getRefundMethod())) {
+            wrapper.eq("refund_method", request.getRefundMethod().trim());
+        }
+        if (request.getStartTime() != null) {
+            wrapper.ge("refunded_at", request.getStartTime());
+        }
+        if (request.getEndTime() != null) {
+            wrapper.le("refunded_at", request.getEndTime());
+        }
+
+        long total = refundRecordMapper.selectCount(wrapper);
+        if (total == 0) {
+            return new PageResponse<>(List.of(), pageNo, pageSize, 0);
+        }
+
+        wrapper.orderByDesc("refunded_at").orderByDesc("id")
+                .last("LIMIT " + pageSize + " OFFSET " + (long) (pageNo - 1) * pageSize);
+        List<RefundRecordEntity> entities = refundRecordMapper.selectList(wrapper);
+        Map<Long, WorkOrderEntity> workOrderMap = loadWorkOrders(entities.stream()
+                .map(RefundRecordEntity::getWorkOrderId)
+                .toList());
+        List<RefundQueryResponse> records = entities.stream()
+                .map(entity -> toRefundQueryResponse(entity, workOrderMap.get(entity.getWorkOrderId())))
+                .toList();
+        return new PageResponse<>(records, pageNo, pageSize, total);
+    }
+
     private void validateRefundCommand(RecordRefundCommand command) {
         if (command.getStoreId() == null || command.getWorkOrderId() == null) {
             throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST);
@@ -134,6 +187,47 @@ public class RefundServiceImpl implements RefundService {
         RefundRecordResponse response = new RefundRecordResponse();
         response.setId(entity.getId());
         response.setWorkOrderId(entity.getWorkOrderId());
+        response.setRefundNo(entity.getRefundNo());
+        response.setAmount(entity.getAmount());
+        response.setRefundMethod(entity.getRefundMethod());
+        response.setRefundedAt(entity.getRefundedAt());
+        response.setOperatorId(entity.getOperatorId());
+        response.setReason(entity.getReason());
+        response.setRemark(entity.getRemark());
+        return response;
+    }
+
+    private List<Long> findWorkOrderIds(Long storeId, String workOrderNo, String customerName) {
+        if (!StringUtils.hasText(workOrderNo) && !StringUtils.hasText(customerName)) {
+            return null;
+        }
+        QueryWrapper<WorkOrderEntity> wrapper = new QueryWrapper<>();
+        wrapper.eq("store_id", storeId).eq("deleted", 0);
+        if (StringUtils.hasText(workOrderNo)) {
+            wrapper.like("work_order_no", workOrderNo.trim());
+        }
+        if (StringUtils.hasText(customerName)) {
+            wrapper.like("customer_name_snapshot", customerName.trim());
+        }
+        return workOrderMapper.selectList(wrapper).stream()
+                .map(WorkOrderEntity::getId)
+                .toList();
+    }
+
+    private Map<Long, WorkOrderEntity> loadWorkOrders(List<Long> workOrderIds) {
+        if (workOrderIds == null || workOrderIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return workOrderMapper.selectBatchIds(workOrderIds).stream()
+                .collect(Collectors.toMap(WorkOrderEntity::getId, Function.identity(), (left, right) -> left));
+    }
+
+    private RefundQueryResponse toRefundQueryResponse(RefundRecordEntity entity, WorkOrderEntity workOrder) {
+        RefundQueryResponse response = new RefundQueryResponse();
+        response.setId(entity.getId());
+        response.setWorkOrderId(entity.getWorkOrderId());
+        response.setWorkOrderNo(workOrder == null ? null : workOrder.getWorkOrderNo());
+        response.setCustomerNameSnapshot(workOrder == null ? null : workOrder.getCustomerNameSnapshot());
         response.setRefundNo(entity.getRefundNo());
         response.setAmount(entity.getAmount());
         response.setRefundMethod(entity.getRefundMethod());

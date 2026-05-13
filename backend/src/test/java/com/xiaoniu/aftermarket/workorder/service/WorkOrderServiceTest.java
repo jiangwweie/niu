@@ -105,6 +105,7 @@ class WorkOrderServiceTest {
 
     @BeforeEach
     void cleanTables() {
+        jdbcTemplate.execute("DELETE FROM official_after_sales");
         jdbcTemplate.execute("DELETE FROM refund_record");
         jdbcTemplate.execute("DELETE FROM payment_record");
         jdbcTemplate.execute("DELETE FROM work_order_status_log");
@@ -477,6 +478,61 @@ class WorkOrderServiceTest {
         PageResponse<WorkOrderQueryResponse> response = workOrderService.pageQuery(request);
         assertEquals(2, response.total());
         assertEquals(2, response.records().size());
+    }
+
+    @Test
+    void pageQueryByCustomerPhoneAndVehicleFrameNo() {
+        Long firstId = workOrderService.createDraft(
+                buildCreateCommand("查询客户A", "13988880001", "小牛N1"));
+        Long secondId = workOrderService.createDraft(
+                buildCreateCommand("查询客户B", "13988880002", "小牛M1"));
+        updateFrameNo(firstId, "FRAME-QUERY-001");
+        updateFrameNo(secondId, "FRAME-QUERY-002");
+
+        WorkOrderQueryRequest phoneRequest = new WorkOrderQueryRequest();
+        phoneRequest.setStoreId(STORE_ID);
+        phoneRequest.setCustomerPhone("13988880001");
+        PageResponse<WorkOrderQueryResponse> phonePage = workOrderService.pageQuery(phoneRequest);
+        assertEquals(1, phonePage.total());
+        assertEquals(firstId, phonePage.records().get(0).getId());
+        assertEquals("13988880001", phonePage.records().get(0).getCustomerPhoneSnapshot());
+
+        WorkOrderQueryRequest frameRequest = new WorkOrderQueryRequest();
+        frameRequest.setStoreId(STORE_ID);
+        frameRequest.setVehicleFrameNo("FRAME-QUERY-002");
+        PageResponse<WorkOrderQueryResponse> framePage = workOrderService.pageQuery(frameRequest);
+        assertEquals(1, framePage.total());
+        assertEquals(secondId, framePage.records().get(0).getId());
+        assertEquals("FRAME-QUERY-002", framePage.records().get(0).getFrameNoSnapshot());
+    }
+
+    @Test
+    void pageQueryOfficialOnlyReturnsOfficialFields() {
+        Long normalId = workOrderService.createDraft(
+                buildCreateCommand("普通客户", "13988881111", "小牛N1"));
+        Long officialId = workOrderService.createDraft(
+                buildCreateCommand("官方客户", "13988882222", "小牛M1"));
+        updateFrameNo(normalId, "FRAME-NORMAL-001");
+        updateFrameNo(officialId, "FRAME-OFFICIAL-001");
+        jdbcTemplate.update("""
+                INSERT INTO official_after_sales
+                    (store_id, work_order_id, is_official_after_sales, official_order_no,
+                     official_settlement_status, created_by)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """, STORE_ID, officialId, 1, "OFF-WO-QUERY-001", "PENDING", OPERATOR_ID);
+
+        WorkOrderQueryRequest request = new WorkOrderQueryRequest();
+        request.setStoreId(STORE_ID);
+        request.setOfficialOnly(true);
+
+        PageResponse<WorkOrderQueryResponse> page = workOrderService.pageQuery(request);
+        assertEquals(1, page.total());
+        WorkOrderQueryResponse response = page.records().get(0);
+        assertEquals(officialId, response.getId());
+        assertEquals("13988882222", response.getCustomerPhoneSnapshot());
+        assertEquals("FRAME-OFFICIAL-001", response.getFrameNoSnapshot());
+        assertTrue(response.getOfficialAfterSales());
+        assertEquals("OFF-WO-QUERY-001", response.getOfficialOrderNo());
     }
 
     @Test
@@ -1757,6 +1813,12 @@ class WorkOrderServiceTest {
         assertEquals(before.getActualQty(), after.getActualQty());
         assertEquals(before.getAvailableQty(), after.getAvailableQty());
         assertEquals(before.getReservedQty(), after.getReservedQty());
+    }
+
+    private void updateFrameNo(Long workOrderId, String frameNo) {
+        WorkOrderEntity entity = workOrderMapper.selectById(workOrderId);
+        entity.setFrameNoSnapshot(frameNo);
+        workOrderMapper.updateById(entity);
     }
 
     private CreateDraftWorkOrderCommand buildCreateCommand(String name, String phone,

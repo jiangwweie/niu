@@ -14,6 +14,8 @@ import com.xiaoniu.aftermarket.inventory.entity.InventoryFlowEntity;
 import com.xiaoniu.aftermarket.inventory.entity.InventoryStockEntity;
 import com.xiaoniu.aftermarket.inventory.mapper.InventoryFlowMapper;
 import com.xiaoniu.aftermarket.inventory.mapper.InventoryStockMapper;
+import com.xiaoniu.aftermarket.official.entity.OfficialAfterSalesEntity;
+import com.xiaoniu.aftermarket.official.mapper.OfficialAfterSalesMapper;
 import com.xiaoniu.aftermarket.payment.service.impl.PaymentAmountService;
 import com.xiaoniu.aftermarket.part.entity.PartEntity;
 import com.xiaoniu.aftermarket.part.mapper.PartMapper;
@@ -61,6 +63,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     private final InventoryStockMapper inventoryStockMapper;
     private final InventoryFlowMapper inventoryFlowMapper;
     private final PaymentAmountService paymentAmountService;
+    private final OfficialAfterSalesMapper officialAfterSalesMapper;
 
     private static final List<String> SETTLE_ALLOWED_STATUSES = List.of(
             WorkOrderStatus.PENDING_ACCEPT.getCode(),
@@ -79,10 +82,11 @@ public class WorkOrderServiceImpl implements WorkOrderService {
                                 WorkOrderChargeItemMapper chargeItemMapper,
                                 WorkOrderStatusLogMapper statusLogMapper,
                                 SequenceService sequenceService,
-                                PartMapper partMapper,
-                                InventoryStockMapper inventoryStockMapper,
-                                InventoryFlowMapper inventoryFlowMapper,
-                                PaymentAmountService paymentAmountService) {
+	                                PartMapper partMapper,
+	                                InventoryStockMapper inventoryStockMapper,
+	                                InventoryFlowMapper inventoryFlowMapper,
+	                                PaymentAmountService paymentAmountService,
+	                                OfficialAfterSalesMapper officialAfterSalesMapper) {
         this.workOrderMapper = workOrderMapper;
         this.chargeItemMapper = chargeItemMapper;
         this.statusLogMapper = statusLogMapper;
@@ -91,6 +95,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         this.inventoryStockMapper = inventoryStockMapper;
         this.inventoryFlowMapper = inventoryFlowMapper;
         this.paymentAmountService = paymentAmountService;
+        this.officialAfterSalesMapper = officialAfterSalesMapper;
     }
 
     @Override
@@ -211,6 +216,14 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         int pn = request.getPageNo() == null ? 1 : request.getPageNo();
         int ps = request.getPageSize() == null ? 20 : request.getPageSize();
 
+        Map<Long, OfficialAfterSalesEntity> officialFilterMap = Map.of();
+        if (Boolean.TRUE.equals(request.getOfficialOnly())) {
+            officialFilterMap = loadOfficialAfterSalesByStore(request.getStoreId());
+            if (officialFilterMap.isEmpty()) {
+                return new PageResponse<>(List.of(), pn, ps, 0);
+            }
+        }
+
         QueryWrapper<WorkOrderEntity> wrapper = new QueryWrapper<>();
         wrapper.eq("store_id", request.getStoreId()).eq("deleted", 0);
 
@@ -223,6 +236,21 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         if (StringUtils.hasText(request.getCustomerName())) {
             wrapper.like("customer_name_snapshot", request.getCustomerName());
         }
+        if (StringUtils.hasText(request.getCustomerPhone())) {
+            wrapper.like("customer_phone_snapshot", request.getCustomerPhone().trim());
+        }
+        if (StringUtils.hasText(request.getVehicleFrameNo())) {
+            wrapper.like("frame_no_snapshot", request.getVehicleFrameNo().trim());
+        }
+        if (request.getStartTime() != null) {
+            wrapper.ge("created_at", request.getStartTime());
+        }
+        if (request.getEndTime() != null) {
+            wrapper.le("created_at", request.getEndTime());
+        }
+        if (Boolean.TRUE.equals(request.getOfficialOnly())) {
+            wrapper.in("id", officialFilterMap.keySet());
+        }
 
         long total = workOrderMapper.selectCount(wrapper);
 
@@ -232,7 +260,12 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         } else {
             wrapper.last("ORDER BY id DESC LIMIT " + ps + " OFFSET " + (long) (pn - 1) * ps);
             List<WorkOrderEntity> entities = workOrderMapper.selectList(wrapper);
-            records = entities.stream().map(this::toQueryResponse).toList();
+            Map<Long, OfficialAfterSalesEntity> officialMap = Boolean.TRUE.equals(request.getOfficialOnly())
+                    ? officialFilterMap
+                    : loadOfficialAfterSalesByWorkOrderIds(entities.stream().map(WorkOrderEntity::getId).toList());
+            records = entities.stream()
+                    .map(entity -> toQueryResponse(entity, officialMap.get(entity.getId())))
+                    .toList();
         }
 
         return new PageResponse<>(records, pn, ps, total);
@@ -883,12 +916,44 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         return response;
     }
 
-    private WorkOrderQueryResponse toQueryResponse(WorkOrderEntity entity) {
+    private Map<Long, OfficialAfterSalesEntity> loadOfficialAfterSalesByStore(Long storeId) {
+        QueryWrapper<OfficialAfterSalesEntity> wrapper = new QueryWrapper<>();
+        wrapper.eq("store_id", storeId)
+                .eq("deleted", 0)
+                .eq("is_official_after_sales", true);
+        return officialAfterSalesMapper.selectList(wrapper).stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        OfficialAfterSalesEntity::getWorkOrderId,
+                        java.util.function.Function.identity(),
+                        (left, right) -> left));
+    }
+
+    private Map<Long, OfficialAfterSalesEntity> loadOfficialAfterSalesByWorkOrderIds(List<Long> workOrderIds) {
+        if (workOrderIds == null || workOrderIds.isEmpty()) {
+            return Map.of();
+        }
+        QueryWrapper<OfficialAfterSalesEntity> wrapper = new QueryWrapper<>();
+        wrapper.in("work_order_id", workOrderIds)
+                .eq("deleted", 0)
+                .eq("is_official_after_sales", true);
+        return officialAfterSalesMapper.selectList(wrapper).stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        OfficialAfterSalesEntity::getWorkOrderId,
+                        java.util.function.Function.identity(),
+                        (left, right) -> left));
+    }
+
+    private WorkOrderQueryResponse toQueryResponse(WorkOrderEntity entity, OfficialAfterSalesEntity officialAfterSales) {
         WorkOrderQueryResponse response = new WorkOrderQueryResponse();
         response.setId(entity.getId());
         response.setWorkOrderNo(entity.getWorkOrderNo());
         response.setCustomerNameSnapshot(entity.getCustomerNameSnapshot());
+        response.setCustomerPhoneSnapshot(entity.getCustomerPhoneSnapshot());
         response.setVehicleModelSnapshot(entity.getVehicleModelSnapshot());
+        response.setFrameNoSnapshot(entity.getFrameNoSnapshot());
+        response.setOfficialAfterSales(officialAfterSales != null
+                && Boolean.TRUE.equals(officialAfterSales.getOfficialAfterSales()));
+        response.setOfficialOrderNo(officialAfterSales == null ? null : officialAfterSales.getOfficialOrderNo());
         response.setStatus(entity.getStatus());
         response.setReceivableAmount(entity.getReceivableAmount());
         response.setReceivedAmount(entity.getReceivedAmount());

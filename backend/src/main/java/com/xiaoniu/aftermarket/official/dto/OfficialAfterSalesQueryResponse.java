@@ -13,6 +13,12 @@ public class OfficialAfterSalesQueryResponse {
     private Long storeId;
     private Long workOrderId;
     private String workOrderNo;
+    private String customerNameSnapshot;
+    private String customerPhoneSnapshot;
+    private String vehicleModelSnapshot;
+    private String frameNoSnapshot;
+    private BigDecimal receivedAmount;
+    private String workOrderStatus;
     private String officialOrderNo;
     private BigDecimal settlementAmount;
     private String settlementStatus;

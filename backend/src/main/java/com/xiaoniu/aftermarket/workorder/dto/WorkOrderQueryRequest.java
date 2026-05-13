@@ -1,5 +1,6 @@
 package com.xiaoniu.aftermarket.workorder.dto;
 
+import java.time.LocalDateTime;
 import lombok.Data;
 
 @Data
@@ -9,6 +10,11 @@ public class WorkOrderQueryRequest {
     private String status;
     private String workOrderNo;
     private String customerName;
+    private String customerPhone;
+    private String vehicleFrameNo;
+    private Boolean officialOnly;
+    private LocalDateTime startTime;
+    private LocalDateTime endTime;
     private Integer pageNo;
     private Integer pageSize;
 }

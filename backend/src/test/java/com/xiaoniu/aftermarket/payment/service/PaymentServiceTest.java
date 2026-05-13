@@ -10,10 +10,15 @@ import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.common.enums.InventoryFlowType;
 import com.xiaoniu.aftermarket.common.enums.WorkOrderStatus;
 import com.xiaoniu.aftermarket.common.exception.BusinessException;
+import com.xiaoniu.aftermarket.common.pagination.PageResponse;
 import com.xiaoniu.aftermarket.inventory.mapper.InventoryFlowMapper;
+import com.xiaoniu.aftermarket.payment.dto.PaymentQueryRequest;
+import com.xiaoniu.aftermarket.payment.dto.PaymentQueryResponse;
 import com.xiaoniu.aftermarket.payment.dto.PaymentSummaryResponse;
 import com.xiaoniu.aftermarket.payment.dto.RecordPaymentCommand;
 import com.xiaoniu.aftermarket.payment.dto.RecordRefundCommand;
+import com.xiaoniu.aftermarket.payment.dto.RefundQueryRequest;
+import com.xiaoniu.aftermarket.payment.dto.RefundQueryResponse;
 import com.xiaoniu.aftermarket.payment.entity.PaymentRecordEntity;
 import com.xiaoniu.aftermarket.payment.entity.RefundRecordEntity;
 import com.xiaoniu.aftermarket.payment.mapper.PaymentRecordMapper;
@@ -426,6 +431,88 @@ class PaymentServiceTest {
         assertFalse(summary.getCanSettle());
     }
 
+    @Test
+    void pageQueryPaymentsGloballyAndByWorkOrderNoCustomerNameAndMethod() {
+        Long firstWorkOrderId = createSubmittedWorkOrder(new BigDecimal("300.00"));
+        renameWorkOrderCustomer(firstWorkOrderId, "支付查询客户A");
+        Long secondWorkOrderId = createSubmittedWorkOrder(new BigDecimal("200.00"));
+        renameWorkOrderCustomer(secondWorkOrderId, "支付查询客户B");
+
+        paymentService.recordPayment(buildPaymentCommand(firstWorkOrderId, new BigDecimal("120.00"), "WECHAT"));
+        paymentService.recordPayment(buildPaymentCommand(secondWorkOrderId, new BigDecimal("80.00"), "CASH"));
+
+        PaymentQueryRequest allRequest = new PaymentQueryRequest();
+        allRequest.setStoreId(STORE_ID);
+        PageResponse<PaymentQueryResponse> allPage = paymentService.pageQuery(allRequest);
+        assertEquals(2, allPage.total());
+        assertEquals(2, allPage.records().size());
+
+        PaymentQueryRequest workOrderNoRequest = new PaymentQueryRequest();
+        workOrderNoRequest.setStoreId(STORE_ID);
+        workOrderNoRequest.setWorkOrderNo(workOrderMapper.selectById(firstWorkOrderId).getWorkOrderNo());
+        PageResponse<PaymentQueryResponse> workOrderNoPage = paymentService.pageQuery(workOrderNoRequest);
+        assertEquals(1, workOrderNoPage.total());
+        assertEquals(firstWorkOrderId, workOrderNoPage.records().get(0).getWorkOrderId());
+        assertEquals("支付查询客户A", workOrderNoPage.records().get(0).getCustomerNameSnapshot());
+
+        PaymentQueryRequest customerNameRequest = new PaymentQueryRequest();
+        customerNameRequest.setStoreId(STORE_ID);
+        customerNameRequest.setCustomerName("客户B");
+        PageResponse<PaymentQueryResponse> customerNamePage = paymentService.pageQuery(customerNameRequest);
+        assertEquals(1, customerNamePage.total());
+        assertEquals(secondWorkOrderId, customerNamePage.records().get(0).getWorkOrderId());
+
+        PaymentQueryRequest methodRequest = new PaymentQueryRequest();
+        methodRequest.setStoreId(STORE_ID);
+        methodRequest.setPaymentMethod("WECHAT");
+        PageResponse<PaymentQueryResponse> methodPage = paymentService.pageQuery(methodRequest);
+        assertEquals(1, methodPage.total());
+        assertEquals(firstWorkOrderId, methodPage.records().get(0).getWorkOrderId());
+        assertEquals("WECHAT", methodPage.records().get(0).getPaymentMethod());
+    }
+
+    @Test
+    void pageQueryRefundsGloballyAndByWorkOrderNoCustomerNameAndMethod() {
+        Long firstWorkOrderId = createSubmittedWorkOrder(new BigDecimal("300.00"));
+        renameWorkOrderCustomer(firstWorkOrderId, "退款查询客户A");
+        Long secondWorkOrderId = createSubmittedWorkOrder(new BigDecimal("200.00"));
+        renameWorkOrderCustomer(secondWorkOrderId, "退款查询客户B");
+
+        paymentService.recordPayment(buildPaymentCommand(firstWorkOrderId, new BigDecimal("120.00"), "WECHAT"));
+        paymentService.recordPayment(buildPaymentCommand(secondWorkOrderId, new BigDecimal("80.00"), "CASH"));
+        refundService.recordRefund(buildRefundCommand(firstWorkOrderId, new BigDecimal("20.00"), "WECHAT", "退款A"));
+        refundService.recordRefund(buildRefundCommand(secondWorkOrderId, new BigDecimal("10.00"), "CASH", "退款B"));
+
+        RefundQueryRequest allRequest = new RefundQueryRequest();
+        allRequest.setStoreId(STORE_ID);
+        PageResponse<RefundQueryResponse> allPage = refundService.pageQuery(allRequest);
+        assertEquals(2, allPage.total());
+        assertEquals(2, allPage.records().size());
+
+        RefundQueryRequest workOrderNoRequest = new RefundQueryRequest();
+        workOrderNoRequest.setStoreId(STORE_ID);
+        workOrderNoRequest.setWorkOrderNo(workOrderMapper.selectById(firstWorkOrderId).getWorkOrderNo());
+        PageResponse<RefundQueryResponse> workOrderNoPage = refundService.pageQuery(workOrderNoRequest);
+        assertEquals(1, workOrderNoPage.total());
+        assertEquals(firstWorkOrderId, workOrderNoPage.records().get(0).getWorkOrderId());
+        assertEquals("退款查询客户A", workOrderNoPage.records().get(0).getCustomerNameSnapshot());
+
+        RefundQueryRequest customerNameRequest = new RefundQueryRequest();
+        customerNameRequest.setStoreId(STORE_ID);
+        customerNameRequest.setCustomerName("客户B");
+        PageResponse<RefundQueryResponse> customerNamePage = refundService.pageQuery(customerNameRequest);
+        assertEquals(1, customerNamePage.total());
+        assertEquals(secondWorkOrderId, customerNamePage.records().get(0).getWorkOrderId());
+
+        RefundQueryRequest methodRequest = new RefundQueryRequest();
+        methodRequest.setStoreId(STORE_ID);
+        methodRequest.setRefundMethod("WECHAT");
+        PageResponse<RefundQueryResponse> methodPage = refundService.pageQuery(methodRequest);
+        assertEquals(1, methodPage.total());
+        assertEquals(firstWorkOrderId, methodPage.records().get(0).getWorkOrderId());
+        assertEquals("WECHAT", methodPage.records().get(0).getRefundMethod());
+    }
+
     private Long createSubmittedWorkOrder(BigDecimal receivableAmount) {
         Long workOrderId = createDraftWorkOrder(receivableAmount);
         SubmitWorkOrderCommand command = new SubmitWorkOrderCommand();
@@ -482,6 +569,12 @@ class PaymentServiceTest {
         command.setReason(reason);
         command.setRemark("测试退款");
         return command;
+    }
+
+    private void renameWorkOrderCustomer(Long workOrderId, String customerName) {
+        WorkOrderEntity workOrder = workOrderMapper.selectById(workOrderId);
+        workOrder.setCustomerNameSnapshot(customerName);
+        workOrderMapper.updateById(workOrder);
     }
 
     private void assertPaymentFailureNoChange(Long workOrderId) {

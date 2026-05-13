@@ -372,8 +372,15 @@ class OfficialAfterSalesServiceTest {
 
         assertEquals(1, page.total());
         assertEquals(1, page.records().size());
-        assertEquals(settledWorkOrderId, page.records().get(0).getWorkOrderId());
-        assertEquals("OFF-PAGE-SETTLED", page.records().get(0).getOfficialOrderNo());
+        OfficialAfterSalesQueryResponse response = page.records().get(0);
+        assertEquals(settledWorkOrderId, response.getWorkOrderId());
+        assertEquals("OFF-PAGE-SETTLED", response.getOfficialOrderNo());
+        assertEquals("官方售后客户", response.getCustomerNameSnapshot());
+        assertEquals("13800000000", response.getCustomerPhoneSnapshot());
+        assertEquals("小牛N1", response.getVehicleModelSnapshot());
+        assertEquals("OFFICIAL-FRAME-001", response.getFrameNoSnapshot());
+        assertEquals(0, new BigDecimal("100.00").compareTo(response.getReceivedAmount()));
+        assertEquals(WorkOrderStatus.SETTLED.getCode(), response.getWorkOrderStatus());
     }
 
     private Long createDraftWorkOrder(Long storeId, BigDecimal amount) {
@@ -382,6 +389,7 @@ class OfficialAfterSalesServiceTest {
         create.setCustomerNameSnapshot("官方售后客户");
         create.setCustomerPhoneSnapshot("13800000000");
         create.setVehicleModelSnapshot("小牛N1");
+        create.setFrameNoSnapshot("OFFICIAL-FRAME-001");
         create.setRepairItem("官方售后测试");
         create.setOperatorId(OPERATOR_ID);
         Long workOrderId = workOrderService.createDraft(create);
