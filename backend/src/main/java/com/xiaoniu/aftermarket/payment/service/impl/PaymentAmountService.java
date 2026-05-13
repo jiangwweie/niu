@@ -10,7 +10,7 @@ import java.math.RoundingMode;
 import org.springframework.stereotype.Service;
 
 @Service
-class PaymentAmountService {
+public class PaymentAmountService {
 
     private final PaymentRecordMapper paymentRecordMapper;
     private final RefundRecordMapper refundRecordMapper;
@@ -24,21 +24,21 @@ class PaymentAmountService {
         this.workOrderMapper = workOrderMapper;
     }
 
-    BigDecimal sumPaidAmount(Long workOrderId) {
+    public BigDecimal sumPaidAmount(Long workOrderId) {
         return normalizeAmount(paymentRecordMapper.sumAmountByWorkOrderId(workOrderId));
     }
 
-    BigDecimal sumRefundAmount(Long workOrderId) {
+    public BigDecimal sumRefundAmount(Long workOrderId) {
         return normalizeAmount(refundRecordMapper.sumAmountByWorkOrderId(workOrderId));
     }
 
-    BigDecimal calculateReceivedAmount(Long workOrderId) {
+    public BigDecimal calculateReceivedAmount(Long workOrderId) {
         return sumPaidAmount(workOrderId)
                 .subtract(sumRefundAmount(workOrderId))
                 .setScale(2, RoundingMode.HALF_UP);
     }
 
-    BigDecimal updateReceivedAmount(Long workOrderId) {
+    public BigDecimal updateReceivedAmount(Long workOrderId) {
         BigDecimal receivedAmount = calculateReceivedAmount(workOrderId);
         UpdateWrapper<WorkOrderEntity> wrapper = new UpdateWrapper<>();
         wrapper.eq("id", workOrderId).set("received_amount", receivedAmount);
@@ -46,7 +46,7 @@ class PaymentAmountService {
         return receivedAmount;
     }
 
-    BigDecimal normalizeAmount(BigDecimal amount) {
+    public BigDecimal normalizeAmount(BigDecimal amount) {
         return (amount != null ? amount : BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
     }
 }
