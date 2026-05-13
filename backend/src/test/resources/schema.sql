@@ -326,3 +326,24 @@ CREATE TABLE IF NOT EXISTS refund_record (
     PRIMARY KEY (id),
     UNIQUE (refund_no)
 );
+
+CREATE TABLE IF NOT EXISTS official_after_sales (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    store_id BIGINT NOT NULL,
+    work_order_id BIGINT NOT NULL,
+    is_official_after_sales INTEGER NOT NULL DEFAULT 0,
+    official_order_no VARCHAR(128) NULL,
+    official_settlement_amount DECIMAL(18,2) NULL,
+    official_settlement_status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
+    official_settlement_time TIMESTAMP NULL,
+    official_settlement_operator_id BIGINT NULL,
+    official_settlement_remark VARCHAR(512) NULL,
+    remark VARCHAR(512) NULL,
+    created_by BIGINT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by BIGINT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (id),
+    UNIQUE (work_order_id)
+);

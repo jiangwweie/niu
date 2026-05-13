@@ -1,12 +1,19 @@
 package com.xiaoniu.aftermarket.official.application;
 
-import java.math.BigDecimal;
+import com.xiaoniu.aftermarket.official.dto.MarkOfficialSettledCommand;
+import com.xiaoniu.aftermarket.official.service.OfficialAfterSalesService;
 import org.springframework.stereotype.Service;
 
 @Service
 public class OfficialSettlementApplicationService {
 
-    public void execute(Long workOrderId, BigDecimal settlementAmount, Long operatorId, String remark) {
-        throw new UnsupportedOperationException("TODO: orchestrate official settlement in Phase 5");
+    private final OfficialAfterSalesService officialAfterSalesService;
+
+    public OfficialSettlementApplicationService(OfficialAfterSalesService officialAfterSalesService) {
+        this.officialAfterSalesService = officialAfterSalesService;
+    }
+
+    public void execute(MarkOfficialSettledCommand command) {
+        officialAfterSalesService.markOfficialSettled(command);
     }
 }

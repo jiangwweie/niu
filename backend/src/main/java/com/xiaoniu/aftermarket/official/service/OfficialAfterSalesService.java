@@ -1,11 +1,22 @@
 package com.xiaoniu.aftermarket.official.service;
 
-import com.xiaoniu.aftermarket.official.entity.OfficialAfterSalesEntity;
-import java.math.BigDecimal;
+import com.xiaoniu.aftermarket.common.pagination.PageResponse;
+import com.xiaoniu.aftermarket.official.dto.MarkNoSettlementRequiredCommand;
+import com.xiaoniu.aftermarket.official.dto.MarkOfficialSettledCommand;
+import com.xiaoniu.aftermarket.official.dto.OfficialAfterSalesQueryRequest;
+import com.xiaoniu.aftermarket.official.dto.OfficialAfterSalesQueryResponse;
+import com.xiaoniu.aftermarket.official.dto.OfficialAfterSalesResponse;
+import com.xiaoniu.aftermarket.official.dto.SaveOfficialOrderInfoCommand;
 
 public interface OfficialAfterSalesService {
 
-    OfficialAfterSalesEntity upsertOfficialAfterSales(OfficialAfterSalesEntity officialAfterSales);
+    Long saveOfficialOrderInfo(SaveOfficialOrderInfoCommand command);
 
-    void markOfficialSettled(Long workOrderId, BigDecimal settlementAmount, Long operatorId, String remark);
+    void markOfficialSettled(MarkOfficialSettledCommand command);
+
+    void markNoSettlementRequired(MarkNoSettlementRequiredCommand command);
+
+    OfficialAfterSalesResponse getByWorkOrderId(Long storeId, Long workOrderId);
+
+    PageResponse<OfficialAfterSalesQueryResponse> pageQuery(OfficialAfterSalesQueryRequest request);
 }
