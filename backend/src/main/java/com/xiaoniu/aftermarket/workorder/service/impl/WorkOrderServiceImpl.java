@@ -68,6 +68,12 @@ public class WorkOrderServiceImpl implements WorkOrderService {
             WorkOrderStatus.PART_ORDERED.getCode(),
             WorkOrderStatus.PART_ARRIVED.getCode()
     );
+    private static final List<String> CANCEL_SUBMITTED_ALLOWED_STATUSES = List.of(
+            WorkOrderStatus.PENDING_ACCEPT.getCode(),
+            WorkOrderStatus.ACCEPTED.getCode(),
+            WorkOrderStatus.PART_ORDERED.getCode(),
+            WorkOrderStatus.PART_ARRIVED.getCode()
+    );
 
     public WorkOrderServiceImpl(WorkOrderMapper workOrderMapper,
                                 WorkOrderChargeItemMapper chargeItemMapper,
@@ -381,8 +387,53 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     }
 
     @Override
+    @Transactional
     public void cancel(CancelWorkOrderCommand command) {
-        throw new UnsupportedOperationException("TODO: implement cancel flow");
+        if (command.getStoreId() == null) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "storeId不能为空");
+        }
+        if (command.getWorkOrderId() == null) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "workOrderId不能为空");
+        }
+        if (command.getOperatorId() == null) {
+            throw new BusinessException(ErrorCode.OPERATOR_REQUIRED);
+        }
+        if (!StringUtils.hasText(command.getReason())) {
+            throw new BusinessException(ErrorCode.WORK_ORDER_CANCEL_REASON_REQUIRED);
+        }
+
+        WorkOrderEntity workOrder = workOrderMapper.selectByIdForUpdate(command.getWorkOrderId());
+        if (workOrder == null || workOrder.getStoreId() == null
+                || !command.getStoreId().equals(workOrder.getStoreId())) {
+            throw new BusinessException(ErrorCode.WORK_ORDER_NOT_FOUND);
+        }
+
+        String fromStatus = workOrder.getStatus();
+        boolean draftCancel = WorkOrderStatus.DRAFT.getCode().equals(fromStatus);
+        boolean submittedCancel = CANCEL_SUBMITTED_ALLOWED_STATUSES.contains(fromStatus);
+        if (!draftCancel && !submittedCancel) {
+            throw new BusinessException(ErrorCode.WORK_ORDER_CANCEL_NOT_ALLOWED);
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        if (submittedCancel) {
+            List<WorkOrderChargeItemEntity> items = chargeItemMapper.selectByWorkOrderId(workOrder.getId());
+            Map<Long, Integer> releaseQuantities = summarizeInventoryAffectingQuantities(items);
+            for (Map.Entry<Long, Integer> entry : releaseQuantities.entrySet()) {
+                releasePartStock(workOrder, entry.getKey(), entry.getValue(), command, now);
+            }
+        }
+
+        workOrder.setStatus(WorkOrderStatus.CANCELLED.getCode());
+        workOrder.setCancelledBy(command.getOperatorId());
+        workOrder.setCancelledAt(now);
+        workOrder.setCancelReason(command.getReason());
+        workOrder.setUpdatedBy(command.getOperatorId());
+        workOrderMapper.updateById(workOrder);
+
+        writeStatusLog(workOrder.getStoreId(), workOrder.getId(), fromStatus,
+                WorkOrderStatus.CANCELLED.getCode(), "CANCEL", command.getOperatorId(),
+                now, command.getReason(), command.getReason());
     }
 
     @Override
@@ -612,6 +663,57 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         flow.setOperatedAt(operatedAt);
         flow.setReason("工单结算扣减库存");
         flow.setRemark(command.getRemark());
+        flow.setCreatedBy(command.getOperatorId());
+        inventoryFlowMapper.insert(flow);
+
+        stock.setLastFlowId(flow.getId());
+        stock.setLastChangedAt(operatedAt);
+        inventoryStockMapper.updateById(stock);
+    }
+
+    private void releasePartStock(WorkOrderEntity workOrder, Long partId, Integer quantity,
+                                  CancelWorkOrderCommand command,
+                                  LocalDateTime operatedAt) {
+        InventoryStockEntity stock = inventoryStockMapper.selectByStoreIdAndPartIdForUpdate(
+                workOrder.getStoreId(), partId);
+        if (stock == null) {
+            throw new BusinessException(ErrorCode.PART_STOCK_NOT_FOUND);
+        }
+
+        int beforeActual = stock.getActualQty();
+        int beforeAvailable = stock.getAvailableQty();
+        int beforeReserved = stock.getReservedQty();
+        if (beforeReserved < quantity) {
+            throw new BusinessException(ErrorCode.INVENTORY_RESERVED_NOT_ENOUGH);
+        }
+
+        int afterAvailable = beforeAvailable + quantity;
+        int afterReserved = beforeReserved - quantity;
+
+        stock.setAvailableQty(afterAvailable);
+        stock.setReservedQty(afterReserved);
+        stock.setUpdatedBy(command.getOperatorId());
+        inventoryStockMapper.updateById(stock);
+
+        InventoryFlowEntity flow = new InventoryFlowEntity();
+        flow.setStoreId(workOrder.getStoreId());
+        flow.setInventoryStockId(stock.getId());
+        flow.setPartId(partId);
+        flow.setFlowType(InventoryFlowType.RELEASE.getCode());
+        flow.setQuantityDelta(quantity);
+        flow.setActualBefore(beforeActual);
+        flow.setActualAfter(beforeActual);
+        flow.setAvailableBefore(beforeAvailable);
+        flow.setAvailableAfter(afterAvailable);
+        flow.setReservedBefore(beforeReserved);
+        flow.setReservedAfter(afterReserved);
+        flow.setBusinessType("WORK_ORDER");
+        flow.setBusinessId(workOrder.getId());
+        flow.setWorkOrderId(workOrder.getId());
+        flow.setOperatorId(command.getOperatorId());
+        flow.setOperatedAt(operatedAt);
+        flow.setReason("工单取消释放库存");
+        flow.setRemark(command.getReason());
         flow.setCreatedBy(command.getOperatorId());
         inventoryFlowMapper.insert(flow);
 

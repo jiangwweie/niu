@@ -22,12 +22,15 @@ import com.xiaoniu.aftermarket.inventory.service.InventoryService;
 import com.xiaoniu.aftermarket.payment.dto.PaymentSummaryResponse;
 import com.xiaoniu.aftermarket.payment.dto.RecordPaymentCommand;
 import com.xiaoniu.aftermarket.payment.dto.RecordRefundCommand;
+import com.xiaoniu.aftermarket.payment.mapper.PaymentRecordMapper;
+import com.xiaoniu.aftermarket.payment.mapper.RefundRecordMapper;
 import com.xiaoniu.aftermarket.payment.service.PaymentService;
 import com.xiaoniu.aftermarket.payment.service.RefundService;
 import com.xiaoniu.aftermarket.part.dto.CreatePartCommand;
 import com.xiaoniu.aftermarket.part.entity.PartEntity;
 import com.xiaoniu.aftermarket.part.service.PartService;
 import com.xiaoniu.aftermarket.workorder.dto.AddWorkOrderChargeItemCommand;
+import com.xiaoniu.aftermarket.workorder.dto.CancelWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.CreateDraftWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.SettleWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.SubmitWorkOrderCommand;
@@ -75,6 +78,12 @@ class WorkOrderServiceTest {
 
     @Autowired
     private RefundService refundService;
+
+    @Autowired
+    private PaymentRecordMapper paymentRecordMapper;
+
+    @Autowired
+    private RefundRecordMapper refundRecordMapper;
 
     @Autowired
     private WorkOrderMapper workOrderMapper;
@@ -1369,6 +1378,261 @@ class WorkOrderServiceTest {
         assertEquals(WorkOrderStatus.SETTLED.getCode(), workOrderMapper.selectById(woId).getStatus());
     }
 
+    // --- cancel ---
+
+    @Test
+    void cancelDraftWorkOrderSuccessfully() {
+        Long woId = workOrderService.createDraft(
+                buildCreateCommand("取消草稿", "13900070001", "小牛N1"));
+        int statusLogCountBefore = statusLogMapper.selectByWorkOrderId(woId).size();
+
+        workOrderService.cancel(buildCancelCommand(woId));
+
+        WorkOrderEntity workOrder = workOrderMapper.selectById(woId);
+        assertEquals(WorkOrderStatus.CANCELLED.getCode(), workOrder.getStatus());
+        assertEquals(OPERATOR_ID, workOrder.getCancelledBy());
+        assertNotNull(workOrder.getCancelledAt());
+        assertEquals("测试取消", workOrder.getCancelReason());
+        assertEquals(0, inventoryFlowMapper.selectCount(null));
+        List<WorkOrderStatusLogEntity> logs = statusLogMapper.selectByWorkOrderId(woId);
+        assertEquals(statusLogCountBefore + 1, logs.size());
+        WorkOrderStatusLogEntity cancelLog = logs.get(logs.size() - 1);
+        assertEquals(WorkOrderStatus.DRAFT.getCode(), cancelLog.getFromStatus());
+        assertEquals(WorkOrderStatus.CANCELLED.getCode(), cancelLog.getToStatus());
+        assertEquals("CANCEL", cancelLog.getActionType());
+    }
+
+    @Test
+    void cancelSubmittedWorkOrderSuccessfully() {
+        Long woId = createSubmittedLaborWorkOrder(new BigDecimal("100.00"));
+        int statusLogCountBefore = statusLogMapper.selectByWorkOrderId(woId).size();
+
+        workOrderService.cancel(buildCancelCommand(woId));
+
+        assertEquals(WorkOrderStatus.CANCELLED.getCode(), workOrderMapper.selectById(woId).getStatus());
+        List<WorkOrderStatusLogEntity> logs = statusLogMapper.selectByWorkOrderId(woId);
+        assertEquals(statusLogCountBefore + 1, logs.size());
+        assertEquals("CANCEL", logs.get(logs.size() - 1).getActionType());
+    }
+
+    @Test
+    void cancelSubmittedPartWorkOrderReleasesReservedInventory() {
+        PartEntity part = createPart("取消释放件", "CAN-001", new BigDecimal("20.00"));
+        inbound(part.getId(), 10);
+        Long woId = createSubmittedPartWorkOrder(part.getId(), 3, new BigDecimal("50.00"));
+
+        workOrderService.cancel(buildCancelCommand(woId));
+
+        InventoryStockEntity stock = inventoryStockMapper.selectByStoreIdAndPartId(STORE_ID, part.getId());
+        assertEquals(10, stock.getActualQty());
+        assertEquals(10, stock.getAvailableQty());
+        assertEquals(0, stock.getReservedQty());
+        InventoryFlowEntity releaseFlow = inventoryFlowMapper.selectList(null).stream()
+                .filter(flow -> InventoryFlowType.RELEASE.getCode().equals(flow.getFlowType()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(3, releaseFlow.getQuantityDelta());
+        assertEquals(10, releaseFlow.getActualBefore());
+        assertEquals(10, releaseFlow.getActualAfter());
+        assertEquals(7, releaseFlow.getAvailableBefore());
+        assertEquals(10, releaseFlow.getAvailableAfter());
+        assertEquals(3, releaseFlow.getReservedBefore());
+        assertEquals(0, releaseFlow.getReservedAfter());
+        assertEquals("WORK_ORDER", releaseFlow.getBusinessType());
+        assertEquals(woId, releaseFlow.getWorkOrderId());
+    }
+
+    @Test
+    void cancelSubmittedLaborOnlyWorkOrderDoesNotWriteInventoryFlow() {
+        Long woId = createSubmittedLaborWorkOrder(new BigDecimal("100.00"));
+
+        workOrderService.cancel(buildCancelCommand(woId));
+
+        assertEquals(WorkOrderStatus.CANCELLED.getCode(), workOrderMapper.selectById(woId).getStatus());
+        assertEquals(0, inventoryFlowMapper.selectCount(null));
+    }
+
+    @Test
+    void settledWorkOrderCannotCancel() {
+        PartEntity part = createPart("已结算取消件", "CAN-002", new BigDecimal("20.00"));
+        inbound(part.getId(), 5);
+        Long woId = createSubmittedPartWorkOrder(part.getId(), 2, new BigDecimal("50.00"));
+        recordPayment(woId, new BigDecimal("100.00"));
+        workOrderService.settle(buildSettleCommand(woId));
+        InventoryStockEntity before = inventoryStockMapper.selectByStoreIdAndPartId(STORE_ID, part.getId());
+        int statusLogCountBefore = statusLogMapper.selectByWorkOrderId(woId).size();
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> workOrderService.cancel(buildCancelCommand(woId)));
+
+        assertEquals(ErrorCode.WORK_ORDER_CANCEL_NOT_ALLOWED, ex.getErrorCode());
+        assertEquals(WorkOrderStatus.SETTLED.getCode(), workOrderMapper.selectById(woId).getStatus());
+        assertStockUnchanged(part.getId(), before);
+        assertEquals(0, countReleaseFlows());
+        assertEquals(statusLogCountBefore, statusLogMapper.selectByWorkOrderId(woId).size());
+    }
+
+    @Test
+    void repeatedCancelFailsWithoutDuplicateReleaseOrLog() {
+        PartEntity part = createPart("重复取消件", "CAN-003", new BigDecimal("20.00"));
+        inbound(part.getId(), 5);
+        Long woId = createSubmittedPartWorkOrder(part.getId(), 2, new BigDecimal("50.00"));
+        workOrderService.cancel(buildCancelCommand(woId));
+        int statusLogCountBefore = statusLogMapper.selectByWorkOrderId(woId).size();
+        InventoryStockEntity before = inventoryStockMapper.selectByStoreIdAndPartId(STORE_ID, part.getId());
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> workOrderService.cancel(buildCancelCommand(woId)));
+
+        assertEquals(ErrorCode.WORK_ORDER_CANCEL_NOT_ALLOWED, ex.getErrorCode());
+        assertStockUnchanged(part.getId(), before);
+        assertEquals(1, countReleaseFlows());
+        assertEquals(statusLogCountBefore, statusLogMapper.selectByWorkOrderId(woId).size());
+    }
+
+    @Test
+    void cancelAggregatesSamePartBeforeRelease() {
+        PartEntity part = createPart("汇总取消件", "CAN-004", new BigDecimal("20.00"));
+        inbound(part.getId(), 5);
+        Long woId = workOrderService.createDraft(
+                buildCreateCommand("取消汇总", "13900070004", "小牛N1"));
+        workOrderService.addChargeItem(woId, buildPartItem(part.getId(), "件1", 2, new BigDecimal("30.00")));
+        workOrderService.addChargeItem(woId, buildPartItem(part.getId(), "件2", 3, new BigDecimal("30.00")));
+        workOrderService.submit(buildSubmitCommand(woId));
+
+        workOrderService.cancel(buildCancelCommand(woId));
+
+        InventoryStockEntity stock = inventoryStockMapper.selectByStoreIdAndPartId(STORE_ID, part.getId());
+        assertEquals(5, stock.getActualQty());
+        assertEquals(5, stock.getAvailableQty());
+        assertEquals(0, stock.getReservedQty());
+        assertEquals(1, countReleaseFlows());
+        InventoryFlowEntity flow = inventoryFlowMapper.selectList(null).stream()
+                .filter(f -> InventoryFlowType.RELEASE.getCode().equals(f.getFlowType()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(5, flow.getQuantityDelta());
+    }
+
+    @Test
+    void cancelFailsWhenAggregatedReservedQtyNotEnough() {
+        PartEntity part = createPart("取消预占不足件", "CAN-005", new BigDecimal("20.00"));
+        inbound(part.getId(), 5);
+        Long woId = createSubmittedPartWorkOrder(part.getId(), 5, new BigDecimal("30.00"));
+        InventoryStockEntity stock = inventoryStockMapper.selectByStoreIdAndPartId(STORE_ID, part.getId());
+        stock.setReservedQty(4);
+        inventoryStockMapper.updateById(stock);
+        InventoryStockEntity before = inventoryStockMapper.selectByStoreIdAndPartId(STORE_ID, part.getId());
+        int statusLogCountBefore = statusLogMapper.selectByWorkOrderId(woId).size();
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> workOrderService.cancel(buildCancelCommand(woId)));
+
+        assertEquals(ErrorCode.INVENTORY_RESERVED_NOT_ENOUGH, ex.getErrorCode());
+        assertStockUnchanged(part.getId(), before);
+        assertCancelFailureNoChange(woId, WorkOrderStatus.PENDING_ACCEPT.getCode(), statusLogCountBefore);
+    }
+
+    @Test
+    void cancelRollbackWhenOneOfMultiplePartsReservedQtyNotEnough() {
+        PartEntity enoughPart = createPart("取消足够件", "CAN-006", new BigDecimal("20.00"));
+        PartEntity shortPart = createPart("取消不足件", "CAN-007", new BigDecimal("20.00"));
+        inbound(enoughPart.getId(), 5);
+        inbound(shortPart.getId(), 5);
+        Long woId = workOrderService.createDraft(
+                buildCreateCommand("取消回滚", "13900070007", "小牛N1"));
+        workOrderService.addChargeItem(woId, buildPartItem(enoughPart.getId(), "足够件", 2, new BigDecimal("30.00")));
+        workOrderService.addChargeItem(woId, buildPartItem(shortPart.getId(), "不足件", 3, new BigDecimal("30.00")));
+        workOrderService.submit(buildSubmitCommand(woId));
+        InventoryStockEntity shortStock = inventoryStockMapper.selectByStoreIdAndPartId(STORE_ID, shortPart.getId());
+        shortStock.setReservedQty(2);
+        inventoryStockMapper.updateById(shortStock);
+        InventoryStockEntity enoughBefore = inventoryStockMapper.selectByStoreIdAndPartId(STORE_ID, enoughPart.getId());
+        InventoryStockEntity shortBefore = inventoryStockMapper.selectByStoreIdAndPartId(STORE_ID, shortPart.getId());
+        int statusLogCountBefore = statusLogMapper.selectByWorkOrderId(woId).size();
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> workOrderService.cancel(buildCancelCommand(woId)));
+
+        assertEquals(ErrorCode.INVENTORY_RESERVED_NOT_ENOUGH, ex.getErrorCode());
+        assertStockUnchanged(enoughPart.getId(), enoughBefore);
+        assertStockUnchanged(shortPart.getId(), shortBefore);
+        assertCancelFailureNoChange(woId, WorkOrderStatus.PENDING_ACCEPT.getCode(), statusLogCountBefore);
+    }
+
+    @Test
+    void cancelWithNullStoreIdFails() {
+        Long woId = createSubmittedLaborWorkOrder(new BigDecimal("100.00"));
+        int statusLogCountBefore = statusLogMapper.selectByWorkOrderId(woId).size();
+        CancelWorkOrderCommand command = buildCancelCommand(woId);
+        command.setStoreId(null);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> workOrderService.cancel(command));
+
+        assertEquals(ErrorCode.COMMON_BAD_REQUEST, ex.getErrorCode());
+        assertCancelFailureNoChange(woId, WorkOrderStatus.PENDING_ACCEPT.getCode(), statusLogCountBefore);
+    }
+
+    @Test
+    void cancelWithWrongStoreIdFails() {
+        Long woId = createSubmittedLaborWorkOrder(new BigDecimal("100.00"));
+        int statusLogCountBefore = statusLogMapper.selectByWorkOrderId(woId).size();
+        CancelWorkOrderCommand command = buildCancelCommand(woId);
+        command.setStoreId(OTHER_STORE_ID);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> workOrderService.cancel(command));
+
+        assertEquals(ErrorCode.WORK_ORDER_NOT_FOUND, ex.getErrorCode());
+        assertCancelFailureNoChange(woId, WorkOrderStatus.PENDING_ACCEPT.getCode(), statusLogCountBefore);
+    }
+
+    @Test
+    void cancelWithNullOperatorIdFails() {
+        Long woId = createSubmittedLaborWorkOrder(new BigDecimal("100.00"));
+        int statusLogCountBefore = statusLogMapper.selectByWorkOrderId(woId).size();
+        CancelWorkOrderCommand command = buildCancelCommand(woId);
+        command.setOperatorId(null);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> workOrderService.cancel(command));
+
+        assertEquals(ErrorCode.OPERATOR_REQUIRED, ex.getErrorCode());
+        assertCancelFailureNoChange(woId, WorkOrderStatus.PENDING_ACCEPT.getCode(), statusLogCountBefore);
+    }
+
+    @Test
+    void cancelWithBlankReasonFails() {
+        Long woId = createSubmittedLaborWorkOrder(new BigDecimal("100.00"));
+        int statusLogCountBefore = statusLogMapper.selectByWorkOrderId(woId).size();
+        CancelWorkOrderCommand command = buildCancelCommand(woId);
+        command.setReason(" ");
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> workOrderService.cancel(command));
+
+        assertEquals(ErrorCode.WORK_ORDER_CANCEL_REASON_REQUIRED, ex.getErrorCode());
+        assertCancelFailureNoChange(woId, WorkOrderStatus.PENDING_ACCEPT.getCode(), statusLogCountBefore);
+    }
+
+    @Test
+    void cancelPaidUnsettledWorkOrderDoesNotAutoRefund() {
+        Long woId = createSubmittedLaborWorkOrder(new BigDecimal("100.00"));
+        recordPayment(woId, new BigDecimal("100.00"));
+        BigDecimal receivedBefore = workOrderMapper.selectById(woId).getReceivedAmount();
+        long paymentCountBefore = paymentRecordMapper.selectCount(null);
+        long refundCountBefore = refundRecordMapper.selectCount(null);
+
+        workOrderService.cancel(buildCancelCommand(woId));
+
+        WorkOrderEntity workOrder = workOrderMapper.selectById(woId);
+        assertEquals(WorkOrderStatus.CANCELLED.getCode(), workOrder.getStatus());
+        assertEquals(0, receivedBefore.compareTo(workOrder.getReceivedAmount()));
+        assertEquals(paymentCountBefore, paymentRecordMapper.selectCount(null));
+        assertEquals(refundCountBefore, refundRecordMapper.selectCount(null));
+    }
+
     // --- helpers ---
 
     private PartEntity createPart(String name, String partCode, BigDecimal costPrice) {
@@ -1407,6 +1671,15 @@ class WorkOrderServiceTest {
         command.setWorkOrderId(workOrderId);
         command.setOperatorId(OPERATOR_ID);
         command.setRemark("测试结算");
+        return command;
+    }
+
+    private CancelWorkOrderCommand buildCancelCommand(Long workOrderId) {
+        CancelWorkOrderCommand command = new CancelWorkOrderCommand();
+        command.setStoreId(STORE_ID);
+        command.setWorkOrderId(workOrderId);
+        command.setOperatorId(OPERATOR_ID);
+        command.setReason("测试取消");
         return command;
     }
 
@@ -1461,9 +1734,22 @@ class WorkOrderServiceTest {
                 .count();
     }
 
+    private long countReleaseFlows() {
+        return inventoryFlowMapper.selectList(null).stream()
+                .filter(flow -> InventoryFlowType.RELEASE.getCode().equals(flow.getFlowType()))
+                .count();
+    }
+
     private void assertUnchangedDraftLikeSettleFailure(Long workOrderId, String expectedStatus) {
         assertEquals(expectedStatus, workOrderMapper.selectById(workOrderId).getStatus());
         assertEquals(0, countConsumeFlows());
+    }
+
+    private void assertCancelFailureNoChange(Long workOrderId, String expectedStatus,
+                                             int expectedStatusLogCount) {
+        assertEquals(expectedStatus, workOrderMapper.selectById(workOrderId).getStatus());
+        assertEquals(0, countReleaseFlows());
+        assertEquals(expectedStatusLogCount, statusLogMapper.selectByWorkOrderId(workOrderId).size());
     }
 
     private void assertStockUnchanged(Long partId, InventoryStockEntity before) {
