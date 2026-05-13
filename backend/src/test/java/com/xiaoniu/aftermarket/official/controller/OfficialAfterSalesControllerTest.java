@@ -493,4 +493,38 @@ class OfficialAfterSalesControllerTest {
                 .andExpect(jsonPath("$.data.pageSize").exists())
                 .andExpect(jsonPath("$.data.total").exists());
     }
+
+    // ========== 13. Date-only query support (yyyy-MM-dd) ==========
+
+    @Test
+    void listOfficialAfterSalesWithDateOnlyQuerySucceeds() throws Exception {
+        // Seed an official after-sales record with a known settlement time
+        jdbcTemplate.execute("""
+                INSERT INTO official_after_sales (id, store_id, work_order_id, is_official_after_sales,
+                                                  official_order_no, official_settlement_amount,
+                                                  official_settlement_status, official_settlement_time,
+                                                  official_settlement_operator_id)
+                VALUES (9100, 1, 8001, 1, 'OFF-DATE-001', 50.00, 'SETTLED', '2026-05-13 10:30:00', 1)
+                """);
+
+        mockMvc.perform(get("/api/admin/official-after-sales")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .param("startTime", "2026-05-13")
+                        .param("endTime", "2026-05-13"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.records").isArray())
+                .andExpect(jsonPath("$.data.records", hasSize(greaterThanOrEqualTo(1))));
+    }
+
+    @Test
+    void listOfficialAfterSalesWithInvalidDateReturnsBadRequest() throws Exception {
+        mockMvc.perform(get("/api/admin/official-after-sales")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .param("startTime", "not-a-date"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
+    }
 }
