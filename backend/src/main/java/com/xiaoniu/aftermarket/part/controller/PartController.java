@@ -48,8 +48,11 @@ public class PartController {
 
     @GetMapping("/{partId}")
     public ApiResponse<PartDetailResponse> getPart(@PathVariable Long partId) {
-        requireCurrentUser();
+        CurrentUser user = requireCurrentUser();
         PartEntity entity = partService.getById(partId);
+        if (!user.storeId().equals(entity.getStoreId())) {
+            throw new BusinessException(ErrorCode.PART_NOT_FOUND, "配件不存在");
+        }
         PartQueryResponse qr = new PartQueryResponse();
         qr.setId(entity.getId());
         qr.setStoreId(entity.getStoreId());

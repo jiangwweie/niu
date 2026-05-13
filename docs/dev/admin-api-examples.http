@@ -1,0 +1,276 @@
+### Admin API HTTP 联调示例
+### 使用 VS Code REST Client 插件或 JetBrains HTTP Client 直接运行
+### 后端需先启动: cd backend && mvn spring-boot:run -Dspring-boot.run.profiles=dev
+
+@baseUrl = http://localhost:8080
+@userId = 1
+@storeId = 1
+
+### ========== Health Check ==========
+GET {{baseUrl}}/api/health
+
+### ========== Dict ==========
+### 获取工单状态字典
+GET {{baseUrl}}/api/admin/dict/types/WORK_ORDER_STATUS/items
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### 获取支付方式字典
+GET {{baseUrl}}/api/admin/dict/types/PAYMENT_METHOD/items
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### ========== Part ==========
+### 创建第三方配件
+POST {{baseUrl}}/api/admin/parts/third-party
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+{
+  "partName": "测试刹车片",
+  "model": "BP-2024",
+  "categoryCode": "BRAKE",
+  "referenceCostPrice": 45.50
+}
+
+### 创建官方配件
+POST {{baseUrl}}/api/admin/parts/official
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+{
+  "partName": "官方电池",
+  "officialPartNo": "BAT-N1S-001",
+  "model": "N1S",
+  "referenceCostPrice": 800.00
+}
+
+### 查询配件列表
+GET {{baseUrl}}/api/admin/parts?pageNo=1&pageSize=10
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### 查询配件详情
+GET {{baseUrl}}/api/admin/parts/1
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### ========== Inventory ==========
+### 入库
+POST {{baseUrl}}/api/admin/inventory/inbound
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+{
+  "partId": 1,
+  "quantity": 100,
+  "unitCost": 45.50,
+  "reason": "初始入库"
+}
+
+### 查询库存
+GET {{baseUrl}}/api/admin/inventory/stocks?pageNo=1&pageSize=10
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### 查询某配件库存
+GET {{baseUrl}}/api/admin/inventory/stocks/1
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### 库存调整
+POST {{baseUrl}}/api/admin/inventory/adjust
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+{
+  "partId": 1,
+  "quantityDelta": -5,
+  "reason": "盘点损耗"
+}
+
+### 查询库存流水
+GET {{baseUrl}}/api/admin/inventory/flows?pageNo=1&pageSize=10
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### ========== WorkOrder ==========
+### 创建 DRAFT 工单（含费用项）
+POST {{baseUrl}}/api/admin/work-orders/drafts
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+{
+  "customerNameSnapshot": "张三",
+  "customerPhoneSnapshot": "13900001111",
+  "vehicleModelSnapshot": "小牛N1S",
+  "frameNoSnapshot": "TEST-FRAME-001",
+  "repairItem": "更换刹车片",
+  "chargeItems": [
+    {
+      "chargeType": "PART",
+      "itemName": "刹车片",
+      "partId": 1,
+      "quantity": 2,
+      "unit": "片",
+      "unitPrice": 120.00,
+      "lineAmount": 240.00,
+      "costPriceSnapshot": 45.50,
+      "lineCostAmount": 91.00,
+      "inventoryAffecting": true,
+      "tempPart": false
+    },
+    {
+      "chargeType": "LABOR",
+      "itemName": "工时费",
+      "quantity": 1,
+      "unit": "次",
+      "unitPrice": 80.00,
+      "lineAmount": 80.00,
+      "inventoryAffecting": false,
+      "tempPart": false
+    }
+  ]
+}
+
+### 查询工单列表
+GET {{baseUrl}}/api/admin/work-orders?pageNo=1&pageSize=10
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### 查询工单详情
+GET {{baseUrl}}/api/admin/work-orders/1
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### 提交工单（触发 RESERVE）
+POST {{baseUrl}}/api/admin/work-orders/1/submit
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+{
+  "remark": "提交工单"
+}
+
+### ========== Payment ==========
+### 记录支付
+POST {{baseUrl}}/api/admin/work-orders/1/payments
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+{
+  "amount": 320.00,
+  "paymentMethod": "WECHAT",
+  "receiverId": 1,
+  "remark": "客户微信支付"
+}
+
+### 查询工单支付记录
+GET {{baseUrl}}/api/admin/work-orders/1/payments
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### 查询支付汇总
+GET {{baseUrl}}/api/admin/work-orders/1/payment-summary
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### 全局支付查询
+GET {{baseUrl}}/api/admin/payments?pageNo=1&pageSize=10
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### ========== Settle ==========
+### 结算工单（触发 CONSUME）
+POST {{baseUrl}}/api/admin/work-orders/1/settle
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+{
+  "remark": "完成结算"
+}
+
+### ========== Refund ==========
+### 记录退款
+POST {{baseUrl}}/api/admin/work-orders/1/refunds
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+{
+  "amount": 50.00,
+  "refundMethod": "WECHAT",
+  "reason": "客户对工时费有异议",
+  "remark": "部分退款"
+}
+
+### 查询工单退款记录
+GET {{baseUrl}}/api/admin/work-orders/1/refunds
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### 全局退款查询
+GET {{baseUrl}}/api/admin/refunds?pageNo=1&pageSize=10
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### ========== OfficialAfterSales ==========
+### 保存官方订单号
+POST {{baseUrl}}/api/admin/work-orders/1/official-after-sales/order-info
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+{
+  "officialOrderNo": "OFF-2026-001",
+  "remark": "官方售后工单"
+}
+
+### 标记官方已结算
+POST {{baseUrl}}/api/admin/work-orders/1/official-after-sales/settle
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+{
+  "settlementAmount": 200.00,
+  "remark": "官方结算完成"
+}
+
+### 查询工单官方售后信息
+GET {{baseUrl}}/api/admin/work-orders/1/official-after-sales
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### 全局官方售后查询
+GET {{baseUrl}}/api/admin/official-after-sales?pageNo=1&pageSize=10
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### ========== Cancel (测试 RELEASE) ==========
+### 取消工单（触发 RELEASE，仅对已提交未结算工单有效）
+POST {{baseUrl}}/api/admin/work-orders/2/cancel
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+{
+  "reason": "客户取消"
+}
+
+### ========== Error Cases ==========
+### 缺少 Header（应返回 COMMON_BAD_REQUEST）
+GET {{baseUrl}}/api/admin/parts
+
+### 查询不存在的工单（应返回 WORK_ORDER_NOT_FOUND）
+GET {{baseUrl}}/api/admin/work-orders/999999
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
