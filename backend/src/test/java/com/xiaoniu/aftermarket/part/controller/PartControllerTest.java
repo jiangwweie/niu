@@ -194,4 +194,41 @@ class PartControllerTest {
                 "SELECT COUNT(*) FROM part WHERE part_code IS NOT NULL AND part_name = 'Body尝试覆盖' AND store_id = 1", Long.class);
         assertTrue(count > 0);
     }
+
+    @Test
+    void listPartsFilterByCategoryCode() throws Exception {
+        mockMvc.perform(get("/api/admin/parts")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .param("categoryCode", "BATTERY"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.records", hasSize(1)))
+                .andExpect(jsonPath("$.data.records[0].partCode").value("P-TEST-001"))
+                .andExpect(jsonPath("$.data.records[0].categoryCode").value("BATTERY"));
+    }
+
+    @Test
+    void listPartsFilterByModel() throws Exception {
+        mockMvc.perform(get("/api/admin/parts")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .param("model", "NQi"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.records", hasSize(1)))
+                .andExpect(jsonPath("$.data.records[0].partCode").value("P-TEST-001"));
+    }
+
+    @Test
+    void listPartsFilterByOfficialPartNo() throws Exception {
+        mockMvc.perform(get("/api/admin/parts")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .param("officialPartNo", "OFF-001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.records", hasSize(1)))
+                .andExpect(jsonPath("$.data.records[0].officialPartNo").value("OFF-001"));
+    }
 }

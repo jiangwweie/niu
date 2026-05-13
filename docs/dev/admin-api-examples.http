@@ -10,6 +10,9 @@
 GET {{baseUrl}}/api/health
 
 ### ========== Dict ==========
+### 获取所有启用的字典类型列表
+GET {{baseUrl}}/api/admin/dict/types
+
 ### 获取工单状态字典
 GET {{baseUrl}}/api/admin/dict/types/WORK_ORDER_STATUS/items
 X-User-Id: {{userId}}
@@ -17,6 +20,11 @@ X-Store-Id: {{storeId}}
 
 ### 获取支付方式字典
 GET {{baseUrl}}/api/admin/dict/types/PAYMENT_METHOD/items
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### 查询不存在的字典类型（应返回空数组）
+GET {{baseUrl}}/api/admin/dict/types/NONEXISTENT/items
 X-User-Id: {{userId}}
 X-Store-Id: {{storeId}}
 
@@ -49,6 +57,21 @@ X-Store-Id: {{storeId}}
 
 ### 查询配件列表
 GET {{baseUrl}}/api/admin/parts?pageNo=1&pageSize=10
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### 按分类筛选配件
+GET {{baseUrl}}/api/admin/parts?categoryCode=BRAKE&pageNo=1&pageSize=10
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### 按车型模糊筛选配件
+GET {{baseUrl}}/api/admin/parts?model=N1S&pageNo=1&pageSize=10
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### 按官方编号精确筛选配件
+GET {{baseUrl}}/api/admin/parts?officialPartNo=BAT-N1S-001&pageNo=1&pageSize=10
 X-User-Id: {{userId}}
 X-Store-Id: {{storeId}}
 

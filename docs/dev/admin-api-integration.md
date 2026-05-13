@@ -122,10 +122,37 @@ const headers = {
 ### 6.1 Dict（字典查询）
 
 ```
-GET /api/admin/dict/types/{typeCode}/items
+GET /api/admin/dict/types                    获取所有启用的字典类型列表
+GET /api/admin/dict/types/{typeCode}/items   获取某类型下的字典项
 ```
 
-用于获取下拉选项数据（工单状态、支付方式、配件来源等）。
+获取字典类型列表（替代硬编码）：
+
+```json
+{
+  "code": "SUCCESS",
+  "data": [
+    { "typeCode": "WORK_ORDER_STATUS", "typeName": "工单状态", "enabled": true },
+    { "typeCode": "PAYMENT_METHOD", "typeName": "支付方式", "enabled": true }
+  ]
+}
+```
+
+获取字典项列表：
+
+```json
+{
+  "code": "SUCCESS",
+  "data": [
+    { "itemCode": "DRAFT", "itemName": "草稿", "sortOrder": 1, "enabled": true }
+  ]
+}
+```
+
+说明：
+- `typeCode` 不存在或已停用时返回空数组 `[]`，不报错。
+- `/types` 端点无需 `X-User-Id` / `X-Store-Id` Header。
+- 前端不接字典类型的新增、编辑、停用。
 
 常用 typeCode：
 - `WORK_ORDER_STATUS` — 工单状态
@@ -136,13 +163,27 @@ GET /api/admin/dict/types/{typeCode}/items
 ### 6.2 Part（配件管理）
 
 ```
-GET    /api/admin/parts                          分页查询
+GET    /api/admin/parts                          分页查询（支持筛选参数）
 POST   /api/admin/parts/third-party              创建第三方配件
 POST   /api/admin/parts/official                 创建官方配件
 PUT    /api/admin/parts/{partId}                 修改配件
 POST   /api/admin/parts/{partId}/enable          启用
 POST   /api/admin/parts/{partId}/disable         停用
 ```
+
+配件列表查询参数：
+
+| 参数 | 类型 | 匹配方式 | 说明 |
+| --- | --- | --- | --- |
+| partCode | String | 精确 | 配件编码 |
+| partName | String | 模糊 | 配件名称 |
+| officialPartNo | String | 精确 | 官方配件编号 |
+| model | String | 模糊 | 车型 |
+| categoryCode | String | 精确 | 配件分类编码 |
+| source | String | 精确 | 配件来源 (OFFICIAL/THIRD_PARTY) |
+| enabled | Boolean | — | 启用状态 |
+| pageNo | Integer | — | 页码，默认 1 |
+| pageSize | Integer | — | 每页数量，默认 20 |
 
 ### 6.3 Inventory（库存管理）
 

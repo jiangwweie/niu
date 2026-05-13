@@ -18,7 +18,7 @@ public class SysDictItemEntity extends SoftDeleteEntity {
     private String status;
 
     @TableField("is_system")
-    private Boolean system;
+    private Boolean isSystem;
 
     private String remark;
 }

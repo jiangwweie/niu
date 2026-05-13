@@ -199,6 +199,31 @@ r=$(curl -s -H "$H1" -H "$H2" "$BASE/api/admin/inventory/flows?partId=$PART2_ID&
 check "RELEASE flow exists" '"flowType":"RELEASE"' "$r"
 
 echo ""
+echo "=== Step 19: Dict types list (P1) ==="
+r=$(curl -s -H "$H1" -H "$H2" "$BASE/api/admin/dict/types")
+check "Dict types list returns SUCCESS" "SUCCESS" "$r"
+check "Dict types contains WORK_ORDER_STATUS" "WORK_ORDER_STATUS" "$r"
+check "Dict types contains PAYMENT_METHOD" "PAYMENT_METHOD" "$r"
+
+echo ""
+echo "=== Step 20: Dict items for existing typeCode (P0 fix) ==="
+r=$(curl -s -H "$H1" -H "$H2" "$BASE/api/admin/dict/types/WORK_ORDER_STATUS/items")
+check "Dict items WORK_ORDER_STATUS returns SUCCESS" "SUCCESS" "$r"
+check "Dict items contains DRAFT" '"itemCode":"DRAFT"' "$r"
+check "Dict items contains SETTLED" '"itemCode":"SETTLED"' "$r"
+
+echo ""
+echo "=== Step 21: Dict items for non-existent typeCode ==="
+r=$(curl -s -H "$H1" -H "$H2" "$BASE/api/admin/dict/types/NONEXISTENT/items")
+check "Non-existent typeCode returns SUCCESS (empty list)" "SUCCESS" "$r"
+
+echo ""
+echo "=== Step 22: Part list with new filters (P2) ==="
+r=$(curl -s -H "$H1" -H "$H2" "$BASE/api/admin/parts?categoryCode=BRAKE&pageNo=1&pageSize=10")
+check "Part filter by categoryCode returns SUCCESS" "SUCCESS" "$r"
+check "Part filter by categoryCode finds BRAKE part" "BRAKE" "$r"
+
+echo ""
 echo "==================================="
 echo "  SMOKE TEST RESULTS: $pass passed, $fail failed"
 echo "==================================="

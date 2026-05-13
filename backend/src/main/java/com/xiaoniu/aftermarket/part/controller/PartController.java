@@ -29,6 +29,9 @@ public class PartController {
     public ApiResponse<PageResponse<PartQueryResponse>> listParts(
             @RequestParam(required = false) String partCode,
             @RequestParam(required = false) String partName,
+            @RequestParam(required = false) String officialPartNo,
+            @RequestParam(required = false) String model,
+            @RequestParam(required = false) String categoryCode,
             @RequestParam(required = false) String source,
             @RequestParam(required = false) Boolean enabled,
             @RequestParam(required = false) Integer pageNo,
@@ -39,6 +42,9 @@ public class PartController {
         request.setStoreId(user.storeId());
         request.setPartCode(partCode);
         request.setPartName(partName);
+        request.setOfficialPartNo(officialPartNo);
+        request.setModel(model);
+        request.setCategoryCode(categoryCode);
         request.setSource(source);
         request.setStatus(enabled != null ? (enabled ? "ENABLED" : "DISABLED") : null);
         request.setPageNo(pageNo);

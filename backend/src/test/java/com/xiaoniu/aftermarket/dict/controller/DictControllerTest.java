@@ -76,6 +76,37 @@ class DictControllerTest {
     }
 
     @Test
+    void listTypesReturnsEnabledTypes() throws Exception {
+        mockMvc.perform(get("/api/admin/dict/types"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].typeCode").value("PART_CATEGORY"))
+                .andExpect(jsonPath("$.data[0].typeName").value("零件分类"))
+                .andExpect(jsonPath("$.data[0].enabled").value(true));
+    }
+
+    @Test
+    void listItemsReturnsEmptyForNonexistentTypeCode() throws Exception {
+        mockMvc.perform(get("/api/admin/dict/types/NONEXISTENT/items"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data.length()").value(0));
+    }
+
+    @Test
+    void listItemsReturnsEmptyForDisabledType() throws Exception {
+        // REPAIR_TYPE is DISABLED in test data
+        mockMvc.perform(get("/api/admin/dict/types/REPAIR_TYPE/items"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data.length()").value(0));
+    }
+
+    @Test
     void apiResponseDoesNotExposeSuccessField() throws Exception {
         mockMvc.perform(get("/api/admin/dict/types/PART_CATEGORY/items"))
                 .andExpect(status().isOk())

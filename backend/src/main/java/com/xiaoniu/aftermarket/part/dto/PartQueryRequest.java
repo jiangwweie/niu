@@ -8,6 +8,9 @@ public class PartQueryRequest {
     private Long storeId;
     private String partCode;
     private String partName;
+    private String officialPartNo;
+    private String model;
+    private String categoryCode;
     private String source;
     private String status;
     private Integer pageNo;

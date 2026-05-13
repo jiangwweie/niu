@@ -22,6 +22,16 @@ public class DictServiceImpl implements DictService {
     }
 
     @Override
+    public List<SysDictTypeEntity> listEnabledTypes() {
+        return dictTypeMapper.selectList(
+                new LambdaQueryWrapper<SysDictTypeEntity>()
+                        .eq(SysDictTypeEntity::getStatus, CommonStatus.ENABLED.name())
+                        .eq(SysDictTypeEntity::getDeleted, 0)
+                        .orderByAsc(SysDictTypeEntity::getId)
+        );
+    }
+
+    @Override
     public List<SysDictItemEntity> listItemsByTypeCode(String typeCode) {
         SysDictTypeEntity dictType = dictTypeMapper.selectOne(
                 new LambdaQueryWrapper<SysDictTypeEntity>()

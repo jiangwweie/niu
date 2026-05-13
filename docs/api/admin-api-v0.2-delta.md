@@ -154,7 +154,88 @@ GET /api/admin/refunds
 - 不自动反结算。
 - 不回滚库存。
 
-## 5. Task 14B Controller 对接提示
+## 5. Dict 查询增强
+
+### 5.1 新增：字典类型列表
+
+```text
+GET /api/admin/dict/types
+```
+
+返回所有启用的字典类型列表。无需认证 Header（纯只读公共数据）。
+
+响应：
+
+```json
+{
+  "code": "SUCCESS",
+  "data": [
+    {
+      "typeCode": "WORK_ORDER_STATUS",
+      "typeName": "工单状态",
+      "enabled": true
+    }
+  ]
+}
+```
+
+说明：
+- 只返回 `status = ENABLED` 且未软删除的字典类型。
+- 不实现字典类型的新增、编辑、停用。
+- 前端可用此接口替代硬编码字典类型列表。
+
+### 5.2 字典项查询行为确认
+
+```text
+GET /api/admin/dict/types/{typeCode}/items
+```
+
+响应格式：
+
+```json
+{
+  "code": "SUCCESS",
+  "data": [
+    {
+      "itemCode": "DRAFT",
+      "itemName": "草稿",
+      "sortOrder": 1,
+      "enabled": true
+    }
+  ]
+}
+```
+
+行为说明：
+- `typeCode` 存在且启用：返回该类型下所有启用的字典项，按 `sort_order` 升序排列。
+- `typeCode` 不存在或已停用：返回空数组 `[]`，不返回错误。
+- 不返回 `id`、`typeId`、`remark` 等内部字段。
+- 不实现字典项的新增、编辑、停用。
+
+## 6. Part 查询增强
+
+`GET /api/admin/parts` 新增可选查询参数：
+
+| 参数 | 类型 | 匹配方式 | 说明 |
+| --- | --- | --- | --- |
+| officialPartNo | String | 精确匹配 | 按官方配件编号筛选 |
+| model | String | 模糊匹配 | 按车型模糊筛选 |
+| categoryCode | String | 精确匹配 | 按配件分类编码筛选 |
+
+示例：
+
+```text
+GET /api/admin/parts?officialPartNo=BAT-N1S-001&pageNo=1&pageSize=20
+GET /api/admin/parts?model=N1S&pageNo=1&pageSize=20
+GET /api/admin/parts?categoryCode=BRAKE&pageNo=1&pageSize=20
+```
+
+说明：
+- 所有新参数均为可选，与现有 `partCode`/`partName`/`source`/`status` 可任意组合。
+- `storeId` 隔离保持不变。
+- 不改变现有分页逻辑。
+
+## 7. Task 14B Controller 对接提示
 
 - Controller 仍应从 `CurrentUserContext` 获取 `storeId/operatorId`。
 - 前端不得传入可信 `storeId/operatorId`。
