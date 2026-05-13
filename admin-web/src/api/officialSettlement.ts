@@ -23,9 +23,9 @@ export const getSettlementList = (params: OfficialSettlementQuery): Promise<Base
         filtered = filtered.filter(p => p.settlementTime && p.settlementTime >= params.dateRange![0] && p.settlementTime <= params.dateRange![1]);
       }
       
-      const page = params.pageNo || 1;
+      const pageNo = params.pageNo || 1;
       const pageSize = params.pageSize || 10;
-      const start = (page - 1) * pageSize;
+      const start = (pageNo - 1) * pageSize;
       const pagedData = filtered.slice(start, start + pageSize);
 
       resolve({
@@ -34,7 +34,7 @@ export const getSettlementList = (params: OfficialSettlementQuery): Promise<Base
         data: {
           records: pagedData,
           total: filtered.length,
-          page,
+          pageNo,
           pageSize
         }
       });

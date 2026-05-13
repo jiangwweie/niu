@@ -19,9 +19,9 @@ export const getFinanceList = (params: FinanceQuery): Promise<BaseHttpResponse<P
     setTimeout(() => {
       let data = params.reportType === 'MONTHLY' ? mockMonthlySummaries : mockDailySummaries;
       
-      const page = params.pageNo || 1;
+      const pageNo = params.pageNo || 1;
       const pageSize = params.pageSize || 10;
-      const start = (page - 1) * pageSize;
+      const start = (pageNo - 1) * pageSize;
       const pagedData = data.slice(start, start + pageSize);
 
       resolve({
@@ -30,7 +30,7 @@ export const getFinanceList = (params: FinanceQuery): Promise<BaseHttpResponse<P
         data: {
           records: pagedData,
           total: data.length,
-          page,
+          pageNo,
           pageSize
         }
       });

@@ -18,9 +18,9 @@ export const getRefundList = (params: RefundQuery): Promise<BaseHttpResponse<Pag
         filtered = filtered.filter(p => p.refundTime >= params.dateRange![0] && p.refundTime <= params.dateRange![1]);
       }
       
-      const page = params.pageNo || 1;
+      const pageNo = params.pageNo || 1;
       const pageSize = params.pageSize || 10;
-      const start = (page - 1) * pageSize;
+      const start = (pageNo - 1) * pageSize;
       const pagedData = filtered.slice(start, start + pageSize);
 
       resolve({
@@ -29,7 +29,7 @@ export const getRefundList = (params: RefundQuery): Promise<BaseHttpResponse<Pag
         data: {
           records: pagedData,
           total: filtered.length,
-          page,
+          pageNo,
           pageSize
         }
       });

@@ -38,6 +38,9 @@ export interface PartViewRecord {
 export interface PartListParams {
   partCode?: string;
   partName?: string;
+  officialPartNo?: string;
+  model?: string;
+  categoryCode?: string;
   source?: string;
   enabled?: boolean;
   pageNo: number;
@@ -97,6 +100,9 @@ export async function getPartsList(params: PartViewQuery): Promise<{
   };
   if (params.partCode) backendParams.partCode = params.partCode;
   if (params.partName) backendParams.partName = params.partName;
+  if (params.officialCode) backendParams.officialPartNo = params.officialCode;
+  if (params.model) backendParams.model = params.model;
+  if (params.category) backendParams.categoryCode = params.category;
   if (params.source) backendParams.source = params.source.toUpperCase();
   if (params.status !== undefined && params.status !== '') {
     backendParams.enabled = params.status === true || params.status === 'true';

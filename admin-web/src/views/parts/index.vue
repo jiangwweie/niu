@@ -10,6 +10,15 @@
         <el-form-item label="配件名称">
           <el-input v-model="queryParams.partName" placeholder="请输入" clearable />
         </el-form-item>
+        <el-form-item label="官方品号">
+          <el-input v-model="queryParams.officialCode" placeholder="请输入" clearable />
+        </el-form-item>
+        <el-form-item label="型号">
+          <el-input v-model="queryParams.model" placeholder="请输入" clearable />
+        </el-form-item>
+        <el-form-item label="分类">
+          <el-input v-model="queryParams.category" placeholder="请输入" clearable />
+        </el-form-item>
         <el-form-item label="来源">
           <el-select v-model="queryParams.source" placeholder="全部" clearable style="width: 120px">
             <el-option label="官方" value="OFFICIAL" />
@@ -148,6 +157,9 @@ import type { PartViewRecord } from '@/api/parts';
 const queryParams = reactive({
   partCode: '',
   partName: '',
+  officialCode: '',
+  model: '',
+  category: '',
   source: '' as string,
   status: '' as boolean | string,
   pageNo: 1,
@@ -179,6 +191,9 @@ const handleSearch = () => {
 const handleReset = () => {
   queryParams.partCode = '';
   queryParams.partName = '';
+  queryParams.officialCode = '';
+  queryParams.model = '';
+  queryParams.category = '';
   queryParams.source = '';
   queryParams.status = '';
   handleSearch();

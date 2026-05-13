@@ -15,9 +15,9 @@ export const getUserList = (params: UserQuery): Promise<BaseHttpResponse<Paginat
         filtered = filtered.filter(p => p.enabled === isEnabled);
       }
       
-      const page = params.pageNo || 1;
+      const pageNo = params.pageNo || 1;
       const pageSize = params.pageSize || 10;
-      const start = (page - 1) * pageSize;
+      const start = (pageNo - 1) * pageSize;
       const pagedData = filtered.slice(start, start + pageSize);
 
       resolve({
@@ -26,7 +26,7 @@ export const getUserList = (params: UserQuery): Promise<BaseHttpResponse<Paginat
         data: {
           records: pagedData,
           total: filtered.length,
-          page,
+          pageNo,
           pageSize
         }
       });

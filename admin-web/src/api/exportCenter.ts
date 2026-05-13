@@ -22,9 +22,9 @@ export const getExportTasks = (params: ExportTaskQuery): Promise<BaseHttpRespons
       if (params.typeCode) filtered = filtered.filter(p => p.typeCode === params.typeCode);
       if (params.status) filtered = filtered.filter(p => p.status === params.status);
       
-      const page = params.pageNo || 1;
+      const pageNo = params.pageNo || 1;
       const pageSize = params.pageSize || 10;
-      const start = (page - 1) * pageSize;
+      const start = (pageNo - 1) * pageSize;
       const pagedData = filtered.slice(start, start + pageSize);
 
       resolve({
@@ -33,7 +33,7 @@ export const getExportTasks = (params: ExportTaskQuery): Promise<BaseHttpRespons
         data: {
           records: pagedData,
           total: filtered.length,
-          page,
+          pageNo,
           pageSize
         }
       });

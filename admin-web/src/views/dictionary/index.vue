@@ -87,8 +87,8 @@ const filteredTableData = computed(() => {
   return data;
 });
 
-const fetchTypes = () => {
-  dictTypes.value = getDictionaryTypes();
+const fetchTypes = async () => {
+  dictTypes.value = await getDictionaryTypes();
   if (dictTypes.value.length > 0) {
     activeDictCode.value = dictTypes.value[0].code;
     fetchItems();

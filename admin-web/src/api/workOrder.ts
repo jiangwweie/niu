@@ -29,18 +29,18 @@ export const getWorkOrderList = (params: WorkOrderQuery): Promise<BaseHttpRespon
         filtered = filtered.filter(item => item.isOfficial === params.isOfficial);
       }
       
-      const page = params.pageNo || 1;
+      const pageNo = params.pageNo || 1;
       const pageSize = params.pageSize || 10;
-      const start = (page - 1) * pageSize;
+      const start = (pageNo - 1) * pageSize;
       const pagedData = filtered.slice(start, start + pageSize);
-      
+
       resolve({
         code: 'SUCCESS',
         message: 'success',
         data: {
           records: pagedData,
           total: filtered.length,
-          page,
+          pageNo,
           pageSize
         }
       });
