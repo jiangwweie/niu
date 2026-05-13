@@ -1,0 +1,211 @@
+import { InventoryRecord, InventoryLogRecord } from '@/types/inventory';
+
+export const mockInventories: InventoryRecord[] = [
+  {
+    id: 'INV1001',
+    partCode: 'PT-BR-001',
+    partName: 'NQi 前刹车片组件',
+    source: 'official',
+    actualQty: 12,
+    availableQty: 10,
+    reservedQty: 2,
+    warningThreshold: 5,
+    location: 'A区-01架-02层',
+    lastUpdated: '2023-10-24 09:30:00'
+  },
+  {
+    id: 'INV1002',
+    partCode: 'PT-TY-012',
+    partName: '90/90-12 真空胎',
+    source: 'third_party',
+    actualQty: 4,
+    availableQty: 4,
+    reservedQty: 0,
+    warningThreshold: 5,
+    location: 'B区-大件存放区',
+    lastUpdated: '2023-10-23 15:45:00'
+  },
+  {
+    id: 'INV1003',
+    partCode: 'PT-BT-005',
+    partName: '60V26Ah 锂电池',
+    source: 'official',
+    actualQty: 1,
+    availableQty: 1,
+    reservedQty: 0,
+    warningThreshold: 2,
+    location: 'C区-防爆电池柜',
+    lastUpdated: '2023-10-20 11:20:00'
+  },
+  {
+    id: 'INV1004',
+    partCode: 'PT-LT-008',
+    partName: 'LED 转向灯',
+    source: 'third_party',
+    actualQty: 25,
+    availableQty: 25,
+    reservedQty: 0,
+    warningThreshold: 10,
+    location: 'A区-05架-01层',
+    lastUpdated: '2023-10-21 08:15:00'
+  },
+  {
+    id: 'INV1005',
+    partCode: 'PT-CT-002',
+    partName: 'NQi 中控控制器',
+    source: 'official',
+    actualQty: 3,
+    availableQty: 2,
+    reservedQty: 1,
+    warningThreshold: 3,
+    location: '特殊件库-01架',
+    lastUpdated: '2023-10-24 17:05:00'
+  },
+  {
+    id: 'INV1006',
+    partCode: 'PT-BD-010',
+    partName: 'UQi+ 原装前护板',
+    source: 'official',
+    actualQty: 8,
+    availableQty: 8,
+    reservedQty: 0,
+    warningThreshold: 5,
+    location: 'B区-03架-02层',
+    lastUpdated: '2023-10-22 14:10:00'
+  },
+  {
+    id: 'INV1007',
+    partCode: 'PT-SEAT-001',
+    partName: 'UQi+ 定制真皮坐垫',
+    source: 'third_party',
+    actualQty: 5,
+    availableQty: 4,
+    reservedQty: 1,
+    warningThreshold: 2,
+    location: 'B区-04架-01层',
+    lastUpdated: '2023-10-24 11:20:00'
+  },
+  {
+    id: 'INV1008',
+    partCode: 'PT-MT-002',
+    partName: 'G0 驱动电机',
+    source: 'official',
+    actualQty: 2,
+    availableQty: 1,
+    reservedQty: 1,
+    warningThreshold: 2,
+    location: 'C区-电机存放架',
+    lastUpdated: '2023-10-24 13:00:00'
+  }
+];
+
+export const mockInventoryLogs: InventoryLogRecord[] = [
+  {
+    id: 'LOG001',
+    flowNo: 'FLOW-20231024-001',
+    partCode: 'PT-BR-001',
+    partName: 'NQi 前刹车片组件',
+    type: 'RESERVE',
+    changeQty: 2,
+    beforeQty: 12,
+    afterQty: 10,
+    businessSource: '工单: WO-20231024-008',
+    operator: '张师傅',
+    operatedAt: '2023-10-24 17:05:00'
+  },
+  {
+    id: 'LOG002',
+    flowNo: 'FLOW-20231024-002',
+    partCode: 'PT-MT-002',
+    partName: 'G0 驱动电机',
+    type: 'INBOUND',
+    changeQty: 2,
+    beforeQty: 0,
+    afterQty: 2,
+    businessSource: '采购单: PO-20231024-001',
+    operator: '店长',
+    operatedAt: '2023-10-24 12:30:00',
+    remark: '总部发货到店'
+  },
+  {
+    id: 'LOG003',
+    flowNo: 'FLOW-20231024-003',
+    partCode: 'PT-MT-002',
+    partName: 'G0 驱动电机',
+    type: 'RESERVE',
+    changeQty: 1,
+    beforeQty: 2,
+    afterQty: 1,
+    businessSource: '工单: WO-20231024-004',
+    operator: '李师傅',
+    operatedAt: '2023-10-24 13:00:00'
+  },
+  {
+    id: 'LOG004',
+    flowNo: 'FLOW-20231024-004',
+    partCode: 'PT-LT-015',
+    partName: 'NQi 前大灯总成',
+    type: 'CONSUME',
+    changeQty: 1,
+    beforeQty: 4,
+    afterQty: 3,
+    businessSource: '工单: WO-20231024-005',
+    operator: '系统自动',
+    operatedAt: '2023-10-24 14:45:00',
+    remark: '工单已结算，真实扣减库存'
+  },
+  {
+    id: 'LOG005',
+    flowNo: 'FLOW-20231024-005',
+    partCode: 'PT-CT-005',
+    partName: 'NQi GT 控制器总成',
+    type: 'RELEASE',
+    changeQty: 1,
+    beforeQty: 2,
+    afterQty: 3,
+    businessSource: '工单取消',
+    operator: '系统自动',
+    operatedAt: '2023-10-24 15:30:00',
+    remark: '客户取消维修释放预占库存'
+  },
+  {
+    id: 'LOG006',
+    flowNo: 'FLOW-20231024-006',
+    partCode: 'PT-TY-012',
+    partName: '90/90-12 真空胎',
+    type: 'ADJUST',
+    changeQty: -1,
+    beforeQty: 5,
+    afterQty: 4,
+    businessSource: '库存盘点',
+    operator: '库管小王',
+    operatedAt: '2023-10-23 15:45:00',
+    remark: '盘点缺失，进行调整'
+  },
+  {
+    id: 'LOG007',
+    flowNo: 'FLOW-20231024-007',
+    partCode: 'PT-SEAT-001',
+    partName: 'UQi+ 定制真皮坐垫',
+    type: 'INBOUND',
+    changeQty: 5,
+    beforeQty: 0,
+    afterQty: 5,
+    businessSource: '手工入库',
+    operator: '店长',
+    operatedAt: '2023-10-23 09:10:00'
+  },
+  {
+    id: 'LOG008',
+    flowNo: 'FLOW-20231024-008',
+    partCode: 'PT-SEAT-001',
+    partName: 'UQi+ 定制真皮坐垫',
+    type: 'RESERVE',
+    changeQty: 1,
+    beforeQty: 5,
+    afterQty: 4,
+    businessSource: '工单: WO-20231024-003',
+    operator: '张师傅',
+    operatedAt: '2023-10-24 11:20:00'
+  }
+];
