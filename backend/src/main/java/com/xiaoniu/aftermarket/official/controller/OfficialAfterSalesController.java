@@ -6,6 +6,7 @@ import com.xiaoniu.aftermarket.common.context.CurrentUserContext;
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
+import com.xiaoniu.aftermarket.common.util.DateParamParser;
 import com.xiaoniu.aftermarket.official.controller.dto.MarkNoSettlementRequiredRequest;
 import com.xiaoniu.aftermarket.official.controller.dto.MarkOfficialSettledRequest;
 import com.xiaoniu.aftermarket.official.controller.dto.SaveOfficialOrderInfoRequest;
@@ -18,7 +19,6 @@ import com.xiaoniu.aftermarket.official.dto.SaveOfficialOrderInfoCommand;
 import com.xiaoniu.aftermarket.official.service.OfficialAfterSalesService;
 import jakarta.validation.Valid;
 import java.time.LocalDateTime;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -37,18 +37,26 @@ public class OfficialAfterSalesController {
             @RequestParam(required = false) String officialOrderNo,
             @RequestParam(required = false) String workOrderNo,
             @RequestParam(required = false) String settlementStatus,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startTime,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endTime,
+            @RequestParam(required = false) String startTime,
+            @RequestParam(required = false) String endTime,
             @RequestParam(required = false) Integer pageNo,
             @RequestParam(required = false) Integer pageSize) {
         CurrentUser user = requireCurrentUser();
+        LocalDateTime parsedStart;
+        LocalDateTime parsedEnd;
+        try {
+            parsedStart = DateParamParser.parseStartDateTime(startTime);
+            parsedEnd = DateParamParser.parseEndDateTime(endTime);
+        } catch (IllegalArgumentException e) {
+            return ApiResponse.failure(ErrorCode.COMMON_BAD_REQUEST, e.getMessage());
+        }
         OfficialAfterSalesQueryRequest request = new OfficialAfterSalesQueryRequest();
         request.setStoreId(user.storeId());
         request.setOfficialOrderNo(officialOrderNo);
         request.setWorkOrderNo(workOrderNo);
         request.setSettlementStatus(settlementStatus);
-        request.setSettlementStartTime(startTime);
-        request.setSettlementEndTime(endTime);
+        request.setSettlementStartTime(parsedStart);
+        request.setSettlementEndTime(parsedEnd);
         request.setPageNo(pageNo);
         request.setPageSize(pageSize);
         return ApiResponse.success(officialAfterSalesService.pageQuery(request));

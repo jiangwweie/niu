@@ -10,20 +10,18 @@ export interface OfficialSettlementRecord {
   customerActualPaid: number;
   customerActualRefund: number;
   receivableAmount: number;
-  settlementStatus: 'PENDING' | 'SETTLED' | 'NOT_REQUIRED' | 'NOT_RECORDED';
+  settlementStatus: 'PENDING' | 'SETTLED' | 'NOT_REQUIRED';
   settlementAmount?: number;
   settlementTime?: string;
   remark?: string;
-  createdAt: string;
 }
 
 export interface OfficialSettlementQuery {
-  orderNo?: string;
+  workOrderNo?: string;
   officialOrderNo?: string;
-  customerName?: string;
   settlementStatus?: string;
-  dateRange?: [string, string];
-  hasAmount?: boolean | '';
+  startTime?: string;
+  endTime?: string;
   pageNo: number;
   pageSize: number;
 }
