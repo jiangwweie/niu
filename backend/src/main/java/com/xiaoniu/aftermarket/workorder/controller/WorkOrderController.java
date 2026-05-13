@@ -75,8 +75,12 @@ public class WorkOrderController {
 
     @GetMapping("/{workOrderId}")
     public ApiResponse<WorkOrderDetailResponse> getWorkOrder(@PathVariable Long workOrderId) {
-        requireCurrentUser();
-        return ApiResponse.success(workOrderService.getById(workOrderId));
+        CurrentUser user = requireCurrentUser();
+        WorkOrderDetailResponse detail = workOrderService.getById(workOrderId);
+        if (!user.storeId().equals(detail.getStoreId())) {
+            throw new BusinessException(ErrorCode.WORK_ORDER_NOT_FOUND, "工单不存在");
+        }
+        return ApiResponse.success(detail);
     }
 
     @PostMapping("/drafts")

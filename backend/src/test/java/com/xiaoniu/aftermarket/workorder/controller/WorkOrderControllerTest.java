@@ -30,12 +30,12 @@ class WorkOrderControllerTest {
 
     @BeforeEach
     void cleanAndSeed() {
-        jdbcTemplate.execute("DELETE FROM work_order_status_log WHERE store_id = 1");
-        jdbcTemplate.execute("DELETE FROM work_order_charge_item WHERE store_id = 1");
-        jdbcTemplate.execute("DELETE FROM inventory_flow WHERE store_id = 1");
-        jdbcTemplate.execute("DELETE FROM inventory_stock WHERE store_id = 1");
-        jdbcTemplate.execute("DELETE FROM payment_record WHERE store_id = 1");
-        jdbcTemplate.execute("DELETE FROM work_order WHERE store_id = 1");
+        jdbcTemplate.execute("DELETE FROM work_order_status_log WHERE store_id IN (1, 2)");
+        jdbcTemplate.execute("DELETE FROM work_order_charge_item WHERE store_id IN (1, 2)");
+        jdbcTemplate.execute("DELETE FROM inventory_flow WHERE store_id IN (1, 2)");
+        jdbcTemplate.execute("DELETE FROM inventory_stock WHERE store_id IN (1, 2)");
+        jdbcTemplate.execute("DELETE FROM payment_record WHERE store_id IN (1, 2)");
+        jdbcTemplate.execute("DELETE FROM work_order WHERE store_id IN (1, 2)");
         jdbcTemplate.execute("DELETE FROM part WHERE id IN (9001, 9002)");
         jdbcTemplate.execute("DELETE FROM sequence_daily WHERE seq_type = 'WORK_ORDER'");
 
@@ -136,6 +136,15 @@ class WorkOrderControllerTest {
             INSERT INTO payment_record (id, store_id, work_order_id, payment_no, amount, payment_method,
                                         paid_at, operator_id)
             VALUES (8001, 1, 5004, 'PAY-0001', 60.00, 'CASH', CURRENT_TIMESTAMP, 1)
+            """);
+
+        // Work order belonging to store_id=2 — for cross-store isolation test
+        jdbcTemplate.execute("""
+            INSERT INTO work_order (id, store_id, work_order_no, customer_name_snapshot, customer_phone_snapshot,
+                                    vehicle_model_snapshot, frame_no_snapshot, repair_item, status,
+                                    receivable_amount, received_amount)
+            VALUES (5099, 2, 'WO-0099', '其他门店客户', '13900009999', 'NQi', 'FRAME099', '其他门店维修',
+                    'DRAFT', 0.00, 0.00)
             """);
     }
 
@@ -513,5 +522,83 @@ class WorkOrderControllerTest {
                 .andExpect(jsonPath("$.data.pageNo").exists())
                 .andExpect(jsonPath("$.data.pageSize").exists())
                 .andExpect(jsonPath("$.data.total").exists());
+    }
+
+    // ========== 17. Store isolation: get detail same store succeeds ==========
+
+    @Test
+    void getWorkOrderDetailSameStoreSucceeds() throws Exception {
+        mockMvc.perform(get("/api/admin/work-orders/5001")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.id").value(5001))
+                .andExpect(jsonPath("$.data.storeId").value(1));
+    }
+
+    // ========== 18. Store isolation: get detail cross store returns not found ==========
+
+    @Test
+    void getWorkOrderDetailCrossStoreReturnsNotFound() throws Exception {
+        mockMvc.perform(get("/api/admin/work-orders/5099")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("WORK_ORDER_NOT_FOUND"));
+    }
+
+    // ========== 19. Store isolation: page query uses X-Store-Id header ==========
+
+    @Test
+    void listWorkOrdersUsesHeaderStoreId() throws Exception {
+        mockMvc.perform(get("/api/admin/work-orders")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.records").isArray());
+        // Verify all returned records belong to store 1
+        Long countStore2 = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM work_order WHERE store_id = 2", Long.class);
+        assertTrue(countStore2 != null && countStore2 > 0);
+        // The list should only contain store 1 records (5 total: 5001-5004 + 5099 is store 2)
+        mockMvc.perform(get("/api/admin/work-orders")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(4));
+    }
+
+    // ========== 20. Store isolation: page query ignores frontend storeId ==========
+
+    @Test
+    void listWorkOrdersIgnoresFrontendStoreId() throws Exception {
+        // Even if frontend passes storeId=2 as query param, it should be ignored
+        mockMvc.perform(get("/api/admin/work-orders")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .param("storeId", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.total").value(4));
+    }
+
+    // ========== 21. Store isolation: missing X-Store-Id header fails ==========
+
+    @Test
+    void listWorkOrdersWithoutStoreIdHeaderFails() throws Exception {
+        mockMvc.perform(get("/api/admin/work-orders")
+                        .header("X-User-Id", "1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
+    }
+
+    @Test
+    void getWorkOrderWithoutStoreIdHeaderFails() throws Exception {
+        mockMvc.perform(get("/api/admin/work-orders/5001")
+                        .header("X-User-Id", "1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
     }
 }
