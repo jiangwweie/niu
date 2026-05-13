@@ -31,6 +31,6 @@ public class AdminWebMvcConfig implements WebMvcConfigurer {
         // Dev-only bootstrap for local Admin API integration. This is not authentication
         // and must be replaced by the formal token-based CurrentUserContext setup.
         registry.addInterceptor(devCurrentUserInterceptor)
-                .addPathPatterns("/api/admin/**");
+                .addPathPatterns("/api/admin/**", "/api/staff/**");
     }
 }

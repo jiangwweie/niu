@@ -1,0 +1,113 @@
+### Staff API HTTP 联调示例
+### 使用 VS Code REST Client 插件或 JetBrains HTTP Client 直接运行
+### 后端需先启动: cd backend && mvn spring-boot:run -Dspring-boot.run.profiles=dev
+
+@baseUrl = http://localhost:8080
+@userId = 1
+@storeId = 1
+
+### ========== Dict ==========
+
+### 获取零件分类字典项
+GET {{baseUrl}}/api/staff/dict/types/PART_CATEGORY/items
+
+### 获取支付方式字典项
+GET {{baseUrl}}/api/staff/dict/types/PAYMENT_METHOD/items
+
+### 查询不存在的字典类型（应返回空数组）
+GET {{baseUrl}}/api/staff/dict/types/NONEXISTENT/items
+
+### ========== Part ==========
+
+### 查询启用配件列表（分页）
+GET {{baseUrl}}/api/staff/parts?pageNo=1&pageSize=10
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### 按配件名称搜索
+GET {{baseUrl}}/api/staff/parts?partName=电池&pageSize=5
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### 按来源筛选官方配件
+GET {{baseUrl}}/api/staff/parts?source=OFFICIAL
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### 获取配件详情
+GET {{baseUrl}}/api/staff/parts/1
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### 获取不存在的配件（应返回 PART_NOT_FOUND）
+GET {{baseUrl}}/api/staff/parts/99999
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### 缺少 dev header（应返回 COMMON_BAD_REQUEST）
+GET {{baseUrl}}/api/staff/parts
+
+### ========== Inventory ==========
+
+### 查询库存列表
+GET {{baseUrl}}/api/staff/inventory/stocks?pageNo=1&pageSize=10
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### 按配件编码搜索库存
+GET {{baseUrl}}/api/staff/inventory/stocks?partCode=TEST
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### 获取指定配件库存详情
+GET {{baseUrl}}/api/staff/inventory/stocks/1
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### 获取不存在的库存（应返回错误）
+GET {{baseUrl}}/api/staff/inventory/stocks/99999
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### 缺少 dev header（应返回 COMMON_BAD_REQUEST）
+GET {{baseUrl}}/api/staff/inventory/stocks
+
+### ========== WorkOrder ==========
+
+### 查询工单列表
+GET {{baseUrl}}/api/staff/work-orders?pageNo=1&pageSize=10
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### 按客户姓名搜索工单
+GET {{baseUrl}}/api/staff/work-orders?customerName=张三
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### 按状态筛选草稿工单
+GET {{baseUrl}}/api/staff/work-orders?status=DRAFT
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### 按车架号搜索工单
+GET {{baseUrl}}/api/staff/work-orders?vehicleFrameNo=FRAME001
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### 获取工单详情
+GET {{baseUrl}}/api/staff/work-orders/1
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### 获取不存在的工单（应返回 WORK_ORDER_NOT_FOUND）
+GET {{baseUrl}}/api/staff/work-orders/99999
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### 跨门店访问（应返回 WORK_ORDER_NOT_FOUND）
+GET {{baseUrl}}/api/staff/work-orders/1
+X-User-Id: {{userId}}
+X-Store-Id: 2
+
+### 缺少 dev header（应返回 COMMON_BAD_REQUEST）
+GET {{baseUrl}}/api/staff/work-orders
