@@ -1,37 +1,101 @@
+/* ── View-layer types (used by inventory page) ── */
+
 export interface InventoryRecord {
   id: string;
+  partId: number;
   partCode: string;
   partName: string;
-  source: 'official' | 'third_party';
+  source: string;
   actualQty: number;
   availableQty: number;
   reservedQty: number;
-  warningThreshold: number;
-  location: string;
-  lastUpdated: string;
+  lastChangedAt: string;
 }
 
 export interface InventoryQuery {
   partCode?: string;
   partName?: string;
-  source?: 'official' | 'third_party' | '';
-  location?: string;
-  isWarning?: boolean | '';
+  source?: string;
   pageNo: number;
   pageSize: number;
 }
 
 export interface InventoryLogRecord {
   id: string;
-  flowNo: string;
+  flowType: string;
+  quantityChange: number;
   partCode: string;
   partName: string;
-  type: 'INBOUND' | 'RESERVE' | 'RELEASE' | 'CONSUME' | 'ADJUST';
-  changeQty: number;
-  beforeQty: number;
-  afterQty: number;
-  businessSource: string;
-  operator: string;
-  operatedAt: string;
+  operatorId: number;
+  remark: string;
+  createdAt: string;
+  /* inventory before/after */
+  actualBefore: number;
+  actualAfter: number;
+  availableBefore: number;
+  availableAfter: number;
+  reservedBefore: number;
+  reservedAfter: number;
+  /* business linkage */
+  businessType: string;
+  businessId: string;
+  unitCost: number;
+}
+
+/* ── Backend response shapes ── */
+
+export interface InventoryStockResp {
+  id: number;
+  storeId: number;
+  partId: number;
+  partCode: string;
+  partName: string;
+  partSource: string;
+  actualQty: number;
+  availableQty: number;
+  reservedQty: number;
+  lastFlowId: number | null;
+  lastChangedAt: string | null;
+}
+
+export interface InventoryFlowResp {
+  id: number;
+  storeId: number;
+  partId: number;
+  partCode: string;
+  partName: string;
+  flowType: string;
+  quantityChange: number;
+  relatedOrderId: number | null;
+  operatorId: number;
+  remark: string;
+  createdAt: string;
+  /* inventory before/after */
+  actualBefore: number;
+  actualAfter: number;
+  availableBefore: number;
+  availableAfter: number;
+  reservedBefore: number;
+  reservedAfter: number;
+  /* business linkage */
+  businessType: string;
+  businessId: string;
+  unitCost: number;
+}
+
+/* ── Request bodies ── */
+
+export interface InventoryInboundBody {
+  partId: number;
+  quantity: number;
+  unitCost?: number;
+  reason?: string;
+  remark?: string;
+}
+
+export interface InventoryAdjustBody {
+  partId: number;
+  quantityDelta: number;
+  reason: string;
   remark?: string;
 }

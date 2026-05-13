@@ -1,57 +1,109 @@
-import type { BaseHttpResponse, PaginatedResult } from '@/types';
-import type { InventoryQuery, InventoryRecord, InventoryLogRecord } from '@/types/inventory';
-import { mockInventories, mockInventoryLogs } from '@/mock/inventory';
+import request from '@/utils/request';
+import type { PaginatedResult } from '@/types';
+import type {
+  InventoryQuery,
+  InventoryRecord,
+  InventoryLogRecord,
+  InventoryStockResp,
+  InventoryFlowResp,
+  InventoryInboundBody,
+  InventoryAdjustBody,
+} from '@/types/inventory';
 
-/**
- * 获取库存列表
- */
-export const getInventoryList = (params: InventoryQuery): Promise<BaseHttpResponse<PaginatedResult<InventoryRecord>>> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      let filtered = [...mockInventories];
-      
-      if (params.partCode) filtered = filtered.filter(p => p.partCode.includes(params.partCode!));
-      if (params.partName) filtered = filtered.filter(p => p.partName.includes(params.partName!));
-      if (params.source !== undefined && params.source !== '') filtered = filtered.filter(p => p.source === params.source);
-      if (params.location) filtered = filtered.filter(p => p.location.includes(params.location!));
-      if (params.isWarning !== undefined && params.isWarning !== '') {
-        filtered = filtered.filter(p => {
-            const isWarn = p.availableQty < p.warningThreshold;
-            return params.isWarning ? isWarn : !isWarn;
-        });
-      }
-      
-      const pageNo = params.pageNo || 1;
-      const pageSize = params.pageSize || 10;
-      const start = (pageNo - 1) * pageSize;
-      const pagedData = filtered.slice(start, start + pageSize);
+/* ── Adapters: backend → view ── */
 
-      resolve({
-        code: 'SUCCESS',
-        message: 'success',
-        data: {
-          records: pagedData,
-          total: filtered.length,
-          pageNo,
-          pageSize
-        }
-      });
-    }, 300);
-  });
-};
+function adaptStock(resp: InventoryStockResp): InventoryRecord {
+  return {
+    id: String(resp.id),
+    partId: resp.partId,
+    partCode: resp.partCode,
+    partName: resp.partName,
+    source: resp.partSource || '',
+    actualQty: resp.actualQty,
+    availableQty: resp.availableQty,
+    reservedQty: resp.reservedQty,
+    lastChangedAt: resp.lastChangedAt || '',
+  };
+}
 
-/**
- * 获取库存流水
- */
-export const getInventoryLogs = (partCode?: string): Promise<BaseHttpResponse<InventoryLogRecord[]>> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const logs = partCode ? mockInventoryLogs.filter(log => log.partCode === partCode) : mockInventoryLogs;
-      resolve({
-        code: 'SUCCESS',
-        message: 'success',
-        data: logs
-      });
-    }, 300);
-  });
+function adaptFlow(resp: InventoryFlowResp): InventoryLogRecord {
+  return {
+    id: String(resp.id),
+    flowType: resp.flowType,
+    quantityChange: resp.quantityChange,
+    partCode: resp.partCode,
+    partName: resp.partName,
+    operatorId: resp.operatorId,
+    remark: resp.remark || '',
+    createdAt: resp.createdAt,
+    actualBefore: resp.actualBefore ?? 0,
+    actualAfter: resp.actualAfter ?? 0,
+    availableBefore: resp.availableBefore ?? 0,
+    availableAfter: resp.availableAfter ?? 0,
+    reservedBefore: resp.reservedBefore ?? 0,
+    reservedAfter: resp.reservedAfter ?? 0,
+    businessType: resp.businessType || '',
+    businessId: resp.businessId || '',
+    unitCost: resp.unitCost ?? 0,
+  };
+}
+
+/* ── API calls ── */
+
+/** GET /api/admin/inventory/stocks */
+export async function getInventoryList(
+  params: InventoryQuery,
+): Promise<PaginatedResult<InventoryRecord>> {
+  const backendParams: Record<string, string | number> = {
+    pageNo: params.pageNo,
+    pageSize: params.pageSize,
+  };
+  if (params.partCode) backendParams.partCode = params.partCode;
+  if (params.partName) backendParams.partName = params.partName;
+  if (params.source) backendParams.source = params.source;
+
+  const page: PaginatedResult<InventoryStockResp> = await request.get(
+    '/api/admin/inventory/stocks',
+    { params: backendParams },
+  );
+  return {
+    records: page.records.map(adaptStock),
+    total: page.total,
+    pageNo: page.pageNo,
+    pageSize: page.pageSize,
+  };
+}
+
+/** GET /api/admin/inventory/flows */
+export async function getInventoryFlows(
+  params: { partId?: number; partCode?: string; partName?: string; flowType?: string; pageNo: number; pageSize: number },
+): Promise<PaginatedResult<InventoryLogRecord>> {
+  const backendParams: Record<string, string | number> = {
+    pageNo: params.pageNo,
+    pageSize: params.pageSize,
+  };
+  if (params.partId) backendParams.partId = params.partId;
+  if (params.partCode) backendParams.partCode = params.partCode;
+  if (params.flowType) backendParams.flowType = params.flowType;
+
+  const page: PaginatedResult<InventoryFlowResp> = await request.get(
+    '/api/admin/inventory/flows',
+    { params: backendParams },
+  );
+  return {
+    records: page.records.map(adaptFlow),
+    total: page.total,
+    pageNo: page.pageNo,
+    pageSize: page.pageSize,
+  };
+}
+
+/** POST /api/admin/inventory/inbound */
+export function submitInbound(body: InventoryInboundBody) {
+  return request.post('/api/admin/inventory/inbound', body);
+}
+
+/** POST /api/admin/inventory/adjust */
+export function submitAdjust(body: InventoryAdjustBody) {
+  return request.post('/api/admin/inventory/adjust', body);
 }
