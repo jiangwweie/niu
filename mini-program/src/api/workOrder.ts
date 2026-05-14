@@ -6,7 +6,10 @@ import {
   UpdateDraftWorkOrderRequest, 
   AddChargeItemRequest, 
   UpdateChargeItemRequest,
-  SubmitWorkOrderRequest
+  SubmitWorkOrderRequest,
+  CancelWorkOrderRequest,
+  RecordPaymentRequest,
+  StaffPaymentRecordResponse
 } from '../types/workOrder';
 import { mockWorkOrders } from '../mock/workOrder';
 
@@ -84,6 +87,26 @@ export const submitWorkOrder = (workOrderId: string | number, data?: SubmitWorkO
     method: 'POST',
     data,
     mockData: { id: workOrderId, status: 'PENDING_ACCEPT' } as WorkOrder,
+    showLoading: true
+  });
+};
+
+export const cancelWorkOrder = (workOrderId: string | number, data: CancelWorkOrderRequest) => {
+  return request<WorkOrder>({
+    url: `/api/staff/work-orders/${workOrderId}/cancel`,
+    method: 'POST',
+    data,
+    mockData: { id: workOrderId, status: 'CANCELLED' } as WorkOrder,
+    showLoading: true
+  });
+};
+
+export const recordPayment = (workOrderId: string | number, data: RecordPaymentRequest) => {
+  return request<StaffPaymentRecordResponse>({
+    url: `/api/staff/work-orders/${workOrderId}/payments`,
+    method: 'POST',
+    data,
+    mockData: { id: Date.now(), workOrderId, amount: data.amount, paymentMethod: data.paymentMethod } as StaffPaymentRecordResponse,
     showLoading: true
   });
 };

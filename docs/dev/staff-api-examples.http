@@ -332,3 +332,51 @@ X-Store-Id: 2
 {
   "reason": "跨店取消"
 }
+
+### ========== Work Order Payment ==========
+
+### 记录支付（只生成 payment_record，更新 receivedAmount，不自动结算、不扣库存）
+POST {{baseUrl}}/api/staff/work-orders/2/payments
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+{
+  "amount": 120.50,
+  "paymentMethod": "WECHAT",
+  "paidAt": "2026-05-14T10:30:00",
+  "remark": "客户微信支付"
+}
+
+### 记录支付 - 非法金额（应返回 COMMON_BAD_REQUEST 或 PAYMENT_AMOUNT_INVALID）
+POST {{baseUrl}}/api/staff/work-orders/2/payments
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+{
+  "amount": 0,
+  "paymentMethod": "WECHAT"
+}
+
+### 记录支付 - 非法支付方式（应返回 PAYMENT_METHOD_INVALID）
+POST {{baseUrl}}/api/staff/work-orders/2/payments
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+{
+  "amount": 10,
+  "paymentMethod": "UNKNOWN"
+}
+
+### 跨门店记录支付（应返回 WORK_ORDER_NOT_FOUND）
+POST {{baseUrl}}/api/staff/work-orders/2/payments
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: 2
+
+{
+  "amount": 10,
+  "paymentMethod": "CASH"
+}

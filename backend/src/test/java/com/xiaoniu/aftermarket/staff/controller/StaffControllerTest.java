@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.math.BigDecimal;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -1230,6 +1231,174 @@ class StaffControllerTest {
                         .header("X-Store-Id", "2")
                         .contentType("application/json")
                         .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("WORK_ORDER_NOT_FOUND"));
+    }
+
+    // ========== WorkOrder payment tests ==========
+
+    @Test
+    void staffRecordPaymentSucceedsCreatesPaymentRecordAndUpdatesReceivedAmountOnly() throws Exception {
+        String body = """
+                {
+                  "amount": 30.00,
+                  "paymentMethod": "WECHAT",
+                  "paidAt": "2026-05-14T10:30:00",
+                  "remark": "客户微信支付"
+                }
+                """;
+
+        mockMvc.perform(post("/api/staff/work-orders/80002/payments")
+                        .header("X-User-Id", "7")
+                        .header("X-Store-Id", "1")
+                        .contentType("application/json")
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.id", notNullValue()))
+                .andExpect(jsonPath("$.data.workOrderId").value(80002))
+                .andExpect(jsonPath("$.data.paymentNo", notNullValue()))
+                .andExpect(jsonPath("$.data.amount").value(30.0))
+                .andExpect(jsonPath("$.data.paymentMethod").value("WECHAT"))
+                .andExpect(jsonPath("$.data.paidAt").value("2026-05-14T10:30:00"))
+                .andExpect(jsonPath("$.data.receiverId").value(7))
+                .andExpect(jsonPath("$.data.operatorId").value(7))
+                .andExpect(jsonPath("$.data.remark").value("客户微信支付"))
+                .andExpect(jsonPath("$.data.storeId").doesNotExist())
+                .andExpect(jsonPath("$.data.costPriceSnapshot").doesNotExist())
+                .andExpect(jsonPath("$.data.lineCostAmount").doesNotExist());
+
+        assertEquals(1, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM payment_record WHERE store_id = 1 AND work_order_id = 80002",
+                Integer.class));
+        assertEquals(new BigDecimal("30.00"), jdbcTemplate.queryForObject(
+                "SELECT amount FROM payment_record WHERE store_id = 1 AND work_order_id = 80002",
+                BigDecimal.class));
+        assertEquals(7L, jdbcTemplate.queryForObject(
+                "SELECT operator_id FROM payment_record WHERE store_id = 1 AND work_order_id = 80002",
+                Long.class));
+        assertEquals(7L, jdbcTemplate.queryForObject(
+                "SELECT receiver_id FROM payment_record WHERE store_id = 1 AND work_order_id = 80002",
+                Long.class));
+        assertEquals(new BigDecimal("30.00"), jdbcTemplate.queryForObject(
+                "SELECT received_amount FROM work_order WHERE id = 80002",
+                BigDecimal.class));
+        assertEquals("PENDING_ACCEPT", jdbcTemplate.queryForObject(
+                "SELECT status FROM work_order WHERE id = 80002", String.class));
+        assertEquals(0, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM inventory_flow WHERE store_id = 1 AND flow_type = 'CONSUME'",
+                Integer.class));
+        assertEquals(0, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM inventory_flow WHERE store_id = 1 AND flow_type = 'RELEASE'",
+                Integer.class));
+        assertEquals(0, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM inventory_flow WHERE store_id = 1 AND flow_type = 'RESERVE'",
+                Integer.class));
+        assertEquals(0, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM refund_record WHERE store_id = 1 AND work_order_id = 80002",
+                Integer.class));
+    }
+
+    @Test
+    void staffRecordPaymentAmountMustBePositive() throws Exception {
+        mockMvc.perform(post("/api/staff/work-orders/80002/payments")
+                        .header("X-User-Id", "7")
+                        .header("X-Store-Id", "1")
+                        .contentType("application/json")
+                        .content("""
+                                {"amount": 0, "paymentMethod": "WECHAT"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
+
+        assertEquals(0, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM payment_record WHERE store_id = 1 AND work_order_id = 80002",
+                Integer.class));
+    }
+
+    @Test
+    void staffRecordPaymentInvalidMethodFails() throws Exception {
+        mockMvc.perform(post("/api/staff/work-orders/80002/payments")
+                        .header("X-User-Id", "7")
+                        .header("X-Store-Id", "1")
+                        .contentType("application/json")
+                        .content("""
+                                {"amount": 10.00, "paymentMethod": "BITCOIN"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("PAYMENT_METHOD_INVALID"));
+    }
+
+    @Test
+    void staffRecordPaymentNonexistentWorkOrderFails() throws Exception {
+        mockMvc.perform(post("/api/staff/work-orders/99999/payments")
+                        .header("X-User-Id", "7")
+                        .header("X-Store-Id", "1")
+                        .contentType("application/json")
+                        .content("""
+                                {"amount": 10.00, "paymentMethod": "CASH"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("WORK_ORDER_NOT_FOUND"));
+    }
+
+    @Test
+    void staffRecordPaymentCancelledWorkOrderFails() throws Exception {
+        jdbcTemplate.execute("""
+            INSERT INTO work_order (id, store_id, work_order_no, customer_name_snapshot, customer_phone_snapshot,
+                                    vehicle_model_snapshot, frame_no_snapshot, repair_item, status,
+                                    receivable_amount, received_amount)
+            VALUES (80120, 1, 'S-WO-CANCELLED-PAY', '已取消客户', '13900004444', 'NQi', 'SFRAME120', '已取消',
+                    'CANCELLED', 100.00, 0.00)
+            """);
+
+        mockMvc.perform(post("/api/staff/work-orders/80120/payments")
+                        .header("X-User-Id", "7")
+                        .header("X-Store-Id", "1")
+                        .contentType("application/json")
+                        .content("""
+                                {"amount": 10.00, "paymentMethod": "CASH"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("PAYMENT_WORK_ORDER_STATUS_INVALID"));
+    }
+
+    @Test
+    void staffRecordPaymentUsesCurrentUserContextInsteadOfBodyStoreOperatorOrReceiver() throws Exception {
+        mockMvc.perform(post("/api/staff/work-orders/80002/payments")
+                        .header("X-User-Id", "8")
+                        .header("X-Store-Id", "1")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "storeId": 2,
+                                  "operatorId": 99,
+                                  "receiverId": 99,
+                                  "amount": 15.00,
+                                  "paymentMethod": "CASH"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.receiverId").value(8))
+                .andExpect(jsonPath("$.data.operatorId").value(8));
+
+        assertEquals(8L, jdbcTemplate.queryForObject(
+                "SELECT operator_id FROM payment_record WHERE store_id = 1 AND work_order_id = 80002",
+                Long.class));
+        assertEquals(8L, jdbcTemplate.queryForObject(
+                "SELECT receiver_id FROM payment_record WHERE store_id = 1 AND work_order_id = 80002",
+                Long.class));
+    }
+
+    @Test
+    void staffRecordPaymentCrossStoreWorkOrderFails() throws Exception {
+        mockMvc.perform(post("/api/staff/work-orders/80099/payments")
+                        .header("X-User-Id", "7")
+                        .header("X-Store-Id", "1")
+                        .contentType("application/json")
+                        .content("""
+                                {"amount": 10.00, "paymentMethod": "CASH"}
+                                """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("WORK_ORDER_NOT_FOUND"));
     }

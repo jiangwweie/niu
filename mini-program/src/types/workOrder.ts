@@ -70,3 +70,29 @@ export interface UpdateChargeItemRequest {
 export interface SubmitWorkOrderRequest {
   remark?: string;
 }
+
+export interface CancelWorkOrderRequest {
+  reason: string;
+  remark?: string;
+}
+
+export type PaymentMethod = 'WECHAT' | 'ALIPAY' | 'UNIONPAY' | 'CASH' | 'OTHER';
+
+export interface RecordPaymentRequest {
+  amount: number;
+  paymentMethod: PaymentMethod;
+  paidAt?: string;
+  remark?: string;
+}
+
+export interface StaffPaymentRecordResponse {
+  id: number | string;
+  workOrderId: number | string;
+  paymentNo: string;
+  amount: number;
+  paymentMethod: string;
+  paidAt?: string;
+  receiverId?: number | string;
+  operatorId?: number | string;
+  remark?: string;
+}

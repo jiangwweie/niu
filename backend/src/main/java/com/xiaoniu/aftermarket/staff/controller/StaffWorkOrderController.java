@@ -6,10 +6,15 @@ import com.xiaoniu.aftermarket.common.context.CurrentUser;
 import com.xiaoniu.aftermarket.common.context.CurrentUserContext;
 import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
+import com.xiaoniu.aftermarket.payment.application.RecordPaymentApplicationService;
+import com.xiaoniu.aftermarket.payment.dto.PaymentRecordResponse;
+import com.xiaoniu.aftermarket.payment.dto.RecordPaymentCommand;
+import com.xiaoniu.aftermarket.payment.service.PaymentService;
 import com.xiaoniu.aftermarket.staff.dto.StaffAddChargeItemRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffCancelWorkOrderRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffChargeItemIdResponse;
 import com.xiaoniu.aftermarket.staff.dto.StaffCreateDraftWorkOrderRequest;
+import com.xiaoniu.aftermarket.staff.dto.StaffRecordPaymentRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffSubmitWorkOrderRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffUpdateChargeItemRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffUpdateDraftWorkOrderRequest;
@@ -34,11 +39,17 @@ public class StaffWorkOrderController {
 
     private final WorkOrderService workOrderService;
     private final WorkOrderMapper workOrderMapper;
+    private final RecordPaymentApplicationService recordPaymentService;
+    private final PaymentService paymentService;
 
     public StaffWorkOrderController(WorkOrderService workOrderService,
-                                    WorkOrderMapper workOrderMapper) {
+                                    WorkOrderMapper workOrderMapper,
+                                    RecordPaymentApplicationService recordPaymentService,
+                                    PaymentService paymentService) {
         this.workOrderService = workOrderService;
         this.workOrderMapper = workOrderMapper;
+        this.recordPaymentService = recordPaymentService;
+        this.paymentService = paymentService;
     }
 
     @GetMapping
@@ -196,6 +207,31 @@ public class StaffWorkOrderController {
         workOrderService.cancel(command);
         WorkOrderDetailResponse detail = workOrderService.getById(workOrderId);
         return ApiResponse.success(StaffWorkOrderDetail.from(detail));
+    }
+
+    @PostMapping("/{workOrderId}/payments")
+    public ApiResponse<StaffPaymentRecordResponse> recordPayment(
+            @PathVariable Long workOrderId,
+            @Valid @RequestBody StaffRecordPaymentRequest request) {
+        CurrentUser user = requireCurrentUser();
+        requireWorkOrderInStore(workOrderId, user.storeId());
+
+        RecordPaymentCommand command = new RecordPaymentCommand();
+        command.setStoreId(user.storeId());
+        command.setWorkOrderId(workOrderId);
+        command.setOperatorId(user.userId());
+        command.setReceiverId(user.userId());
+        command.setAmount(request.amount());
+        command.setPaymentMethod(request.paymentMethod());
+        command.setPaidAt(request.paidAt());
+        command.setRemark(request.remark());
+
+        Long paymentId = recordPaymentService.execute(command);
+        PaymentRecordResponse response = paymentService.listByWorkOrderId(workOrderId).stream()
+                .filter(record -> paymentId.equals(record.getId()))
+                .findFirst()
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMMON_INTERNAL_ERROR, "支付记录不存在"));
+        return ApiResponse.success(StaffPaymentRecordResponse.from(response));
     }
 
     private CurrentUser requireCurrentUser() {

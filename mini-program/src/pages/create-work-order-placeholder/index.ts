@@ -7,7 +7,14 @@ import {
   deleteChargeItem 
 } from '../../api/workOrder';
 import { Part } from '../../types/parts';
-import { WorkOrder, WorkOrderItem, CreateDraftWorkOrderRequest, AddChargeItemRequest, UpdateChargeItemRequest } from '../../types/workOrder';
+import { 
+  WorkOrder, 
+  WorkOrderItem, 
+  CreateDraftWorkOrderRequest, 
+  AddChargeItemRequest, 
+  UpdateChargeItemRequest,
+  PaymentMethod 
+} from '../../types/workOrder';
 import Toast from 'tdesign-miniprogram/toast/index';
 import Dialog from 'tdesign-miniprogram/dialog/index';
 
@@ -51,7 +58,22 @@ Page({
     // Submit
     submitDialogVisible: false,
     submitRemark: '',
-    submitLoading: false
+    submitLoading: false,
+
+    // Cancel
+    cancelDialogVisible: false,
+    cancelReason: '',
+    cancelRemark: '',
+    cancelLoading: false,
+
+    // Payment
+    paymentDialogVisible: false,
+    paymentForm: {
+      amount: '',
+      paymentMethod: 'WECHAT' as PaymentMethod,
+      remark: ''
+    },
+    paymentLoading: false
   },
 
   onLoad() {
@@ -320,6 +342,114 @@ Page({
         console.error('Submit work order failed:', err);
       }).finally(() => {
         this.setData({ submitLoading: false });
+      });
+    });
+  },
+
+  // --- Cancel Work Order ---
+  openCancelDialog() {
+    this.setData({
+      cancelDialogVisible: true,
+      cancelReason: '',
+      cancelRemark: ''
+    });
+  },
+
+  onCancelReasonChange(e: any) {
+    this.setData({ cancelReason: e.detail.value });
+  },
+
+  onCancelRemarkChange(e: any) {
+    this.setData({ cancelRemark: e.detail.value });
+  },
+
+  onCancelCancelDialog() {
+    this.setData({ cancelDialogVisible: false });
+  },
+
+  onConfirmCancel() {
+    if (this.data.cancelLoading || !this.data.workOrderId) return;
+    
+    if (!this.data.cancelReason || this.data.cancelReason.trim() === '') {
+      Toast({ context: this, selector: '#t-toast', message: '请输入取消原因', icon: 'close-circle' });
+      return;
+    }
+
+    this.setData({ cancelLoading: true, cancelDialogVisible: false });
+
+    import('../../api/workOrder').then(({ cancelWorkOrder }) => {
+      cancelWorkOrder(this.data.workOrderId!, { 
+        reason: this.data.cancelReason, 
+        remark: this.data.cancelRemark 
+      }).then(res => {
+        Toast({ context: this, selector: '#t-toast', message: '工单已取消，库存释放以后端结果为准。', icon: 'check-circle' });
+        this.refreshWorkOrder();
+      }).catch(err => {
+        console.error('Cancel work order failed:', err);
+      }).finally(() => {
+        this.setData({ cancelLoading: false });
+      });
+    });
+  },
+
+  // --- Record Payment ---
+  openPaymentDialog() {
+    this.setData({
+      paymentDialogVisible: true,
+      paymentForm: {
+        amount: '',
+        paymentMethod: 'WECHAT',
+        remark: ''
+      }
+    });
+  },
+
+  closePaymentDialog() {
+    this.setData({ paymentDialogVisible: false });
+  },
+
+  onPaymentPopupVisibleChange(e: any) {
+    this.setData({ paymentDialogVisible: e.detail.visible || false });
+  },
+
+  onPaymentFormChange(e: any) {
+    const field = e.currentTarget.dataset.field;
+    this.setData({ [`paymentForm.${field}`]: e.detail.value });
+  },
+
+  onSelectPaymentMethod(e: any) {
+    this.setData({ 'paymentForm.paymentMethod': e.currentTarget.dataset.val });
+  },
+
+  confirmRecordPayment() {
+    if (this.data.paymentLoading || !this.data.workOrderId) return;
+    
+    const amount = parseFloat(this.data.paymentForm.amount);
+    if (isNaN(amount) || amount <= 0) {
+      Toast({ context: this, selector: '#t-toast', message: '请输入大于0的支付金额', icon: 'close-circle' });
+      return;
+    }
+
+    if (!this.data.paymentForm.paymentMethod) {
+      Toast({ context: this, selector: '#t-toast', message: '请选择支付方式', icon: 'close-circle' });
+      return;
+    }
+
+    this.setData({ paymentLoading: true });
+
+    import('../../api/workOrder').then(({ recordPayment }) => {
+      recordPayment(this.data.workOrderId!, {
+        amount: amount,
+        paymentMethod: this.data.paymentForm.paymentMethod,
+        remark: this.data.paymentForm.remark
+      }).then(res => {
+        this.setData({ paymentDialogVisible: false });
+        Toast({ context: this, selector: '#t-toast', message: '支付记录已保存。支付不会自动结算工单。', icon: 'check-circle' });
+        this.refreshWorkOrder();
+      }).catch(err => {
+        console.error('Record payment failed:', err);
+      }).finally(() => {
+        this.setData({ paymentLoading: false });
       });
     });
   }
