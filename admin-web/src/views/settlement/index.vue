@@ -86,7 +86,11 @@
           <el-table-column label="操作" width="240" fixed="right" align="center">
             <template #default="{ row }">
               <el-button link type="primary" @click="handleView(row)">查看</el-button>
-              <el-button link type="primary" @click="handleRecordOrderNo(row)">录入订单号</el-button>
+              <el-button
+                v-if="row.settlementStatus !== 'SETTLED' && row.settlementStatus !== 'NOT_REQUIRED'"
+                link type="primary" 
+                @click="handleRecordOrderNo(row)"
+              >录入订单号</el-button>
               <el-button
                 v-if="row.settlementStatus !== 'SETTLED' && row.settlementStatus !== 'NOT_REQUIRED'"
                 link type="success"
