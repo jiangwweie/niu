@@ -27,5 +27,11 @@ Page({
       title: '切换成功',
       icon: 'success'
     });
+  },
+
+  goToReimbursement() {
+    wx.navigateTo({
+      url: '/pages/reimbursement-placeholder/index'
+    });
   }
 })

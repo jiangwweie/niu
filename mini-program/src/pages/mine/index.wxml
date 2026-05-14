@@ -22,4 +22,9 @@
       </view>
     </view>
   </view>
+
+  <view class="section">
+    <text class="section-title">快捷操作</text>
+    <t-button theme="primary" block size="large" bind:tap="goToReimbursement">提交报销</t-button>
+  </view>
 </view>

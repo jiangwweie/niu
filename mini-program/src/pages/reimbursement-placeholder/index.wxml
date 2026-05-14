@@ -1,1 +1,15 @@
-<view class="container"><text>reimbursement-placeholder page</text></view>
+<view class="container" style="padding: 16px;">
+  <view style="font-size: 14px; color: #666; margin-bottom: 24px; padding: 12px; background: #f0f5ff; border-radius: 4px;">
+    报销提交后需等待后台确认，确认前不计入门店运营成本。
+  </view>
+
+  <t-input label="报销用途" placeholder="必填" value="{{form.purpose}}" bind:change="onFormChange" data-field="purpose" align="right" />
+  <t-input label="报销金额" type="digit" placeholder="必填(>0)" value="{{form.amount}}" bind:change="onFormChange" data-field="amount" align="right" />
+  <t-input label="备注" placeholder="选填" value="{{form.remark}}" bind:change="onFormChange" data-field="remark" align="right" />
+
+  <view style="margin-top: 32px;">
+    <t-button theme="primary" block size="large" bind:tap="onSubmit" loading="{{submitLoading}}">提交报销</t-button>
+  </view>
+
+  <t-toast id="t-toast" />
+</view>
