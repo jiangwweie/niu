@@ -25,5 +25,8 @@ public class ReimbursementEntity extends SoftDeleteEntity {
     private Long rejectedBy;
     private LocalDateTime rejectedAt;
     private String rejectReason;
+    private Long cancelledBy;
+    private LocalDateTime cancelledAt;
+    private String cancelReason;
     private String remark;
 }

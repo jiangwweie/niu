@@ -226,6 +226,7 @@ Codex 自行扩展 MVP 以外能力
   - M10A: Staff 主链路回归 smoke / 断点检查已完成。433 tests passed，8 步主链路全部验证通过。
   - M11A: 后端官方售后结算补强完成。新增 officialOrderNo 门店维度唯一约束、金额校验、状态校验、跨店隔离测试。445 tests passed。
   - M11B: admin-web 官方售后结算真实接口对接完成。列表/详情/录入订单号/标记结算/标记无需结算均已对接后端真实 API。
+  - M12A: 后端报销台账最小实现完成。Staff 可提交 PENDING 报销，Admin 可分页/详情/确认/驳回；仅 CONFIRMED 计入成本语义，不影响工单、库存、支付、退款或官方结算。
 10. 真实门店试运行
 
 ## 8. 重要文档
@@ -280,4 +281,4 @@ MYSQL_USERNAME
 MYSQL_PASSWORD
 ```
 
-后端已有 Flyway 数据库迁移（V1-V4 业务表 + V5 Staff seed 数据），测试环境使用 H2 内存数据库。
+后端已有 Flyway 数据库迁移（V1-V7 业务表/增量 + V5 Staff seed 数据），测试环境使用 H2 内存数据库。

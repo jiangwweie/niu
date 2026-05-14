@@ -6,7 +6,8 @@ import lombok.Getter;
 public enum ReimbursementStatus {
     PENDING("PENDING"),
     CONFIRMED("CONFIRMED"),
-    REJECTED_OR_CANCELLED("REJECTED_OR_CANCELLED");
+    REJECTED("REJECTED"),
+    CANCELLED("CANCELLED");
 
     private final String code;
 

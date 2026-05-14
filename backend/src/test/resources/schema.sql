@@ -348,3 +348,31 @@ CREATE TABLE IF NOT EXISTS official_after_sales (
     UNIQUE (work_order_id),
     UNIQUE (store_id, official_order_no)
 );
+
+CREATE TABLE IF NOT EXISTS reimbursement (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    store_id BIGINT NOT NULL,
+    reimbursement_no VARCHAR(64) NOT NULL,
+    applicant_id BIGINT NOT NULL,
+    purpose VARCHAR(255) NOT NULL,
+    amount DECIMAL(18,2) NOT NULL,
+    confirmed_amount DECIMAL(18,2) NULL,
+    status VARCHAR(32) NOT NULL,
+    submitted_at TIMESTAMP NOT NULL,
+    confirmed_by BIGINT NULL,
+    confirmed_at TIMESTAMP NULL,
+    rejected_by BIGINT NULL,
+    rejected_at TIMESTAMP NULL,
+    reject_reason VARCHAR(512) NULL,
+    cancelled_by BIGINT NULL,
+    cancelled_at TIMESTAMP NULL,
+    cancel_reason VARCHAR(512) NULL,
+    remark VARCHAR(512) NULL,
+    created_by BIGINT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by BIGINT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (id),
+    UNIQUE (reimbursement_no)
+);
