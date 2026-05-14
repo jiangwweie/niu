@@ -1,28 +1,30 @@
 export interface ReimbursementRecord {
-  id: string;
+  id: string | number;
   reimbursementNo: string;
-  applicant: string;
+  applicantId: number;
   purpose: string;
   amount: number;
-  approvedAmount?: number;
   status: 'PENDING' | 'CONFIRMED' | 'REJECTED' | 'CANCELLED';
-  createdAt: string;
-  confirmer?: string;
-  confirmedAt?: string;
   remark?: string;
+  submittedAt?: string;
+  confirmedAmount?: number;
+  confirmedBy?: number;
+  confirmedAt?: string;
+  rejectedBy?: number;
+  rejectedAt?: string;
   rejectReason?: string;
+  cancelledBy?: number;
+  cancelledAt?: string;
   cancelReason?: string;
-  processor?: string;
-  processedAt?: string;
+  costIncluded?: boolean;
 }
 
 export interface ReimbursementQuery {
   reimbursementNo?: string;
-  applicant?: string;
-  keyword?: string;
+  applicantId?: number;
   status?: string;
-  dateRange?: [string, string];
-  confirmer?: string;
+  dateFrom?: string;
+  dateTo?: string;
   pageNo: number;
   pageSize: number;
 }
