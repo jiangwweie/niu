@@ -20,12 +20,15 @@ import com.xiaoniu.aftermarket.staff.dto.StaffChargeItemIdResponse;
 import com.xiaoniu.aftermarket.staff.dto.StaffCreateDraftWorkOrderRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffRecordPaymentRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffRecordRefundRequest;
+import com.xiaoniu.aftermarket.staff.dto.StaffSettleWorkOrderRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffSubmitWorkOrderRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffUpdateChargeItemRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffUpdateDraftWorkOrderRequest;
+import com.xiaoniu.aftermarket.workorder.application.SettleWorkOrderApplicationService;
 import com.xiaoniu.aftermarket.workorder.dto.AddWorkOrderChargeItemCommand;
 import com.xiaoniu.aftermarket.workorder.dto.CancelWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.CreateDraftWorkOrderCommand;
+import com.xiaoniu.aftermarket.workorder.dto.SettleWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.SubmitWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.UpdateWorkOrderChargeItemCommand;
 import com.xiaoniu.aftermarket.workorder.dto.UpdateWorkOrderDraftCommand;
@@ -48,19 +51,22 @@ public class StaffWorkOrderController {
     private final PaymentService paymentService;
     private final RecordRefundApplicationService recordRefundService;
     private final RefundService refundService;
+    private final SettleWorkOrderApplicationService settleService;
 
     public StaffWorkOrderController(WorkOrderService workOrderService,
                                     WorkOrderMapper workOrderMapper,
                                     RecordPaymentApplicationService recordPaymentService,
                                     PaymentService paymentService,
                                     RecordRefundApplicationService recordRefundService,
-                                    RefundService refundService) {
+                                    RefundService refundService,
+                                    SettleWorkOrderApplicationService settleService) {
         this.workOrderService = workOrderService;
         this.workOrderMapper = workOrderMapper;
         this.recordPaymentService = recordPaymentService;
         this.paymentService = paymentService;
         this.recordRefundService = recordRefundService;
         this.refundService = refundService;
+        this.settleService = settleService;
     }
 
     @GetMapping
@@ -268,6 +274,24 @@ public class StaffWorkOrderController {
                 .findFirst()
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMMON_INTERNAL_ERROR, "退款记录不存在"));
         return ApiResponse.success(StaffRefundRecordResponse.from(response));
+    }
+
+    @PostMapping("/{workOrderId}/settle")
+    public ApiResponse<StaffSettledWorkOrderResponse> settle(
+            @PathVariable Long workOrderId,
+            @Valid @RequestBody StaffSettleWorkOrderRequest request) {
+        CurrentUser user = requireCurrentUser();
+
+        SettleWorkOrderCommand command = new SettleWorkOrderCommand();
+        command.setStoreId(user.storeId());
+        command.setWorkOrderId(workOrderId);
+        command.setOperatorId(user.userId());
+        command.setRemark(request.remark());
+
+        settleService.execute(command);
+        WorkOrderDetailResponse detail = workOrderService.getById(workOrderId);
+        WorkOrderEntity entity = workOrderMapper.selectById(workOrderId);
+        return ApiResponse.success(StaffSettledWorkOrderResponse.from(detail, entity));
     }
 
     private CurrentUser requireCurrentUser() {

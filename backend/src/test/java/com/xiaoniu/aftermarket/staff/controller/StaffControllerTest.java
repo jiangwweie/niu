@@ -1614,6 +1614,182 @@ class StaffControllerTest {
                 Integer.class));
     }
 
+    // ========== WorkOrder settle tests ==========
+
+    @Test
+    void staffSettleWorkOrderSucceedsAndConsumesReservedInventory() throws Exception {
+        seedSettleWorkOrder(80130, "PENDING_ACCEPT", "100.00", "100.00", 2);
+
+        mockMvc.perform(post("/api/staff/work-orders/80130/settle")
+                        .header("X-User-Id", "7")
+                        .header("X-Store-Id", "1")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "settledAt": "2026-05-14T08:00:00",
+                                  "remark": "员工确认结算"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.workOrderId").value(80130))
+                .andExpect(jsonPath("$.data.workOrderNo").value("S-WO-SETTLE-80130"))
+                .andExpect(jsonPath("$.data.status").value("SETTLED"))
+                .andExpect(jsonPath("$.data.receivableAmount").value(100.0))
+                .andExpect(jsonPath("$.data.receivedAmount").value(100.0))
+                .andExpect(jsonPath("$.data.settledAt", notNullValue()))
+                .andExpect(jsonPath("$.data.settlerId").value(7))
+                .andExpect(jsonPath("$.data.chargeItems", hasSize(1)))
+                .andExpect(jsonPath("$.data.storeId").doesNotExist())
+                .andExpect(jsonPath("$.data.customerId").doesNotExist())
+                .andExpect(jsonPath("$.data.vehicleId").doesNotExist())
+                .andExpect(jsonPath("$.data.chargeItems[0].costPriceSnapshot").doesNotExist())
+                .andExpect(jsonPath("$.data.chargeItems[0].lineCostAmount").doesNotExist())
+                .andExpect(jsonPath("$.data.chargeItems[0].inventoryAffecting").doesNotExist())
+                .andExpect(jsonPath("$.data.chargeItems[0].tempPart").doesNotExist())
+                .andExpect(jsonPath("$.data.chargeItems[0].status").doesNotExist())
+                .andExpect(jsonPath("$.data.chargeItems[0].workOrderId").doesNotExist());
+
+        assertEquals("SETTLED", jdbcTemplate.queryForObject(
+                "SELECT status FROM work_order WHERE id = 80130", String.class));
+        assertEquals(7L, jdbcTemplate.queryForObject(
+                "SELECT settled_by FROM work_order WHERE id = 80130", Long.class));
+        assertNotNull(jdbcTemplate.queryForObject(
+                "SELECT settled_at FROM work_order WHERE id = 80130", java.sql.Timestamp.class));
+        assertEquals(98, jdbcTemplate.queryForObject(
+                "SELECT actual_qty FROM inventory_stock WHERE store_id = 1 AND part_id = 80001", Integer.class));
+        assertEquals(80, jdbcTemplate.queryForObject(
+                "SELECT available_qty FROM inventory_stock WHERE store_id = 1 AND part_id = 80001", Integer.class));
+        assertEquals(18, jdbcTemplate.queryForObject(
+                "SELECT reserved_qty FROM inventory_stock WHERE store_id = 1 AND part_id = 80001", Integer.class));
+        assertEquals(1, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM inventory_flow WHERE store_id = 1 AND work_order_id = 80130 AND flow_type = 'CONSUME'",
+                Integer.class));
+        assertEquals(2, jdbcTemplate.queryForObject(
+                "SELECT quantity_delta FROM inventory_flow WHERE store_id = 1 AND work_order_id = 80130 AND flow_type = 'CONSUME'",
+                Integer.class));
+        assertEquals(0, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM inventory_flow WHERE store_id = 1 AND work_order_id = 80130 AND flow_type = 'RESERVE'",
+                Integer.class));
+        assertEquals(0, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM inventory_flow WHERE store_id = 1 AND work_order_id = 80130 AND flow_type = 'RELEASE'",
+                Integer.class));
+        assertEquals(1, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM payment_record WHERE store_id = 1 AND work_order_id = 80130",
+                Integer.class));
+        assertEquals(0, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM refund_record WHERE store_id = 1 AND work_order_id = 80130",
+                Integer.class));
+    }
+
+    @Test
+    void staffSettleFailsWhenReceivedAmountNotEnough() throws Exception {
+        seedSettleWorkOrder(80131, "PENDING_ACCEPT", "100.00", "99.00", 1);
+
+        mockMvc.perform(post("/api/staff/work-orders/80131/settle")
+                        .header("X-User-Id", "7")
+                        .header("X-Store-Id", "1")
+                        .contentType("application/json")
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("WORK_ORDER_RECEIVED_AMOUNT_NOT_ENOUGH"));
+
+        assertSettleFailureNoSideEffects(80131, "PENDING_ACCEPT");
+    }
+
+    @Test
+    void staffSettleDraftWorkOrderFails() throws Exception {
+        mockMvc.perform(post("/api/staff/work-orders/80001/settle")
+                        .header("X-User-Id", "7")
+                        .header("X-Store-Id", "1")
+                        .contentType("application/json")
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("WORK_ORDER_SETTLE_NOT_ALLOWED"));
+
+        assertEquals("DRAFT", jdbcTemplate.queryForObject(
+                "SELECT status FROM work_order WHERE id = 80001", String.class));
+        assertEquals(0, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM inventory_flow WHERE store_id = 1 AND flow_type = 'CONSUME'",
+                Integer.class));
+    }
+
+    @Test
+    void staffSettleCancelledWorkOrderFails() throws Exception {
+        seedSettleWorkOrder(80132, "CANCELLED", "100.00", "100.00", 1);
+
+        mockMvc.perform(post("/api/staff/work-orders/80132/settle")
+                        .header("X-User-Id", "7")
+                        .header("X-Store-Id", "1")
+                        .contentType("application/json")
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("WORK_ORDER_SETTLE_NOT_ALLOWED"));
+
+        assertSettleFailureNoSideEffects(80132, "CANCELLED");
+    }
+
+    @Test
+    void staffSettleRepeatedSettledWorkOrderFails() throws Exception {
+        seedSettleWorkOrder(80133, "PENDING_ACCEPT", "100.00", "100.00", 1);
+
+        mockMvc.perform(post("/api/staff/work-orders/80133/settle")
+                        .header("X-User-Id", "7")
+                        .header("X-Store-Id", "1")
+                        .contentType("application/json")
+                        .content("{}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/staff/work-orders/80133/settle")
+                        .header("X-User-Id", "7")
+                        .header("X-Store-Id", "1")
+                        .contentType("application/json")
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("WORK_ORDER_SETTLE_NOT_ALLOWED"));
+
+        assertEquals("SETTLED", jdbcTemplate.queryForObject(
+                "SELECT status FROM work_order WHERE id = 80133", String.class));
+        assertEquals(1, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM inventory_flow WHERE store_id = 1 AND work_order_id = 80133 AND flow_type = 'CONSUME'",
+                Integer.class));
+    }
+
+    @Test
+    void staffSettleUsesCurrentUserContextInsteadOfBodyStoreOperatorOrSettler() throws Exception {
+        seedSettleWorkOrder(80134, "PENDING_ACCEPT", "100.00", "100.00", 1);
+
+        mockMvc.perform(post("/api/staff/work-orders/80134/settle")
+                        .header("X-User-Id", "8")
+                        .header("X-Store-Id", "1")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "storeId": 2,
+                                  "operatorId": 99,
+                                  "settlerId": 99,
+                                  "settledAt": "2026-05-14T08:00:00",
+                                  "remark": "上下文结算"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.settlerId").value(8));
+
+        assertEquals(8L, jdbcTemplate.queryForObject(
+                "SELECT settled_by FROM work_order WHERE id = 80134", Long.class));
+    }
+
+    @Test
+    void staffSettleCrossStoreWorkOrderFails() throws Exception {
+        mockMvc.perform(post("/api/staff/work-orders/80099/settle")
+                        .header("X-User-Id", "7")
+                        .header("X-Store-Id", "1")
+                        .contentType("application/json")
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("WORK_ORDER_NOT_FOUND"));
+    }
+
     // ========== WorkOrder cancel tests ==========
 
     @Test
@@ -1855,5 +2031,66 @@ class StaffControllerTest {
                                             paid_at, receiver_id, operator_id)
                 VALUES (?, 1, ?, ?, ?, 'CASH', CURRENT_TIMESTAMP, 1, 1)
                 """, 82000 + workOrderId, workOrderId, "PAY-STAFF-REFUND-" + workOrderId, new BigDecimal(amount));
+    }
+
+    private void seedSettleWorkOrder(long workOrderId,
+                                     String status,
+                                     String receivableAmount,
+                                     String paymentAmount,
+                                     int quantity) {
+        jdbcTemplate.update("""
+                INSERT INTO work_order (id, store_id, work_order_no, customer_name_snapshot, customer_phone_snapshot,
+                                        vehicle_model_snapshot, frame_no_snapshot, repair_item, status,
+                                        receivable_amount, received_amount, submitted_by, submitted_at)
+                VALUES (?, 1, ?, '结算客户', '13900003333', 'NQi', ?, '结算测试',
+                        ?, ?, ?, 1, CURRENT_TIMESTAMP)
+                """,
+                workOrderId,
+                "S-WO-SETTLE-" + workOrderId,
+                "SFRAME-SETTLE-" + workOrderId,
+                status,
+                new BigDecimal(receivableAmount),
+                new BigDecimal(paymentAmount));
+        jdbcTemplate.update("""
+                INSERT INTO work_order_charge_item (id, store_id, work_order_id, charge_type, item_name, part_id,
+                                                    part_code_snapshot, part_name_snapshot, part_source_snapshot,
+                                                    quantity, unit, unit_price, line_amount, cost_price_snapshot,
+                                                    line_cost_amount, inventory_affecting, is_temp_part, status)
+                VALUES (?, 1, ?, 'PART', '结算配件', 80001, 'S-TEST-001', 'Staff测试电池', 'OFFICIAL',
+                        ?, '个', 50.00, ?, 120.50, 120.50, 1, 0, 'ACTIVE')
+                """,
+                90000 + workOrderId,
+                workOrderId,
+                quantity,
+                new BigDecimal(receivableAmount));
+        jdbcTemplate.update("""
+                INSERT INTO payment_record (id, store_id, work_order_id, payment_no, amount, payment_method,
+                                            paid_at, receiver_id, operator_id)
+                VALUES (?, 1, ?, ?, ?, 'CASH', CURRENT_TIMESTAMP, 1, 1)
+                """,
+                84000 + workOrderId,
+                workOrderId,
+                "PAY-STAFF-SETTLE-" + workOrderId,
+                new BigDecimal(paymentAmount));
+    }
+
+    private void assertSettleFailureNoSideEffects(long workOrderId, String expectedStatus) {
+        assertEquals(expectedStatus, jdbcTemplate.queryForObject(
+                "SELECT status FROM work_order WHERE id = ?", String.class, workOrderId));
+        assertEquals(100, jdbcTemplate.queryForObject(
+                "SELECT actual_qty FROM inventory_stock WHERE store_id = 1 AND part_id = 80001", Integer.class));
+        assertEquals(80, jdbcTemplate.queryForObject(
+                "SELECT available_qty FROM inventory_stock WHERE store_id = 1 AND part_id = 80001", Integer.class));
+        assertEquals(20, jdbcTemplate.queryForObject(
+                "SELECT reserved_qty FROM inventory_stock WHERE store_id = 1 AND part_id = 80001", Integer.class));
+        assertEquals(0, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM inventory_flow WHERE store_id = 1 AND work_order_id = ?",
+                Integer.class, workOrderId));
+        assertEquals(1, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM payment_record WHERE store_id = 1 AND work_order_id = ?",
+                Integer.class, workOrderId));
+        assertEquals(0, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM refund_record WHERE store_id = 1 AND work_order_id = ?",
+                Integer.class, workOrderId));
     }
 }
