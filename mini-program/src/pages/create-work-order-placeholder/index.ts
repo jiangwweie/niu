@@ -73,7 +73,17 @@ Page({
       paymentMethod: 'WECHAT' as PaymentMethod,
       remark: ''
     },
-    paymentLoading: false
+    paymentLoading: false,
+
+    // Refund
+    refundDialogVisible: false,
+    refundForm: {
+      amount: '',
+      refundMethod: 'WECHAT' as PaymentMethod,
+      reason: '',
+      remark: ''
+    },
+    refundLoading: false
   },
 
   onLoad() {
@@ -450,6 +460,75 @@ Page({
         console.error('Record payment failed:', err);
       }).finally(() => {
         this.setData({ paymentLoading: false });
+      });
+    });
+  },
+
+  // --- Record Refund ---
+  openRefundDialog() {
+    this.setData({
+      refundDialogVisible: true,
+      refundForm: {
+        amount: '',
+        refundMethod: 'WECHAT',
+        reason: '',
+        remark: ''
+      }
+    });
+  },
+
+  closeRefundDialog() {
+    this.setData({ refundDialogVisible: false });
+  },
+
+  onRefundPopupVisibleChange(e: any) {
+    this.setData({ refundDialogVisible: e.detail.visible || false });
+  },
+
+  onRefundFormChange(e: any) {
+    const field = e.currentTarget.dataset.field;
+    this.setData({ [`refundForm.${field}`]: e.detail.value });
+  },
+
+  onSelectRefundMethod(e: any) {
+    this.setData({ 'refundForm.refundMethod': e.currentTarget.dataset.val });
+  },
+
+  confirmRecordRefund() {
+    if (this.data.refundLoading || !this.data.workOrderId) return;
+    
+    const amount = parseFloat(this.data.refundForm.amount);
+    if (isNaN(amount) || amount <= 0) {
+      Toast({ context: this, selector: '#t-toast', message: '请输入大于0的退款金额', icon: 'close-circle' });
+      return;
+    }
+
+    if (!this.data.refundForm.refundMethod) {
+      Toast({ context: this, selector: '#t-toast', message: '请选择退款方式', icon: 'close-circle' });
+      return;
+    }
+
+    if (!this.data.refundForm.reason || this.data.refundForm.reason.trim() === '') {
+      Toast({ context: this, selector: '#t-toast', message: '请输入退款原因', icon: 'close-circle' });
+      return;
+    }
+
+    this.setData({ refundLoading: true });
+
+    import('../../api/workOrder').then(({ recordRefund }) => {
+      recordRefund(this.data.workOrderId!, {
+        amount: amount,
+        refundMethod: this.data.refundForm.refundMethod,
+        reason: this.data.refundForm.reason,
+        remark: this.data.refundForm.remark
+      }).then(res => {
+        this.setData({ refundDialogVisible: false });
+        Toast({ context: this, selector: '#t-toast', message: '退款记录已保存。', icon: 'check-circle' });
+        this.refreshWorkOrder();
+      }).catch(err => {
+        console.error('Record refund failed:', err);
+      }).finally(() => {
+        this.setData({ refundLoading: false });
       });
     });
   }

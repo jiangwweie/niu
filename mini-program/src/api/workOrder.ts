@@ -9,7 +9,9 @@ import {
   SubmitWorkOrderRequest,
   CancelWorkOrderRequest,
   RecordPaymentRequest,
-  StaffPaymentRecordResponse
+  StaffPaymentRecordResponse,
+  RecordRefundRequest,
+  StaffRefundRecordResponse
 } from '../types/workOrder';
 import { mockWorkOrders } from '../mock/workOrder';
 
@@ -107,6 +109,16 @@ export const recordPayment = (workOrderId: string | number, data: RecordPaymentR
     method: 'POST',
     data,
     mockData: { id: Date.now(), workOrderId, amount: data.amount, paymentMethod: data.paymentMethod } as StaffPaymentRecordResponse,
+    showLoading: true
+  });
+};
+
+export const recordRefund = (workOrderId: string | number, data: RecordRefundRequest) => {
+  return request<StaffRefundRecordResponse>({
+    url: `/api/staff/work-orders/${workOrderId}/refunds`,
+    method: 'POST',
+    data,
+    mockData: { id: Date.now(), workOrderId, amount: data.amount, refundMethod: data.refundMethod, reason: data.reason } as StaffRefundRecordResponse,
     showLoading: true
   });
 };

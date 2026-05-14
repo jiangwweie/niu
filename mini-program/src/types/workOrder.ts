@@ -96,3 +96,23 @@ export interface StaffPaymentRecordResponse {
   operatorId?: number | string;
   remark?: string;
 }
+
+export interface RecordRefundRequest {
+  amount: number;
+  refundMethod: PaymentMethod;
+  refundedAt?: string;
+  reason: string;
+  remark?: string;
+}
+
+export interface StaffRefundRecordResponse {
+  id: number | string;
+  workOrderId: number | string;
+  refundNo: string;
+  amount: number;
+  refundMethod: string;
+  refundedAt?: string;
+  operatorId?: number | string;
+  reason?: string;
+  remark?: string;
+}
