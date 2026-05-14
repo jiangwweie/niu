@@ -1403,6 +1403,217 @@ class StaffControllerTest {
                 .andExpect(jsonPath("$.code").value("WORK_ORDER_NOT_FOUND"));
     }
 
+    // ========== WorkOrder refund tests ==========
+
+    @Test
+    void staffRecordRefundSucceedsCreatesRefundRecordAndRecalculatesReceivedAmountOnly() throws Exception {
+        seedPaymentForRefund(80002, "PENDING_ACCEPT", "100.00");
+        String body = """
+                {
+                  "amount": 30.00,
+                  "refundMethod": "WECHAT",
+                  "refundedAt": "2026-05-14T11:30:00",
+                  "reason": "客户多付",
+                  "remark": "原路退回"
+                }
+                """;
+
+        mockMvc.perform(post("/api/staff/work-orders/80002/refunds")
+                        .header("X-User-Id", "7")
+                        .header("X-Store-Id", "1")
+                        .contentType("application/json")
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.id", notNullValue()))
+                .andExpect(jsonPath("$.data.workOrderId").value(80002))
+                .andExpect(jsonPath("$.data.refundNo", notNullValue()))
+                .andExpect(jsonPath("$.data.amount").value(30.0))
+                .andExpect(jsonPath("$.data.refundMethod").value("WECHAT"))
+                .andExpect(jsonPath("$.data.refundedAt").value("2026-05-14T11:30:00"))
+                .andExpect(jsonPath("$.data.operatorId").value(7))
+                .andExpect(jsonPath("$.data.reason").value("客户多付"))
+                .andExpect(jsonPath("$.data.remark").value("原路退回"))
+                .andExpect(jsonPath("$.data.storeId").doesNotExist())
+                .andExpect(jsonPath("$.data.costPriceSnapshot").doesNotExist())
+                .andExpect(jsonPath("$.data.lineCostAmount").doesNotExist());
+
+        assertEquals(1, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM refund_record WHERE store_id = 1 AND work_order_id = 80002",
+                Integer.class));
+        assertEquals(new BigDecimal("30.00"), jdbcTemplate.queryForObject(
+                "SELECT amount FROM refund_record WHERE store_id = 1 AND work_order_id = 80002",
+                BigDecimal.class));
+        assertEquals(7L, jdbcTemplate.queryForObject(
+                "SELECT operator_id FROM refund_record WHERE store_id = 1 AND work_order_id = 80002",
+                Long.class));
+        assertEquals(new BigDecimal("70.00"), jdbcTemplate.queryForObject(
+                "SELECT received_amount FROM work_order WHERE id = 80002",
+                BigDecimal.class));
+        assertEquals("PENDING_ACCEPT", jdbcTemplate.queryForObject(
+                "SELECT status FROM work_order WHERE id = 80002", String.class));
+        assertEquals(1, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM payment_record WHERE store_id = 1 AND work_order_id = 80002",
+                Integer.class));
+        assertEquals(0, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM inventory_flow WHERE store_id = 1 AND flow_type = 'CONSUME'",
+                Integer.class));
+        assertEquals(0, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM inventory_flow WHERE store_id = 1 AND flow_type = 'RELEASE'",
+                Integer.class));
+        assertEquals(0, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM inventory_flow WHERE store_id = 1 AND flow_type = 'RESERVE'",
+                Integer.class));
+    }
+
+    @Test
+    void staffRecordRefundAmountMustBePositive() throws Exception {
+        seedPaymentForRefund(80002, "PENDING_ACCEPT", "100.00");
+
+        mockMvc.perform(post("/api/staff/work-orders/80002/refunds")
+                        .header("X-User-Id", "7")
+                        .header("X-Store-Id", "1")
+                        .contentType("application/json")
+                        .content("""
+                                {"amount": 0, "refundMethod": "WECHAT", "reason": "测试"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
+
+        assertEquals(0, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM refund_record WHERE store_id = 1 AND work_order_id = 80002",
+                Integer.class));
+    }
+
+    @Test
+    void staffRecordRefundMethodRequired() throws Exception {
+        seedPaymentForRefund(80002, "PENDING_ACCEPT", "100.00");
+
+        mockMvc.perform(post("/api/staff/work-orders/80002/refunds")
+                        .header("X-User-Id", "7")
+                        .header("X-Store-Id", "1")
+                        .contentType("application/json")
+                        .content("""
+                                {"amount": 10.00, "reason": "测试"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
+    }
+
+    @Test
+    void staffRecordRefundInvalidMethodFails() throws Exception {
+        seedPaymentForRefund(80002, "PENDING_ACCEPT", "100.00");
+
+        mockMvc.perform(post("/api/staff/work-orders/80002/refunds")
+                        .header("X-User-Id", "7")
+                        .header("X-Store-Id", "1")
+                        .contentType("application/json")
+                        .content("""
+                                {"amount": 10.00, "refundMethod": "BITCOIN", "reason": "测试"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("REFUND_METHOD_INVALID"));
+    }
+
+    @Test
+    void staffRecordRefundReasonRequired() throws Exception {
+        seedPaymentForRefund(80002, "PENDING_ACCEPT", "100.00");
+
+        mockMvc.perform(post("/api/staff/work-orders/80002/refunds")
+                        .header("X-User-Id", "7")
+                        .header("X-Store-Id", "1")
+                        .contentType("application/json")
+                        .content("""
+                                {"amount": 10.00, "refundMethod": "CASH", "reason": ""}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
+    }
+
+    @Test
+    void staffRecordRefundExceedingRefundableAmountFails() throws Exception {
+        seedPaymentForRefund(80002, "PENDING_ACCEPT", "100.00");
+
+        mockMvc.perform(post("/api/staff/work-orders/80002/refunds")
+                        .header("X-User-Id", "7")
+                        .header("X-Store-Id", "1")
+                        .contentType("application/json")
+                        .content("""
+                                {"amount": 100.01, "refundMethod": "CASH", "reason": "超过可退金额"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("REFUND_EXCEEDS_PAID_AMOUNT"));
+
+        assertEquals(new BigDecimal("100.00"), jdbcTemplate.queryForObject(
+                "SELECT received_amount FROM work_order WHERE id = 80002",
+                BigDecimal.class));
+        assertEquals(0, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM refund_record WHERE store_id = 1 AND work_order_id = 80002",
+                Integer.class));
+    }
+
+    @Test
+    void staffRecordRefundUsesCurrentUserContextInsteadOfBodyStoreOrOperator() throws Exception {
+        seedPaymentForRefund(80002, "PENDING_ACCEPT", "100.00");
+
+        mockMvc.perform(post("/api/staff/work-orders/80002/refunds")
+                        .header("X-User-Id", "8")
+                        .header("X-Store-Id", "1")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "storeId": 2,
+                                  "operatorId": 99,
+                                  "amount": 15.00,
+                                  "refundMethod": "CASH",
+                                  "reason": "上下文测试"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.operatorId").value(8));
+
+        assertEquals(8L, jdbcTemplate.queryForObject(
+                "SELECT operator_id FROM refund_record WHERE store_id = 1 AND work_order_id = 80002",
+                Long.class));
+    }
+
+    @Test
+    void staffRecordRefundCrossStoreWorkOrderFails() throws Exception {
+        mockMvc.perform(post("/api/staff/work-orders/80099/refunds")
+                        .header("X-User-Id", "7")
+                        .header("X-Store-Id", "1")
+                        .contentType("application/json")
+                        .content("""
+                                {"amount": 10.00, "refundMethod": "CASH", "reason": "跨店退款"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("WORK_ORDER_NOT_FOUND"));
+    }
+
+    @Test
+    void staffRecordRefundSettledWorkOrderDoesNotAutoReverseSettle() throws Exception {
+        seedPaymentForRefund(80002, "SETTLED", "100.00");
+
+        mockMvc.perform(post("/api/staff/work-orders/80002/refunds")
+                        .header("X-User-Id", "7")
+                        .header("X-Store-Id", "1")
+                        .contentType("application/json")
+                        .content("""
+                                {"amount": 10.00, "refundMethod": "CASH", "reason": "已结算退款测试"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("PAYMENT_WORK_ORDER_STATUS_INVALID"));
+
+        assertEquals("SETTLED", jdbcTemplate.queryForObject(
+                "SELECT status FROM work_order WHERE id = 80002", String.class));
+        assertEquals(0, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM refund_record WHERE store_id = 1 AND work_order_id = 80002",
+                Integer.class));
+        assertEquals(0, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM inventory_flow WHERE store_id = 1",
+                Integer.class));
+    }
+
     // ========== WorkOrder cancel tests ==========
 
     @Test
@@ -1631,5 +1842,18 @@ class StaffControllerTest {
                 .andExpect(jsonPath("$.data.chargeItems[0].tempPart").doesNotExist())
                 .andExpect(jsonPath("$.data.chargeItems[0].status").doesNotExist())
                 .andExpect(jsonPath("$.data.chargeItems[0].workOrderId").doesNotExist());
+    }
+
+    private void seedPaymentForRefund(long workOrderId, String status, String amount) {
+        jdbcTemplate.update("""
+                UPDATE work_order
+                SET status = ?, received_amount = ?
+                WHERE id = ?
+                """, status, new BigDecimal(amount), workOrderId);
+        jdbcTemplate.update("""
+                INSERT INTO payment_record (id, store_id, work_order_id, payment_no, amount, payment_method,
+                                            paid_at, receiver_id, operator_id)
+                VALUES (?, 1, ?, ?, ?, 'CASH', CURRENT_TIMESTAMP, 1, 1)
+                """, 82000 + workOrderId, workOrderId, "PAY-STAFF-REFUND-" + workOrderId, new BigDecimal(amount));
     }
 }

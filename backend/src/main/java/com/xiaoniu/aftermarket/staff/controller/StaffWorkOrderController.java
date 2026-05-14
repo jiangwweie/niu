@@ -7,14 +7,19 @@ import com.xiaoniu.aftermarket.common.context.CurrentUserContext;
 import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
 import com.xiaoniu.aftermarket.payment.application.RecordPaymentApplicationService;
+import com.xiaoniu.aftermarket.payment.application.RecordRefundApplicationService;
 import com.xiaoniu.aftermarket.payment.dto.PaymentRecordResponse;
 import com.xiaoniu.aftermarket.payment.dto.RecordPaymentCommand;
+import com.xiaoniu.aftermarket.payment.dto.RecordRefundCommand;
+import com.xiaoniu.aftermarket.payment.dto.RefundRecordResponse;
 import com.xiaoniu.aftermarket.payment.service.PaymentService;
+import com.xiaoniu.aftermarket.payment.service.RefundService;
 import com.xiaoniu.aftermarket.staff.dto.StaffAddChargeItemRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffCancelWorkOrderRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffChargeItemIdResponse;
 import com.xiaoniu.aftermarket.staff.dto.StaffCreateDraftWorkOrderRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffRecordPaymentRequest;
+import com.xiaoniu.aftermarket.staff.dto.StaffRecordRefundRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffSubmitWorkOrderRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffUpdateChargeItemRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffUpdateDraftWorkOrderRequest;
@@ -41,15 +46,21 @@ public class StaffWorkOrderController {
     private final WorkOrderMapper workOrderMapper;
     private final RecordPaymentApplicationService recordPaymentService;
     private final PaymentService paymentService;
+    private final RecordRefundApplicationService recordRefundService;
+    private final RefundService refundService;
 
     public StaffWorkOrderController(WorkOrderService workOrderService,
                                     WorkOrderMapper workOrderMapper,
                                     RecordPaymentApplicationService recordPaymentService,
-                                    PaymentService paymentService) {
+                                    PaymentService paymentService,
+                                    RecordRefundApplicationService recordRefundService,
+                                    RefundService refundService) {
         this.workOrderService = workOrderService;
         this.workOrderMapper = workOrderMapper;
         this.recordPaymentService = recordPaymentService;
         this.paymentService = paymentService;
+        this.recordRefundService = recordRefundService;
+        this.refundService = refundService;
     }
 
     @GetMapping
@@ -232,6 +243,31 @@ public class StaffWorkOrderController {
                 .findFirst()
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMMON_INTERNAL_ERROR, "支付记录不存在"));
         return ApiResponse.success(StaffPaymentRecordResponse.from(response));
+    }
+
+    @PostMapping("/{workOrderId}/refunds")
+    public ApiResponse<StaffRefundRecordResponse> recordRefund(
+            @PathVariable Long workOrderId,
+            @Valid @RequestBody StaffRecordRefundRequest request) {
+        CurrentUser user = requireCurrentUser();
+        requireWorkOrderInStore(workOrderId, user.storeId());
+
+        RecordRefundCommand command = new RecordRefundCommand();
+        command.setStoreId(user.storeId());
+        command.setWorkOrderId(workOrderId);
+        command.setOperatorId(user.userId());
+        command.setAmount(request.amount());
+        command.setRefundMethod(request.refundMethod());
+        command.setRefundedAt(request.refundedAt());
+        command.setReason(request.reason());
+        command.setRemark(request.remark());
+
+        Long refundId = recordRefundService.execute(command);
+        RefundRecordResponse response = refundService.listByWorkOrderId(workOrderId).stream()
+                .filter(record -> refundId.equals(record.getId()))
+                .findFirst()
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMMON_INTERNAL_ERROR, "退款记录不存在"));
+        return ApiResponse.success(StaffRefundRecordResponse.from(response));
     }
 
     private CurrentUser requireCurrentUser() {
