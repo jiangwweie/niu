@@ -94,11 +94,18 @@
       <t-button block theme="primary" size="large" bind:tap="openPaymentDialog" loading="{{paymentLoading}}">记录支付</t-button>
     </view>
 
-    <view class="refund-action" wx:if="{{workOrder && workOrder.status !== 'DRAFT' && workOrder.status !== 'CANCELLED'}}" style="margin-top: 16px; margin-bottom: 24px; padding: 0 16px;">
+    <view class="refund-action" wx:if="{{workOrder && workOrder.status !== 'DRAFT' && workOrder.status !== 'CANCELLED'}}" style="margin-top: 16px; padding: 0 16px;">
       <view style="font-size: 12px; color: #666; margin-bottom: 12px; text-align: center;">
         是否允许退款以及可退金额上限以后端校验为准。前端只负责登记。
       </view>
       <t-button block theme="danger" variant="outline" size="large" bind:tap="openRefundDialog" loading="{{refundLoading}}">记录退款</t-button>
+    </view>
+
+    <view class="settle-action" wx:if="{{workOrder && workOrder.status !== 'DRAFT' && workOrder.status !== 'CANCELLED' && workOrder.status !== 'SETTLED'}}" style="margin-top: 16px; margin-bottom: 24px; padding: 0 16px;">
+      <view style="font-size: 12px; color: #666; margin-bottom: 12px; text-align: center;">
+        是否允许结算完全以后端校验为准。结算后将正式扣减库存。
+      </view>
+      <t-button block theme="primary" variant="base" size="large" bind:tap="openSettleDialog" loading="{{settleLoading}}">结算工单</t-button>
     </view>
   </view>
 
@@ -248,6 +255,20 @@
       </view>
     </scroll-view>
   </t-popup>
+
+  <t-dialog
+    visible="{{settleDialogVisible}}"
+    title="结算工单"
+    confirm-btn="确认结算"
+    cancel-btn="返回"
+    bind:confirm="onConfirmSettle"
+    bind:cancel="onCancelSettleDialog"
+  >
+    <view slot="content" style="font-size: 14px; color: #666;">
+      <text style="display: block; margin-bottom: 12px;">结算后工单将变为已结算，且后端将正式扣减已预占库存。是否允许结算以后端校验为准（例如实收金额需达标）。</text>
+      <t-input placeholder="可输入结算备注(选填)" value="{{settleRemark}}" bind:change="onSettleRemarkChange" borderless style="background: #f5f5f5; border-radius: 4px;" />
+    </view>
+  </t-dialog>
 
   <t-toast id="t-toast" />
 </view>

@@ -83,7 +83,12 @@ Page({
       reason: '',
       remark: ''
     },
-    refundLoading: false
+    refundLoading: false,
+
+    // Settle
+    settleDialogVisible: false,
+    settleRemark: '',
+    settleLoading: false
   },
 
   onLoad() {
@@ -529,6 +534,39 @@ Page({
         console.error('Record refund failed:', err);
       }).finally(() => {
         this.setData({ refundLoading: false });
+      });
+    });
+  },
+
+  // --- Settle Work Order ---
+  openSettleDialog() {
+    this.setData({
+      settleDialogVisible: true,
+      settleRemark: ''
+    });
+  },
+
+  onCancelSettleDialog() {
+    this.setData({ settleDialogVisible: false });
+  },
+
+  onSettleRemarkChange(e: any) {
+    this.setData({ settleRemark: e.detail.value });
+  },
+
+  onConfirmSettle() {
+    if (this.data.settleLoading || !this.data.workOrderId) return;
+    
+    this.setData({ settleLoading: true, settleDialogVisible: false });
+
+    import('../../api/workOrder').then(({ settleWorkOrder }) => {
+      settleWorkOrder(this.data.workOrderId!, { remark: this.data.settleRemark }).then(res => {
+        Toast({ context: this, selector: '#t-toast', message: '结算成功。', icon: 'check-circle' });
+        this.refreshWorkOrder();
+      }).catch(err => {
+        console.error('Settle work order failed:', err);
+      }).finally(() => {
+        this.setData({ settleLoading: false });
       });
     });
   }

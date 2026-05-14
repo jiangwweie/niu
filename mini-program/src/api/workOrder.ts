@@ -11,7 +11,9 @@ import {
   RecordPaymentRequest,
   StaffPaymentRecordResponse,
   RecordRefundRequest,
-  StaffRefundRecordResponse
+  StaffRefundRecordResponse,
+  SettleWorkOrderRequest,
+  StaffSettledWorkOrderResponse
 } from '../types/workOrder';
 import { mockWorkOrders } from '../mock/workOrder';
 
@@ -119,6 +121,16 @@ export const recordRefund = (workOrderId: string | number, data: RecordRefundReq
     method: 'POST',
     data,
     mockData: { id: Date.now(), workOrderId, amount: data.amount, refundMethod: data.refundMethod, reason: data.reason } as StaffRefundRecordResponse,
+    showLoading: true
+  });
+};
+
+export const settleWorkOrder = (workOrderId: string | number, data?: SettleWorkOrderRequest) => {
+  return request<StaffSettledWorkOrderResponse>({
+    url: `/api/staff/work-orders/${workOrderId}/settle`,
+    method: 'POST',
+    data,
+    mockData: { workOrderId, status: 'SETTLED', receivableAmount: 0, receivedAmount: 0, settledAt: new Date().toISOString(), settlerId: 1 } as StaffSettledWorkOrderResponse,
     showLoading: true
   });
 };

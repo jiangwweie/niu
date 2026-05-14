@@ -116,3 +116,18 @@ export interface StaffRefundRecordResponse {
   reason?: string;
   remark?: string;
 }
+
+export interface SettleWorkOrderRequest {
+  settledAt?: string;
+  remark?: string;
+}
+
+export interface StaffSettledWorkOrderResponse {
+  workOrderId: number | string;
+  workOrderNo: string;
+  status: string;
+  receivableAmount: number;
+  receivedAmount: number;
+  settledAt: string;
+  settlerId: number | string;
+}
