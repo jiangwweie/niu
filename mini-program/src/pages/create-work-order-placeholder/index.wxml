@@ -94,7 +94,7 @@
       <t-button block theme="primary" size="large" bind:tap="openPaymentDialog" loading="{{paymentLoading}}">记录支付</t-button>
     </view>
 
-    <view class="refund-action" wx:if="{{workOrder && workOrder.status !== 'DRAFT' && workOrder.status !== 'CANCELLED'}}" style="margin-top: 16px; padding: 0 16px;">
+    <view class="refund-action" wx:if="{{workOrder && workOrder.status !== 'DRAFT' && workOrder.status !== 'CANCELLED' && workOrder.status !== 'SETTLED'}}" style="margin-top: 16px; padding: 0 16px;">
       <view style="font-size: 12px; color: #666; margin-bottom: 12px; text-align: center;">
         是否允许退款以及可退金额上限以后端校验为准。前端只负责登记。
       </view>
