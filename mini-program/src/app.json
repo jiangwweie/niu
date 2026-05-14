@@ -1,0 +1,46 @@
+{
+  "pages": [
+    "pages/dashboard/index",
+    "pages/work-orders/index",
+    "pages/work-order-detail/index",
+    "pages/inventory/index",
+    "pages/parts/index",
+    "pages/inbound-placeholder/index",
+    "pages/create-work-order-placeholder/index",
+    "pages/payment-placeholder/index",
+    "pages/reimbursement-placeholder/index",
+    "pages/mine/index"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#fff",
+    "navigationBarTitleText": "小牛售后",
+    "navigationBarTextStyle": "black"
+  },
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#e33e33",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/dashboard/index",
+        "text": "工作台"
+      },
+      {
+        "pagePath": "pages/work-orders/index",
+        "text": "工单"
+      },
+      {
+        "pagePath": "pages/inventory/index",
+        "text": "库存"
+      },
+      {
+        "pagePath": "pages/mine/index",
+        "text": "我的"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

@@ -1,0 +1,52 @@
+<view class="container" wx:if="{{order}}">
+  <view class="header-card">
+    <view class="header-row">
+      <text class="title">{{order.workOrderNo}}</text>
+      <t-tag theme="primary" variant="light">{{order.status}}</t-tag>
+    </view>
+    <view class="customer-info">
+      <text class="name">{{order.customerNameSnapshot}}</text>
+      <text class="phone">{{order.customerPhoneSnapshot}}</text>
+    </view>
+  </view>
+
+  <view class="section">
+    <text class="section-title">基础信息</text>
+    <t-cell-group>
+      <t-cell title="车型" note="{{order.vehicleModelSnapshot || '-'}}" />
+      <t-cell title="车架号" note="{{order.frameNoSnapshot || '-'}}" />
+      <t-cell title="电池号" note="{{order.batteryNoSnapshot || '-'}}" />
+      <t-cell title="维修项目" note="{{order.repairItem || '-'}}" />
+      <t-cell title="备注" note="{{order.remark || '-'}}" />
+    </t-cell-group>
+  </view>
+
+  <view class="section">
+    <text class="section-title">费用明细</text>
+    <view class="fee-list" wx:if="{{order.chargeItems && order.chargeItems.length > 0}}">
+      <view class="fee-item" wx:for="{{order.chargeItems}}" wx:key="id">
+        <view class="fee-header">
+          <text class="fee-name">{{item.itemName}}</text>
+          <t-tag theme="default" variant="outline">{{item.chargeType === 'PART' ? '配件' : (item.chargeType === 'LABOR' ? '工时' : '其他')}}</t-tag>
+        </view>
+        <view class="fee-body">
+          <text class="fee-desc" wx:if="{{item.chargeType === 'PART'}}">编码: {{item.partCodeSnapshot}}</text>
+          <text class="fee-desc">单价: ¥{{item.unitPrice}} x {{item.quantity}}</text>
+          <text class="fee-amount">¥{{item.lineAmount}}</text>
+        </view>
+      </view>
+    </view>
+    <view class="empty" wx:else>暂无费用明细</view>
+  </view>
+
+  <view class="section summary-section">
+    <text class="section-title">金额摘要</text>
+    <t-cell-group>
+      <t-cell title="应收金额" note="{{order.receivableAmount != null ? '¥' + order.receivableAmount : '-'}}" />
+      <t-cell title="实收金额" note="{{order.receivedAmount != null ? '¥' + order.receivedAmount : '-'}}" />
+    </t-cell-group>
+  </view>
+</view>
+<view class="loading-wrap" wx:else>
+  <t-loading theme="circular" size="48rpx" text="加载中..." />
+</view>

@@ -1,0 +1,21 @@
+<view class="container">
+  <t-search value="{{keyword}}" placeholder="搜索配件编码 / 名称" bind:change="onSearch" bind:clear="onClear" />
+  
+  <view class="list">
+    <block wx:if="{{stocks.length > 0}}">
+      <view class="card" wx:for="{{stocks}}" wx:key="id" bindtap="onTapDetail" data-id="{{item.partId}}">
+        <view class="card-header">
+          <text class="title">{{item.partName}}</text>
+        </view>
+        <view class="card-body">
+          <text class="info">编码: {{item.partCode}}</text>
+          <text class="info">可用库存: <text class="highlight">{{item.availableQty}}</text></text>
+          <text class="info">实际库存: {{item.actualQty}}</text>
+          <text class="info">预占库存: {{item.reservedQty}}</text>
+          <text class="info time">更新时间: {{item.lastChangedAt || '-'}}</text>
+        </view>
+      </view>
+    </block>
+    <view wx:else class="empty">暂无库存数据</view>
+  </view>
+</view>

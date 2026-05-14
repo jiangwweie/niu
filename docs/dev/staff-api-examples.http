@@ -3,7 +3,7 @@
 ### 后端需先启动: cd backend && mvn spring-boot:run -Dspring-boot.run.profiles=dev
 
 @baseUrl = http://localhost:8080
-@userId = 1
+@userId = 10
 @storeId = 1
 
 ### ========== Dict ==========
@@ -34,8 +34,13 @@ GET {{baseUrl}}/api/staff/parts?source=OFFICIAL
 X-User-Id: {{userId}}
 X-Store-Id: {{storeId}}
 
-### 获取配件详情
-GET {{baseUrl}}/api/staff/parts/1
+### 获取配件详情（48V20Ah电池，ID=100）
+GET {{baseUrl}}/api/staff/parts/100
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### 获取停用配件详情（ID=107，应返回 PART_NOT_FOUND）
+GET {{baseUrl}}/api/staff/parts/107
 X-User-Id: {{userId}}
 X-Store-Id: {{storeId}}
 
@@ -59,8 +64,8 @@ GET {{baseUrl}}/api/staff/inventory/stocks?partCode=TEST
 X-User-Id: {{userId}}
 X-Store-Id: {{storeId}}
 
-### 获取指定配件库存详情
-GET {{baseUrl}}/api/staff/inventory/stocks/1
+### 获取指定配件库存详情（partId=100，48V20Ah电池）
+GET {{baseUrl}}/api/staff/inventory/stocks/100
 X-User-Id: {{userId}}
 X-Store-Id: {{storeId}}
 
@@ -80,7 +85,7 @@ X-User-Id: {{userId}}
 X-Store-Id: {{storeId}}
 
 ### 按客户姓名搜索工单
-GET {{baseUrl}}/api/staff/work-orders?customerName=张三
+GET {{baseUrl}}/api/staff/work-orders?customerName=刘明
 X-User-Id: {{userId}}
 X-Store-Id: {{storeId}}
 
@@ -90,12 +95,12 @@ X-User-Id: {{userId}}
 X-Store-Id: {{storeId}}
 
 ### 按车架号搜索工单
-GET {{baseUrl}}/api/staff/work-orders?vehicleFrameNo=FRAME001
+GET {{baseUrl}}/api/staff/work-orders?vehicleFrameNo=LFV000001
 X-User-Id: {{userId}}
 X-Store-Id: {{storeId}}
 
-### 获取工单详情
-GET {{baseUrl}}/api/staff/work-orders/1
+### 获取工单详情（DRAFT工单，ID=400）
+GET {{baseUrl}}/api/staff/work-orders/400
 X-User-Id: {{userId}}
 X-Store-Id: {{storeId}}
 
@@ -105,9 +110,225 @@ X-User-Id: {{userId}}
 X-Store-Id: {{storeId}}
 
 ### 跨门店访问（应返回 WORK_ORDER_NOT_FOUND）
-GET {{baseUrl}}/api/staff/work-orders/1
+GET {{baseUrl}}/api/staff/work-orders/400
 X-User-Id: {{userId}}
 X-Store-Id: 2
 
 ### 缺少 dev header（应返回 COMMON_BAD_REQUEST）
 GET {{baseUrl}}/api/staff/work-orders
+
+### ========== Work Order Draft Write ==========
+
+### 创建工单草稿
+POST {{baseUrl}}/api/staff/work-orders/drafts
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+{
+  "customerNameSnapshot": "张三",
+  "customerPhoneSnapshot": "13800138000",
+  "vehicleModelSnapshot": "NQi",
+  "frameNoSnapshot": "FRAME001",
+  "batteryNoSnapshot": "BAT001",
+  "repairItem": "更换轮胎",
+  "remark": "紧急维修"
+}
+
+### 创建工单草稿 - 缺少 customerNameSnapshot（失败）
+POST {{baseUrl}}/api/staff/work-orders/drafts
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+{
+  "repairItem": "更换轮胎"
+}
+
+### 修改草稿基础信息
+PUT {{baseUrl}}/api/staff/work-orders/1/draft
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+{
+  "customerNameSnapshot": "李四",
+  "repairItem": "更换电机",
+  "remark": "更新备注"
+}
+
+### 修改草稿 - 非 DRAFT 状态（失败）
+PUT {{baseUrl}}/api/staff/work-orders/999/draft
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+{
+  "customerNameSnapshot": "李四"
+}
+
+### ========== Charge Items ==========
+
+### 添加 PART 费用明细
+POST {{baseUrl}}/api/staff/work-orders/1/charge-items
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+{
+  "chargeType": "PART",
+  "itemName": "48V20Ah电池",
+  "partId": 100,
+  "quantity": 2,
+  "unitPrice": 120.50
+}
+
+### 添加 PART 费用明细 - 缺少 partId（失败）
+POST {{baseUrl}}/api/staff/work-orders/1/charge-items
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+{
+  "chargeType": "PART",
+  "itemName": "电池",
+  "quantity": 1,
+  "unitPrice": 100.00
+}
+
+### 添加 LABOR 费用明细
+POST {{baseUrl}}/api/staff/work-orders/1/charge-items
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+{
+  "chargeType": "LABOR",
+  "itemName": "维修工时",
+  "quantity": 1,
+  "unitPrice": 50.00
+}
+
+### 添加 OTHER 费用明细
+POST {{baseUrl}}/api/staff/work-orders/1/charge-items
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+{
+  "chargeType": "OTHER",
+  "itemName": "运输费",
+  "quantity": 1,
+  "unitPrice": 30.00
+}
+
+### 添加费用明细 - quantity=0（失败）
+POST {{baseUrl}}/api/staff/work-orders/1/charge-items
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+{
+  "chargeType": "LABOR",
+  "itemName": "工时",
+  "quantity": 0,
+  "unitPrice": 50.00
+}
+
+### 修改费用明细
+PUT {{baseUrl}}/api/staff/work-orders/1/charge-items/1
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+{
+  "itemName": "48V20Ah电池",
+  "quantity": 3,
+  "unitPrice": 130.00
+}
+
+### 删除费用明细
+DELETE {{baseUrl}}/api/staff/work-orders/1/charge-items/1
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+### ========== Work Order Submit ==========
+
+### 提交工单草稿（触发 RESERVE 预占库存，不收款、不结算）
+POST {{baseUrl}}/api/staff/work-orders/1/submit
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+{
+  "remark": "客户确认维修方案，提交工单"
+}
+
+### 重复提交 / 非 DRAFT 工单提交（应返回 WORK_ORDER_NOT_DRAFT）
+POST {{baseUrl}}/api/staff/work-orders/1/submit
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+{}
+
+### 跨门店提交（应返回 WORK_ORDER_NOT_FOUND）
+POST {{baseUrl}}/api/staff/work-orders/1/submit
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: 2
+
+{}
+
+### ========== Work Order Cancel ==========
+
+### 取消 DRAFT 工单（不释放库存，不生成 RELEASE）
+POST {{baseUrl}}/api/staff/work-orders/1/cancel
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+{
+  "reason": "客户暂不维修",
+  "remark": "客户稍后再联系"
+}
+
+### 取消已提交未结算工单（释放预占库存，生成 RELEASE）
+POST {{baseUrl}}/api/staff/work-orders/2/cancel
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+{
+  "reason": "客户取消维修"
+}
+
+### 取消工单 - 缺少 reason（应返回 COMMON_BAD_REQUEST）
+POST {{baseUrl}}/api/staff/work-orders/1/cancel
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+{
+  "reason": ""
+}
+
+### 重复取消 / 已结算工单取消（应返回 WORK_ORDER_CANCEL_NOT_ALLOWED）
+POST {{baseUrl}}/api/staff/work-orders/1/cancel
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: {{storeId}}
+
+{
+  "reason": "重复取消"
+}
+
+### 跨门店取消（应返回 WORK_ORDER_NOT_FOUND）
+POST {{baseUrl}}/api/staff/work-orders/1/cancel
+Content-Type: application/json
+X-User-Id: {{userId}}
+X-Store-Id: 2
+
+{
+  "reason": "跨店取消"
+}

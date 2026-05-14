@@ -1,0 +1,25 @@
+<view class="container">
+  <view class="header">
+    <text class="title">当前用户</text>
+    <view class="user-info" wx:if="{{currentUser}}">
+      <text>姓名：{{currentUser.userName}}</text>
+      <text>角色：{{currentUser.roleName}}</text>
+      <text>门店：{{currentUser.storeName}}</text>
+    </view>
+  </view>
+
+  <view class="section">
+    <text class="section-title">切换 Mock 用户</text>
+    <view class="user-list">
+      <view 
+        class="user-item {{currentUser.userId === item.userId ? 'active' : ''}}" 
+        wx:for="{{mockUsers}}" 
+        wx:key="userId"
+        data-id="{{item.userId}}"
+        bindtap="onSwitchUser"
+      >
+        <text>{{item.userName}} ({{item.roleName}})</text>
+      </view>
+    </view>
+  </view>
+</view>

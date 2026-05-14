@@ -1,0 +1,138 @@
+<view class="container pb-safe">
+  <view class="warning-banner">
+    <t-icon name="info-circle" size="16" color="#0052d9" />
+    <text>当前仅创建草稿并维护费用明细。提交工单后才会预占库存，本阶段不会生成库存流水。</text>
+  </view>
+
+  <!-- Step 1: 基础信息 -->
+  <view class="section" wx:if="{{step === 1}}">
+    <view class="section-title">工单基础信息</view>
+    <t-cell-group>
+      <t-input label="客户姓名" placeholder="必填" value="{{draft.customerNameSnapshot}}" bind:change="onDraftChange" data-field="customerNameSnapshot" align="right" />
+      <t-input label="手机号" placeholder="选填" value="{{draft.customerPhoneSnapshot}}" bind:change="onDraftChange" data-field="customerPhoneSnapshot" align="right" />
+      <t-input label="车型" placeholder="选填" value="{{draft.vehicleModelSnapshot}}" bind:change="onDraftChange" data-field="vehicleModelSnapshot" align="right" />
+      <t-input label="车架号" placeholder="选填" value="{{draft.frameNoSnapshot}}" bind:change="onDraftChange" data-field="frameNoSnapshot" align="right" />
+      <t-input label="电池号" placeholder="选填" value="{{draft.batteryNoSnapshot}}" bind:change="onDraftChange" data-field="batteryNoSnapshot" align="right" />
+      <t-input label="维修项目" placeholder="必填" value="{{draft.repairItem}}" bind:change="onDraftChange" data-field="repairItem" align="right" />
+      <t-input label="备注" placeholder="选填" value="{{draft.remark}}" bind:change="onDraftChange" data-field="remark" align="right" />
+    </t-cell-group>
+    
+    <view class="action-bar">
+      <t-button theme="primary" block size="large" bind:tap="saveDraft" loading="{{saving}}">保存草稿</t-button>
+    </view>
+  </view>
+
+  <!-- Step 2: 费用明细 -->
+  <view class="section" wx:if="{{step === 2}}">
+    <view class="draft-summary">
+      <view class="summary-header">
+        <text class="wo-no">{{workOrder.workOrderNo || 'DRAFT'}}</text>
+        <t-tag theme="{{workOrder.status === 'DRAFT' ? 'primary' : 'success'}}" variant="light">{{workOrder.status === 'DRAFT' ? '草稿' : (workOrder.status === 'PENDING_ACCEPT' ? '待接单' : workOrder.status)}}</t-tag>
+      </view>
+      <text class="summary-info">客户: {{workOrder.customerNameSnapshot}}</text>
+      <text class="summary-info">项目: {{workOrder.repairItem}}</text>
+    </view>
+
+    <view class="section-title mt">费用明细</view>
+    <view class="item-list" wx:if="{{workOrder.chargeItems && workOrder.chargeItems.length > 0}}">
+      <view class="item-card" wx:for="{{workOrder.chargeItems}}" wx:key="id">
+        <view class="item-header">
+          <view class="item-title">
+            <t-tag theme="default" variant="outline">{{item.chargeType === 'PART' ? '配件' : (item.chargeType === 'LABOR' ? '工时' : '其他')}}</t-tag>
+            <text class="item-name">{{item.itemName}}</text>
+          </view>
+          <view class="item-actions" wx:if="{{workOrder.status === 'DRAFT'}}">
+            <t-icon name="edit" size="20" color="#0052d9" bind:tap="editItem" data-item="{{item}}" />
+            <t-icon name="delete" size="20" color="#e34d59" style="margin-left: 16px;" bind:tap="confirmDeleteItem" data-id="{{item.id}}" />
+          </view>
+        </view>
+        <view class="item-body">
+          <text class="item-desc" wx:if="{{item.chargeType === 'PART'}}">配件编码: {{item.partCodeSnapshot}}</text>
+          <text class="item-desc">单价: ¥{{item.unitPrice}} x {{item.quantity}} {{item.unit || '-'}}</text>
+          <text class="item-desc" wx:if="{{item.remark}}">备注: {{item.remark}}</text>
+          <text class="item-amount">¥{{item.lineAmount}}</text>
+        </view>
+      </view>
+    </view>
+    <view class="empty-state" wx:else>暂无费用明细</view>
+
+    <view class="total-bar" wx:if="{{workOrder.chargeItems && workOrder.chargeItems.length > 0}}">
+      <text>应收总计：</text>
+      <text class="total-amount">¥{{workOrder.receivableAmount != null ? workOrder.receivableAmount : '0'}}</text>
+    </view>
+
+    <view class="add-actions" wx:if="{{workOrder.status === 'DRAFT'}}">
+      <t-button block theme="primary" variant="outline" icon="add" bind:tap="openAddItem" data-type="PART">添加配件费</t-button>
+      <t-button block theme="default" variant="outline" icon="add" bind:tap="openAddItem" data-type="LABOR" style="margin-top: 12px;">添加工时费</t-button>
+      <t-button block theme="default" variant="outline" icon="add" bind:tap="openAddItem" data-type="OTHER" style="margin-top: 12px;">添加其他费用</t-button>
+    </view>
+
+    <view class="submit-action" wx:if="{{workOrder.status === 'DRAFT'}}" style="margin-top: 24px; padding: 0 16px;">
+      <view style="font-size: 12px; color: #666; margin-bottom: 12px; text-align: center;">
+        是否允许提交最终以后端校验为准。提交工单后才会预占库存；提交不会收款、不会结算。
+      </view>
+      <t-button block theme="danger" size="large" bind:tap="confirmSubmitWorkOrder" loading="{{submitLoading}}">提交工单</t-button>
+    </view>
+  </view>
+
+  <!-- 添加/编辑 弹窗 -->
+  <t-popup visible="{{itemPopupVisible}}" bind:visible-change="onPopupVisibleChange" placement="bottom">
+    <view class="popup-header">
+      <text class="popup-title">{{editingItemId ? '编辑费用明细' : '添加费用明细'}}</text>
+      <t-icon name="close" size="24" bind:tap="closeItemPopup" />
+    </view>
+    <scroll-view scroll-y class="popup-body">
+      <t-cell-group>
+        <block wx:if="{{currentItemForm.chargeType === 'PART' && !editingItemId}}">
+          <t-cell title="选择配件" arrow bind:tap="openPartSelector" note="{{selectedPart ? selectedPart.partName : '请选择(必填)'}}" />
+        </block>
+        
+        <t-input label="项目名称" placeholder="必填" value="{{currentItemForm.itemName}}" bind:change="onItemFormChange" data-field="itemName" align="right" />
+        <t-input label="数量" type="number" placeholder="必填(>0)" value="{{currentItemForm.quantity}}" bind:change="onItemFormChange" data-field="quantity" align="right" />
+        <t-input label="单位" placeholder="选填" value="{{currentItemForm.unit}}" bind:change="onItemFormChange" data-field="unit" align="right" />
+        <t-input label="单价(元)" type="digit" placeholder="必填(>=0)" value="{{currentItemForm.unitPrice}}" bind:change="onItemFormChange" data-field="unitPrice" align="right" />
+        <t-input label="备注" placeholder="选填" value="{{currentItemForm.remark}}" bind:change="onItemFormChange" data-field="remark" align="right" />
+      </t-cell-group>
+      
+      <view class="popup-footer">
+        <t-button theme="primary" block size="large" bind:tap="saveChargeItem" loading="{{savingItem}}">保存明细</t-button>
+      </view>
+    </scroll-view>
+  </t-popup>
+
+  <!-- 配件选择 弹窗 -->
+  <t-popup visible="{{partSelectorVisible}}" placement="bottom" custom-style="height: 80vh; z-index: 12000;">
+    <view class="popup-header">
+      <text class="popup-title">选择配件</text>
+      <t-icon name="close" size="24" bind:tap="closePartSelector" />
+    </view>
+    <t-search placeholder="搜索配件编码/名称" bind:change="onSearchPart" />
+    <scroll-view scroll-y class="part-list">
+      <view class="part-item" wx:for="{{partList}}" wx:key="id" bind:tap="selectPart" data-item="{{item}}">
+        <view class="part-item-header">
+          <text class="part-name">{{item.partName}}</text>
+        </view>
+        <text class="part-desc">编码: {{item.partCode}}</text>
+      </view>
+      <view class="empty-state" wx:if="{{partList.length === 0}}">暂无配件</view>
+    </scroll-view>
+  </t-popup>
+
+  <t-dialog id="t-dialog" />
+  
+  <t-dialog
+    visible="{{submitDialogVisible}}"
+    title="提交工单"
+    confirm-btn="确认提交"
+    cancel-btn="取消"
+    bind:confirm="onConfirmSubmit"
+    bind:cancel="onCancelSubmit"
+  >
+    <view slot="content" style="font-size: 14px; color: #666;">
+      <text style="display: block; margin-bottom: 12px;">提交后将由后端预占库存，DRAFT 阶段的配件明细会生成 RESERVE 库存流水。提交不会收款、不会结算、不会扣减实际库存。是否确认提交？</text>
+      <t-input placeholder="可输入提交备注(选填)" value="{{submitRemark}}" bind:change="onSubmitRemarkChange" borderless style="background: #f5f5f5; border-radius: 4px;" />
+    </view>
+  </t-dialog>
+
+  <t-toast id="t-toast" />
+</view>

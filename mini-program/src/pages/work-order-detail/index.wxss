@@ -1,0 +1,96 @@
+.container {
+  padding-bottom: 60rpx;
+}
+.header-card {
+  background: #fff;
+  padding: 32rpx;
+  margin-bottom: 24rpx;
+}
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24rpx;
+}
+.title {
+  font-size: 36rpx;
+  font-weight: bold;
+}
+.customer-info {
+  display: flex;
+  align-items: center;
+}
+.name {
+  font-size: 32rpx;
+  font-weight: bold;
+  margin-right: 16rpx;
+}
+.phone {
+  font-size: 28rpx;
+  color: #666;
+}
+.section {
+  background: #fff;
+  margin-bottom: 24rpx;
+  padding-top: 24rpx;
+}
+.section-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  padding: 0 32rpx 16rpx;
+  display: block;
+  border-bottom: 1rpx solid #eee;
+}
+.fee-list {
+  padding: 0 32rpx;
+}
+.fee-item {
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid #eee;
+}
+.fee-item:last-child {
+  border-bottom: none;
+}
+.fee-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12rpx;
+}
+.fee-name {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #333;
+}
+.fee-body {
+  display: flex;
+  flex-direction: column;
+}
+.fee-desc {
+  font-size: 26rpx;
+  color: #666;
+  margin-bottom: 4rpx;
+}
+.fee-amount {
+  font-size: 28rpx;
+  color: #e33e33;
+  font-weight: bold;
+  margin-top: 8rpx;
+  text-align: right;
+}
+.empty {
+  text-align: center;
+  padding: 40rpx;
+  color: #999;
+  font-size: 28rpx;
+}
+.loading-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 60vh;
+}
+.summary-section t-cell-group t-cell .t-cell__note {
+  color: #e33e33;
+  font-weight: bold;
+}

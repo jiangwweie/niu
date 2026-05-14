@@ -1,0 +1,38 @@
+.container {
+  padding: 32rpx;
+}
+.header {
+  margin-bottom: 48rpx;
+  background: #fff;
+  padding: 32rpx;
+  border-radius: 16rpx;
+}
+.title, .section-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  margin-bottom: 24rpx;
+  display: block;
+}
+.user-info text {
+  display: block;
+  font-size: 28rpx;
+  color: #666;
+  margin-bottom: 12rpx;
+}
+.section {
+  background: #fff;
+  padding: 32rpx;
+  border-radius: 16rpx;
+}
+.user-item {
+  padding: 24rpx;
+  border: 2rpx solid #eee;
+  border-radius: 8rpx;
+  margin-bottom: 16rpx;
+  font-size: 28rpx;
+}
+.user-item.active {
+  border-color: #e33e33;
+  color: #e33e33;
+  background: rgba(227, 62, 51, 0.05);
+}

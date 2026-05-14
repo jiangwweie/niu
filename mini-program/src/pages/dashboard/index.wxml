@@ -1,0 +1,4 @@
+<view class="container" style="display:flex; justify-content:center; align-items:center; height:100vh; flex-direction:column;">
+  <text style="font-size: 24px; color: red; font-weight: bold;">仪表盘页面加载成功</text>
+  <text style="margin-top: 20px; color: #666;">您可以点击底部 Tab 切换</text>
+</view>

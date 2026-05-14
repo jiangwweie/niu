@@ -1,0 +1,72 @@
+<view class="container">
+  <view class="section">
+    <view class="section-title">入库配件信息</view>
+    <t-cell-group wx:if="{{!selectedPart}}">
+      <t-cell title="选择配件" arrow hover bind:tap="showPartSelector" note="点击选择" />
+    </t-cell-group>
+    <view wx:else class="selected-part" bind:tap="showPartSelector">
+      <view class="part-header">
+        <text class="part-name">{{selectedPart.partName}}</text>
+        <t-tag theme="primary" variant="light">{{selectedPart.categoryCode}}</t-tag>
+      </view>
+      <text class="part-desc">编码: {{selectedPart.partCode}}</text>
+      <text class="part-desc" wx:if="{{selectedPart.model}}">型号: {{selectedPart.model}}</text>
+      <view class="change-hint">点击更换配件</view>
+    </view>
+
+    <t-button block theme="default" icon="scan" bind:tap="handleScan" style="margin-top: 16px;">扫码识别 (Mock)</t-button>
+  </view>
+
+  <view class="section" wx:if="{{!successResult}}">
+    <view class="section-title">入库明细</view>
+    <t-cell-group>
+      <t-input label="入库数量" type="number" placeholder="必填，必须大于0" bind:change="onQuantityChange" align="right" value="{{formData.quantity}}" />
+      <t-input label="入库单价" type="digit" placeholder="选填，不能为负数" bind:change="onUnitCostChange" align="right" value="{{formData.unitCost}}" />
+      <t-input label="条码信息" placeholder="选填" bind:change="onBarcodeChange" align="right" value="{{formData.barcode}}" />
+      <t-input label="库位备注" placeholder="选填" bind:change="onLocationChange" align="right" value="{{formData.locationRemark}}" />
+      <t-input label="入库原因" placeholder="选填" bind:change="onReasonChange" align="right" value="{{formData.reason}}" />
+      <t-input label="其他备注" placeholder="选填" bind:change="onRemarkChange" align="right" value="{{formData.remark}}" />
+    </t-cell-group>
+  </view>
+
+  <view class="footer" wx:if="{{!successResult}}">
+    <t-button theme="primary" block size="large" bind:tap="submitInbound" loading="{{submitting}}">确认入库</t-button>
+  </view>
+
+  <!-- 成功结果区 -->
+  <view class="success-result" wx:if="{{successResult}}">
+    <t-icon name="check-circle-filled" size="64" color="#00A870" />
+    <view class="success-title">入库成功</view>
+    <view class="success-hint">入库成功后由后端生成 INBOUND 库存流水，库存数量以后端返回为准。</view>
+    <view class="result-card">
+      <text class="info">流水号: {{successResult.flowId}}</text>
+      <text class="info">配件名称: {{successResult.partName}}</text>
+      <text class="info">配件编码: {{successResult.partCode}}</text>
+      <text class="info highlight">可用库存: {{successResult.availableQty}}</text>
+      <text class="info">实际库存: {{successResult.actualQty}}</text>
+      <text class="info">预占库存: {{successResult.reservedQty}}</text>
+      <text class="info">操作时间: {{successResult.operatedAt}}</text>
+    </view>
+    <t-button theme="primary" block size="large" bind:tap="resetForm" style="margin-top: 24px;">继续入库</t-button>
+  </view>
+
+  <!-- 配件选择弹窗 -->
+  <t-popup visible="{{partSelectorVisible}}" bind:visible-change="onPopupVisibleChange" placement="bottom" custom-style="height: 80vh;">
+    <view class="popup-header">
+      <text class="popup-title">选择配件</text>
+    </view>
+    <t-search placeholder="搜索配件编码/名称" bind:change="onSearchPart" />
+    <scroll-view scroll-y class="part-list">
+      <view class="part-item" wx:for="{{partList}}" wx:key="id" bind:tap="selectPart" data-item="{{item}}">
+        <view class="part-item-header">
+          <text class="part-name">{{item.partName}}</text>
+        </view>
+        <text class="part-desc">编码: {{item.partCode}}</text>
+        <text class="part-desc" wx:if="{{item.model}}">型号: {{item.model}}</text>
+      </view>
+      <view class="empty" wx:if="{{partList.length === 0}}">暂无配件</view>
+    </scroll-view>
+  </t-popup>
+
+  <t-toast id="t-toast" />
+</view>

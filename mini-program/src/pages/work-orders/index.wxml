@@ -1,0 +1,22 @@
+<view class="container">
+  <t-search value="{{keyword}}" placeholder="搜索工单号 / 客户姓名" bind:change="onSearch" bind:clear="onClear" />
+  
+  <view class="list">
+    <block wx:if="{{orders.length > 0}}">
+      <view class="card" wx:for="{{orders}}" wx:key="id" bindtap="onTapDetail" data-id="{{item.id}}">
+        <view class="card-header">
+          <text class="title">{{item.workOrderNo}}</text>
+          <t-tag theme="primary" variant="light">{{item.status}}</t-tag>
+        </view>
+        <view class="card-body">
+          <text class="info">客户姓名: {{item.customerNameSnapshot}}</text>
+          <text class="info" wx:if="{{item.vehicleModelSnapshot}}">车型: {{item.vehicleModelSnapshot}}</text>
+          <text class="info">应收金额: ¥{{item.receivableAmount != null ? item.receivableAmount : '-'}}</text>
+          <text class="info">实收金额: ¥{{item.receivedAmount != null ? item.receivedAmount : '-'}}</text>
+          <text class="info time">创建时间: {{item.createdAt || '-'}}</text>
+        </view>
+      </view>
+    </block>
+    <view wx:else class="empty">暂无工单数据</view>
+  </view>
+</view>

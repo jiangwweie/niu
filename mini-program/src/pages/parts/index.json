@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "配件查询",
+  "usingComponents": {
+    "t-search": "tdesign-miniprogram/search/search",
+    "t-tag": "tdesign-miniprogram/tag/tag"
+  }
+}

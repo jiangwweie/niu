@@ -5,6 +5,7 @@ import com.xiaoniu.aftermarket.common.context.CurrentUser;
 import com.xiaoniu.aftermarket.common.context.CurrentUserContext;
 import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
+import com.xiaoniu.aftermarket.common.enums.CommonStatus;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
 import com.xiaoniu.aftermarket.part.dto.PartQueryRequest;
 import com.xiaoniu.aftermarket.part.dto.PartQueryResponse;
@@ -57,7 +58,8 @@ public class StaffPartController {
     public ApiResponse<StaffPartDetail> getPart(@PathVariable Long partId) {
         CurrentUser user = requireCurrentUser();
         PartEntity entity = partService.getById(partId);
-        if (entity == null || !user.storeId().equals(entity.getStoreId())) {
+        if (entity == null || !user.storeId().equals(entity.getStoreId())
+                || !CommonStatus.ENABLED.getCode().equals(entity.getStatus())) {
             throw new BusinessException(ErrorCode.PART_NOT_FOUND, "配件不存在");
         }
         return ApiResponse.success(StaffPartDetail.from(entity));

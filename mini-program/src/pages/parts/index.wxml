@@ -1,0 +1,21 @@
+<view class="container">
+  <t-search value="{{keyword}}" placeholder="搜索配件编码 / 名称" bind:change="onSearch" bind:clear="onClear" />
+  
+  <view class="list">
+    <block wx:if="{{parts.length > 0}}">
+      <view class="card" wx:for="{{parts}}" wx:key="id" bindtap="onTapDetail" data-id="{{item.id}}">
+        <view class="card-header">
+          <text class="title">{{item.partName}}</text>
+          <t-tag theme="{{item.source === 'OFFICIAL' ? 'primary' : 'warning'}}">{{item.source === 'OFFICIAL' ? '官方' : '第三方'}}</t-tag>
+        </view>
+        <view class="card-body">
+          <text class="info">编码: {{item.partCode}}</text>
+          <text class="info" wx:if="{{item.officialPartNo}}">官方品号: {{item.officialPartNo}}</text>
+          <text class="info" wx:if="{{item.model}}">型号: {{item.model}}</text>
+          <text class="info">分类: {{item.categoryCode}}</text>
+        </view>
+      </view>
+    </block>
+    <view wx:else class="empty">暂无配件数据</view>
+  </view>
+</view>

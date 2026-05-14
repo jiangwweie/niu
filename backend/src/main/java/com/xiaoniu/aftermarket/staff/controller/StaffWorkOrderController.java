@@ -6,25 +6,39 @@ import com.xiaoniu.aftermarket.common.context.CurrentUser;
 import com.xiaoniu.aftermarket.common.context.CurrentUserContext;
 import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
-import com.xiaoniu.aftermarket.workorder.dto.WorkOrderChargeItemResponse;
+import com.xiaoniu.aftermarket.staff.dto.StaffAddChargeItemRequest;
+import com.xiaoniu.aftermarket.staff.dto.StaffCancelWorkOrderRequest;
+import com.xiaoniu.aftermarket.staff.dto.StaffChargeItemIdResponse;
+import com.xiaoniu.aftermarket.staff.dto.StaffCreateDraftWorkOrderRequest;
+import com.xiaoniu.aftermarket.staff.dto.StaffSubmitWorkOrderRequest;
+import com.xiaoniu.aftermarket.staff.dto.StaffUpdateChargeItemRequest;
+import com.xiaoniu.aftermarket.staff.dto.StaffUpdateDraftWorkOrderRequest;
+import com.xiaoniu.aftermarket.workorder.dto.AddWorkOrderChargeItemCommand;
+import com.xiaoniu.aftermarket.workorder.dto.CancelWorkOrderCommand;
+import com.xiaoniu.aftermarket.workorder.dto.CreateDraftWorkOrderCommand;
+import com.xiaoniu.aftermarket.workorder.dto.SubmitWorkOrderCommand;
+import com.xiaoniu.aftermarket.workorder.dto.UpdateWorkOrderChargeItemCommand;
+import com.xiaoniu.aftermarket.workorder.dto.UpdateWorkOrderDraftCommand;
 import com.xiaoniu.aftermarket.workorder.dto.WorkOrderDetailResponse;
 import com.xiaoniu.aftermarket.workorder.dto.WorkOrderQueryRequest;
 import com.xiaoniu.aftermarket.workorder.dto.WorkOrderQueryResponse;
+import com.xiaoniu.aftermarket.workorder.entity.WorkOrderEntity;
+import com.xiaoniu.aftermarket.workorder.mapper.WorkOrderMapper;
 import com.xiaoniu.aftermarket.workorder.service.WorkOrderService;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/staff/work-orders")
 public class StaffWorkOrderController {
 
     private final WorkOrderService workOrderService;
+    private final WorkOrderMapper workOrderMapper;
 
-    public StaffWorkOrderController(WorkOrderService workOrderService) {
+    public StaffWorkOrderController(WorkOrderService workOrderService,
+                                    WorkOrderMapper workOrderMapper) {
         this.workOrderService = workOrderService;
+        this.workOrderMapper = workOrderMapper;
     }
 
     @GetMapping
@@ -54,15 +68,146 @@ public class StaffWorkOrderController {
     @GetMapping("/{workOrderId}")
     public ApiResponse<StaffWorkOrderDetail> getWorkOrder(@PathVariable Long workOrderId) {
         CurrentUser user = requireCurrentUser();
+        requireWorkOrderInStore(workOrderId, user.storeId());
         WorkOrderDetailResponse detail = workOrderService.getById(workOrderId);
-        if (!user.storeId().equals(detail.getStoreId())) {
-            throw new BusinessException(ErrorCode.WORK_ORDER_NOT_FOUND, "工单不存在");
-        }
+        return ApiResponse.success(StaffWorkOrderDetail.from(detail));
+    }
+
+    @PostMapping("/drafts")
+    public ApiResponse<StaffWorkOrderDetail> createDraft(
+            @Valid @RequestBody StaffCreateDraftWorkOrderRequest request) {
+        CurrentUser user = requireCurrentUser();
+
+        CreateDraftWorkOrderCommand command = new CreateDraftWorkOrderCommand();
+        command.setStoreId(user.storeId());
+        command.setOperatorId(user.userId());
+        command.setCustomerNameSnapshot(request.customerNameSnapshot());
+        command.setCustomerPhoneSnapshot(request.customerPhoneSnapshot());
+        command.setVehicleModelSnapshot(request.vehicleModelSnapshot());
+        command.setFrameNoSnapshot(request.frameNoSnapshot());
+        command.setBatteryNoSnapshot(request.batteryNoSnapshot());
+        command.setRepairItem(request.repairItem());
+        command.setRemark(request.remark());
+
+        Long workOrderId = workOrderService.createDraft(command);
+        WorkOrderDetailResponse detail = workOrderService.getById(workOrderId);
+        return ApiResponse.success(StaffWorkOrderDetail.from(detail));
+    }
+
+    @PutMapping("/{workOrderId}/draft")
+    public ApiResponse<StaffWorkOrderDetail> updateDraft(
+            @PathVariable Long workOrderId,
+            @Valid @RequestBody StaffUpdateDraftWorkOrderRequest request) {
+        CurrentUser user = requireCurrentUser();
+
+        UpdateWorkOrderDraftCommand command = new UpdateWorkOrderDraftCommand();
+        command.setStoreId(user.storeId());
+        command.setOperatorId(user.userId());
+        command.setCustomerNameSnapshot(request.customerNameSnapshot());
+        command.setCustomerPhoneSnapshot(request.customerPhoneSnapshot());
+        command.setVehicleModelSnapshot(request.vehicleModelSnapshot());
+        command.setFrameNoSnapshot(request.frameNoSnapshot());
+        command.setBatteryNoSnapshot(request.batteryNoSnapshot());
+        command.setRepairItem(request.repairItem());
+        command.setRemark(request.remark());
+
+        workOrderService.updateDraft(workOrderId, command);
+        WorkOrderDetailResponse detail = workOrderService.getById(workOrderId);
+        return ApiResponse.success(StaffWorkOrderDetail.from(detail));
+    }
+
+    @PostMapping("/{workOrderId}/charge-items")
+    public ApiResponse<StaffChargeItemIdResponse> addChargeItem(
+            @PathVariable Long workOrderId,
+            @Valid @RequestBody StaffAddChargeItemRequest request) {
+        CurrentUser user = requireCurrentUser();
+
+        AddWorkOrderChargeItemCommand command = new AddWorkOrderChargeItemCommand();
+        command.setStoreId(user.storeId());
+        command.setChargeType(request.chargeType());
+        command.setItemName(request.itemName());
+        command.setPartId(request.partId());
+        command.setQuantity(request.quantity());
+        command.setUnit(request.unit());
+        command.setUnitPrice(request.unitPrice());
+        command.setRemark(request.remark());
+
+        Long chargeItemId = workOrderService.addChargeItem(workOrderId, command);
+        return ApiResponse.success(new StaffChargeItemIdResponse(chargeItemId));
+    }
+
+    @PutMapping("/{workOrderId}/charge-items/{chargeItemId}")
+    public ApiResponse<Void> updateChargeItem(
+            @PathVariable Long workOrderId,
+            @PathVariable Long chargeItemId,
+            @Valid @RequestBody StaffUpdateChargeItemRequest request) {
+        CurrentUser user = requireCurrentUser();
+
+        UpdateWorkOrderChargeItemCommand command = new UpdateWorkOrderChargeItemCommand();
+        command.setStoreId(user.storeId());
+        command.setItemName(request.itemName());
+        command.setQuantity(request.quantity());
+        command.setUnit(request.unit());
+        command.setUnitPrice(request.unitPrice());
+        command.setRemark(request.remark());
+
+        workOrderService.updateChargeItem(workOrderId, chargeItemId, command);
+        return ApiResponse.success(null);
+    }
+
+    @DeleteMapping("/{workOrderId}/charge-items/{chargeItemId}")
+    public ApiResponse<Void> deleteChargeItem(
+            @PathVariable Long workOrderId,
+            @PathVariable Long chargeItemId) {
+        CurrentUser user = requireCurrentUser();
+        workOrderService.removeChargeItem(user.storeId(), workOrderId, chargeItemId);
+        return ApiResponse.success(null);
+    }
+
+    @PostMapping("/{workOrderId}/submit")
+    public ApiResponse<StaffWorkOrderDetail> submit(
+            @PathVariable Long workOrderId,
+            @Valid @RequestBody StaffSubmitWorkOrderRequest request) {
+        CurrentUser user = requireCurrentUser();
+
+        SubmitWorkOrderCommand command = new SubmitWorkOrderCommand();
+        command.setStoreId(user.storeId());
+        command.setWorkOrderId(workOrderId);
+        command.setOperatorId(user.userId());
+        command.setRemark(request.remark());
+
+        workOrderService.submit(command);
+        WorkOrderDetailResponse detail = workOrderService.getById(workOrderId);
+        return ApiResponse.success(StaffWorkOrderDetail.from(detail));
+    }
+
+    @PostMapping("/{workOrderId}/cancel")
+    public ApiResponse<StaffWorkOrderDetail> cancel(
+            @PathVariable Long workOrderId,
+            @Valid @RequestBody StaffCancelWorkOrderRequest request) {
+        CurrentUser user = requireCurrentUser();
+
+        CancelWorkOrderCommand command = new CancelWorkOrderCommand();
+        command.setStoreId(user.storeId());
+        command.setWorkOrderId(workOrderId);
+        command.setOperatorId(user.userId());
+        command.setReason(request.reason());
+
+        workOrderService.cancel(command);
+        WorkOrderDetailResponse detail = workOrderService.getById(workOrderId);
         return ApiResponse.success(StaffWorkOrderDetail.from(detail));
     }
 
     private CurrentUser requireCurrentUser() {
         return CurrentUserContext.get()
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "缺少用户上下文"));
+    }
+
+    private void requireWorkOrderInStore(Long workOrderId, Long storeId) {
+        WorkOrderEntity entity = workOrderMapper.selectById(workOrderId);
+        if (entity == null || entity.getDeleted() != null && entity.getDeleted() == 1
+                || !storeId.equals(entity.getStoreId())) {
+            throw new BusinessException(ErrorCode.WORK_ORDER_NOT_FOUND, "工单不存在");
+        }
     }
 }

@@ -1,0 +1,16 @@
+{
+  "name": "niu-mini-program",
+  "version": "1.0.0",
+  "description": "小牛电动官方授权店两轮车维修售后库存管理系统",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "tdesign-miniprogram": "^1.5.0"
+  },
+  "devDependencies": {
+    "miniprogram-api-typings": "^3.12.2",
+    "typescript": "^5.0.0"
+  }
+}
