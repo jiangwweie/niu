@@ -2,6 +2,7 @@ package com.xiaoniu.aftermarket.official.controller;
 
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.math.BigDecimal;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -98,6 +99,24 @@ class OfficialAfterSalesControllerTest {
                                               official_settlement_status, official_settlement_time,
                                               official_settlement_operator_id)
             VALUES (9001, 1, 8004, 1, 'OFF-ORDER-001', 100.00, 'SETTLED', CURRENT_TIMESTAMP, 1)
+            """);
+
+        // Work order (id=8005) in DRAFT — official settlement should not be allowed
+        jdbcTemplate.execute("""
+            INSERT INTO work_order (id, store_id, work_order_no, customer_name_snapshot, customer_phone_snapshot,
+                                    vehicle_model_snapshot, frame_no_snapshot, repair_item, status,
+                                    receivable_amount, received_amount)
+            VALUES (8005, 1, 'WOA-0005', '草稿客户', '13800005555', 'NQi', 'FRAME005', '草稿维修',
+                    'DRAFT', 100.00, 0.00)
+            """);
+
+        // Work order (id=8006) in CANCELLED — official settlement should not be allowed
+        jdbcTemplate.execute("""
+            INSERT INTO work_order (id, store_id, work_order_no, customer_name_snapshot, customer_phone_snapshot,
+                                    vehicle_model_snapshot, frame_no_snapshot, repair_item, status,
+                                    receivable_amount, received_amount)
+            VALUES (8006, 1, 'WOA-0006', '取消客户', '13800006666', 'NQi', 'FRAME006', '取消维修',
+                    'CANCELLED', 100.00, 0.00)
             """);
 
         // Work order (id=8099) in store 2 — for cross-store test
@@ -213,6 +232,124 @@ class OfficialAfterSalesControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    @Test
+    void saveOfficialOrderInfoDuplicateInSameStoreFails() throws Exception {
+        String body = """
+                {
+                    "officialOrderNo": "OFF-DUP-001"
+                }
+                """;
+        mockMvc.perform(post("/api/admin/work-orders/8001/official-after-sales/order-info")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/admin/work-orders/8002/official-after-sales/order-info")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("OFFICIAL_ORDER_NO_DUPLICATED"));
+    }
+
+    @Test
+    void saveOfficialOrderInfoSameOfficialOrderNoAcrossStoresSucceeds() throws Exception {
+        String body = """
+                {
+                    "officialOrderNo": "OFF-CROSS-STORE-001"
+                }
+                """;
+        mockMvc.perform(post("/api/admin/work-orders/8001/official-after-sales/order-info")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/admin/work-orders/8099/official-after-sales/order-info")
+                        .header("X-User-Id", "2")
+                        .header("X-Store-Id", "2")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"));
+
+        Long count = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*) FROM official_after_sales
+                WHERE official_order_no = 'OFF-CROSS-STORE-001'
+                """, Long.class);
+        assertEquals(2L, count);
+    }
+
+    @Test
+    void saveOfficialOrderInfoCanModifyPendingOfficialOrderNo() throws Exception {
+        mockMvc.perform(post("/api/admin/work-orders/8001/official-after-sales/order-info")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"officialOrderNo": "OFF-PENDING-OLD"}
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/admin/work-orders/8001/official-after-sales/order-info")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"officialOrderNo": "OFF-PENDING-NEW"}
+                                """))
+                .andExpect(status().isOk());
+
+        String orderNo = jdbcTemplate.queryForObject(
+                "SELECT official_order_no FROM official_after_sales WHERE store_id = 1 AND work_order_id = 8001",
+                String.class);
+        assertEquals("OFF-PENDING-NEW", orderNo);
+    }
+
+    @Test
+    void saveOfficialOrderInfoCannotModifySettledOfficialOrderNo() throws Exception {
+        mockMvc.perform(post("/api/admin/work-orders/8004/official-after-sales/order-info")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"officialOrderNo": "OFF-ORDER-CHANGED"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("OFFICIAL_SETTLEMENT_STATUS_INVALID"));
+
+        String orderNo = jdbcTemplate.queryForObject(
+                "SELECT official_order_no FROM official_after_sales WHERE id = 9001",
+                String.class);
+        assertEquals("OFF-ORDER-001", orderNo);
+    }
+
+    @Test
+    void saveOfficialOrderInfoCannotModifyNotRequiredOfficialOrderNo() throws Exception {
+        mockMvc.perform(post("/api/admin/work-orders/8003/official-after-sales/no-settlement-required")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"reason": "无需官方结算"}
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/admin/work-orders/8003/official-after-sales/order-info")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"officialOrderNo": "OFF-NOT-REQUIRED-NEW"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("OFFICIAL_SETTLEMENT_STATUS_INVALID"));
+    }
+
     // ========== 4. POST /settle mark official settled ==========
 
     @Test
@@ -243,6 +380,17 @@ class OfficialAfterSalesControllerTest {
                         .content(body))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("SUCCESS"));
+
+        String status = jdbcTemplate.queryForObject("""
+                SELECT official_settlement_status FROM official_after_sales
+                WHERE store_id = 1 AND work_order_id = 8002
+                """, String.class);
+        BigDecimal amount = jdbcTemplate.queryForObject("""
+                SELECT official_settlement_amount FROM official_after_sales
+                WHERE store_id = 1 AND work_order_id = 8002
+                """, BigDecimal.class);
+        assertEquals("SETTLED", status);
+        assertTrue(new BigDecimal("100.00").compareTo(amount) == 0);
     }
 
     @Test
@@ -258,6 +406,62 @@ class OfficialAfterSalesControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void markOfficialSettledAmountZeroFails() throws Exception {
+        saveOfficialOrderInfo(8002, "OFF-ZERO-001");
+
+        mockMvc.perform(post("/api/admin/work-orders/8002/official-after-sales/settle")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"settlementAmount": 0}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("OFFICIAL_SETTLEMENT_AMOUNT_INVALID"));
+    }
+
+    @Test
+    void markOfficialSettledAmountNegativeFails() throws Exception {
+        saveOfficialOrderInfo(8002, "OFF-NEGATIVE-001");
+
+        mockMvc.perform(post("/api/admin/work-orders/8002/official-after-sales/settle")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"settlementAmount": -1}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("OFFICIAL_SETTLEMENT_AMOUNT_INVALID"));
+    }
+
+    @Test
+    void markOfficialSettledDraftWorkOrderFails() throws Exception {
+        mockMvc.perform(post("/api/admin/work-orders/8005/official-after-sales/settle")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"settlementAmount": 100.00}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("OFFICIAL_SETTLEMENT_NOT_ALLOWED"));
+    }
+
+    @Test
+    void markOfficialSettledCancelledWorkOrderFails() throws Exception {
+        mockMvc.perform(post("/api/admin/work-orders/8006/official-after-sales/settle")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"settlementAmount": 100.00}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("OFFICIAL_SETTLEMENT_NOT_ALLOWED"));
     }
 
     // ========== 5. POST /no-settlement-required ==========
@@ -344,6 +548,45 @@ class OfficialAfterSalesControllerTest {
         Long count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM official_after_sales WHERE store_id = 1 AND work_order_id = 8001", Long.class);
         assertTrue(count != null && count > 0);
+    }
+
+    @Test
+    void saveOrderInfoCrossStoreWorkOrderFails() throws Exception {
+        mockMvc.perform(post("/api/admin/work-orders/8099/official-after-sales/order-info")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"officialOrderNo": "OFF-CROSS-BLOCKED"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("WORK_ORDER_NOT_FOUND"));
+    }
+
+    @Test
+    void settleCrossStoreWorkOrderFails() throws Exception {
+        mockMvc.perform(post("/api/admin/work-orders/8099/official-after-sales/settle")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"settlementAmount": 100.00}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("WORK_ORDER_NOT_FOUND"));
+    }
+
+    @Test
+    void noSettlementRequiredCrossStoreWorkOrderFails() throws Exception {
+        mockMvc.perform(post("/api/admin/work-orders/8099/official-after-sales/no-settlement-required")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"reason": "跨店禁止"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("WORK_ORDER_NOT_FOUND"));
     }
 
     // ========== 8. Official settlement does not change receivedAmount ==========
@@ -526,5 +769,16 @@ class OfficialAfterSalesControllerTest {
                         .param("startTime", "not-a-date"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
+    }
+
+    private void saveOfficialOrderInfo(long workOrderId, String officialOrderNo) throws Exception {
+        mockMvc.perform(post("/api/admin/work-orders/" + workOrderId + "/official-after-sales/order-info")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"officialOrderNo": "%s"}
+                                """.formatted(officialOrderNo)))
+                .andExpect(status().isOk());
     }
 }

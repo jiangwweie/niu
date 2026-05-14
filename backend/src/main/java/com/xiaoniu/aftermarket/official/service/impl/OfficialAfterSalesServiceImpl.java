@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -62,7 +63,7 @@ public class OfficialAfterSalesServiceImpl implements OfficialAfterSalesService 
             entity.setOfficialOrderNo(officialOrderNo);
             entity.setRemark(command.getRemark());
             entity.setCreatedBy(command.getOperatorId());
-            officialAfterSalesMapper.insert(entity);
+            insertOfficialAfterSales(entity);
             return entity.getId();
         }
 
@@ -77,7 +78,7 @@ public class OfficialAfterSalesServiceImpl implements OfficialAfterSalesService 
         }
         entity.setRemark(command.getRemark());
         entity.setUpdatedBy(command.getOperatorId());
-        officialAfterSalesMapper.updateById(entity);
+        updateOfficialAfterSales(entity);
         return entity.getId();
     }
 
@@ -210,7 +211,7 @@ public class OfficialAfterSalesServiceImpl implements OfficialAfterSalesService 
         if (command.getOperatorId() == null) {
             throw new BusinessException(ErrorCode.OPERATOR_REQUIRED);
         }
-        if (command.getSettlementAmount() == null || command.getSettlementAmount().compareTo(BigDecimal.ZERO) < 0) {
+        if (command.getSettlementAmount() == null || command.getSettlementAmount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new BusinessException(ErrorCode.OFFICIAL_SETTLEMENT_AMOUNT_INVALID);
         }
     }
@@ -265,6 +266,22 @@ public class OfficialAfterSalesServiceImpl implements OfficialAfterSalesService 
         OfficialAfterSalesEntity existing = officialAfterSalesMapper
                 .selectByStoreIdAndOfficialOrderNo(storeId, officialOrderNo);
         if (existing != null && !workOrderId.equals(existing.getWorkOrderId())) {
+            throw new BusinessException(ErrorCode.OFFICIAL_ORDER_NO_DUPLICATED);
+        }
+    }
+
+    private void insertOfficialAfterSales(OfficialAfterSalesEntity entity) {
+        try {
+            officialAfterSalesMapper.insert(entity);
+        } catch (DuplicateKeyException e) {
+            throw new BusinessException(ErrorCode.OFFICIAL_ORDER_NO_DUPLICATED);
+        }
+    }
+
+    private void updateOfficialAfterSales(OfficialAfterSalesEntity entity) {
+        try {
+            officialAfterSalesMapper.updateById(entity);
+        } catch (DuplicateKeyException e) {
             throw new BusinessException(ErrorCode.OFFICIAL_ORDER_NO_DUPLICATED);
         }
     }

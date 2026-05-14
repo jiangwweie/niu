@@ -345,5 +345,6 @@ CREATE TABLE IF NOT EXISTS official_after_sales (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     deleted INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (id),
-    UNIQUE (work_order_id)
+    UNIQUE (work_order_id),
+    UNIQUE (store_id, official_order_no)
 );
