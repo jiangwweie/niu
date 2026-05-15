@@ -11,3 +11,7 @@ spring:
       mode: always
       schema-locations: classpath:schema.sql
       data-locations: classpath:data.sql
+
+security:
+  jwt:
+    secret: prod-like-test-secret-that-is-long-enough-to-pass-validation

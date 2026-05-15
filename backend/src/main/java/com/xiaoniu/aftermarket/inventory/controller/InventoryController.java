@@ -65,6 +65,7 @@ public class InventoryController {
     }
 
     @PostMapping("/inbound")
+    @PreAuthorize("hasAuthority('INVENTORY_INBOUND')")
     public ApiResponse<Void> inbound(@Valid @RequestBody InventoryInboundRequest request) {
         CurrentUser user = requireCurrentUser();
         InventoryInboundCommand command = new InventoryInboundCommand();

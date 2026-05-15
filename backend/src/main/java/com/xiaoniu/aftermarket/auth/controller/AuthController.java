@@ -51,6 +51,11 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(authService.toResponse(currentUser)));
     }
 
+    /**
+     * Logout is a no-op on the server side — the client should discard the access token.
+     * The token remains valid until it expires (TTL is configurable). Token blacklisting
+     * will be added in a future phase.
+     */
     @PostMapping("/logout")
     public ApiResponse<Void> logout() {
         return ApiResponse.success(null);

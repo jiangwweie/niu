@@ -55,3 +55,11 @@ CREATE DATABASE IF NOT EXISTS xiaoniu_aftermarket
 ```
 
 Migration files live under `src/main/resources/db/migration/`.
+
+## Authentication & Authorization
+
+- JWT-based authentication with HMAC-SHA256 signing.
+- Access token TTL is configurable via `SECURITY_JWT_ACCESSTOKENTTLSECONDS` (default 4h).
+- **`JWT_SECRET` must be set in production** — the app will refuse to start with a dev placeholder secret outside dev/test profiles.
+- Permissions are snapshot into the JWT at login time. Changes to a user's permissions take effect only after the token expires and is re-issued. If immediate revocation is needed (e.g. employee offboarding), a token version or blacklist mechanism must be introduced.
+- Logout is client-side only (discard the token). Server-side token invalidation is not yet implemented.
