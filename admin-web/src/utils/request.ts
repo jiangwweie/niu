@@ -27,8 +27,17 @@ request.interceptors.response.use(
     ElMessage.error(msg);
     return Promise.reject(new Error(msg));
   },
-  (error: AxiosError<{ code?: string; message?: string }>) => {
-    const msg = error.response?.data?.message || error.message || '网络请求错误';
+  async (error: AxiosError<{ code?: string; message?: string }>) => {
+    const data = error.response?.data as any;
+    let msg = data?.message || error.message || '网络请求错误';
+    if (data instanceof Blob && data.type.includes('application/json')) {
+      try {
+        const json = JSON.parse(await data.text());
+        msg = json.message || msg;
+      } catch {
+        msg = '请求失败';
+      }
+    }
     ElMessage.error(msg);
     return Promise.reject(error);
   },

@@ -7,12 +7,14 @@ export async function handleBlobResponse(response: any, defaultFilename: string)
   // If the backend returns an error inside 200 via json instead of blob, handle it
   if (response.data && response.data.type && response.data.type.includes('application/json')) {
     const text = await response.data.text();
+    let message = '导出失败';
     try {
       const json = JSON.parse(text);
-      throw new Error(json.message || '导出失败');
+      message = json.message || message;
     } catch {
-      throw new Error('导出失败');
+      // Keep the default message when the response is not valid JSON.
     }
+    throw new Error(message);
   }
 
   const filename = parseFilenameFromContentDisposition(response.headers['content-disposition'], defaultFilename);
@@ -21,7 +23,7 @@ export async function handleBlobResponse(response: any, defaultFilename: string)
 
 export async function exportFinance(params: FinanceQuery) {
   // Clean up params based on reportType
-  const query: Record<string, any> = { reportType: params.reportType };
+  const query: Record<string, any> = { reportType: params.reportType === 'CUSTOM' ? 'RANGE' : params.reportType };
   if (params.reportType === 'DAILY') query.date = params.date;
   if (params.reportType === 'MONTHLY') query.month = `${params.year}-${String(params.month).padStart(2, '0')}`;
   if (params.reportType === 'CUSTOM' && params.dateRange) {

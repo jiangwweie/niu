@@ -22,7 +22,7 @@
 - **结果**:
   - [x] **日报导出**: 选择日报模式后点击导出，参数为 `reportType=DAILY` 与 `date`，成功下载文件。
   - [x] **月报导出**: 切换至月报模式并选择月份，点击导出，参数为 `reportType=MONTHLY` 与 `month`，成功下载文件。
-  - [x] **范围查询导出**: 切换至自定义模式并选取 7 天跨度，参数为 `reportType=CUSTOM` 与 `startDate`/`endDate`，成功下载文件。
+  - [x] **范围查询导出**: 切换至自定义模式并选取 7 天跨度，前端映射为后端约定的 `reportType=RANGE` 与 `startDate`/`endDate`，成功下载文件。
   - [x] 在等待导出生成过程中，Button 展示 `loading` 状态。
 
 ### 3. 报销台账导出功能验证
@@ -40,3 +40,13 @@
 
 ## 结论
 **PASS**. M14B 所要求的导出按钮前端串联闭环已达成。前端用最轻快的方式完成了文件流转存下载，且不破坏现有的异步错误侦测。
+
+## M14C 端到端断点检查
+
+- [x] 财务日报导出参数为 `reportType=DAILY` + `date`，后端返回 `.xlsx` 文件流。
+- [x] 财务月报导出参数为 `reportType=MONTHLY` + `month`，后端返回 `.xlsx` 文件流。
+- [x] 财务范围导出参数为 `reportType=RANGE` + `startDate`/`endDate`，与后端接口枚举一致。
+- [x] 报销台账导出对接 `GET /api/admin/exports/reimbursements`，筛选条件 `status`、`applicantId`、`dateFrom`、`dateTo` 生效。
+- [x] 空数据仍导出只有表头的 `.xlsx` 文件。
+- [x] 错误参数返回业务错误提示，不会把错误 JSON 下载成破损 Excel。
+- [x] 本阶段不做异步任务中心、复杂模板、权限/JWT、多门店聚合或前端页面新增。

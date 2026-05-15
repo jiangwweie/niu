@@ -4,7 +4,16 @@
 
 export function parseFilenameFromContentDisposition(header: string | undefined, defaultFilename: string): string {
   if (!header) return defaultFilename;
-  const match = header.match(/filename="?([^"]+)"?/);
+  const encodedMatch = header.match(/filename\*=UTF-8''([^;]+)/i);
+  if (encodedMatch && encodedMatch[1]) {
+    try {
+      return decodeURIComponent(encodedMatch[1].replace(/^"|"$/g, ''));
+    } catch {
+      return encodedMatch[1].replace(/^"|"$/g, '');
+    }
+  }
+
+  const match = header.match(/filename="?([^";]+)"?/i);
   if (match && match[1]) {
     // decode URI component if backend encoded it
     try {
