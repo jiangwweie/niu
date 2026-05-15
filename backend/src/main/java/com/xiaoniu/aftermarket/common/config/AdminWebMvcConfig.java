@@ -8,7 +8,7 @@ import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
-@Profile("dev")
+@Profile({"dev", "test"})
 public class AdminWebMvcConfig implements WebMvcConfigurer {
 
     private final DevCurrentUserInterceptor devCurrentUserInterceptor;

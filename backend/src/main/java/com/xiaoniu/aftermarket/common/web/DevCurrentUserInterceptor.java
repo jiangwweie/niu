@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
-@Profile("dev")
+@Profile({"dev", "test"})
 @Component
 public class DevCurrentUserInterceptor implements HandlerInterceptor {
 
