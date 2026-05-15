@@ -38,6 +38,7 @@
         <el-form-item class="search-actions">
           <el-button type="primary" @click="handleSearch" :loading="loading">查询</el-button>
           <el-button @click="handleReset">重置</el-button>
+          <el-button type="success" @click="handleExport" :loading="exportLoading">导出</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -186,6 +187,7 @@ import {
   confirmReimbursement, 
   rejectReimbursement 
 } from '@/api/reimbursement';
+import { exportReimbursements } from '@/api/export';
 import type { ReimbursementQuery, ReimbursementRecord } from '@/types/reimbursement';
 
 const dateRange = ref<[string, string] | null>(null);
@@ -199,6 +201,7 @@ const queryParams = reactive<ReimbursementQuery & { applicantIdStr?: string }>({
 });
 
 const loading = ref(false);
+const exportLoading = ref(false);
 const tableData = ref<ReimbursementRecord[]>([]);
 const total = ref(0);
 
@@ -239,6 +242,31 @@ const handleReset = () => {
   queryParams.status = '';
   dateRange.value = null;
   handleSearch();
+};
+
+const handleExport = async () => {
+  exportLoading.value = true;
+  try {
+    const params: ReimbursementQuery = { 
+      pageNo: queryParams.pageNo,
+      pageSize: queryParams.pageSize,
+      reimbursementNo: queryParams.reimbursementNo,
+      status: queryParams.status
+    };
+    if (queryParams.applicantIdStr) {
+      params.applicantId = Number(queryParams.applicantIdStr);
+    }
+    if (dateRange.value && dateRange.value.length === 2) {
+      params.dateFrom = dateRange.value[0];
+      params.dateTo = dateRange.value[1];
+    }
+    await exportReimbursements(params);
+    ElMessage.success('导出成功');
+  } catch (error: any) {
+    ElMessage.error(error.message || '导出失败');
+  } finally {
+    exportLoading.value = false;
+  }
 };
 
 // 状态映射

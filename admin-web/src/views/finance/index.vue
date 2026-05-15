@@ -60,6 +60,7 @@
 
         <el-form-item class="search-actions">
           <el-button type="primary" @click="handleSearch" :loading="loading">查询</el-button>
+          <el-button type="success" @click="handleExport" :loading="exportLoading">导出</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -171,6 +172,7 @@ import { ElMessage } from 'element-plus';
 import PageContainer from '@/components/PageContainer.vue';
 import MoneyText from '@/components/MoneyText.vue';
 import { getDailyFinance, getMonthlyFinance, getRangeFinance } from '@/api/finance';
+import { exportFinance } from '@/api/export';
 import type { FinanceQuery, FinanceReportResponse } from '@/types/finance';
 import dayjs from 'dayjs';
 
@@ -185,6 +187,7 @@ const queryParams = reactive<FinanceQuery>({
 const monthPickerValue = ref(currentMonthStr);
 
 const loading = ref(false);
+const exportLoading = ref(false);
 const summaryData = ref<FinanceReportResponse | null>(null);
 
 const handleMonthChange = (val: string) => {
@@ -243,6 +246,24 @@ const handleSearch = () => {
     ];
   }
   fetchData();
+};
+
+const handleExport = async () => {
+  exportLoading.value = true;
+  try {
+    const params: FinanceQuery = { ...queryParams };
+    // format month for the api if needed
+    if (params.reportType === 'MONTHLY' && !params.year) {
+      params.year = dayjs().year();
+      params.month = dayjs().month() + 1;
+    }
+    await exportFinance(params);
+    ElMessage.success('导出成功');
+  } catch (error: any) {
+    ElMessage.error(error.message || '导出失败');
+  } finally {
+    exportLoading.value = false;
+  }
 };
 
 onMounted(() => {

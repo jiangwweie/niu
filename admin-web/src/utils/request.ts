@@ -16,6 +16,9 @@ request.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 request.interceptors.response.use(
   (response) => {
     const body = response.data;
+    if (body instanceof Blob) {
+      return response; // Return the full response for Blob to get headers
+    }
     if (body && body.code === 'SUCCESS') {
       return body.data;
     }
