@@ -7,6 +7,7 @@ import com.xiaoniu.aftermarket.auth.security.JwtProvider;
 import com.xiaoniu.aftermarket.common.context.CurrentUser;
 import com.xiaoniu.aftermarket.common.context.CurrentUserContext;
 import com.xiaoniu.aftermarket.common.web.DevCurrentUserInterceptor;
+import com.xiaoniu.aftermarket.user.service.PermissionQueryService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,13 +32,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtProvider jwtProvider;
     private final AuthenticationEntryPoint authenticationEntryPoint;
+    private final PermissionQueryService permissionQueryService;
     private final boolean devHeaderFallbackEnabled;
 
     public JwtAuthenticationFilter(JwtProvider jwtProvider,
                                    AuthenticationEntryPoint authenticationEntryPoint,
+                                   PermissionQueryService permissionQueryService,
                                    Environment environment) {
         this.jwtProvider = jwtProvider;
         this.authenticationEntryPoint = authenticationEntryPoint;
+        this.permissionQueryService = permissionQueryService;
         this.devHeaderFallbackEnabled = Arrays.stream(environment.getActiveProfiles())
                 .anyMatch(profile -> "dev".equals(profile) || "test".equals(profile));
     }
@@ -93,13 +97,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (!hasText(userIdHeader) || !hasText(storeIdHeader)) {
             return;
         }
+        Long userId = Long.valueOf(userIdHeader);
         AuthenticatedUser user = new AuthenticatedUser(
-                Long.valueOf(userIdHeader),
+                userId,
                 Long.valueOf(storeIdHeader),
                 null,
                 null,
                 Set.of(),
-                Set.of()
+                Set.copyOf(permissionQueryService.listPermissionCodesByUserId(userId))
         );
         authenticate(user);
     }

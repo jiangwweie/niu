@@ -19,6 +19,7 @@ import com.xiaoniu.aftermarket.official.dto.SaveOfficialOrderInfoCommand;
 import com.xiaoniu.aftermarket.official.service.OfficialAfterSalesService;
 import jakarta.validation.Valid;
 import java.time.LocalDateTime;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -76,6 +77,7 @@ public class OfficialAfterSalesController {
     }
 
     @PostMapping("/api/admin/work-orders/{workOrderId}/official-after-sales/order-info")
+    @PreAuthorize("hasAuthority('OFFICIAL_SETTLEMENT_MANAGE')")
     public ApiResponse<Long> saveOfficialOrderInfo(
             @PathVariable Long workOrderId,
             @Valid @RequestBody SaveOfficialOrderInfoRequest request) {
@@ -91,6 +93,7 @@ public class OfficialAfterSalesController {
     }
 
     @PostMapping("/api/admin/work-orders/{workOrderId}/official-after-sales/settle")
+    @PreAuthorize("hasAuthority('OFFICIAL_SETTLEMENT_MANAGE')")
     public ApiResponse<Void> markOfficialSettled(
             @PathVariable Long workOrderId,
             @Valid @RequestBody MarkOfficialSettledRequest request) {
@@ -107,6 +110,7 @@ public class OfficialAfterSalesController {
     }
 
     @PostMapping("/api/admin/work-orders/{workOrderId}/official-after-sales/no-settlement-required")
+    @PreAuthorize("hasAuthority('OFFICIAL_SETTLEMENT_MANAGE')")
     public ApiResponse<Void> markNoSettlementRequired(
             @PathVariable Long workOrderId,
             @Valid @RequestBody MarkNoSettlementRequiredRequest request) {

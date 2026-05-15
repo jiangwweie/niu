@@ -123,6 +123,17 @@ class AdminExportControllerTest {
     }
 
     @Test
+    void financeExportWithoutExcelExportPermissionReturnsForbidden() throws Exception {
+        mockMvc.perform(get("/api/admin/exports/finance")
+                        .param("reportType", "DAILY")
+                        .param("date", LocalDate.now().toString())
+                        .header(USER_HEADER, "999")
+                        .header(STORE_HEADER, "1"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+    }
+
+    @Test
     void financeMonthlyExportSucceeds() throws Exception {
         String month = java.time.YearMonth.now().toString();
         mockMvc.perform(get("/api/admin/exports/finance")

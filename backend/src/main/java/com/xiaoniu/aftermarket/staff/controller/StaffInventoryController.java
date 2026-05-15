@@ -18,6 +18,7 @@ import com.xiaoniu.aftermarket.part.mapper.PartMapper;
 import com.xiaoniu.aftermarket.staff.dto.StaffInventoryInboundRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffInventoryInboundResponse;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -63,6 +64,7 @@ public class StaffInventoryController {
     }
 
     @PostMapping("/inbound")
+    @PreAuthorize("hasAuthority('INVENTORY_INBOUND')")
     public ApiResponse<StaffInventoryInboundResponse> inbound(
             @Valid @RequestBody StaffInventoryInboundRequest request) {
         CurrentUser user = requireCurrentUser();

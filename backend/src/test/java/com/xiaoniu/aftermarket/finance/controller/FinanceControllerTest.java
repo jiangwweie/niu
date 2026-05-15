@@ -79,6 +79,15 @@ class FinanceControllerTest {
     }
 
     @Test
+    void dailyReportWithoutFinanceViewPermissionReturnsForbidden() throws Exception {
+        mockMvc.perform(get("/api/admin/finance/daily")
+                        .header(USER_HEADER, "999")
+                        .header(STORE_HEADER, "1"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+    }
+
+    @Test
     void dailyReportWithSpecificDate() throws Exception {
         String today = java.time.LocalDate.now().toString();
         mockMvc.perform(get("/api/admin/finance/daily")

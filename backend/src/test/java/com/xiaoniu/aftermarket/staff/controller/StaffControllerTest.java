@@ -1470,6 +1470,21 @@ class StaffControllerTest {
     }
 
     @Test
+    void staffRecordRefundWithoutPermissionReturnsForbidden() throws Exception {
+        seedPaymentForRefund(80002, "PENDING_ACCEPT", "100.00");
+
+        mockMvc.perform(post("/api/staff/work-orders/80002/refunds")
+                        .header("X-User-Id", "999")
+                        .header("X-Store-Id", "1")
+                        .contentType("application/json")
+                        .content("""
+                                {"amount": 30.00, "refundMethod": "WECHAT", "reason": "测试"}
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+    }
+
+    @Test
     void staffRecordRefundAmountMustBePositive() throws Exception {
         seedPaymentForRefund(80002, "PENDING_ACCEPT", "100.00");
 
@@ -1683,6 +1698,19 @@ class StaffControllerTest {
         assertEquals(0, jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM refund_record WHERE store_id = 1 AND work_order_id = 80130",
                 Integer.class));
+    }
+
+    @Test
+    void staffSettleWithoutPermissionReturnsForbidden() throws Exception {
+        seedSettleWorkOrder(80135, "PENDING_ACCEPT", "100.00", "100.00", 1);
+
+        mockMvc.perform(post("/api/staff/work-orders/80135/settle")
+                        .header("X-User-Id", "999")
+                        .header("X-Store-Id", "1")
+                        .contentType("application/json")
+                        .content("{}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
     }
 
     @Test

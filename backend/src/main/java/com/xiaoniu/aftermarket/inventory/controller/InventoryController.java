@@ -16,6 +16,7 @@ import com.xiaoniu.aftermarket.inventory.service.InventoryService;
 import com.xiaoniu.aftermarket.part.entity.PartEntity;
 import com.xiaoniu.aftermarket.part.mapper.PartMapper;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -81,6 +82,7 @@ public class InventoryController {
     }
 
     @PostMapping("/adjust")
+    @PreAuthorize("hasAuthority('INVENTORY_ADJUST')")
     public ApiResponse<Void> adjust(@Valid @RequestBody InventoryAdjustRequest request) {
         CurrentUser user = requireCurrentUser();
         InventoryAdjustCommand command = new InventoryAdjustCommand();

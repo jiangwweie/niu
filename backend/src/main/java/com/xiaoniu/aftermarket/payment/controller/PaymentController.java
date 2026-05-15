@@ -19,6 +19,7 @@ import com.xiaoniu.aftermarket.workorder.mapper.WorkOrderMapper;
 import com.xiaoniu.aftermarket.common.util.DateParamParser;
 import jakarta.validation.Valid;
 import java.time.LocalDateTime;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -47,6 +48,7 @@ public class PaymentController {
     }
 
     @PostMapping("/api/admin/work-orders/{workOrderId}/payments")
+    @PreAuthorize("hasAuthority('PAYMENT_RECORD')")
     public ApiResponse<Long> recordPayment(
             @PathVariable Long workOrderId,
             @Valid @RequestBody RecordPaymentRequest request) {

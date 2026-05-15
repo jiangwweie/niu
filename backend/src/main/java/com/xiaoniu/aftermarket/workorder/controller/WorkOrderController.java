@@ -23,6 +23,7 @@ import com.xiaoniu.aftermarket.workorder.dto.WorkOrderQueryResponse;
 import com.xiaoniu.aftermarket.workorder.service.WorkOrderService;
 import jakarta.validation.Valid;
 import java.time.LocalDateTime;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -173,6 +174,7 @@ public class WorkOrderController {
     }
 
     @PostMapping("/{workOrderId}/submit")
+    @PreAuthorize("hasAuthority('WORK_ORDER_SUBMIT')")
     public ApiResponse<Void> submit(@PathVariable Long workOrderId,
                                     @Valid @RequestBody SubmitRequest request) {
         CurrentUser user = requireCurrentUser();
@@ -186,6 +188,7 @@ public class WorkOrderController {
     }
 
     @PostMapping("/{workOrderId}/cancel")
+    @PreAuthorize("hasAuthority('WORK_ORDER_CANCEL')")
     public ApiResponse<Void> cancel(@PathVariable Long workOrderId,
                                     @Valid @RequestBody CancelRequest request) {
         CurrentUser user = requireCurrentUser();
@@ -199,6 +202,7 @@ public class WorkOrderController {
     }
 
     @PostMapping("/{workOrderId}/settle")
+    @PreAuthorize("hasAuthority('WORK_ORDER_SETTLE')")
     public ApiResponse<Void> settle(@PathVariable Long workOrderId,
                                     @Valid @RequestBody SettleRequest request) {
         CurrentUser user = requireCurrentUser();

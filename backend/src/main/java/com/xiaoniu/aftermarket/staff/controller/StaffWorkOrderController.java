@@ -39,6 +39,7 @@ import com.xiaoniu.aftermarket.workorder.entity.WorkOrderEntity;
 import com.xiaoniu.aftermarket.workorder.mapper.WorkOrderMapper;
 import com.xiaoniu.aftermarket.workorder.service.WorkOrderService;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -193,6 +194,7 @@ public class StaffWorkOrderController {
     }
 
     @PostMapping("/{workOrderId}/submit")
+    @PreAuthorize("hasAuthority('WORK_ORDER_SUBMIT')")
     public ApiResponse<StaffWorkOrderDetail> submit(
             @PathVariable Long workOrderId,
             @Valid @RequestBody StaffSubmitWorkOrderRequest request) {
@@ -210,6 +212,7 @@ public class StaffWorkOrderController {
     }
 
     @PostMapping("/{workOrderId}/cancel")
+    @PreAuthorize("hasAuthority('WORK_ORDER_CANCEL')")
     public ApiResponse<StaffWorkOrderDetail> cancel(
             @PathVariable Long workOrderId,
             @Valid @RequestBody StaffCancelWorkOrderRequest request) {
@@ -227,6 +230,7 @@ public class StaffWorkOrderController {
     }
 
     @PostMapping("/{workOrderId}/payments")
+    @PreAuthorize("hasAuthority('PAYMENT_RECORD')")
     public ApiResponse<StaffPaymentRecordResponse> recordPayment(
             @PathVariable Long workOrderId,
             @Valid @RequestBody StaffRecordPaymentRequest request) {
@@ -252,6 +256,7 @@ public class StaffWorkOrderController {
     }
 
     @PostMapping("/{workOrderId}/refunds")
+    @PreAuthorize("hasAuthority('REFUND_RECORD')")
     public ApiResponse<StaffRefundRecordResponse> recordRefund(
             @PathVariable Long workOrderId,
             @Valid @RequestBody StaffRecordRefundRequest request) {
@@ -277,6 +282,7 @@ public class StaffWorkOrderController {
     }
 
     @PostMapping("/{workOrderId}/settle")
+    @PreAuthorize("hasAuthority('WORK_ORDER_SETTLE')")
     public ApiResponse<StaffSettledWorkOrderResponse> settle(
             @PathVariable Long workOrderId,
             @Valid @RequestBody StaffSettleWorkOrderRequest request) {

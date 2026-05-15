@@ -217,6 +217,22 @@ class OfficialAfterSalesControllerTest {
     }
 
     @Test
+    void saveOfficialOrderInfoWithoutManagePermissionReturnsForbidden() throws Exception {
+        String body = """
+                {
+                    "officialOrderNo": "OFF-FORBIDDEN-001"
+                }
+                """;
+        mockMvc.perform(post("/api/admin/work-orders/8001/official-after-sales/order-info")
+                        .header("X-User-Id", "999")
+                        .header("X-Store-Id", "1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+    }
+
+    @Test
     void saveOfficialOrderInfoWithoutOfficialOrderNoFails() throws Exception {
         String body = """
                 {
@@ -270,7 +286,7 @@ class OfficialAfterSalesControllerTest {
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/api/admin/work-orders/8099/official-after-sales/order-info")
-                        .header("X-User-Id", "2")
+                        .header("X-User-Id", "1")
                         .header("X-Store-Id", "2")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))

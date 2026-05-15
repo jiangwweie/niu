@@ -8,6 +8,7 @@ import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import com.xiaoniu.aftermarket.finance.dto.FinanceReportResponse;
 import com.xiaoniu.aftermarket.finance.service.FinanceService;
 import java.time.LocalDate;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -21,6 +22,7 @@ public class FinanceController {
     }
 
     @GetMapping("/daily")
+    @PreAuthorize("hasAuthority('FINANCE_VIEW')")
     public ApiResponse<FinanceReportResponse> queryDaily(
             @RequestParam(required = false) String date) {
         CurrentUser user = requireCurrentUser();
@@ -29,6 +31,7 @@ public class FinanceController {
     }
 
     @GetMapping("/monthly")
+    @PreAuthorize("hasAuthority('FINANCE_VIEW')")
     public ApiResponse<FinanceReportResponse> queryMonthly(
             @RequestParam int year,
             @RequestParam int month) {
@@ -37,6 +40,7 @@ public class FinanceController {
     }
 
     @GetMapping("/range")
+    @PreAuthorize("hasAuthority('FINANCE_VIEW')")
     public ApiResponse<FinanceReportResponse> queryRange(
             @RequestParam String startDate,
             @RequestParam String endDate) {

@@ -20,16 +20,19 @@ class PermissionQueryServiceTest {
     private PermissionQueryService permissionQueryService;
 
     // test data:
-    // user 1 (张三) → role 1 (ADMIN) → permissions: work_order:create, work_order:settle, inventory:manage
+    // user 1 (张三) → role 1 (ADMIN) → legacy permissions plus M15B permissionCode authorities
     // user 2 (李四) → role 2 (TECHNICIAN) → permissions: work_order:create, payment:refund(DISABLED)
 
     @Test
     void listPermissionCodesByUserIdReturnsCorrectCodes() {
         List<String> codes = permissionQueryService.listPermissionCodesByUserId(1L);
-        assertEquals(3, codes.size());
         assertTrue(codes.contains("work_order:create"));
         assertTrue(codes.contains("work_order:settle"));
         assertTrue(codes.contains("inventory:manage"));
+        assertTrue(codes.contains("FINANCE_VIEW"));
+        assertTrue(codes.contains("EXCEL_EXPORT"));
+        assertTrue(codes.contains("WORK_ORDER_SETTLE"));
+        assertTrue(codes.contains("REFUND_RECORD"));
     }
 
     @Test
@@ -64,9 +67,10 @@ class PermissionQueryServiceTest {
 
     @Test
     void hasPermissionReturnsTrueForMultipleRoles() {
-        // user 1 has admin role, should have all 3 admin permissions
+        // user 1 has admin role, should have legacy permissions and M15B authority codes
         assertTrue(permissionQueryService.hasPermission(1L, "work_order:settle"));
         assertTrue(permissionQueryService.hasPermission(1L, "inventory:manage"));
+        assertTrue(permissionQueryService.hasPermission(1L, "FINANCE_VIEW"));
     }
 
     @Test
@@ -76,6 +80,5 @@ class PermissionQueryServiceTest {
         List<String> codes = permissionQueryService.listPermissionCodesByUserId(1L);
         assertFalse(codes.contains("report:view"),
                 "Permissions from disabled roles must not be included");
-        assertEquals(3, codes.size());
     }
 }

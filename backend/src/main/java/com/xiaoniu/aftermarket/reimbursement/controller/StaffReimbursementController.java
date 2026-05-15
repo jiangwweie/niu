@@ -10,6 +10,7 @@ import com.xiaoniu.aftermarket.reimbursement.dto.ReimbursementResponse;
 import com.xiaoniu.aftermarket.reimbursement.dto.SubmitReimbursementCommand;
 import com.xiaoniu.aftermarket.reimbursement.service.ReimbursementService;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -23,6 +24,7 @@ public class StaffReimbursementController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('REIMBURSEMENT_SUBMIT')")
     public ApiResponse<ReimbursementResponse> submit(
             @Valid @RequestBody SubmitReimbursementRequest request) {
         CurrentUser user = requireCurrentUser();

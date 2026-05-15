@@ -17,6 +17,7 @@ import com.xiaoniu.aftermarket.reimbursement.dto.RejectReimbursementCommand;
 import com.xiaoniu.aftermarket.reimbursement.service.ReimbursementService;
 import jakarta.validation.Valid;
 import java.time.LocalDateTime;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -70,6 +71,7 @@ public class AdminReimbursementController {
     }
 
     @PostMapping("/{id}/confirm")
+    @PreAuthorize("hasAuthority('REIMBURSEMENT_CONFIRM')")
     public ApiResponse<ReimbursementResponse> confirm(
             @PathVariable Long id,
             @Valid @RequestBody ConfirmReimbursementRequest request) {
@@ -86,6 +88,7 @@ public class AdminReimbursementController {
     }
 
     @PostMapping("/{id}/reject")
+    @PreAuthorize("hasAuthority('REIMBURSEMENT_CONFIRM')")
     public ApiResponse<ReimbursementResponse> reject(
             @PathVariable Long id,
             @Valid @RequestBody RejectReimbursementRequest request) {

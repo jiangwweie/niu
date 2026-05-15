@@ -194,6 +194,19 @@ class ReimbursementControllerTest {
     }
 
     @Test
+    void adminConfirmWithoutPermissionReturnsForbidden() throws Exception {
+        mockMvc.perform(post("/api/admin/reimbursements/9201/confirm")
+                        .header("X-User-Id", "999")
+                        .header("X-Store-Id", "1")
+                        .contentType("application/json")
+                        .content("""
+                                {"confirmedAmount": 30.00}
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+    }
+
+    @Test
     void adminConfirmAmountMustBePositive() throws Exception {
         mockMvc.perform(post("/api/admin/reimbursements/9201/confirm")
                         .header("X-User-Id", "101")

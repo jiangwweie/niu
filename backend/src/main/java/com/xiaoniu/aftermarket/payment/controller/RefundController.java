@@ -18,6 +18,7 @@ import com.xiaoniu.aftermarket.workorder.mapper.WorkOrderMapper;
 import com.xiaoniu.aftermarket.common.util.DateParamParser;
 import jakarta.validation.Valid;
 import java.time.LocalDateTime;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -46,6 +47,7 @@ public class RefundController {
     }
 
     @PostMapping("/api/admin/work-orders/{workOrderId}/refunds")
+    @PreAuthorize("hasAuthority('REFUND_RECORD')")
     public ApiResponse<Long> recordRefund(
             @PathVariable Long workOrderId,
             @Valid @RequestBody RecordRefundRequest request) {
