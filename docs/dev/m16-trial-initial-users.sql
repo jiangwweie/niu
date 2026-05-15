@@ -27,8 +27,9 @@
 
 -- 密码说明：
 --   示例密码均为 Trial@2026!
---   bcrypt hash 由 Spring Security DelegatingPasswordEncoder 格式生成
---   前缀 {bcrypt} 表示使用 bcrypt 算法
+--   bcrypt hash 由 Spring Security BCryptPasswordEncoder 生成
+--   前缀 {bcrypt} 表示使用 bcrypt 算法（DelegatingPasswordEncoder 格式）
+--   hash 已通过 BCryptPasswordEncoder.matches() 验证
 --   首次登录后必须修改密码
 
 -- ============================================================================
@@ -41,13 +42,15 @@
 
 INSERT INTO sys_user (id, store_id, username, password_hash, real_name, phone, wechat_openid, wechat_unionid, status, last_login_at, remark, created_by, created_at, updated_by, updated_at, deleted)
 VALUES (1, 1, 'system_admin',
-        '{bcrypt}$2a$10$EqKcp1WFKVQISheBxnFOheYMKMuiEPOBGYFBEglVPOKJlFHNyxiMK',
+        '{bcrypt}$2a$10$OHzieEhSlnguAS1rxL3youfFOlNE.0IPaIfVfADjIKJREo81.jtW.',
         '系统管理员', '13800000001', NULL, NULL, 'ENABLED', NULL, 'Trial init: 系统超管 / 软件商管理员', NULL, NOW(), NULL, NOW(), 0)
 ON DUPLICATE KEY UPDATE username = username;
 
-INSERT INTO sys_user_role (id, user_id, role_id, created_by, created_at)
-VALUES (1, 1, 1, NULL, NOW())
-ON DUPLICATE KEY UPDATE role_id = role_id;
+INSERT INTO sys_user_role (user_id, role_id, created_by, created_at)
+SELECT 1, r.id, NULL, NOW()
+FROM sys_role r
+WHERE r.role_code = 'SUPER_ADMIN' AND r.deleted = 0
+ON DUPLICATE KEY UPDATE role_id = VALUES(role_id);
 
 -- ============================================================================
 -- 2. 门店管理员（试运行）
@@ -57,13 +60,15 @@ ON DUPLICATE KEY UPDATE role_id = role_id;
 
 INSERT INTO sys_user (id, store_id, username, password_hash, real_name, phone, wechat_openid, wechat_unionid, status, last_login_at, remark, created_by, created_at, updated_by, updated_at, deleted)
 VALUES (2, 1, 'trial_store_admin',
-        '{bcrypt}$2a$10$EqKcp1WFKVQISheBxnFOheYMKMuiEPOBGYFBEglVPOKJlFHNyxiMK',
+        '{bcrypt}$2a$10$OHzieEhSlnguAS1rxL3youfFOlNE.0IPaIfVfADjIKJREo81.jtW.',
         '门店管理员', '13800000002', NULL, NULL, 'ENABLED', NULL, 'Trial init: 门店管理员', NULL, NOW(), NULL, NOW(), 0)
 ON DUPLICATE KEY UPDATE username = username;
 
-INSERT INTO sys_user_role (id, user_id, role_id, created_by, created_at)
-VALUES (2, 2, 2, NULL, NOW())
-ON DUPLICATE KEY UPDATE role_id = role_id;
+INSERT INTO sys_user_role (user_id, role_id, created_by, created_at)
+SELECT 2, r.id, NULL, NOW()
+FROM sys_role r
+WHERE r.role_code = 'STORE_ADMIN' AND r.deleted = 0
+ON DUPLICATE KEY UPDATE role_id = VALUES(role_id);
 
 -- ============================================================================
 -- 3. 财务人员（试运行）
@@ -73,13 +78,15 @@ ON DUPLICATE KEY UPDATE role_id = role_id;
 
 INSERT INTO sys_user (id, store_id, username, password_hash, real_name, phone, wechat_openid, wechat_unionid, status, last_login_at, remark, created_by, created_at, updated_by, updated_at, deleted)
 VALUES (3, 1, 'trial_finance',
-        '{bcrypt}$2a$10$EqKcp1WFKVQISheBxnFOheYMKMuiEPOBGYFBEglVPOKJlFHNyxiMK',
+        '{bcrypt}$2a$10$OHzieEhSlnguAS1rxL3youfFOlNE.0IPaIfVfADjIKJREo81.jtW.',
         '财务人员', '13800000003', NULL, NULL, 'ENABLED', NULL, 'Trial init: 财务人员', NULL, NOW(), NULL, NOW(), 0)
 ON DUPLICATE KEY UPDATE username = username;
 
-INSERT INTO sys_user_role (id, user_id, role_id, created_by, created_at)
-VALUES (3, 3, 3, NULL, NOW())
-ON DUPLICATE KEY UPDATE role_id = role_id;
+INSERT INTO sys_user_role (user_id, role_id, created_by, created_at)
+SELECT 3, r.id, NULL, NOW()
+FROM sys_role r
+WHERE r.role_code = 'FINANCE' AND r.deleted = 0
+ON DUPLICATE KEY UPDATE role_id = VALUES(role_id);
 
 -- ============================================================================
 -- 4. 员工 / 技师前台（试运行）
@@ -89,13 +96,15 @@ ON DUPLICATE KEY UPDATE role_id = role_id;
 
 INSERT INTO sys_user (id, store_id, username, password_hash, real_name, phone, wechat_openid, wechat_unionid, status, last_login_at, remark, created_by, created_at, updated_by, updated_at, deleted)
 VALUES (4, 1, 'trial_staff',
-        '{bcrypt}$2a$10$EqKcp1WFKVQISheBxnFOheYMKMuiEPOBGYFBEglVPOKJlFHNyxiMK',
+        '{bcrypt}$2a$10$OHzieEhSlnguAS1rxL3youfFOlNE.0IPaIfVfADjIKJREo81.jtW.',
         '员工', '13800000004', NULL, NULL, 'ENABLED', NULL, 'Trial init: 员工/技师前台', NULL, NOW(), NULL, NOW(), 0)
 ON DUPLICATE KEY UPDATE username = username;
 
-INSERT INTO sys_user_role (id, user_id, role_id, created_by, created_at)
-VALUES (4, 4, 4, NULL, NOW())
-ON DUPLICATE KEY UPDATE role_id = role_id;
+INSERT INTO sys_user_role (user_id, role_id, created_by, created_at)
+SELECT 4, r.id, NULL, NOW()
+FROM sys_role r
+WHERE r.role_code = 'TECHNICIAN_FRONT_DESK' AND r.deleted = 0
+ON DUPLICATE KEY UPDATE role_id = VALUES(role_id);
 
 -- ============================================================================
 -- 注意事项
@@ -104,8 +113,10 @@ ON DUPLICATE KEY UPDATE role_id = role_id;
 --    V5 使用 id 10/11/12，本脚本使用 id 1/2/3/4
 --    如需同时使用 dev 种子，请确认 id 不冲突
 -- 2. ON DUPLICATE KEY UPDATE 确保脚本可重复执行
--- 3. 所有账号使用相同示例密码，首次登录后必须修改
--- 4. system_admin 是软件商超管，不是门店员工
+-- 3. sys_user_role 使用 INSERT ... SELECT + ON DUPLICATE KEY UPDATE
+--    通过 role_code 子查询绑定角色，不依赖固定 role_id
+-- 4. 所有账号使用相同示例密码，首次登录后必须修改
+-- 5. system_admin 是软件商超管，不是门店员工
 --    当前绑定 store_id=1 是单门店 MVP 技术兼容
 --    后续多门店/SaaS 演进时应引入 platform_admin 概念
--- 5. 本脚本不放入 Flyway migration，由部署人员手动执行
+-- 6. 本脚本不放入 Flyway migration，由部署人员手动执行
