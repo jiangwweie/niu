@@ -13,6 +13,7 @@ import com.xiaoniu.aftermarket.part.dto.UpdatePartCommand;
 import com.xiaoniu.aftermarket.part.entity.PartEntity;
 import com.xiaoniu.aftermarket.part.service.PartService;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -77,6 +78,7 @@ public class PartController {
         return ApiResponse.success(PartDetailResponse.fromQueryResponse(qr));
     }
 
+    @PreAuthorize("hasAuthority('PART_MANAGE')")
     @PostMapping("/official")
     public ApiResponse<Void> createOfficialPart(@Valid @RequestBody CreateOfficialPartRequest request) {
         CurrentUser user = requireCurrentUser();
@@ -87,6 +89,7 @@ public class PartController {
         return ApiResponse.success(null);
     }
 
+    @PreAuthorize("hasAuthority('PART_MANAGE')")
     @PostMapping("/third-party")
     public ApiResponse<Void> createThirdPartyPart(@Valid @RequestBody CreateThirdPartyPartRequest request) {
         CurrentUser user = requireCurrentUser();
@@ -96,6 +99,7 @@ public class PartController {
         return ApiResponse.success(null);
     }
 
+    @PreAuthorize("hasAuthority('PART_MANAGE')")
     @PutMapping("/{partId}")
     public ApiResponse<Void> updatePart(@PathVariable Long partId,
                                         @Valid @RequestBody UpdatePartRequest request) {
@@ -116,6 +120,7 @@ public class PartController {
         return ApiResponse.success(null);
     }
 
+    @PreAuthorize("hasAuthority('PART_MANAGE')")
     @PostMapping("/{partId}/enable")
     public ApiResponse<Void> enablePart(@PathVariable Long partId) {
         requireCurrentUser();
@@ -123,6 +128,7 @@ public class PartController {
         return ApiResponse.success(null);
     }
 
+    @PreAuthorize("hasAuthority('PART_MANAGE')")
     @PostMapping("/{partId}/disable")
     public ApiResponse<Void> disablePart(@PathVariable Long partId) {
         requireCurrentUser();
