@@ -41,5 +41,16 @@
 | **提交报销入口** | 账号不含 `REIMBURSEMENT_SUBMIT` | "我的"页面无 "提交报销" 大按钮 | [x] PASS |
 | **后端 403 阻断** | 点击无权限但强行发起的接口 | Toast 提示 "无权限访问该资源"，界面不跳跃、Token 不清理 | [x] PASS |
 
+## 语义标注
+
+### WORK_ORDER_SUBMIT vs WORK_ORDER_CREATE
+mini-program 工单列表页的"新建工单"浮动按钮当前使用 `WORK_ORDER_SUBMIT` 权限码控制显隐。语义上，"新建工单"（创建草稿）与"提交工单"（提交完工）是不同操作，当前临时复用 `WORK_ORDER_SUBMIT` 控制新建入口。后续建议补 `WORK_ORDER_CREATE` 或 `WORK_ORDER_DRAFT` 权限点，将创建与提交的权限控制分离。本次不做新增权限点或修改后端 RBAC 模型。
+
+### admin-web 工单页面只读设计
+admin-web 工单页面（`/work-order`）设计为**只读查看页**，不提供新建、取消、收款、退款、结算等写操作按钮。页面内有两处 `el-alert` 明确说明："当前管理端仅支持工单查看。创建工单、记录支付/退款、提交/结算/取消等现场操作后续由员工小程序端承接。" 因此 admin-web 不需要 `WORK_ORDER_SUBMIT`、`WORK_ORDER_CANCEL`、`WORK_ORDER_SETTLE`、`PAYMENT_RECORD`、`REFUND_RECORD` 等权限码的 UI 控制——这些操作入口仅存在于 mini-program。
+
+### PAYMENT_RECORD / REFUND_RECORD 在 admin-web 的现状
+admin-web 的支付页（`/payment`）和退款页（`/refund`）是只读列表页，无记录支付/退款按钮，因此 `PAYMENT_RECORD` 和 `REFUND_RECORD` 权限码在 admin-web 无对应 UI 控制点。这两个权限码仅在 mini-program 工单详情页控制"记录支付"和"记录退款"按钮。
+
 ## 结论
 所有前后端鉴权联通顺畅，权限控制实现了体验与安全解耦，M15E 里程碑顺利达成。
