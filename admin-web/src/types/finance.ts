@@ -1,36 +1,39 @@
-export interface FinanceSummary {
-  customerPaidIncome: number;
-  officialSettlementIncome: number;
-  totalIncome: number;
+export interface FinanceReportResponse {
+  storeId: number;
+  periodStart: string;
+  periodEnd: string;
   
-  partsIncome: number;
-  laborIncome: number;
-  otherIncome: number;
-  
+  customerIncome: number;
+  officialIncome: number;
   partsCost: number;
   reimbursementCost: number;
-  totalCost: number;
   
+  totalIncome: number;
+  totalCost: number;
   profit: number;
-  profitMargin: string;
+  
+  settledWorkOrderCount: number;
+  confirmedReimbursementCount: number;
 }
 
-export interface FinanceDetailRecord {
-  id: string;
-  dateOrMonth: string;
-  customerPaidIncome: number;
-  officialSettlementIncome: number;
-  partsIncome: number;
-  laborIncome: number;
-  otherIncome: number;
-  partsCost: number;
-  reimbursementCost: number;
-  profit: number;
+export interface DailyFinanceQuery {
+  date?: string;
+}
+
+export interface MonthlyFinanceQuery {
+  year: number;
+  month: number;
+}
+
+export interface RangeFinanceQuery {
+  startDate: string;
+  endDate: string;
 }
 
 export interface FinanceQuery {
   reportType: 'DAILY' | 'MONTHLY' | 'CUSTOM';
-  dateRange?: [string, string];
-  pageNo: number;
-  pageSize: number;
+  date?: string; // used for DAILY
+  year?: number; // used for MONTHLY
+  month?: number; // used for MONTHLY
+  dateRange?: [string, string]; // used for CUSTOM
 }

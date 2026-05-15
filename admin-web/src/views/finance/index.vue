@@ -1,21 +1,7 @@
 <template>
-  <PageContainer title="财务报表" description="查看客户支付收入、官方结算收入、成本与利润 mock 报表">
+  <PageContainer title="财务报表" description="查看客户支付收入、官方结算收入、成本与利润报表">
     <el-alert
-      title="当前财务报表为 mock 展示，真实统计 API 尚未实现。"
-      type="info"
-      show-icon
-      :closable="false"
-      style="margin-bottom: 10px;"
-    />
-    <el-alert
-      title="财务报表应由后端从工单明细、支付记录、退款记录、官方结算记录、库存成本和已确认报销中汇总生成。当前页面仅展示 mock 数据，不执行真实财务计算。"
-      type="warning"
-      show-icon
-      :closable="false"
-      style="margin-bottom: 10px;"
-    />
-    <el-alert
-      title="客户支付收入和官方结算收入必须分开统计，不能互相替代。"
+      title="财务口径：利润 = (客户支付净收入 + 官方结算收入) - (配件成本 + 报销成本)。金额保留两位小数。"
       type="info"
       show-icon
       :closable="false"
@@ -29,9 +15,36 @@
           <el-radio-group v-model="queryParams.reportType" @change="handleSearch">
             <el-radio-button value="DAILY">日报</el-radio-button>
             <el-radio-button value="MONTHLY">月报</el-radio-button>
-            <el-radio-button value="CUSTOM">自定义</el-radio-button>
+            <el-radio-button value="CUSTOM">自定义范围</el-radio-button>
           </el-radio-group>
         </el-form-item>
+
+        <el-form-item label="选择日期" v-if="queryParams.reportType === 'DAILY'">
+          <el-date-picker
+            v-model="queryParams.date"
+            type="date"
+            placeholder="选择日期"
+            format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
+            :clearable="false"
+            @change="handleSearch"
+          />
+        </el-form-item>
+
+        <el-form-item label="选择月份" v-if="queryParams.reportType === 'MONTHLY'">
+          <div style="display: flex; gap: 10px;">
+            <el-date-picker
+              v-model="monthPickerValue"
+              type="month"
+              placeholder="选择月份"
+              format="YYYY-MM"
+              value-format="YYYY-MM"
+              :clearable="false"
+              @change="handleMonthChange"
+            />
+          </div>
+        </el-form-item>
+
         <el-form-item label="日期范围" v-if="queryParams.reportType === 'CUSTOM'">
           <el-date-picker
             v-model="queryParams.dateRange"
@@ -41,19 +54,12 @@
             end-placeholder="结束日期"
             format="YYYY-MM-DD"
             value-format="YYYY-MM-DD"
+            :clearable="false"
           />
         </el-form-item>
-        <el-form-item class="shortcuts" v-if="queryParams.reportType !== 'CUSTOM'">
-          快捷选择：
-          <el-button link type="primary" disabled title="后续接入">今日</el-button>
-          <el-button link type="primary" disabled title="后续接入">本月</el-button>
-          <el-button link type="primary" disabled title="后续接入">近 7 天</el-button>
-          <el-button link type="primary" disabled title="后续接入">近 30 天</el-button>
-        </el-form-item>
+
         <el-form-item class="search-actions">
           <el-button type="primary" @click="handleSearch" :loading="loading">查询</el-button>
-          <el-button @click="handleReset">重置</el-button>
-          <el-button type="success" disabled title="后续接入">导出</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -61,157 +67,83 @@
     <!-- 核心指标 / 拆分区 -->
     <div class="summary-cards">
       <!-- 收入卡片 -->
-      <el-card shadow="never" class="summary-card" v-loading="summaryLoading">
+      <el-card shadow="never" class="summary-card" v-loading="loading">
         <template #header>
           <div class="card-header">
-            <span>收入</span>
-            <span class="total-text"><MoneyText :amount="summaryData?.totalIncome || 0" /></span>
+            <span>总收入</span>
+            <span class="total-text"><MoneyText :amount="summaryData?.totalIncome || 0" type="primary" /></span>
           </div>
         </template>
         <div class="split-section">
           <div class="split-group">
-            <div class="group-title">客户支付收入 ( <MoneyText :amount="summaryData?.customerPaidIncome || 0" type="primary" bold /> )</div>
             <div class="group-item">
-              <span class="item-label">配件收入</span>
-              <MoneyText :amount="summaryData?.partsIncome || 0" />
+              <span class="item-label">客户收入 (customerIncome)</span>
+              <MoneyText :amount="summaryData?.customerIncome || 0" />
             </div>
-            <div class="group-item">
-              <span class="item-label">人工费收入</span>
-              <MoneyText :amount="summaryData?.laborIncome || 0" />
-            </div>
-            <div class="group-item">
-              <span class="item-label">其他收入</span>
-              <MoneyText :amount="summaryData?.otherIncome || 0" />
-            </div>
-            <div class="group-desc text-info">客户支付净收入 = 客户支付来自 payment_record / refund_record 明细，减去退款总额</div>
+            <div class="group-desc text-info">支付 - 退款（仅统计本期）</div>
           </div>
           <el-divider />
           <div class="split-group">
-            <div class="group-title">官方结算收入 ( <MoneyText :amount="summaryData?.officialSettlementIncome || 0" type="success" bold /> )</div>
             <div class="group-item">
-              <span class="item-label">官方结算收入</span>
-              <MoneyText :amount="summaryData?.officialSettlementIncome || 0" />
+              <span class="item-label">官方结算收入 (officialIncome)</span>
+              <MoneyText :amount="summaryData?.officialIncome || 0" />
             </div>
-            <div class="group-desc text-info">官方结算收入来自管理端手动录入的官方售后结算记录</div>
+            <div class="group-desc text-info">状态为 SETTLED 的官方结算</div>
           </div>
         </div>
       </el-card>
 
       <!-- 成本卡片 -->
-      <el-card shadow="never" class="summary-card" v-loading="summaryLoading">
+      <el-card shadow="never" class="summary-card" v-loading="loading">
         <template #header>
           <div class="card-header">
-            <span>成本</span>
+            <span>总成本</span>
             <span class="total-text"><MoneyText :amount="summaryData?.totalCost || 0" type="danger" /></span>
           </div>
         </template>
         <div class="split-section">
           <div class="split-group">
-            <div class="group-title">配件成本</div>
             <div class="group-item">
-              <span class="item-label">配件成本</span>
+              <span class="item-label">配件成本 (partsCost)</span>
               <MoneyText :amount="summaryData?.partsCost || 0" />
             </div>
-            <div class="group-desc text-info">配件成本来自工单消耗配件的成本记录</div>
+            <div class="group-desc text-info">SETTLED 工单的配件成本 (line_cost_amount)</div>
           </div>
           <el-divider />
           <div class="split-group">
-            <div class="group-title">报销成本</div>
             <div class="group-item">
-              <span class="item-label">报销成本</span>
+              <span class="item-label">报销成本 (reimbursementCost)</span>
               <MoneyText :amount="summaryData?.reimbursementCost || 0" />
             </div>
-            <div class="group-desc text-warning">报销成本仅统计已确认报销。待确认、已驳回、已取消报销不计入成本。</div>
+            <div class="group-desc text-info">状态为 CONFIRMED 的报销</div>
           </div>
         </div>
       </el-card>
 
-      <!-- 利润卡片 -->
-      <el-card shadow="never" class="summary-card" v-loading="summaryLoading">
+      <!-- 利润与单据量卡片 -->
+      <el-card shadow="never" class="summary-card" v-loading="loading">
         <template #header>
           <div class="card-header">
-            <span>利润</span>
-            <span class="total-text"><MoneyText :amount="summaryData?.profit || 0" type="success" /></span>
+            <span>净利润 (Profit)</span>
+            <span class="total-text"><MoneyText :amount="summaryData?.profit || 0" :type="(summaryData?.profit || 0) >= 0 ? 'success' : 'danger'" /></span>
           </div>
         </template>
         <div class="split-section profit-section">
           <div class="profit-row">
-            <span class="item-label">总收入</span>
-            <MoneyText :amount="summaryData?.totalIncome || 0" />
-          </div>
-          <div class="profit-row">
-            <span class="item-label">- 总成本</span>
-            <MoneyText :amount="summaryData?.totalCost || 0" type="danger" />
+            <span class="item-label">已结算工单数 (settledWorkOrderCount)</span>
+            <span class="font-bold">{{ summaryData?.settledWorkOrderCount || 0 }}</span>
           </div>
           <el-divider style="margin: 12px 0;" />
-          <div class="profit-row font-bold">
-            <span class="item-label">= 利润</span>
-            <MoneyText :amount="summaryData?.profit || 0" type="success" />
+          <div class="profit-row">
+            <span class="item-label">已确认报销数 (confirmedReimbursementCount)</span>
+            <span class="font-bold">{{ summaryData?.confirmedReimbursementCount || 0 }}</span>
           </div>
-          <div class="profit-row" style="margin-top: 16px;">
-            <span class="item-label">利润率</span>
-            <span class="text-primary font-bold">{{ summaryData?.profitMargin || '0%' }}</span>
-          </div>
+        </div>
+        <div class="period-info text-info" style="margin-top: 15px; font-size: 12px; text-align: right;">
+          统计周期: {{ summaryData?.periodStart || '-' }} 至 {{ summaryData?.periodEnd || '-' }}
         </div>
       </el-card>
     </div>
-
-    <!-- 表格区 -->
-    <el-card shadow="never" class="table-card" style="margin-top: 20px;">
-      <template #header>
-        <div class="card-header">
-          <span>明细表 (Mock)</span>
-        </div>
-      </template>
-      <div class="table-wrapper">
-<el-table
-        v-loading="loading"
-        :data="tableData"
-        style="width: 100%; min-width: 1000px"
-        border
-      >
-        <el-table-column prop="dateOrMonth" label="日期 / 月份" width="120" fixed="left" />
-        <el-table-column label="客户支付净收入" width="130" align="right">
-          <template #default="{ row }"><MoneyText :amount="row.customerPaidIncome" /></template>
-        </el-table-column>
-        <el-table-column label="官方结算收入" width="120" align="right">
-          <template #default="{ row }"><MoneyText :amount="row.officialSettlementIncome" /></template>
-        </el-table-column>
-        <el-table-column label="配件收入" width="100" align="right">
-          <template #default="{ row }"><MoneyText :amount="row.partsIncome" /></template>
-        </el-table-column>
-        <el-table-column label="人工费收入" width="100" align="right">
-          <template #default="{ row }"><MoneyText :amount="row.laborIncome" /></template>
-        </el-table-column>
-        <el-table-column label="其他收入" width="100" align="right">
-          <template #default="{ row }"><MoneyText :amount="row.otherIncome" /></template>
-        </el-table-column>
-        <el-table-column label="配件成本" width="100" align="right">
-          <template #default="{ row }"><MoneyText :amount="row.partsCost" /></template>
-        </el-table-column>
-        <el-table-column label="报销成本" width="100" align="right">
-          <template #default="{ row }"><MoneyText :amount="row.reimbursementCost" /></template>
-        </el-table-column>
-        <el-table-column label="利润" width="120" align="right" fixed="right">
-          <template #default="{ row }">
-            <MoneyText :amount="row.profit" :type="row.profit >= 0 ? 'success' : 'danger'" bold />
-          </template>
-        </el-table-column>
-      </el-table>
-</div>
-
-      <div class="pagination-wrapper">
-        <el-pagination
-          v-model:current-page="queryParams.pageNo"
-          v-model:page-size="queryParams.pageNoSize"
-          :page-sizes="[10, 20, 50, 100]"
-          layout="total, sizes, prev, pager, next, jumper"
-          :total="total"
-          @size-change="handleSearch"
-          @current-change="fetchData"
-        />
-      </div>
-    </el-card>
 
     <!-- 口径说明区 -->
     <el-card shadow="never" class="notice-card" style="margin-top: 20px;">
@@ -222,12 +154,10 @@
       </template>
       <div class="notice-content text-info text-sm">
         <ol class="list-decimal pl-4">
-          <li><strong>客户支付净收入</strong> 客户支付来自 payment_record / refund_record 明细，净收入 = 支付总额 - 退款总额</li>
-          <li><strong>官方结算收入</strong> 来自管理端手动录入的官方售后结算记录</li>
-          <li><strong>配件成本</strong> 来自工单消耗配件的成本记录</li>
-          <li><strong>报销成本</strong> 只统计已确认报销</li>
-          <li><strong>利润</strong> = 收入 - 成本</li>
-          <li>当前页面为 mock UI，真实统计以后端汇总结果为准</li>
+          <li><strong>总收入 (totalIncome)</strong> = customerIncome + officialIncome</li>
+          <li><strong>总成本 (totalCost)</strong> = partsCost + reimbursementCost</li>
+          <li><strong>净利润 (profit)</strong> = totalIncome - totalCost</li>
+          <li>所有金额均保留 2 位小数。空数据或无流水时金额展示为 0。</li>
         </ol>
       </div>
     </el-card>
@@ -240,57 +170,83 @@ import { ref, reactive, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
 import PageContainer from '@/components/PageContainer.vue';
 import MoneyText from '@/components/MoneyText.vue';
-import { getFinanceSummary, getFinanceList } from '@/api/finance';
-import type { FinanceQuery, FinanceSummary, FinanceDetailRecord } from '@/types/finance';
+import { getDailyFinance, getMonthlyFinance, getRangeFinance } from '@/api/finance';
+import type { FinanceQuery, FinanceReportResponse } from '@/types/finance';
+import dayjs from 'dayjs';
+
+const today = dayjs().format('YYYY-MM-DD');
+const currentMonthStr = dayjs().format('YYYY-MM');
 
 const queryParams = reactive<FinanceQuery>({
   reportType: 'DAILY',
-  page: 1,
-  pageSize: 10
+  date: today,
 });
 
+const monthPickerValue = ref(currentMonthStr);
+
 const loading = ref(false);
-const summaryLoading = ref(false);
-const tableData = ref<FinanceDetailRecord[]>([]);
-const total = ref(0);
-const summaryData = ref<FinanceSummary | null>(null);
+const summaryData = ref<FinanceReportResponse | null>(null);
+
+const handleMonthChange = (val: string) => {
+  if (val) {
+    const parts = val.split('-');
+    queryParams.year = parseInt(parts[0], 10);
+    queryParams.month = parseInt(parts[1], 10);
+  }
+  handleSearch();
+};
 
 const fetchData = async () => {
   loading.value = true;
-  summaryLoading.value = true;
   try {
-    const [listRes, sumRes] = await Promise.all([
-      getFinanceList(queryParams),
-      getFinanceSummary()
-    ]);
-    if (listRes.code === 'SUCCESS') {
-      tableData.value = listRes.data.records;
-      total.value = listRes.data.total;
+    let res: FinanceReportResponse | null = null;
+    
+    if (queryParams.reportType === 'DAILY') {
+      res = await getDailyFinance({ date: queryParams.date });
+    } else if (queryParams.reportType === 'MONTHLY') {
+      const y = queryParams.year || dayjs().year();
+      const m = queryParams.month || (dayjs().month() + 1);
+      res = await getMonthlyFinance({ year: y, month: m });
+    } else if (queryParams.reportType === 'CUSTOM') {
+      if (!queryParams.dateRange || queryParams.dateRange.length !== 2) {
+        ElMessage.warning('请选择日期范围');
+        loading.value = false;
+        return;
+      }
+      res = await getRangeFinance({ startDate: queryParams.dateRange[0], endDate: queryParams.dateRange[1] });
     }
-    if (sumRes.code === 'SUCCESS') {
-      summaryData.value = sumRes.data;
+
+    if (res) {
+      summaryData.value = res;
     }
-  } catch (error) {
-    ElMessage.error('加载失败');
+  } catch (error: any) {
+    ElMessage.error(error.message || '加载失败');
   } finally {
     loading.value = false;
-    summaryLoading.value = false;
   }
 };
 
 const handleSearch = () => {
-  queryParams.pageNo = 1;
+  // auto setup defaults
+  if (queryParams.reportType === 'DAILY' && !queryParams.date) {
+    queryParams.date = today;
+  }
+  if (queryParams.reportType === 'MONTHLY' && !queryParams.year) {
+    queryParams.year = dayjs().year();
+    queryParams.month = dayjs().month() + 1;
+    monthPickerValue.value = `${queryParams.year}-${String(queryParams.month).padStart(2, '0')}`;
+  }
+  if (queryParams.reportType === 'CUSTOM' && (!queryParams.dateRange)) {
+    queryParams.dateRange = [
+      dayjs().subtract(7, 'day').format('YYYY-MM-DD'),
+      today
+    ];
+  }
   fetchData();
-};
-
-const handleReset = () => {
-  queryParams.reportType = 'DAILY';
-  queryParams.dateRange = undefined;
-  handleSearch();
 };
 
 onMounted(() => {
-  fetchData();
+  handleSearch();
 });
 </script>
 
@@ -300,12 +256,6 @@ onMounted(() => {
 }
 .search-actions {
   margin-left: auto;
-}
-.shortcuts {
-  margin-right: 20px;
-}
-.shortcuts .el-button {
-  margin-left: 8px;
 }
 .summary-cards {
   display: flex;
@@ -330,10 +280,6 @@ onMounted(() => {
 .split-group {
   margin-bottom: 8px;
 }
-.group-title {
-  font-weight: bold;
-  margin-bottom: 12px;
-}
 .group-item {
   display: flex;
   justify-content: space-between;
@@ -350,17 +296,11 @@ onMounted(() => {
 .text-info {
   color: var(--el-color-info);
 }
-.text-warning {
-  color: var(--el-color-warning);
-}
 .text-danger {
   color: var(--el-color-danger);
 }
 .text-success {
   color: var(--el-color-success);
-}
-.text-primary {
-  color: var(--el-color-primary);
 }
 .font-bold {
   font-weight: bold;
@@ -375,18 +315,10 @@ onMounted(() => {
   margin-bottom: 12px;
   font-size: 15px;
 }
-.table-card {
-  margin-top: 20px;
-}
-.pagination-wrapper {
-  margin-top: 20px;
-  display: flex;
-  justify-content: flex-end;
-}
 .notice-card {
   margin-top: 20px;
 }
-.records-decimal {
+.list-decimal {
   list-style-type: decimal;
 }
 .pl-4 {
@@ -394,9 +326,5 @@ onMounted(() => {
 }
 .text-sm {
   font-size: 14px;
-}
-.table-wrapper {
-  width: 100%;
-  overflow-x: auto;
 }
 </style>

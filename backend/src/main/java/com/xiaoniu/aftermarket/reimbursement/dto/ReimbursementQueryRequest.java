@@ -7,6 +7,7 @@ import lombok.Data;
 public class ReimbursementQueryRequest {
 
     private Long storeId;
+    private String reimbursementNo;
     private Long applicantId;
     private String status;
     private LocalDateTime dateFrom;

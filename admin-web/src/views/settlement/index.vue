@@ -172,7 +172,7 @@
     <el-dialog v-model="settleDialog.visible" title="标记官方已结算" width="480px" :close-on-click-modal="false">
       <el-form :model="settleDialog.form" label-width="100px">
         <el-form-item label="结算金额" required>
-          <el-input-number v-model="settleDialog.form.settlementAmount" :min="0" :precision="2" style="width: 100%" />
+          <el-input-number v-model="settleDialog.form.settlementAmount" :min="0.01" :precision="2" style="width: 100%" />
         </el-form-item>
         <el-form-item label="备注">
           <el-input v-model="settleDialog.form.remark" type="textarea" :rows="2" placeholder="可选备注" />
@@ -267,9 +267,10 @@ const handleReset = () => {
 // 标签映射
 const getOrderStatusLabel = (status: string) => {
   const map: Record<string, string> = {
-    PENDING: '待接单',
+    DRAFT: '草稿',
+    PENDING_ACCEPT: '待接单',
     ACCEPTED: '已接单',
-    PARTS_ORDERED: '已定件',
+    PART_ORDERED: '已定件',
     PART_ARRIVED: '已到件',
     SETTLED: '已结算',
     CANCELLED: '已取消',
@@ -363,8 +364,8 @@ const handleSettle = (row: OfficialSettlementRecord) => {
 };
 
 const submitSettle = async () => {
-  if (settleDialog.form.settlementAmount < 0) {
-    ElMessage.warning('结算金额不能为负数');
+  if (settleDialog.form.settlementAmount <= 0) {
+    ElMessage.warning('结算金额必须大于0');
     return;
   }
   settleDialog.submitting = true;

@@ -5,9 +5,11 @@ import com.xiaoniu.aftermarket.common.context.CurrentUserContext;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.Set;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+@Profile("dev")
 @Component
 public class DevCurrentUserInterceptor implements HandlerInterceptor {
 

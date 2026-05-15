@@ -34,6 +34,7 @@ public class AdminReimbursementController {
 
     @GetMapping
     public ApiResponse<PageResponse<ReimbursementResponse>> list(
+            @RequestParam(required = false) String reimbursementNo,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Long applicantId,
             @RequestParam(required = false) String dateFrom,
@@ -52,6 +53,7 @@ public class AdminReimbursementController {
 
         ReimbursementQueryRequest request = new ReimbursementQueryRequest();
         request.setStoreId(user.storeId());
+        request.setReimbursementNo(reimbursementNo);
         request.setStatus(status);
         request.setApplicantId(applicantId);
         request.setDateFrom(parsedFrom);

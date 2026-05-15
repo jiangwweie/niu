@@ -64,6 +64,9 @@ public class ReimbursementServiceImpl implements ReimbursementService {
 
         QueryWrapper<ReimbursementEntity> wrapper = new QueryWrapper<>();
         wrapper.eq("store_id", request.getStoreId()).eq("deleted", 0);
+        if (StringUtils.hasText(request.getReimbursementNo())) {
+            wrapper.like("reimbursement_no", request.getReimbursementNo().trim());
+        }
         if (StringUtils.hasText(request.getStatus())) {
             wrapper.eq("status", request.getStatus().trim());
         }
