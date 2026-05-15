@@ -267,7 +267,7 @@ class WorkOrderServiceTest {
     @Test
     void addPartChargeItemWithDisabledPartFails() {
         PartEntity part = createPart("刹车片", "ADP-002", new BigDecimal("50.00"));
-        partService.disablePart(part.getId());
+        partService.disablePart(STORE_ID, part.getId());
         Long woId = workOrderService.createDraft(
                 buildCreateCommand("客户C", "13900003333", "小牛N1"));
 
@@ -972,7 +972,7 @@ class WorkOrderServiceTest {
                 buildCreateCommand("提交客户7", "13900040007", "小牛N1"));
         workOrderService.addChargeItem(woId,
                 buildPartItem(part.getId(), "更换轴承", 1, new BigDecimal("60.00")));
-        partService.disablePart(part.getId());
+        partService.disablePart(STORE_ID, part.getId());
 
         BusinessException ex = assertThrows(BusinessException.class,
                 () -> workOrderService.submit(buildSubmitCommand(woId)));

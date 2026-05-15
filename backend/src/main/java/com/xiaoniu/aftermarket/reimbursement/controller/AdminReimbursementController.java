@@ -33,6 +33,7 @@ public class AdminReimbursementController {
         this.confirmService = confirmService;
     }
 
+    @PreAuthorize("hasAnyAuthority('REIMBURSEMENT_CONFIRM', 'FINANCE_VIEW')")
     @GetMapping
     public ApiResponse<PageResponse<ReimbursementResponse>> list(
             @RequestParam(required = false) String reimbursementNo,
@@ -64,6 +65,7 @@ public class AdminReimbursementController {
         return ApiResponse.success(reimbursementService.pageQuery(request));
     }
 
+    @PreAuthorize("hasAnyAuthority('REIMBURSEMENT_CONFIRM', 'FINANCE_VIEW')")
     @GetMapping("/{id}")
     public ApiResponse<ReimbursementResponse> get(@PathVariable Long id) {
         CurrentUser user = requireCurrentUser();

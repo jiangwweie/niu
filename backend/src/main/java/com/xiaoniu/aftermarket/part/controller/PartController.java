@@ -123,16 +123,16 @@ public class PartController {
     @PreAuthorize("hasAuthority('PART_MANAGE')")
     @PostMapping("/{partId}/enable")
     public ApiResponse<Void> enablePart(@PathVariable Long partId) {
-        requireCurrentUser();
-        partService.enablePart(partId);
+        CurrentUser user = requireCurrentUser();
+        partService.enablePart(user.storeId(), partId);
         return ApiResponse.success(null);
     }
 
     @PreAuthorize("hasAuthority('PART_MANAGE')")
     @PostMapping("/{partId}/disable")
     public ApiResponse<Void> disablePart(@PathVariable Long partId) {
-        requireCurrentUser();
-        partService.disablePart(partId);
+        CurrentUser user = requireCurrentUser();
+        partService.disablePart(user.storeId(), partId);
         return ApiResponse.success(null);
     }
 

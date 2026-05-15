@@ -22,9 +22,9 @@ public interface PartService {
 
     void updatePart(UpdatePartCommand command);
 
-    void enablePart(Long partId);
+    void enablePart(Long storeId, Long partId);
 
-    void disablePart(Long partId);
+    void disablePart(Long storeId, Long partId);
 
     PartBarcodeEntity createBarcode(Long storeId, Long partId, String barcode, Long operatorId);
 

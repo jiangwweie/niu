@@ -154,7 +154,7 @@ class InventoryServiceTest {
     @Test
     void inboundDisabledPartFails() {
         PartEntity part = createOfficialPart("刹车片", "DIS-001");
-        partService.disablePart(part.getId());
+        partService.disablePart(STORE_ID, part.getId());
 
         InventoryInboundCommand command = buildInboundCommand(part.getId(), 10);
         BusinessException ex = assertThrows(BusinessException.class,

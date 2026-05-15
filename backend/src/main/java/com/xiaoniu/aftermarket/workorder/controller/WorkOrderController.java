@@ -92,6 +92,7 @@ public class WorkOrderController {
         return ApiResponse.success(detail);
     }
 
+    @PreAuthorize("hasAuthority('WORK_ORDER_CREATE')")
     @PostMapping("/drafts")
     public ApiResponse<Long> createDraft(@Valid @RequestBody CreateDraftRequest request) {
         CurrentUser user = requireCurrentUser();
@@ -112,6 +113,7 @@ public class WorkOrderController {
         return ApiResponse.success(workOrderId);
     }
 
+    @PreAuthorize("hasAuthority('WORK_ORDER_UPDATE')")
     @PutMapping("/{workOrderId}/draft")
     public ApiResponse<Void> updateDraft(@PathVariable Long workOrderId,
                                          @Valid @RequestBody UpdateDraftRequest request) {
@@ -130,6 +132,7 @@ public class WorkOrderController {
         return ApiResponse.success(null);
     }
 
+    @PreAuthorize("hasAuthority('WORK_ORDER_UPDATE')")
     @PostMapping("/{workOrderId}/charge-items")
     public ApiResponse<ChargeItemIdResponse> addChargeItem(
             @PathVariable Long workOrderId,
@@ -148,6 +151,7 @@ public class WorkOrderController {
         return ApiResponse.success(new ChargeItemIdResponse(chargeItemId));
     }
 
+    @PreAuthorize("hasAuthority('WORK_ORDER_UPDATE')")
     @PutMapping("/{workOrderId}/charge-items/{chargeItemId}")
     public ApiResponse<Void> updateChargeItem(
             @PathVariable Long workOrderId,
@@ -165,6 +169,7 @@ public class WorkOrderController {
         return ApiResponse.success(null);
     }
 
+    @PreAuthorize("hasAuthority('WORK_ORDER_UPDATE')")
     @DeleteMapping("/{workOrderId}/charge-items/{chargeItemId}")
     public ApiResponse<Void> deleteChargeItem(@PathVariable Long workOrderId,
                                                @PathVariable Long chargeItemId) {

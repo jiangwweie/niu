@@ -36,6 +36,7 @@ public class StaffInventoryController {
         this.inventoryFlowMapper = inventoryFlowMapper;
     }
 
+    @PreAuthorize("hasAuthority('INVENTORY_VIEW')")
     @GetMapping("/stocks")
     public ApiResponse<PageResponse<StaffInventoryStockItem>> listStocks(
             @RequestParam(required = false) String partCode,
@@ -49,6 +50,7 @@ public class StaffInventoryController {
         return ApiResponse.success(result.map(StaffInventoryStockItem::from));
     }
 
+    @PreAuthorize("hasAuthority('INVENTORY_VIEW')")
     @GetMapping("/stocks/{partId}")
     public ApiResponse<StaffInventoryStockDetail> getStockByPartId(@PathVariable Long partId) {
         CurrentUser user = requireCurrentUser();

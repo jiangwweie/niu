@@ -132,7 +132,7 @@ class PartServiceTest {
         PartEntity part = partService.createOfficialPart(buildOfficialCommand("刹车片", "DIS-001"));
         assertEquals(CommonStatus.ENABLED.getCode(), part.getStatus());
 
-        partService.disablePart(part.getId());
+        partService.disablePart(STORE_ID, part.getId());
 
         PartEntity updated = partService.getById(part.getId());
         assertEquals(CommonStatus.DISABLED.getCode(), updated.getStatus());
@@ -141,8 +141,8 @@ class PartServiceTest {
     @Test
     void enablePartSuccessfully() {
         PartEntity part = partService.createOfficialPart(buildOfficialCommand("刹车片", "ENA-001"));
-        partService.disablePart(part.getId());
-        partService.enablePart(part.getId());
+        partService.disablePart(STORE_ID, part.getId());
+        partService.enablePart(STORE_ID, part.getId());
 
         PartEntity updated = partService.getById(part.getId());
         assertEquals(CommonStatus.ENABLED.getCode(), updated.getStatus());
@@ -151,7 +151,7 @@ class PartServiceTest {
     @Test
     void disableNonExistentPartFails() {
         BusinessException ex = assertThrows(BusinessException.class,
-                () -> partService.disablePart(99999L));
+                () -> partService.disablePart(STORE_ID, 99999L));
         assertEquals(ErrorCode.PART_NOT_FOUND, ex.getErrorCode());
     }
 

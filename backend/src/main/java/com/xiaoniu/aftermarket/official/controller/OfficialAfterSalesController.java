@@ -33,6 +33,7 @@ public class OfficialAfterSalesController {
 
     // ========== Global page query ==========
 
+    @PreAuthorize("hasAnyAuthority('OFFICIAL_SETTLEMENT_MANAGE', 'FINANCE_VIEW')")
     @GetMapping("/api/admin/official-after-sales")
     public ApiResponse<PageResponse<OfficialAfterSalesQueryResponse>> listOfficialAfterSales(
             @RequestParam(required = false) String officialOrderNo,
@@ -65,6 +66,7 @@ public class OfficialAfterSalesController {
 
     // ========== Work-order scoped ==========
 
+    @PreAuthorize("hasAnyAuthority('OFFICIAL_SETTLEMENT_MANAGE', 'FINANCE_VIEW')")
     @GetMapping("/api/admin/work-orders/{workOrderId}/official-after-sales")
     public ApiResponse<OfficialAfterSalesResponse> getOfficialAfterSalesByWorkOrder(
             @PathVariable Long workOrderId) {

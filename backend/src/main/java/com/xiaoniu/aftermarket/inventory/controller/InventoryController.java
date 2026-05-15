@@ -31,6 +31,7 @@ public class InventoryController {
         this.partMapper = partMapper;
     }
 
+    @PreAuthorize("hasAuthority('INVENTORY_VIEW')")
     @GetMapping("/stocks")
     public ApiResponse<PageResponse<InventoryStockQueryResponse>> listStocks(
             @RequestParam(required = false) String partCode,
@@ -44,6 +45,7 @@ public class InventoryController {
         return ApiResponse.success(result);
     }
 
+    @PreAuthorize("hasAuthority('INVENTORY_VIEW')")
     @GetMapping("/stocks/{partId}")
     public ApiResponse<InventoryStockDetailResponse> getStockByPartId(@PathVariable Long partId) {
         CurrentUser user = requireCurrentUser();
@@ -97,6 +99,7 @@ public class InventoryController {
         return ApiResponse.success(null);
     }
 
+    @PreAuthorize("hasAuthority('INVENTORY_VIEW')")
     @GetMapping("/flows")
     public ApiResponse<PageResponse<InventoryFlowQueryResponse>> listFlows(
             @RequestParam(required = false) Long partId,

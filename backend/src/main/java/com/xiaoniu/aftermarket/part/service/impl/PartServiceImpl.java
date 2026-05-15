@@ -153,20 +153,26 @@ public class PartServiceImpl implements PartService {
     }
 
     @Override
-    public void enablePart(Long partId) {
+    public void enablePart(Long storeId, Long partId) {
         PartEntity existing = partMapper.selectById(partId);
         if (existing == null) {
             throw new BusinessException(ErrorCode.PART_NOT_FOUND);
+        }
+        if (!storeId.equals(existing.getStoreId())) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "配件不属于当前门店");
         }
         existing.setStatus(CommonStatus.ENABLED.getCode());
         partMapper.updateById(existing);
     }
 
     @Override
-    public void disablePart(Long partId) {
+    public void disablePart(Long storeId, Long partId) {
         PartEntity existing = partMapper.selectById(partId);
         if (existing == null) {
             throw new BusinessException(ErrorCode.PART_NOT_FOUND);
+        }
+        if (!storeId.equals(existing.getStoreId())) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "配件不属于当前门店");
         }
         existing.setStatus(CommonStatus.DISABLED.getCode());
         partMapper.updateById(existing);
