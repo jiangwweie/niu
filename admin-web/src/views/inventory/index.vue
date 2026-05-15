@@ -19,7 +19,7 @@
         <el-form-item class="search-actions">
           <el-button type="primary" @click="handleSearch" :loading="loading">查询</el-button>
           <el-button @click="handleReset">重置</el-button>
-          <el-button type="success" @click="handleInbound">入库</el-button>
+          <el-button v-if="hasPermission('INVENTORY_INBOUND')" type="success" @click="handleInbound">入库</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -60,8 +60,8 @@
           <el-table-column prop="lastChangedAt" label="最近流水时间" width="160" />
           <el-table-column label="操作" width="220" fixed="right">
             <template #default="{ row }">
-              <el-button link type="success" @click="openInboundDialog(row)">入库</el-button>
-              <el-button link type="warning" @click="openAdjustDialog(row)">库存调整</el-button>
+              <el-button v-if="hasPermission('INVENTORY_INBOUND')" link type="success" @click="openInboundDialog(row)">入库</el-button>
+              <el-button v-if="hasPermission('INVENTORY_ADJUST')" link type="warning" @click="openAdjustDialog(row)">库存调整</el-button>
               <el-button link type="primary" @click="openLogsDrawer(row)">查看流水</el-button>
             </template>
           </el-table-column>
@@ -206,6 +206,7 @@ import {
   submitInbound as submitInboundApi,
   submitAdjust as submitAdjustApi,
 } from '@/api/inventory';
+import { hasPermission } from '@/utils/permission';
 import type { InventoryQuery, InventoryRecord, InventoryLogRecord } from '@/types/inventory';
 
 /* ── Query ── */

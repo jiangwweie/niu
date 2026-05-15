@@ -20,7 +20,7 @@
         <el-menu-item index="/refund"><template #title>退款记录</template></el-menu-item>
         <el-menu-item index="/settlement"><template #title>官方售后结算</template></el-menu-item>
         <el-menu-item index="/reimbursement"><template #title>报销台账</template></el-menu-item>
-        <el-menu-item index="/finance"><template #title>财务报表</template></el-menu-item>
+        <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/finance"><template #title>财务报表</template></el-menu-item>
         <el-menu-item index="/dictionary"><template #title>字典配置</template></el-menu-item>
         <el-menu-item index="/user"><template #title>用户与权限</template></el-menu-item>
         <el-menu-item index="/export"><template #title>Excel 导出中心</template></el-menu-item>
@@ -90,6 +90,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/user';
 import { useAuthStore } from '@/stores/auth';
 import { logout } from '@/api/auth';
+import { hasPermission } from '@/utils/permission';
 import { ElMessage } from 'element-plus';
 
 const route = useRoute();

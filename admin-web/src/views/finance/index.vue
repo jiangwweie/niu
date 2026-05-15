@@ -60,7 +60,7 @@
 
         <el-form-item class="search-actions">
           <el-button type="primary" @click="handleSearch" :loading="loading">查询</el-button>
-          <el-button type="success" @click="handleExport" :loading="exportLoading">导出</el-button>
+          <el-button v-if="hasPermission('EXCEL_EXPORT')" type="success" @click="handleExport" :loading="exportLoading">导出</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -173,6 +173,7 @@ import PageContainer from '@/components/PageContainer.vue';
 import MoneyText from '@/components/MoneyText.vue';
 import { getDailyFinance, getMonthlyFinance, getRangeFinance } from '@/api/finance';
 import { exportFinance } from '@/api/export';
+import { hasPermission } from '@/utils/permission';
 import type { FinanceQuery, FinanceReportResponse } from '@/types/finance';
 import dayjs from 'dayjs';
 

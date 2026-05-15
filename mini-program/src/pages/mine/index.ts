@@ -2,12 +2,14 @@ import { authStore } from '../../stores/auth';
 import { mockUsers } from '../../mock/auth';
 import { API_MODE } from '../../utils/config';
 import { authApi } from '../../api/auth';
+import { hasPermission } from '../../utils/permission';
 
 Page({
   data: {
     currentUser: null,
     mockUsers: [],
-    apiMode: API_MODE
+    apiMode: API_MODE,
+    hasReimbursementPermission: false
   },
   onLoad() {
     this.setData({
@@ -21,7 +23,8 @@ Page({
       return;
     }
     this.setData({
-      currentUser: authStore.getCurrentUser() as any
+      currentUser: authStore.getCurrentUser() as any,
+      hasReimbursementPermission: hasPermission('REIMBURSEMENT_SUBMIT')
     });
   },
   onSwitchUser(e: any) {

@@ -38,7 +38,7 @@
         <el-form-item class="search-actions">
           <el-button type="primary" @click="handleSearch" :loading="loading">查询</el-button>
           <el-button @click="handleReset">重置</el-button>
-          <el-button type="success" @click="handleExport" :loading="exportLoading">导出</el-button>
+          <el-button v-if="hasPermission('EXCEL_EXPORT')" type="success" @click="handleExport" :loading="exportLoading">导出</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -87,8 +87,10 @@
           <el-table-column label="操作" width="220" fixed="right" align="center">
             <template #default="{ row }">
               <el-button link type="primary" @click="handleView(row)">查看</el-button>
-              <el-button v-if="row.status === 'PENDING'" link type="success" @click="handleConfirm(row)">确认</el-button>
-              <el-button v-if="row.status === 'PENDING'" link type="warning" @click="handleReject(row)">驳回</el-button>
+              <template v-if="hasPermission('REIMBURSEMENT_CONFIRM') && row.status === 'PENDING'">
+                <el-button link type="success" @click="handleConfirm(row)">确认</el-button>
+                <el-button link type="warning" @click="handleReject(row)">驳回</el-button>
+              </template>
             </template>
           </el-table-column>
         </el-table>
@@ -188,6 +190,7 @@ import {
   rejectReimbursement 
 } from '@/api/reimbursement';
 import { exportReimbursements } from '@/api/export';
+import { hasPermission } from '@/utils/permission';
 import type { ReimbursementQuery, ReimbursementRecord } from '@/types/reimbursement';
 
 const dateRange = ref<[string, string] | null>(null);

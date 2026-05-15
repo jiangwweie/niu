@@ -18,4 +18,8 @@
     </block>
     <view wx:else class="empty">暂无库存数据</view>
   </view>
+
+  <view class="fab-btn" wx:if="{{hasInboundPermission}}" bindtap="goToInbound">
+    <text>+ 入库</text>
+  </view>
 </view>

@@ -19,4 +19,8 @@
     </block>
     <view wx:else class="empty">暂无工单数据</view>
   </view>
+
+  <view class="fab-btn" wx:if="{{hasSubmitPermission}}" bindtap="goToCreate">
+    <text>+ 新建工单</text>
+  </view>
 </view>

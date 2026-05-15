@@ -1,18 +1,26 @@
 import { authStore } from '../../stores/auth';
 import { getWorkOrders } from '../../api/workOrder';
 import { WorkOrder } from '../../types/workOrder';
+import { hasPermission } from '../../utils/permission';
 
 Page({
   data: {
     keyword: '',
     orders: [] as WorkOrder[],
+    hasSubmitPermission: false,
   },
   onShow() {
     if (!authStore.isLoggedIn) {
       wx.redirectTo({ url: '/pages/login/index?redirect=' + encodeURIComponent('/pages/work-orders/index') });
       return;
     }
+    this.setData({
+      hasSubmitPermission: hasPermission('WORK_ORDER_SUBMIT')
+    });
     this.fetchData();
+  },
+  goToCreate() {
+    wx.navigateTo({ url: '/pages/create-work-order-placeholder/index' });
   },
   onSearch(e: any) {
     this.setData({ keyword: e.detail.value });

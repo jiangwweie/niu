@@ -86,21 +86,20 @@
           <el-table-column label="操作" width="240" fixed="right" align="center">
             <template #default="{ row }">
               <el-button link type="primary" @click="handleView(row)">查看</el-button>
-              <el-button
-                v-if="row.settlementStatus !== 'SETTLED' && row.settlementStatus !== 'NOT_REQUIRED'"
-                link type="primary" 
-                @click="handleRecordOrderNo(row)"
-              >录入订单号</el-button>
-              <el-button
-                v-if="row.settlementStatus !== 'SETTLED' && row.settlementStatus !== 'NOT_REQUIRED'"
-                link type="success"
-                @click="handleSettle(row)"
-              >标记已结算</el-button>
-              <el-button
-                v-if="row.settlementStatus !== 'SETTLED' && row.settlementStatus !== 'NOT_REQUIRED'"
-                link type="warning"
-                @click="handleNoSettlementRequired(row)"
-              >无需结算</el-button>
+              <template v-if="hasPermission('OFFICIAL_SETTLEMENT_MANAGE') && row.settlementStatus !== 'SETTLED' && row.settlementStatus !== 'NOT_REQUIRED'">
+                <el-button
+                  link type="primary" 
+                  @click="handleRecordOrderNo(row)"
+                >录入订单号</el-button>
+                <el-button
+                  link type="success"
+                  @click="handleSettle(row)"
+                >标记已结算</el-button>
+                <el-button
+                  link type="warning"
+                  @click="handleNoSettlementRequired(row)"
+                >无需结算</el-button>
+              </template>
             </template>
           </el-table-column>
         </el-table>
@@ -216,6 +215,7 @@ import {
   markOfficialSettled,
   markNoSettlementRequired,
 } from '@/api/officialSettlement';
+import { hasPermission } from '@/utils/permission';
 import type { OfficialSettlementQuery, OfficialSettlementRecord } from '@/types/officialSettlement';
 import type { OfficialAfterSalesDetailResp } from '@/api/officialSettlement';
 
