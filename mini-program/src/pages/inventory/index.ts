@@ -1,3 +1,4 @@
+import { authStore } from '../../stores/auth';
 import { getInventoryStocks } from '../../api/inventory';
 import { InventoryStock } from '../../types/inventory';
 
@@ -6,7 +7,11 @@ Page({
     keyword: '',
     stocks: [] as InventoryStock[],
   },
-  onLoad() {
+  onShow() {
+    if (!authStore.isLoggedIn) {
+      wx.redirectTo({ url: '/pages/login/index?redirect=' + encodeURIComponent('/pages/inventory/index') });
+      return;
+    }
     this.fetchData();
   },
   onSearch(e: any) {

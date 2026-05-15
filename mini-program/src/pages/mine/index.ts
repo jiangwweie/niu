@@ -1,10 +1,13 @@
 import { authStore } from '../../stores/auth';
 import { mockUsers } from '../../mock/auth';
+import { API_MODE } from '../../utils/config';
+import { authApi } from '../../api/auth';
 
 Page({
   data: {
     currentUser: null,
-    mockUsers: []
+    mockUsers: [],
+    apiMode: API_MODE
   },
   onLoad() {
     this.setData({
@@ -13,11 +16,16 @@ Page({
     });
   },
   onShow() {
+    if (!authStore.isLoggedIn) {
+      wx.redirectTo({ url: '/pages/login/index?redirect=' + encodeURIComponent('/pages/mine/index') });
+      return;
+    }
     this.setData({
       currentUser: authStore.getCurrentUser() as any
     });
   },
   onSwitchUser(e: any) {
+    if (this.data.apiMode === 'real') return;
     const userId = e.currentTarget.dataset.id;
     authStore.switchUser(userId);
     this.setData({
@@ -33,5 +41,19 @@ Page({
     wx.navigateTo({
       url: '/pages/reimbursement-placeholder/index'
     });
+  },
+  
+  async handleLogout() {
+    try {
+      await authApi.logout();
+    } catch (e) {
+      // ignore
+    } finally {
+      authStore.clearAuth();
+      wx.showToast({ title: '已退出登录', icon: 'success' });
+      setTimeout(() => {
+        wx.redirectTo({ url: '/pages/login/index' });
+      }, 500);
+    }
   }
 })

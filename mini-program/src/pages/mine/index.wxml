@@ -2,13 +2,13 @@
   <view class="header">
     <text class="title">当前用户</text>
     <view class="user-info" wx:if="{{currentUser}}">
-      <text>姓名：{{currentUser.userName}}</text>
-      <text>角色：{{currentUser.roleName}}</text>
-      <text>门店：{{currentUser.storeName}}</text>
+      <text>姓名：{{currentUser.realName || currentUser.userName || currentUser.username}}</text>
+      <text wx:if="{{apiMode === 'mock'}}">角色：{{currentUser.roleName}}</text>
+      <text wx:if="{{apiMode === 'mock'}}">门店：{{currentUser.storeName}}</text>
     </view>
   </view>
 
-  <view class="section">
+  <view class="section" wx:if="{{apiMode === 'mock'}}">
     <text class="section-title">切换 Mock 用户</text>
     <view class="user-list">
       <view 
@@ -26,5 +26,8 @@
   <view class="section">
     <text class="section-title">快捷操作</text>
     <t-button theme="primary" block size="large" bind:tap="goToReimbursement">提交报销</t-button>
+    <view style="margin-top: 16px;">
+      <t-button theme="danger" variant="outline" block size="large" bind:tap="handleLogout">退出登录</t-button>
+    </view>
   </view>
 </view>

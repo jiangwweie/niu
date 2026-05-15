@@ -1,0 +1,34 @@
+<view class="login-container">
+  <view class="login-header">
+    <text class="title">小牛售后</text>
+    <text class="subtitle">员工登录</text>
+  </view>
+  
+  <view class="form-container">
+    <t-input
+      value="{{username}}"
+      placeholder="请输入用户名"
+      bind:change="onUsernameChange"
+      prefixIcon="user"
+    />
+    <t-input
+      value="{{password}}"
+      type="password"
+      placeholder="请输入密码"
+      bind:change="onPasswordChange"
+      prefixIcon="lock-on"
+      clearable
+    />
+    
+    <t-button 
+      theme="danger" 
+      size="large" 
+      block 
+      bind:tap="handleLogin" 
+      loading="{{loading}}"
+      class="login-btn"
+    >
+      登录
+    </t-button>
+  </view>
+</view>

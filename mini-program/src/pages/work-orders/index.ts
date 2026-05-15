@@ -1,3 +1,4 @@
+import { authStore } from '../../stores/auth';
 import { getWorkOrders } from '../../api/workOrder';
 import { WorkOrder } from '../../types/workOrder';
 
@@ -7,6 +8,10 @@ Page({
     orders: [] as WorkOrder[],
   },
   onShow() {
+    if (!authStore.isLoggedIn) {
+      wx.redirectTo({ url: '/pages/login/index?redirect=' + encodeURIComponent('/pages/work-orders/index') });
+      return;
+    }
     this.fetchData();
   },
   onSearch(e: any) {

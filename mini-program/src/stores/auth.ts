@@ -1,17 +1,28 @@
 import { User } from '../types/auth';
 import { storage } from '../utils/storage';
+import { authApi } from '../api/auth';
+import { API_MODE } from '../utils/config';
 import { defaultMockUser, mockUsers } from '../mock/auth';
 
 class AuthStore {
   currentUser: User | null = null;
+  accessToken: string = '';
 
   init() {
+    this.accessToken = wx.getStorageSync('accessToken') || '';
     let user = storage.getUser();
-    if (!user) {
-      user = defaultMockUser;
-      storage.setUser(user);
+    
+    if (API_MODE === 'mock') {
+      if (!user) {
+        user = defaultMockUser;
+        storage.setUser(user);
+      }
+      this.currentUser = user;
+    } else {
+      if (user) {
+        this.currentUser = user;
+      }
     }
-    this.currentUser = user;
   }
 
   getCurrentUser(): User | null {
@@ -21,12 +32,37 @@ class AuthStore {
     return this.currentUser;
   }
 
+  setToken(token: string) {
+    this.accessToken = token;
+    wx.setStorageSync('accessToken', token);
+  }
+
+  setUser(user: User) {
+    this.currentUser = user;
+    storage.setUser(user);
+  }
+
+  clearAuth() {
+    this.currentUser = null;
+    this.accessToken = '';
+    wx.removeStorageSync('accessToken');
+    // keep other storage, or remove user if user storage is separate
+    // assuming storage.setUser(null) isn't standard, we'll just remove it:
+    wx.removeStorageSync('user');
+  }
+
   switchUser(userId: string) {
+    if (API_MODE === 'real') return;
     const user = mockUsers.find(u => u.userId === userId);
     if (user) {
       this.currentUser = user;
       storage.setUser(user);
     }
+  }
+
+  get isLoggedIn(): boolean {
+    if (API_MODE === 'mock') return true;
+    return !!this.accessToken;
   }
 }
 
