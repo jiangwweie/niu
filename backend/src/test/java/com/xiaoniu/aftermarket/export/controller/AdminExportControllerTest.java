@@ -260,8 +260,8 @@ class AdminExportControllerTest {
     void exportWithoutCurrentUserFails() throws Exception {
         mockMvc.perform(get("/api/admin/exports/finance")
                         .param("reportType", "DAILY"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
     @Test

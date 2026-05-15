@@ -1,0 +1,126 @@
+package com.xiaoniu.aftermarket.auth.service;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.xiaoniu.aftermarket.auth.dto.AuthUserResponse;
+import com.xiaoniu.aftermarket.auth.dto.LoginResponse;
+import com.xiaoniu.aftermarket.auth.dto.PasswordLoginRequest;
+import com.xiaoniu.aftermarket.auth.security.AuthenticatedUser;
+import com.xiaoniu.aftermarket.auth.security.JwtProvider;
+import com.xiaoniu.aftermarket.common.enums.CommonStatus;
+import com.xiaoniu.aftermarket.user.entity.SysRoleEntity;
+import com.xiaoniu.aftermarket.user.entity.SysUserEntity;
+import com.xiaoniu.aftermarket.user.entity.SysUserRoleEntity;
+import com.xiaoniu.aftermarket.user.mapper.SysRoleMapper;
+import com.xiaoniu.aftermarket.user.mapper.SysUserMapper;
+import com.xiaoniu.aftermarket.user.mapper.SysUserRoleMapper;
+import com.xiaoniu.aftermarket.user.service.PermissionQueryService;
+import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class AuthService {
+
+    private final SysUserMapper userMapper;
+    private final SysUserRoleMapper userRoleMapper;
+    private final SysRoleMapper roleMapper;
+    private final PermissionQueryService permissionQueryService;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtProvider jwtProvider;
+
+    public AuthService(SysUserMapper userMapper,
+                       SysUserRoleMapper userRoleMapper,
+                       SysRoleMapper roleMapper,
+                       PermissionQueryService permissionQueryService,
+                       PasswordEncoder passwordEncoder,
+                       JwtProvider jwtProvider) {
+        this.userMapper = userMapper;
+        this.userRoleMapper = userRoleMapper;
+        this.roleMapper = roleMapper;
+        this.permissionQueryService = permissionQueryService;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtProvider = jwtProvider;
+    }
+
+    @Transactional
+    public LoginResponse loginWithPassword(PasswordLoginRequest request) {
+        SysUserEntity user = userMapper.selectOne(
+                new LambdaQueryWrapper<SysUserEntity>()
+                        .eq(SysUserEntity::getUsername, request.username())
+                        .last("LIMIT 1")
+        );
+        if (user == null || user.getDeleted() != null && user.getDeleted() != 0) {
+            throw new BadCredentialsException("用户名或密码错误");
+        }
+        if (!CommonStatus.ENABLED.name().equals(user.getStatus())) {
+            throw new DisabledException("用户已停用");
+        }
+        if (user.getPasswordHash() == null || user.getPasswordHash().isBlank()
+                || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+            throw new BadCredentialsException("用户名或密码错误");
+        }
+
+        AuthenticatedUser authenticatedUser = buildAuthenticatedUser(user);
+        JwtProvider.JwtToken token = jwtProvider.generateAccessToken(authenticatedUser);
+
+        user.setLastLoginAt(LocalDateTime.now());
+        userMapper.updateById(user);
+
+        return new LoginResponse(
+                token.token(),
+                "Bearer",
+                token.expiresAt(),
+                toResponse(authenticatedUser)
+        );
+    }
+
+    public AuthenticatedUser buildAuthenticatedUser(SysUserEntity user) {
+        Set<String> roleCodes = listRoleCodes(user.getId());
+        Set<String> permissionCodes = new LinkedHashSet<>(permissionQueryService.listPermissionCodesByUserId(user.getId()));
+        return new AuthenticatedUser(
+                user.getId(),
+                user.getStoreId(),
+                user.getUsername(),
+                user.getRealName(),
+                Set.copyOf(roleCodes),
+                Set.copyOf(permissionCodes)
+        );
+    }
+
+    public AuthUserResponse toResponse(AuthenticatedUser user) {
+        return new AuthUserResponse(
+                user.userId(),
+                user.storeId(),
+                user.username(),
+                user.realName(),
+                user.roleCodes(),
+                user.permissionCodes()
+        );
+    }
+
+    private Set<String> listRoleCodes(Long userId) {
+        List<Long> roleIds = userRoleMapper.selectList(
+                new LambdaQueryWrapper<SysUserRoleEntity>()
+                        .eq(SysUserRoleEntity::getUserId, userId)
+        ).stream().map(SysUserRoleEntity::getRoleId).toList();
+        if (roleIds.isEmpty()) {
+            return Set.of();
+        }
+
+        List<SysRoleEntity> roles = roleMapper.selectList(
+                new LambdaQueryWrapper<SysRoleEntity>()
+                        .in(SysRoleEntity::getId, roleIds)
+                        .eq(SysRoleEntity::getStatus, CommonStatus.ENABLED.name())
+                        .eq(SysRoleEntity::getDeleted, 0)
+        );
+        return roles.stream()
+                .map(SysRoleEntity::getRoleCode)
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+    }
+}

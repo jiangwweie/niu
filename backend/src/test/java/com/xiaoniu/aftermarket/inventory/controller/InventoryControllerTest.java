@@ -112,8 +112,8 @@ class InventoryControllerTest {
         mockMvc.perform(post("/api/admin/inventory/inbound")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
     @Test

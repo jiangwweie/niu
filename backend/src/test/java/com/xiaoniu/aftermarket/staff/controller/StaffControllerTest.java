@@ -128,53 +128,54 @@ class StaffControllerTest {
     @Test
     void staffDictWithoutHeaderReturnsError() throws Exception {
         mockMvc.perform(get("/api/staff/dict/types/PART_CATEGORY/items"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value("SUCCESS"))
-                .andExpect(jsonPath("$.data").isArray());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
     @Test
     void staffPartListWithoutHeaderReturnsBadRequest() throws Exception {
         mockMvc.perform(get("/api/staff/parts"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
     @Test
     void staffPartListWithUserIdOnlyReturnsBadRequest() throws Exception {
         mockMvc.perform(get("/api/staff/parts")
                         .header("X-User-Id", "1"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
     @Test
     void staffPartListWithStoreIdOnlyReturnsBadRequest() throws Exception {
         mockMvc.perform(get("/api/staff/parts")
                         .header("X-Store-Id", "1"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
     @Test
     void staffInventoryListWithoutHeaderReturnsBadRequest() throws Exception {
         mockMvc.perform(get("/api/staff/inventory/stocks"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
     @Test
     void staffWorkOrderListWithoutHeaderReturnsBadRequest() throws Exception {
         mockMvc.perform(get("/api/staff/work-orders"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
     // ========== Dict items ==========
 
     @Test
     void staffDictListItemsReturnsSuccess() throws Exception {
-        mockMvc.perform(get("/api/staff/dict/types/PART_CATEGORY/items"))
+        mockMvc.perform(get("/api/staff/dict/types/PART_CATEGORY/items")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("SUCCESS"))
                 .andExpect(jsonPath("$.data", hasSize(2)))
@@ -186,7 +187,9 @@ class StaffControllerTest {
 
     @Test
     void staffDictListItemsReturnsEmptyForNonexistentType() throws Exception {
-        mockMvc.perform(get("/api/staff/dict/types/NONEXISTENT/items"))
+        mockMvc.perform(get("/api/staff/dict/types/NONEXISTENT/items")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("SUCCESS"))
                 .andExpect(jsonPath("$.data").isArray())
@@ -663,8 +666,8 @@ class StaffControllerTest {
         mockMvc.perform(post("/api/staff/inventory/inbound")
                         .contentType("application/json")
                         .content(body))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
     @Test

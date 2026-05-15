@@ -169,8 +169,8 @@ class OfficialAfterSalesControllerTest {
     @Test
     void listOfficialAfterSalesGlobalWithoutHeaderFails() throws Exception {
         mockMvc.perform(get("/api/admin/official-after-sales"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
     // ========== 2. GET /api/admin/work-orders/{workOrderId}/official-after-sales ==========
@@ -495,8 +495,8 @@ class OfficialAfterSalesControllerTest {
         mockMvc.perform(post("/api/admin/work-orders/8001/official-after-sales/order-info")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
     @Test
@@ -509,8 +509,8 @@ class OfficialAfterSalesControllerTest {
         mockMvc.perform(post("/api/admin/work-orders/8002/official-after-sales/settle")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
     @Test
@@ -523,8 +523,8 @@ class OfficialAfterSalesControllerTest {
         mockMvc.perform(post("/api/admin/work-orders/8003/official-after-sales/no-settlement-required")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
     // ========== 7. Body storeId/operatorId does not override header ==========

@@ -4,6 +4,7 @@ import com.xiaoniu.aftermarket.common.api.ApiResponse;
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -30,6 +31,12 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiResponse<Void> handleBadRequest(Exception exception) {
         return ApiResponse.failure(ErrorCode.COMMON_BAD_REQUEST, exception.getMessage());
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ApiResponse<Void> handleAccessDeniedException(AccessDeniedException exception) {
+        return ApiResponse.failure(ErrorCode.FORBIDDEN);
     }
 
     @ExceptionHandler(Exception.class)

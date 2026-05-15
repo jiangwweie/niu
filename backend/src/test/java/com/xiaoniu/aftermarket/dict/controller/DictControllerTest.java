@@ -32,7 +32,9 @@ class DictControllerTest {
 
     @Test
     void listItemsReturnsVoWithUnifiedApiResponse() throws Exception {
-        mockMvc.perform(get("/api/admin/dict/types/PART_CATEGORY/items"))
+        mockMvc.perform(get("/api/admin/dict/types/PART_CATEGORY/items")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("SUCCESS"))
                 .andExpect(jsonPath("$.message").value("OK"))
@@ -60,9 +62,8 @@ class DictControllerTest {
     @Test
     void missingDevHeadersLeaveCurrentUserContextEmpty() throws Exception {
         mockMvc.perform(get("/api/admin/test/current-user"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value("SUCCESS"))
-                .andExpect(jsonPath("$.data").isEmpty());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
     @Test
@@ -77,7 +78,9 @@ class DictControllerTest {
 
     @Test
     void listTypesReturnsEnabledTypes() throws Exception {
-        mockMvc.perform(get("/api/admin/dict/types"))
+        mockMvc.perform(get("/api/admin/dict/types")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("SUCCESS"))
                 .andExpect(jsonPath("$.data").isArray())
@@ -89,7 +92,9 @@ class DictControllerTest {
 
     @Test
     void listItemsReturnsEmptyForNonexistentTypeCode() throws Exception {
-        mockMvc.perform(get("/api/admin/dict/types/NONEXISTENT/items"))
+        mockMvc.perform(get("/api/admin/dict/types/NONEXISTENT/items")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("SUCCESS"))
                 .andExpect(jsonPath("$.data").isArray())
@@ -99,7 +104,9 @@ class DictControllerTest {
     @Test
     void listItemsReturnsEmptyForDisabledType() throws Exception {
         // REPAIR_TYPE is DISABLED in test data
-        mockMvc.perform(get("/api/admin/dict/types/REPAIR_TYPE/items"))
+        mockMvc.perform(get("/api/admin/dict/types/REPAIR_TYPE/items")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("SUCCESS"))
                 .andExpect(jsonPath("$.data").isArray())
@@ -108,7 +115,9 @@ class DictControllerTest {
 
     @Test
     void apiResponseDoesNotExposeSuccessField() throws Exception {
-        mockMvc.perform(get("/api/admin/dict/types/PART_CATEGORY/items"))
+        mockMvc.perform(get("/api/admin/dict/types/PART_CATEGORY/items")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").doesNotExist())
                 .andExpect(jsonPath("$.code").value("SUCCESS"))

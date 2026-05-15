@@ -16,3 +16,8 @@ mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
   configuration:
     map-underscore-to-camel-case: true
+
+security:
+  jwt:
+    secret: ${JWT_SECRET:xiaoniu-aftermarket-dev-secret-change-me-please-2026}
+    access-token-ttl-seconds: ${JWT_ACCESS_TOKEN_TTL_SECONDS:14400}

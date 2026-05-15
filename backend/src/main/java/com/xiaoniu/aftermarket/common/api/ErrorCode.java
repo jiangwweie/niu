@@ -5,6 +5,8 @@ import lombok.Getter;
 @Getter
 public enum ErrorCode {
     SUCCESS("SUCCESS", "OK"),
+    UNAUTHORIZED("UNAUTHORIZED", "未登录或登录已过期"),
+    FORBIDDEN("FORBIDDEN", "无权限访问该资源"),
     COMMON_BAD_REQUEST("COMMON_BAD_REQUEST", "请求参数错误"),
     COMMON_NOT_FOUND("COMMON_NOT_FOUND", "资源不存在"),
     COMMON_INTERNAL_ERROR("COMMON_INTERNAL_ERROR", "系统异常"),

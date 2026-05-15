@@ -128,10 +128,10 @@ class PartControllerTest {
                 """;
         mockMvc.perform(post("/api/admin/parts/official")
                         .header("X-Store-Id", "1")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(body))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
     @Test
@@ -144,10 +144,10 @@ class PartControllerTest {
                 """;
         mockMvc.perform(post("/api/admin/parts/official")
                         .header("X-User-Id", "1")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(body))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
     @Test

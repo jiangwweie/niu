@@ -166,10 +166,10 @@ class RefundControllerTest {
                 }
                 """;
         mockMvc.perform(post("/api/admin/work-orders/7001/refunds")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(body))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
     @Test
@@ -337,8 +337,8 @@ class RefundControllerTest {
     @Test
     void listRefundsGlobalWithoutHeaderFails() throws Exception {
         mockMvc.perform(get("/api/admin/refunds"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
     // ========== 7. Response shape checks ==========

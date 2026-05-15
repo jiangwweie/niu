@@ -267,8 +267,8 @@ class WorkOrderControllerTest {
         mockMvc.perform(post("/api/admin/work-orders/drafts")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
     @Test
@@ -280,11 +280,11 @@ class WorkOrderControllerTest {
                 }
                 """;
         mockMvc.perform(post("/api/admin/work-orders/drafts")
-                        .header("X-Store-Id", "1")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(body))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
+                .header("X-Store-Id", "1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
     // ========== 7. Update draft ==========
@@ -466,8 +466,8 @@ class WorkOrderControllerTest {
         mockMvc.perform(post("/api/admin/work-orders/5002/submit")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
     @Test
@@ -480,8 +480,8 @@ class WorkOrderControllerTest {
         mockMvc.perform(post("/api/admin/work-orders/5003/cancel")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
     @Test
@@ -494,8 +494,8 @@ class WorkOrderControllerTest {
         mockMvc.perform(post("/api/admin/work-orders/5004/settle")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
     // ========== 16. Response shape checks ==========
@@ -590,15 +590,15 @@ class WorkOrderControllerTest {
     void listWorkOrdersWithoutStoreIdHeaderFails() throws Exception {
         mockMvc.perform(get("/api/admin/work-orders")
                         .header("X-User-Id", "1"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
     @Test
     void getWorkOrderWithoutStoreIdHeaderFails() throws Exception {
         mockMvc.perform(get("/api/admin/work-orders/5001")
                         .header("X-User-Id", "1"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 }
