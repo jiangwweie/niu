@@ -5,10 +5,12 @@ const request = axios.create({
   timeout: 15000,
 });
 
-// Dev headers for local development (temporary — not production auth)
+// Remove hardcoded X-User-Id and use JWT
 request.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  config.headers.set('X-User-Id', '1');
-  config.headers.set('X-Store-Id', '1');
+  const token = localStorage.getItem('accessToken');
+  if (token) {
+    config.headers.set('Authorization', `Bearer ${token}`);
+  }
   return config;
 });
 
@@ -28,6 +30,18 @@ request.interceptors.response.use(
     return Promise.reject(new Error(msg));
   },
   async (error: AxiosError<{ code?: string; message?: string }>) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('accessToken');
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+      }
+      return Promise.reject(new Error('未登录或登录已过期'));
+    }
+    if (error.response?.status === 403) {
+      ElMessage.error('无权限访问该资源');
+      return Promise.reject(new Error('无权限访问该资源'));
+    }
+
     const data = error.response?.data as any;
     let msg = data?.message || error.message || '网络请求错误';
     if (data instanceof Blob && data.type.includes('application/json')) {

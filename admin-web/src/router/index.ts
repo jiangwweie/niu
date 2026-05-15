@@ -3,6 +3,12 @@ import BasicLayout from '@/layouts/BasicLayout.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/views/login/index.vue'),
+    meta: { title: '登录' }
+  },
+  {
     path: '/',
     component: BasicLayout,
     redirect: '/dashboard',
@@ -86,6 +92,40 @@ const routes: Array<RouteRecordRaw> = [
 const router = createRouter({
   history: createWebHistory('/'),
   routes
+});
+
+import { useAuthStore } from '@/stores/auth';
+import { getMe } from '@/api/auth';
+
+router.beforeEach(async (to, from, next) => {
+  const authStore = useAuthStore();
+  const token = authStore.accessToken;
+
+  if (to.path === '/login') {
+    if (token) {
+      return next({ path: '/' });
+    }
+    return next();
+  }
+
+  if (!token) {
+    return next({ path: '/login', query: { redirect: to.fullPath } });
+  }
+
+  // Token exists, check user
+  if (!authStore.user) {
+    try {
+      const user = await getMe();
+      authStore.setUser(user);
+      next();
+    } catch (error) {
+      // 401 interceptor handles redirection, but in case it doesn't:
+      authStore.clearAuth();
+      next({ path: '/login', query: { redirect: to.fullPath } });
+    }
+  } else {
+    next();
+  }
 });
 
 // Update page title automatically (optional enhancement)

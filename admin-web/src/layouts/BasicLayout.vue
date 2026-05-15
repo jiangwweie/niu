@@ -51,14 +51,14 @@
             <div class="user-profile">
               <div class="avatar">AD</div>
               <div class="user-meta">
-                <span class="username">{{ userStore.username }}</span>
+                <span class="username">{{ authStore.user?.realName || authStore.user?.username || '未登录' }}</span>
                 <span class="role">NIU-OFFICER</span>
               </div>
             </div>
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item>个人中心</el-dropdown-item>
-                <el-dropdown-item divided>退出登录</el-dropdown-item>
+                <el-dropdown-item divided @click="handleLogout">退出登录</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -86,16 +86,33 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/user';
+import { useAuthStore } from '@/stores/auth';
+import { logout } from '@/api/auth';
+import { ElMessage } from 'element-plus';
 
 const route = useRoute();
+const router = useRouter();
 const userStore = useUserStore();
+const authStore = useAuthStore();
 
 // Highlight current menu item
 const activeMenu = computed(() => {
   return route.path;
 });
+
+const handleLogout = async () => {
+  try {
+    await logout();
+  } catch (e) {
+    // ignore
+  } finally {
+    authStore.clearAuth();
+    ElMessage.success('已退出登录');
+    router.push('/login');
+  }
+};
 </script>
 
 <style scoped>
