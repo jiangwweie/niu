@@ -42,3 +42,58 @@
 
 ## 结论
 **PASS**. M13B 的前端对接非常顺利。核心财务数据被直观呈现，没有任何无关业务的污染。财务计算边界锁死在了安全稳定的后端服务中。
+
+---
+
+## M13C：业务闭环端到端断点检查（2026-05-15）
+
+### 检查结果：全部通过，无断点
+
+| 检查项 | 结果 |
+|--------|------|
+| 日报查询 | PASS |
+| 月报查询 | PASS |
+| 范围查询 | PASS |
+| 空数据返回零值 | PASS |
+| 客户收入 = 支付 - 退款 | PASS |
+| 官方收入只统计 SETTLED | PASS |
+| PENDING/NOT_REQUIRED 不计入 officialIncome | PASS |
+| 配件成本只统计 SETTLED 工单 | PASS |
+| 报销成本只统计 CONFIRMED | PASS |
+| PENDING/REJECTED/CANCELLED 不计入 reimbursementCost | PASS |
+| totalIncome = customerIncome + officialIncome | PASS |
+| totalCost = partsCost + reimbursementCost | PASS |
+| profit = totalIncome - totalCost | PASS |
+| 跨店隔离 | PASS |
+| settledWorkOrderCount | PASS |
+| confirmedReimbursementCount | PASS |
+| 财务 API 只读 | PASS |
+| 不修改工单/库存/支付/报销/结算状态 | PASS |
+| 不生成 inventory_flow/payment_record/refund_record | PASS |
+
+### 后端测试
+
+- mvn test：480 tests, 0 failures
+- FinanceServiceTest：14 tests passed
+- FinanceControllerTest：6 tests passed
+
+### admin-web 检查
+
+- npm run build：成功
+- vue-tsc --noEmit：finance 相关 0 错误（export/user 历史类型错误不在本任务范围）
+- finance.ts 对接 3 个真实 API
+- 类型与 FinanceReportResponse 对齐
+- 页面使用真实 API，无 mock
+- 支持日报/月报/自定义范围查询
+- 金额展示 2 位小数
+- 页面展示财务口径说明
+- Excel/导出入口未真实启用
+- 无复杂图表/BI/新依赖
+
+### 未做内容
+
+- Excel 导出
+- 权限/JWT
+- 多门店
+- 复杂 BI / 图表大屏
+- export/user 历史类型错误修复
