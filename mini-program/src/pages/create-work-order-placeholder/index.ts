@@ -4,7 +4,12 @@ import {
   getWorkOrderDetail, 
   addChargeItem, 
   updateChargeItem, 
-  deleteChargeItem 
+  deleteChargeItem,
+  submitWorkOrder,
+  cancelWorkOrder,
+  recordPayment,
+  recordRefund,
+  settleWorkOrder
 } from '../../api/workOrder';
 import { Part } from '../../types/parts';
 import { 
@@ -348,16 +353,14 @@ Page({
     
     this.setData({ submitLoading: true, submitDialogVisible: false });
 
-    import('../../api/workOrder').then(({ submitWorkOrder }) => {
-      submitWorkOrder(this.data.workOrderId!, { remark: this.data.submitRemark }).then(res => {
-        Toast({ context: this, selector: '#t-toast', message: '工单已提交，库存预占以后端结果为准。', icon: 'check-circle' });
-        this.refreshWorkOrder();
-      }).catch(err => {
-        // Backend error messages will be shown by request wrapper (Toast)
-        console.error('Submit work order failed:', err);
-      }).finally(() => {
-        this.setData({ submitLoading: false });
-      });
+    submitWorkOrder(this.data.workOrderId!, { remark: this.data.submitRemark }).then(res => {
+      Toast({ context: this, selector: '#t-toast', message: '工单已提交，库存预占以后端结果为准。', icon: 'check-circle' });
+      this.refreshWorkOrder();
+    }).catch(err => {
+      // Backend error messages will be shown by request wrapper (Toast)
+      console.error('Submit work order failed:', err);
+    }).finally(() => {
+      this.setData({ submitLoading: false });
     });
   },
 
@@ -392,18 +395,16 @@ Page({
 
     this.setData({ cancelLoading: true, cancelDialogVisible: false });
 
-    import('../../api/workOrder').then(({ cancelWorkOrder }) => {
-      cancelWorkOrder(this.data.workOrderId!, { 
-        reason: this.data.cancelReason, 
-        remark: this.data.cancelRemark 
-      }).then(res => {
-        Toast({ context: this, selector: '#t-toast', message: '工单已取消，库存释放以后端结果为准。', icon: 'check-circle' });
-        this.refreshWorkOrder();
-      }).catch(err => {
-        console.error('Cancel work order failed:', err);
-      }).finally(() => {
-        this.setData({ cancelLoading: false });
-      });
+    cancelWorkOrder(this.data.workOrderId!, { 
+      reason: this.data.cancelReason, 
+      remark: this.data.cancelRemark 
+    }).then(res => {
+      Toast({ context: this, selector: '#t-toast', message: '工单已取消，库存释放以后端结果为准。', icon: 'check-circle' });
+      this.refreshWorkOrder();
+    }).catch(err => {
+      console.error('Cancel work order failed:', err);
+    }).finally(() => {
+      this.setData({ cancelLoading: false });
     });
   },
 
@@ -452,20 +453,18 @@ Page({
 
     this.setData({ paymentLoading: true });
 
-    import('../../api/workOrder').then(({ recordPayment }) => {
-      recordPayment(this.data.workOrderId!, {
-        amount: amount,
-        paymentMethod: this.data.paymentForm.paymentMethod,
-        remark: this.data.paymentForm.remark
-      }).then(res => {
-        this.setData({ paymentDialogVisible: false });
-        Toast({ context: this, selector: '#t-toast', message: '支付记录已保存。支付不会自动结算工单。', icon: 'check-circle' });
-        this.refreshWorkOrder();
-      }).catch(err => {
-        console.error('Record payment failed:', err);
-      }).finally(() => {
-        this.setData({ paymentLoading: false });
-      });
+    recordPayment(this.data.workOrderId!, {
+      amount: amount,
+      paymentMethod: this.data.paymentForm.paymentMethod,
+      remark: this.data.paymentForm.remark
+    }).then(res => {
+      this.setData({ paymentDialogVisible: false });
+      Toast({ context: this, selector: '#t-toast', message: '支付记录已保存。支付不会自动结算工单。', icon: 'check-circle' });
+      this.refreshWorkOrder();
+    }).catch(err => {
+      console.error('Record payment failed:', err);
+    }).finally(() => {
+      this.setData({ paymentLoading: false });
     });
   },
 
@@ -520,21 +519,19 @@ Page({
 
     this.setData({ refundLoading: true });
 
-    import('../../api/workOrder').then(({ recordRefund }) => {
-      recordRefund(this.data.workOrderId!, {
-        amount: amount,
-        refundMethod: this.data.refundForm.refundMethod,
-        reason: this.data.refundForm.reason,
-        remark: this.data.refundForm.remark
-      }).then(res => {
-        this.setData({ refundDialogVisible: false });
-        Toast({ context: this, selector: '#t-toast', message: '退款记录已保存。', icon: 'check-circle' });
-        this.refreshWorkOrder();
-      }).catch(err => {
-        console.error('Record refund failed:', err);
-      }).finally(() => {
-        this.setData({ refundLoading: false });
-      });
+    recordRefund(this.data.workOrderId!, {
+      amount: amount,
+      refundMethod: this.data.refundForm.refundMethod,
+      reason: this.data.refundForm.reason,
+      remark: this.data.refundForm.remark
+    }).then(res => {
+      this.setData({ refundDialogVisible: false });
+      Toast({ context: this, selector: '#t-toast', message: '退款记录已保存。', icon: 'check-circle' });
+      this.refreshWorkOrder();
+    }).catch(err => {
+      console.error('Record refund failed:', err);
+    }).finally(() => {
+      this.setData({ refundLoading: false });
     });
   },
 
@@ -559,15 +556,13 @@ Page({
     
     this.setData({ settleLoading: true, settleDialogVisible: false });
 
-    import('../../api/workOrder').then(({ settleWorkOrder }) => {
-      settleWorkOrder(this.data.workOrderId!, { remark: this.data.settleRemark }).then(res => {
-        Toast({ context: this, selector: '#t-toast', message: '结算成功。', icon: 'check-circle' });
-        this.refreshWorkOrder();
-      }).catch(err => {
-        console.error('Settle work order failed:', err);
-      }).finally(() => {
-        this.setData({ settleLoading: false });
-      });
+    settleWorkOrder(this.data.workOrderId!, { remark: this.data.settleRemark }).then(res => {
+      Toast({ context: this, selector: '#t-toast', message: '结算成功。', icon: 'check-circle' });
+      this.refreshWorkOrder();
+    }).catch(err => {
+      console.error('Settle work order failed:', err);
+    }).finally(() => {
+      this.setData({ settleLoading: false });
     });
   }
 });
