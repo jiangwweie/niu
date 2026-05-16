@@ -5,6 +5,8 @@ import { authStore } from '../stores/auth';
 interface RequestOptions extends WechatMiniprogram.RequestOption {
   mockData?: any;
   showLoading?: boolean;
+  /** 设为 true 时跳过 Authorization 注入，专门用于登录接口 */
+  skipAuth?: boolean;
 }
 
 type ApiError = Error & {
@@ -46,7 +48,7 @@ export const request = <T = any>(options: RequestOptions): Promise<ApiResponse<T
       'Content-Type': 'application/json'
     } as Record<string, string>;
 
-    if (user && authStore.accessToken) {
+    if (!options.skipAuth && user && authStore.accessToken) {
       headers['Authorization'] = `Bearer ${authStore.accessToken}`;
     }
 
