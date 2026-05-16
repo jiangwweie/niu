@@ -43,3 +43,16 @@
   color: #999;
   font-size: 28rpx;
 }
+.fab-btn {
+  position: fixed;
+  bottom: 48rpx;
+  right: 48rpx;
+  background: #2BA471;
+  color: #fff;
+  border-radius: 48rpx;
+  padding: 24rpx 48rpx;
+  box-shadow: 0 8rpx 24rpx rgba(43,164,113,0.3);
+  font-weight: bold;
+  font-size: 32rpx;
+  z-index: 100;
+}

@@ -1,10 +1,11 @@
 <view class="container">
-  <view class="header">
-    <text class="title">当前用户</text>
+  <view class="header user-card">
+    <view class="avatar-wrap">
+      <t-icon name="user-circle" size="96rpx" color="#df001f" />
+    </view>
     <view class="user-info" wx:if="{{currentUser}}">
-      <text>姓名：{{currentUser.realName || currentUser.userName || currentUser.username}}</text>
-      <text wx:if="{{apiMode === 'mock'}}">角色：{{currentUser.roleName}}</text>
-      <text wx:if="{{apiMode === 'mock'}}">门店：{{currentUser.storeName}}</text>
+      <text class="user-name">{{displayUserName}}</text>
+      <text class="user-desc" wx:if="{{apiMode === 'mock'}}">{{currentUser.roleName}} | {{currentUser.storeName}}</text>
     </view>
   </view>
 

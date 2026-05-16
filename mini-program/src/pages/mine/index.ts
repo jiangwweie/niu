@@ -7,6 +7,7 @@ import { hasPermission } from '../../utils/permission';
 Page({
   data: {
     currentUser: null,
+    displayUserName: '',
     mockUsers: [],
     apiMode: API_MODE,
     hasReimbursementPermission: false
@@ -22,8 +23,15 @@ Page({
       wx.redirectTo({ url: '/pages/login/index?redirect=' + encodeURIComponent('/pages/mine/index') });
       return;
     }
+    const user = authStore.getCurrentUser() as any;
+    let name = user?.realName || user?.userName || user?.username || '未登录';
+    try {
+      name = decodeURIComponent(name);
+    } catch(e) {}
+
     this.setData({
-      currentUser: authStore.getCurrentUser() as any,
+      currentUser: user,
+      displayUserName: name,
       hasReimbursementPermission: hasPermission('REIMBURSEMENT_SUBMIT')
     });
   },

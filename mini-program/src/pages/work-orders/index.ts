@@ -15,7 +15,7 @@ Page({
       return;
     }
     this.setData({
-      hasSubmitPermission: hasPermission('WORK_ORDER_SUBMIT')
+      hasCreateOrderPermission: hasPermission('WORK_ORDER_CREATE')
     });
     this.fetchData();
   },

@@ -1,5 +1,5 @@
 .container {
-  padding-bottom: 60rpx;
+  padding-bottom: 180rpx;
 }
 .header-card {
   background: #fff;
@@ -93,4 +93,26 @@
 .summary-section t-cell-group t-cell .t-cell__note {
   color: #e33e33;
   font-weight: bold;
+}
+.action-section {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: #fff;
+  padding: 24rpx 32rpx;
+  box-shadow: 0 -4rpx 16rpx rgba(0,0,0,0.05);
+  z-index: 100;
+  box-sizing: border-box;
+  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+}
+.action-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  justify-content: flex-end;
+}
+.action-grid t-button {
+  flex: 1;
+  min-width: 160rpx;
 }

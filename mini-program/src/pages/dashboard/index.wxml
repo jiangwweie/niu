@@ -1,4 +1,36 @@
-<view class="container" style="display:flex; justify-content:center; align-items:center; height:100vh; flex-direction:column;">
-  <text style="font-size: 24px; color: red; font-weight: bold;">仪表盘页面加载成功</text>
-  <text style="margin-top: 20px; color: #666;">您可以点击底部 Tab 切换</text>
+<view class="container">
+  <view class="header-card">
+    <text class="greeting">你好，{{userName}}</text>
+    <text class="subtitle">欢迎来到小牛售后工作台</text>
+  </view>
+
+  <view class="section">
+    <text class="section-title">快捷操作</text>
+    <view class="grid-actions">
+      <view class="action-item" wx:if="{{hasCreateOrderPermission}}" bindtap="goToCreateOrder">
+        <view class="icon-wrap bg-primary"><t-icon name="add" size="48rpx" color="#fff" /></view>
+        <text class="action-name">新建工单</text>
+      </view>
+      <view class="action-item" wx:if="{{hasInboundPermission}}" bindtap="goToInbound">
+        <view class="icon-wrap bg-success"><t-icon name="download" size="48rpx" color="#fff" /></view>
+        <text class="action-name">配件入库</text>
+      </view>
+      <view class="action-item" bindtap="goToInventory">
+        <view class="icon-wrap bg-info"><t-icon name="search" size="48rpx" color="#fff" /></view>
+        <text class="action-name">查库存</text>
+      </view>
+      <view class="action-item" wx:if="{{hasReimbursementPermission}}" bindtap="goToReimbursement">
+        <view class="icon-wrap bg-warning"><t-icon name="money-circle" size="48rpx" color="#fff" /></view>
+        <text class="action-name">提交报销</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="section">
+    <text class="section-title">待办与提醒</text>
+    <view class="empty-card">
+      <t-icon name="info-circle" size="48rpx" color="#ccc" />
+      <text class="empty-text">当前暂无待处理任务</text>
+    </view>
+  </view>
 </view>
