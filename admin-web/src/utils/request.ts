@@ -5,10 +5,24 @@ const request = axios.create({
   timeout: 15000,
 });
 
+const AUTH_FREE_PATHS = ['/api/auth/login/password'];
+
+function getRequestPath(config: AxiosRequestConfig) {
+  const url = config.url || '';
+  try {
+    const fullUrl = new URL(url, config.baseURL || window.location.origin);
+    return fullUrl.pathname;
+  } catch {
+    return url.split('?')[0];
+  }
+}
+
 // Remove hardcoded X-User-Id and use JWT
 request.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = localStorage.getItem('accessToken');
-  if (token) {
+  const requestPath = getRequestPath(config);
+  const shouldSkipAuth = AUTH_FREE_PATHS.includes(requestPath);
+  if (token && !shouldSkipAuth) {
     config.headers.set('Authorization', `Bearer ${token}`);
   }
   return config;

@@ -14,6 +14,7 @@
 - **验证点与结果**:
   - [x] 未登录（无 `accessToken`）访问除 `/login` 外的任何路径（如 `/dashboard`），均会被前端路由守卫拦截并携带 `redirect` 参数重定向至 `/login`。
   - [x] 在 `/login` 页面输入正确的账号（如 admin）与密码，点击登录发起 `POST /api/auth/login/password`。
+  - [x] 即使 `localStorage.accessToken` 中存在旧 Token / 过期 Token，登录请求也不会携带 `Authorization` Header，避免后端 `JwtAuthenticationFilter` 在进入登录 Controller 前返回 401。
   - [x] 登录成功后，前端获取到 `LoginResponse`，将其中的 `accessToken` 存入 `localStorage`，并在 Pinia Store `auth` 中保存完整的用户信息 (`username`, `realName`, `roleCodes`, `permissionCodes` 等)。
   - [x] 页面自动跳转至原本想要访问的目标页，或者默认跳转至首页 `/`。
 
@@ -21,7 +22,8 @@
 - **场景**: 登录后，触发其他页面数据的拉取请求（如查询工单或财务报表）。
 - **验证点与结果**:
   - [x] 移除了原有的写死 `X-User-Id` / `X-Store-Id`。
-  - [x] 全局 `request.ts` 拦截器正确地在每个 HTTP 请求的 Headers 中带上了 `Authorization: Bearer <accessToken>`。
+  - [x] 全局 `request.ts` 拦截器会为受保护接口带上 `Authorization: Bearer <accessToken>`。
+  - [x] Token 豁免白名单只包含 `/api/auth/login/password`；`GET /api/auth/me` 不在白名单内，刷新页面自愈时仍携带新 Token。
 
 ### 3. 未授权(401) 与 无权限(403) 拦截处理
 - **场景**: 模拟请求接口返回 401 或 403 错误。
