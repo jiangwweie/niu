@@ -50,9 +50,9 @@
   <view class="action-section">
     <view class="action-grid">
       <t-button wx:if="{{hasCancelPermission && order.status !== 'CANCELLED' && order.status !== 'SETTLED'}}" theme="danger" variant="outline" bind:tap="onCancel">取消工单</t-button>
-      <t-button wx:if="{{hasPaymentPermission && order.status !== 'CANCELLED' && order.status !== 'SETTLED'}}" theme="primary" variant="outline" bind:tap="openPaymentPopup">记录支付</t-button>
+      <t-button wx:if="{{hasPaymentPermission && isPayableStatus}}" theme="primary" variant="outline" bind:tap="openPaymentPopup">记录支付</t-button>
       <t-button wx:if="{{hasRefundPermission}}" theme="warning" variant="outline" bind:tap="openRefundPopup">记录退款</t-button>
-      <t-button wx:if="{{hasSettlePermission && order.status !== 'CANCELLED' && order.status !== 'SETTLED'}}" theme="primary" bind:tap="openSettleDialog">结算工单</t-button>
+      <t-button wx:if="{{hasSettlePermission && isPayableStatus}}" theme="primary" bind:tap="openSettleDialog">结算工单</t-button>
     </view>
   </view>
 </view>

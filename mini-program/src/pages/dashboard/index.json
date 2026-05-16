@@ -1,1 +1,6 @@
-{ "navigationBarTitleText": "dashboard", "usingComponents": {} }
+{
+  "navigationBarTitleText": "工作台",
+  "usingComponents": {
+    "t-icon": "tdesign-miniprogram/icon/icon"
+  }
+}

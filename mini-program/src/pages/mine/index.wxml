@@ -5,7 +5,11 @@
     </view>
     <view class="user-info" wx:if="{{currentUser}}">
       <text class="user-name">{{displayUserName}}</text>
-      <text class="user-desc" wx:if="{{apiMode === 'mock'}}">{{currentUser.roleName}} | {{currentUser.storeName}}</text>
+      <view class="meta-list">
+        <text class="user-desc" wx:if="{{displayAccount}}">账号：{{displayAccount}}</text>
+        <text class="user-desc" wx:if="{{displayRole}}">角色：{{displayRole}}</text>
+        <text class="user-desc" wx:if="{{displayStore}}">门店：{{displayStore}}</text>
+      </view>
     </view>
   </view>
 
@@ -25,10 +29,12 @@
   </view>
 
   <view class="section">
-    <text class="section-title">快捷操作</text>
+    <text class="section-title">常用功能</text>
     <t-button wx:if="{{hasReimbursementPermission}}" theme="primary" block size="large" bind:tap="goToReimbursement">提交报销</t-button>
-    <view style="margin-top: 16px;">
-      <t-button theme="danger" variant="outline" block size="large" bind:tap="handleLogout">退出登录</t-button>
-    </view>
+  </view>
+
+  <view class="section account-section">
+    <text class="section-title">账号操作</text>
+    <t-button theme="default" variant="outline" block size="large" bind:tap="handleLogout">退出登录</t-button>
   </view>
 </view>

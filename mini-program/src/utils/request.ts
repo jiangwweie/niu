@@ -7,6 +7,12 @@ interface RequestOptions extends WechatMiniprogram.RequestOption {
   showLoading?: boolean;
 }
 
+type ApiError = Error & {
+  code?: string | number;
+  statusCode?: number;
+  traceId?: string;
+};
+
 export const request = <T = any>(options: RequestOptions): Promise<ApiResponse<T>> => {
   return new Promise((resolve, reject) => {
     if (options.showLoading) {
@@ -74,8 +80,14 @@ export const request = <T = any>(options: RequestOptions): Promise<ApiResponse<T
             resolve(apiRes);
           }
         } else {
-          wx.showToast({ title: '网络请求失败', icon: 'none' });
-          reject(new Error(`HTTP Error: ${res.statusCode}`));
+          const apiRes = res.data as Partial<ApiResponse<any>> | undefined;
+          const message = apiRes?.message || `请求失败(${res.statusCode})`;
+          const error = new Error(message) as ApiError;
+          error.code = apiRes?.code;
+          error.statusCode = res.statusCode;
+          error.traceId = apiRes?.traceId;
+          wx.showToast({ title: message, icon: 'none' });
+          reject(error);
         }
       },
       fail: (err) => {

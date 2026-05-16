@@ -23,6 +23,8 @@
 .user-info {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-width: 0;
 }
 .user-name {
   font-size: 40rpx;
@@ -32,12 +34,18 @@
 }
 .user-desc {
   font-size: 26rpx;
-  color: #999;
+  color: #666;
+  margin-top: 6rpx;
+}
+.meta-list {
+  display: flex;
+  flex-direction: column;
 }
 .section {
   background: #fff;
   padding: 32rpx;
   border-radius: 16rpx;
+  margin-bottom: 24rpx;
 }
 .section-title {
   font-size: 32rpx;
@@ -56,4 +64,7 @@
   border-color: #e33e33;
   color: #e33e33;
   background: rgba(227, 62, 51, 0.05);
+}
+.account-section {
+  background: #fafafa;
 }

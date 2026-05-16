@@ -1,5 +1,5 @@
 .container {
-  padding-bottom: 40rpx;
+  padding-bottom: 180rpx;
 }
 .list {
   padding: 24rpx;
@@ -28,9 +28,17 @@
   color: #666;
   margin-bottom: 8rpx;
 }
-.highlight {
-  color: #e33e33;
+.stock-qty {
   font-weight: bold;
+}
+.stock-normal {
+  color: #2BA471;
+}
+.stock-warning {
+  color: #E37318;
+}
+.stock-danger {
+  color: #e33e33;
 }
 .time {
   font-size: 24rpx;
@@ -45,14 +53,21 @@
 }
 .fab-btn {
   position: fixed;
-  bottom: 48rpx;
-  right: 48rpx;
+  bottom: calc(48rpx + env(safe-area-inset-bottom));
+  right: 32rpx;
   background: #2BA471;
   color: #fff;
   border-radius: 48rpx;
-  padding: 24rpx 48rpx;
+  padding: 22rpx 36rpx;
   box-shadow: 0 8rpx 24rpx rgba(43,164,113,0.3);
   font-weight: bold;
-  font-size: 32rpx;
+  font-size: 30rpx;
   z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+.fab-plus {
+  font-size: 36rpx;
+  line-height: 1;
 }

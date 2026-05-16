@@ -3,6 +3,12 @@ import { WorkOrder, PaymentMethod } from '../../types/workOrder';
 import { hasPermission } from '../../utils/permission';
 import Toast from 'tdesign-miniprogram/toast/index';
 
+const PAYABLE_STATUSES = ['PENDING_ACCEPT', 'ACCEPTED', 'PART_ORDERED', 'PART_ARRIVED'];
+
+function isPayableStatus(status?: string) {
+  return !!status && PAYABLE_STATUSES.indexOf(status) >= 0;
+}
+
 Page({
   data: {
     orderId: '',
@@ -11,6 +17,7 @@ Page({
     hasSettlePermission: false,
     hasPaymentPermission: false,
     hasRefundPermission: false,
+    isPayableStatus: false,
     
     // Cancel
     cancelDialogVisible: false,
@@ -57,7 +64,10 @@ Page({
   async fetchData() {
     try {
       const res = await getWorkOrderDetail(this.data.orderId);
-      this.setData({ order: res.data });
+      this.setData({
+        order: res.data,
+        isPayableStatus: isPayableStatus(res.data?.status)
+      });
     } catch (e) {
       wx.showToast({ title: '加载失败', icon: 'none' });
     }
@@ -108,6 +118,11 @@ Page({
 
   // --- Record Payment ---
   openPaymentPopup() {
+    if (!isPayableStatus(this.data.order?.status)) {
+      Toast({ context: this, selector: '#t-toast', message: '当前工单状态不允许记录支付，请先提交工单', icon: 'close-circle' });
+      return;
+    }
+
     this.setData({
       paymentDialogVisible: true,
       paymentForm: {
@@ -243,6 +258,11 @@ Page({
 
   // --- Settle Work Order ---
   openSettleDialog() {
+    if (!isPayableStatus(this.data.order?.status)) {
+      Toast({ context: this, selector: '#t-toast', message: '当前工单状态不允许结算', icon: 'close-circle' });
+      return;
+    }
+
     this.setData({
       settleDialogVisible: true,
       settleRemark: ''

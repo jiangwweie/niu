@@ -9,10 +9,10 @@
         </view>
         <view class="card-body">
           <text class="info">编码: {{item.partCode}}</text>
-          <text class="info">可用库存: <text class="highlight">{{item.availableQty}}</text></text>
+          <text class="info">可用库存: <text class="stock-qty {{item.availableQtyClass}}">{{item.availableQty}}</text></text>
           <text class="info">实际库存: {{item.actualQty}}</text>
           <text class="info">预占库存: {{item.reservedQty}}</text>
-          <text class="info time">更新时间: {{item.lastChangedAt || '-'}}</text>
+          <text class="info time">更新时间: {{item.lastChangedAtText}}</text>
         </view>
       </view>
     </block>
@@ -20,6 +20,7 @@
   </view>
 
   <view class="fab-btn" wx:if="{{hasInboundPermission}}" bindtap="goToInbound">
-    <text>+ 入库</text>
+    <text class="fab-plus">+</text>
+    <text>入库</text>
   </view>
 </view>

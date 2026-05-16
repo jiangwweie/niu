@@ -1,7 +1,7 @@
 <view class="container">
   <view class="header-card">
     <text class="greeting">你好，{{userName}}</text>
-    <text class="subtitle">欢迎来到小牛售后工作台</text>
+    <text class="subtitle">门店售后工作台</text>
   </view>
 
   <view class="section">
@@ -30,7 +30,7 @@
     <text class="section-title">待办与提醒</text>
     <view class="empty-card">
       <t-icon name="info-circle" size="48rpx" color="#ccc" />
-      <text class="empty-text">当前暂无待处理任务</text>
+      <text class="empty-text">暂无待处理事项</text>
     </view>
   </view>
 </view>

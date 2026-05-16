@@ -8,6 +8,9 @@ Page({
   data: {
     currentUser: null,
     displayUserName: '',
+    displayAccount: '',
+    displayRole: '',
+    displayStore: '',
     mockUsers: [],
     apiMode: API_MODE,
     hasReimbursementPermission: false
@@ -28,10 +31,16 @@ Page({
     try {
       name = decodeURIComponent(name);
     } catch(e) {}
+    const account = user?.userName || user?.username || '';
+    const role = user?.roleName || (Array.isArray(user?.roleCodes) ? user.roleCodes.join(' / ') : user?.roleCode || '');
+    const store = user?.storeName || (user?.storeId != null ? `门店ID ${user.storeId}` : '');
 
     this.setData({
       currentUser: user,
       displayUserName: name,
+      displayAccount: account,
+      displayRole: role,
+      displayStore: store,
       hasReimbursementPermission: hasPermission('REIMBURSEMENT_SUBMIT')
     });
   },
