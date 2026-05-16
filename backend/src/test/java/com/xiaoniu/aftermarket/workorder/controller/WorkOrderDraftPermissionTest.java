@@ -13,6 +13,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -67,15 +68,17 @@ class WorkOrderDraftPermissionTest {
     }
 
     @Test
-    void createDraft_withWorkOrderCreate_not403() throws Exception {
+    void createDraft_withWorkOrderCreate_passesAuth() throws Exception {
         String token = tokenWithWorkOrderCreate();
         mockMvc.perform(post("/api/admin/work-orders/drafts")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"storeId\":1,\"customerName\":\"测试\"}"))
+                        .content("{\"customerNameSnapshot\":\"测试\",\"customerPhoneSnapshot\":\"13800000000\","
+                                + "\"repairItem\":\"换电池\"}"))
                 .andExpect(result -> {
                     int s = result.getResponse().getStatus();
-                    assert s != 403 : "WORK_ORDER_CREATE user should not get 403 on createDraft";
+                    assertNotEquals(403, s, "createDraft should not be 403, got: " + s);
+                    assertNotEquals(500, s, "createDraft should not be 500, got: " + s);
                 });
     }
 
@@ -126,15 +129,16 @@ class WorkOrderDraftPermissionTest {
     }
 
     @Test
-    void updateDraft_withWorkOrderUpdate_not403() throws Exception {
+    void updateDraft_withWorkOrderUpdate_passesAuth() throws Exception {
         String token = tokenWithWorkOrderUpdate();
         mockMvc.perform(put("/api/admin/work-orders/1/draft")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"customerName\":\"测试\"}"))
+                        .content("{\"customerNameSnapshot\":\"测试\"}"))
                 .andExpect(result -> {
                     int s = result.getResponse().getStatus();
-                    assert s != 403 : "WORK_ORDER_UPDATE user should not get 403 on updateDraft";
+                    assertNotEquals(403, s, "updateDraft should not be 403, got: " + s);
+                    assertNotEquals(500, s, "updateDraft should not be 500, got: " + s);
                 });
     }
 }

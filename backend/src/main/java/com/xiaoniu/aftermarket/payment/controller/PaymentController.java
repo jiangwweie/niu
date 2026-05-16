@@ -39,7 +39,7 @@ public class PaymentController {
 
     // ========== Work-order scoped ==========
 
-    @PreAuthorize("hasAuthority('FINANCE_VIEW')")
+    @PreAuthorize("hasAnyAuthority('FINANCE_VIEW','PAYMENT_RECORD')")
     @GetMapping("/api/admin/work-orders/{workOrderId}/payments")
     public ApiResponse<java.util.List<PaymentRecordResponse>> listPaymentsByWorkOrder(
             @PathVariable Long workOrderId) {
@@ -68,7 +68,7 @@ public class PaymentController {
         return ApiResponse.success(paymentId);
     }
 
-    @PreAuthorize("hasAuthority('FINANCE_VIEW')")
+    @PreAuthorize("hasAnyAuthority('FINANCE_VIEW','PAYMENT_RECORD')")
     @GetMapping("/api/admin/work-orders/{workOrderId}/payment-summary")
     public ApiResponse<PaymentSummaryResponse> getPaymentSummary(
             @PathVariable Long workOrderId) {
@@ -79,7 +79,7 @@ public class PaymentController {
 
     // ========== Global page query ==========
 
-    @PreAuthorize("hasAuthority('FINANCE_VIEW')")
+    @PreAuthorize("hasAnyAuthority('FINANCE_VIEW','PAYMENT_RECORD')")
     @GetMapping("/api/admin/payments")
     public ApiResponse<PageResponse<PaymentQueryResponse>> listPayments(
             @RequestParam(required = false) String workOrderNo,

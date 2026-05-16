@@ -59,9 +59,25 @@ class SensitiveReadPermissionTest {
         ).token();
     }
 
-    // --- Payment read: FINANCE_VIEW required ---
+    private String tokenWithPaymentRecord() {
+        return jwtProvider.generateAccessToken(
+                new AuthenticatedUser(5L, 1L, "pay01", "孙收款",
+                        Set.of("PAYMENT"), Set.of("PAYMENT_RECORD")),
+                Instant.now(), Instant.now().plusSeconds(3600)
+        ).token();
+    }
+
+    private String tokenWithRefundRecord() {
+        return jwtProvider.generateAccessToken(
+                new AuthenticatedUser(6L, 1L, "refund01", "周退款",
+                        Set.of("REFUND"), Set.of("REFUND_RECORD")),
+                Instant.now(), Instant.now().plusSeconds(3600)
+        ).token();
+    }
+
+    // --- Payment read: FINANCE_VIEW or PAYMENT_RECORD ---
     @Test
-    void listPayments_withoutFinanceView_returns403() throws Exception {
+    void listPayments_withoutEither_returns403() throws Exception {
         String token = tokenWithoutFinanceView();
         mockMvc.perform(get("/api/admin/payments")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
@@ -70,19 +86,26 @@ class SensitiveReadPermissionTest {
     }
 
     @Test
-    void listPayments_withFinanceView_not403() throws Exception {
+    void listPayments_withFinanceView_isOk() throws Exception {
         String token = tokenWithFinanceView();
         mockMvc.perform(get("/api/admin/payments")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
-                .andExpect(result -> {
-                    int s = result.getResponse().getStatus();
-                    assert s != 403 : "FINANCE_VIEW user should not get 403 on listPayments";
-                });
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"));
     }
 
-    // --- Refund read: FINANCE_VIEW required ---
     @Test
-    void listRefunds_withoutFinanceView_returns403() throws Exception {
+    void listPayments_withPaymentRecord_isOk() throws Exception {
+        String token = tokenWithPaymentRecord();
+        mockMvc.perform(get("/api/admin/payments")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"));
+    }
+
+    // --- Refund read: FINANCE_VIEW or REFUND_RECORD ---
+    @Test
+    void listRefunds_withoutEither_returns403() throws Exception {
         String token = tokenWithoutFinanceView();
         mockMvc.perform(get("/api/admin/refunds")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
@@ -91,14 +114,21 @@ class SensitiveReadPermissionTest {
     }
 
     @Test
-    void listRefunds_withFinanceView_not403() throws Exception {
+    void listRefunds_withFinanceView_isOk() throws Exception {
         String token = tokenWithFinanceView();
         mockMvc.perform(get("/api/admin/refunds")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
-                .andExpect(result -> {
-                    int s = result.getResponse().getStatus();
-                    assert s != 403 : "FINANCE_VIEW user should not get 403 on listRefunds";
-                });
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"));
+    }
+
+    @Test
+    void listRefunds_withRefundRecord_isOk() throws Exception {
+        String token = tokenWithRefundRecord();
+        mockMvc.perform(get("/api/admin/refunds")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"));
     }
 
     // --- Official settlement read: OFFICIAL_SETTLEMENT_MANAGE or FINANCE_VIEW ---
@@ -112,25 +142,21 @@ class SensitiveReadPermissionTest {
     }
 
     @Test
-    void listOfficialAfterSales_withOfficialSettlementManage_not403() throws Exception {
+    void listOfficialAfterSales_withOfficialSettlementManage_isOk() throws Exception {
         String token = tokenWithOfficialSettlementManage();
         mockMvc.perform(get("/api/admin/official-after-sales")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
-                .andExpect(result -> {
-                    int s = result.getResponse().getStatus();
-                    assert s != 403 : "OFFICIAL_SETTLEMENT_MANAGE user should not get 403";
-                });
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"));
     }
 
     @Test
-    void listOfficialAfterSales_withFinanceView_not403() throws Exception {
+    void listOfficialAfterSales_withFinanceView_isOk() throws Exception {
         String token = tokenWithFinanceView();
         mockMvc.perform(get("/api/admin/official-after-sales")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
-                .andExpect(result -> {
-                    int s = result.getResponse().getStatus();
-                    assert s != 403 : "FINANCE_VIEW user should not get 403";
-                });
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"));
     }
 
     // --- Reimbursement read: REIMBURSEMENT_CONFIRM or FINANCE_VIEW ---
@@ -144,24 +170,20 @@ class SensitiveReadPermissionTest {
     }
 
     @Test
-    void listReimbursements_withReimbursementConfirm_not403() throws Exception {
+    void listReimbursements_withReimbursementConfirm_isOk() throws Exception {
         String token = tokenWithReimbursementConfirm();
         mockMvc.perform(get("/api/admin/reimbursements")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
-                .andExpect(result -> {
-                    int s = result.getResponse().getStatus();
-                    assert s != 403 : "REIMBURSEMENT_CONFIRM user should not get 403";
-                });
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"));
     }
 
     @Test
-    void listReimbursements_withFinanceView_not403() throws Exception {
+    void listReimbursements_withFinanceView_isOk() throws Exception {
         String token = tokenWithFinanceView();
         mockMvc.perform(get("/api/admin/reimbursements")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
-                .andExpect(result -> {
-                    int s = result.getResponse().getStatus();
-                    assert s != 403 : "FINANCE_VIEW user should not get 403";
-                });
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"));
     }
 }

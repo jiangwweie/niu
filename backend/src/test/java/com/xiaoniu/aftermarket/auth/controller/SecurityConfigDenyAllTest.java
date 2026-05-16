@@ -1,5 +1,6 @@
 package com.xiaoniu.aftermarket.auth.controller;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -30,9 +31,9 @@ class SecurityConfigDenyAllTest {
                         .header("X-User-Id", "1")
                         .header("X-Store-Id", "1"))
                 .andExpect(result -> {
-                    int status = result.getResponse().getStatus();
-                    assert status == 403 || status == 401
-                            : "Unmatched path should be denied (401 or 403), got " + status;
+                    int s = result.getResponse().getStatus();
+                    assertTrue(s == 403 || s == 401,
+                            "Unmatched path should be denied (401 or 403), got: " + s);
                 });
     }
 
@@ -43,7 +44,7 @@ class SecurityConfigDenyAllTest {
     }
 
     @Test
-    void authLoginEndpointIsPublic() throws Exception {
+    void authMeEndpointRequiresAuthentication() throws Exception {
         mockMvc.perform(get("/api/auth/me"))
                 .andExpect(status().isUnauthorized());
     }

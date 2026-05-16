@@ -53,14 +53,12 @@ class InventoryReadPermissionTest {
     }
 
     @Test
-    void listStocks_withInventoryView_not403() throws Exception {
+    void listStocks_withInventoryView_isOk() throws Exception {
         String token = tokenWithInventoryView();
         mockMvc.perform(get("/api/admin/inventory/stocks")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
-                .andExpect(result -> {
-                    int status = result.getResponse().getStatus();
-                    assert status != 403 : "INVENTORY_VIEW user should not get 403 on listStocks";
-                });
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"));
     }
 
     @Test

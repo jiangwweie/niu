@@ -38,7 +38,7 @@ public class RefundController {
 
     // ========== Work-order scoped ==========
 
-    @PreAuthorize("hasAuthority('FINANCE_VIEW')")
+    @PreAuthorize("hasAnyAuthority('FINANCE_VIEW','REFUND_RECORD')")
     @GetMapping("/api/admin/work-orders/{workOrderId}/refunds")
     public ApiResponse<java.util.List<RefundRecordResponse>> listRefundsByWorkOrder(
             @PathVariable Long workOrderId) {
@@ -69,7 +69,7 @@ public class RefundController {
 
     // ========== Global page query ==========
 
-    @PreAuthorize("hasAuthority('FINANCE_VIEW')")
+    @PreAuthorize("hasAnyAuthority('FINANCE_VIEW','REFUND_RECORD')")
     @GetMapping("/api/admin/refunds")
     public ApiResponse<PageResponse<RefundQueryResponse>> listRefunds(
             @RequestParam(required = false) String workOrderNo,

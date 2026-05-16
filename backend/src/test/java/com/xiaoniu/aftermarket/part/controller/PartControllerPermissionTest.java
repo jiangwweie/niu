@@ -1,5 +1,6 @@
 package com.xiaoniu.aftermarket.part.controller;
 
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -118,14 +119,14 @@ class PartControllerPermissionTest {
     void withPartManageCanAccessWriteEndpoints() throws Exception {
         String token = tokenWithPartManage();
 
-        // Verify PART_MANAGE permission bypasses @PreAuthorize — response is NOT 403
         mockMvc.perform(post("/api/admin/parts/official")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"partName\":\"perm-test-official\",\"officialPartNo\":\"PT001\"}"))
                 .andExpect(result -> {
-                    int status = result.getResponse().getStatus();
-                    assert status != 403 : "PART_MANAGE user should not get 403 on createOfficialPart";
+                    int s = result.getResponse().getStatus();
+                    assertNotEquals(403, s, "createOfficialPart should not be 403, got: " + s);
+                    assertNotEquals(500, s, "createOfficialPart should not be 500, got: " + s);
                 });
 
         mockMvc.perform(post("/api/admin/parts/third-party")
@@ -133,8 +134,9 @@ class PartControllerPermissionTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"partName\":\"perm-test-third-party\"}"))
                 .andExpect(result -> {
-                    int status = result.getResponse().getStatus();
-                    assert status != 403 : "PART_MANAGE user should not get 403 on createThirdPartyPart";
+                    int s = result.getResponse().getStatus();
+                    assertNotEquals(403, s, "createThirdPartyPart should not be 403, got: " + s);
+                    assertNotEquals(500, s, "createThirdPartyPart should not be 500, got: " + s);
                 });
 
         mockMvc.perform(put("/api/admin/parts/999")
@@ -142,22 +144,25 @@ class PartControllerPermissionTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(result -> {
-                    int status = result.getResponse().getStatus();
-                    assert status != 403 : "PART_MANAGE user should not get 403 on updatePart";
+                    int s = result.getResponse().getStatus();
+                    assertNotEquals(403, s, "updatePart should not be 403, got: " + s);
+                    assertNotEquals(500, s, "updatePart should not be 500, got: " + s);
                 });
 
         mockMvc.perform(post("/api/admin/parts/999/enable")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(result -> {
-                    int status = result.getResponse().getStatus();
-                    assert status != 403 : "PART_MANAGE user should not get 403 on enablePart";
+                    int s = result.getResponse().getStatus();
+                    assertNotEquals(403, s, "enablePart should not be 403, got: " + s);
+                    assertNotEquals(500, s, "enablePart should not be 500, got: " + s);
                 });
 
         mockMvc.perform(post("/api/admin/parts/999/disable")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(result -> {
-                    int status = result.getResponse().getStatus();
-                    assert status != 403 : "PART_MANAGE user should not get 403 on disablePart";
+                    int s = result.getResponse().getStatus();
+                    assertNotEquals(403, s, "disablePart should not be 403, got: " + s);
+                    assertNotEquals(500, s, "disablePart should not be 500, got: " + s);
                 });
     }
 
@@ -168,15 +173,17 @@ class PartControllerPermissionTest {
         mockMvc.perform(get("/api/admin/parts")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(result -> {
-                    int status = result.getResponse().getStatus();
-                    assert status != 403 : "Query endpoints should not require PART_MANAGE";
+                    int s = result.getResponse().getStatus();
+                    assertNotEquals(403, s, "listParts should not be 403, got: " + s);
+                    assertNotEquals(500, s, "listParts should not be 500, got: " + s);
                 });
 
         mockMvc.perform(get("/api/admin/parts/1")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(result -> {
-                    int status = result.getResponse().getStatus();
-                    assert status != 403 : "Query endpoints should not require PART_MANAGE";
+                    int s = result.getResponse().getStatus();
+                    assertNotEquals(403, s, "getPart should not be 403, got: " + s);
+                    assertNotEquals(500, s, "getPart should not be 500, got: " + s);
                 });
     }
 }
