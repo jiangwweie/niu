@@ -1,64 +1,135 @@
+/* ===== 工单页 ===== */
+page {
+  background: #f5f6f8;
+}
+
 .container {
-  padding-bottom: 180rpx;
+  padding-bottom: calc(120rpx + env(safe-area-inset-bottom));
 }
+
+/* 顶部工具栏 */
+.toolbar {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 24rpx 0;
+  gap: 0;
+}
+.search-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 状态筛选 tabs */
+.status-tabs {
+  display: flex;
+  white-space: nowrap;
+  padding: 16rpx 24rpx 0;
+}
+.tab-item {
+  display: inline-block;
+  padding: 12rpx 28rpx;
+  font-size: 26rpx;
+  color: #666;
+  border-radius: 32rpx;
+  background: #fff;
+  margin-right: 16rpx;
+  border: 2rpx solid #eee;
+  transition: all 0.2s;
+}
+.tab-active {
+  color: #df001f;
+  border-color: #df001f;
+  background: rgba(223,0,31,0.05);
+  font-weight: 600;
+}
+
+/* 列表 */
 .list {
-  padding: 24rpx;
+  padding: 20rpx 24rpx 0;
 }
+
+/* 工单卡片 */
 .card {
   background: #fff;
   border-radius: 16rpx;
-  padding: 32rpx;
-  margin-bottom: 24rpx;
-  box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.05);
+  padding: 24rpx 28rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04);
 }
-.card-header {
+
+.card-row {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  margin-bottom: 12rpx;
+}
+.card-row-top {
+  justify-content: space-between;
   margin-bottom: 16rpx;
 }
-.title {
+
+.order-no {
   font-size: 30rpx;
   font-weight: bold;
-  color: #333;
+  color: #222;
 }
-.card-body {
-  display: flex;
-  flex-direction: column;
+
+/* 状态标签（自定义色彩，不依赖 t-tag） */
+.status-tag {
+  font-size: 22rpx;
+  padding: 4rpx 16rpx;
+  border-radius: 20rpx;
+  font-weight: 500;
 }
-.info {
-  font-size: 28rpx;
-  color: #666;
-  margin-bottom: 8rpx;
-}
-.time {
+.status-DRAFT       { background: #e8f0fe; color: #0052d9; }
+.status-PENDING_ACCEPT { background: #fff3cd; color: #e37318; }
+.status-ACCEPTED    { background: #e8f0fe; color: #0052d9; }
+.status-PART_ORDERED { background: #fff3cd; color: #e37318; }
+.status-PART_ARRIVED { background: #e6f4ed; color: #2ba471; }
+.status-SETTLED     { background: #e6f4ed; color: #2ba471; }
+.status-CANCELLED   { background: #f5f5f5; color: #999; }
+
+.info-label {
   font-size: 24rpx;
   color: #999;
-  margin-top: 8rpx;
+  margin-right: 8rpx;
 }
-.empty {
-  text-align: center;
-  padding: 60rpx;
-  color: #999;
+.info-val {
+  font-size: 26rpx;
+  color: #333;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ml { margin-left: 20rpx; }
+
+.money {
   font-size: 28rpx;
+  font-weight: 600;
+  color: #333;
+  margin-right: 4rpx;
 }
-.fab-btn {
-  position: fixed;
-  bottom: calc(48rpx + env(safe-area-inset-bottom));
-  right: 32rpx;
-  background: #df001f;
-  color: #fff;
-  border-radius: 48rpx;
-  padding: 22rpx 36rpx;
-  box-shadow: 0 8rpx 24rpx rgba(223,0,31,0.3);
-  font-weight: bold;
-  font-size: 30rpx;
-  z-index: 100;
+.money-green { color: #2ba471; }
+
+.card-time {
+  font-size: 22rpx;
+  color: #bbb;
+  margin-top: 4rpx;
+}
+
+/* 空状态 */
+.empty {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8rpx;
+  padding: 100rpx 0 60rpx;
 }
-.fab-plus {
-  font-size: 36rpx;
-  line-height: 1;
+.empty-icon {
+  font-size: 80rpx;
+  margin-bottom: 24rpx;
+}
+.empty-text {
+  font-size: 28rpx;
+  color: #999;
 }

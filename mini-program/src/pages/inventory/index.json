@@ -1,7 +1,8 @@
 {
-  "navigationBarTitleText": "库存查询",
+  "navigationBarTitleText": "库存",
   "usingComponents": {
     "t-search": "tdesign-miniprogram/search/search",
-    "t-tag": "tdesign-miniprogram/tag/tag"
+    "t-tag": "tdesign-miniprogram/tag/tag",
+    "t-button": "tdesign-miniprogram/button/button"
   }
 }

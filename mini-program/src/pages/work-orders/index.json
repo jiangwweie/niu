@@ -1,7 +1,8 @@
 {
-  "navigationBarTitleText": "工单查询",
+  "navigationBarTitleText": "工单",
   "usingComponents": {
     "t-search": "tdesign-miniprogram/search/search",
-    "t-tag": "tdesign-miniprogram/tag/tag"
+    "t-tag": "tdesign-miniprogram/tag/tag",
+    "t-button": "tdesign-miniprogram/button/button"
   }
 }

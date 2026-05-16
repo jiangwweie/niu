@@ -1,26 +1,61 @@
 <view class="container">
-  <t-search value="{{keyword}}" placeholder="搜索配件编码 / 名称" bind:change="onSearch" bind:clear="onClear" />
-  
-  <view class="list">
-    <block wx:if="{{stocks.length > 0}}">
-      <view class="card" wx:for="{{stocks}}" wx:key="id" bindtap="onTapDetail" data-id="{{item.partId}}">
-        <view class="card-header">
-          <text class="title">{{item.partName}}</text>
-        </view>
-        <view class="card-body">
-          <text class="info">编码: {{item.partCode}}</text>
-          <text class="info">可用库存: <text class="stock-qty {{item.availableQtyClass}}">{{item.availableQty}}</text></text>
-          <text class="info">实际库存: {{item.actualQty}}</text>
-          <text class="info">预占库存: {{item.reservedQty}}</text>
-          <text class="info time">更新时间: {{item.lastChangedAtText}}</text>
-        </view>
-      </view>
-    </block>
-    <view wx:else class="empty">暂无库存数据</view>
+  <!-- 顶部搜索 + 入库按钮 -->
+  <view class="toolbar">
+    <view class="search-wrap">
+      <t-search value="{{keyword}}" placeholder="搜索配件编码 / 名称" bind:change="onSearch" bind:clear="onClear" />
+    </view>
+    <t-button
+      wx:if="{{hasInboundPermission}}"
+      theme="success"
+      size="small"
+      icon="add"
+      bind:tap="goToInbound"
+      custom-style="flex-shrink:0;margin-left:12rpx;"
+    >入库</t-button>
   </view>
 
-  <view class="fab-btn" wx:if="{{hasInboundPermission}}" bindtap="goToInbound">
-    <text class="fab-plus">+</text>
-    <text>入库</text>
+  <!-- 库存列表 -->
+  <view class="list">
+    <block wx:if="{{stocks.length > 0}}">
+      <view class="card" wx:for="{{stocks}}" wx:key="id">
+        <!-- 配件名 + 来源标签 -->
+        <view class="card-row card-row-top">
+          <text class="part-name">{{item.partName}}</text>
+          <view class="source-tag source-{{item.partSource}}">{{item.sourceText}}</view>
+        </view>
+
+        <!-- 编码 -->
+        <text class="part-code">{{item.partCode}}</text>
+
+        <!-- 库存三列 -->
+        <view class="stock-row">
+          <view class="stock-cell">
+            <text class="stock-label">可用</text>
+            <text class="stock-val {{item.availableQtyClass}}">{{item.availableQty}}</text>
+          </view>
+          <view class="stock-divider" />
+          <view class="stock-cell">
+            <text class="stock-label">实际</text>
+            <text class="stock-val">{{item.actualQty}}</text>
+          </view>
+          <view class="stock-divider" />
+          <view class="stock-cell">
+            <text class="stock-label">预占</text>
+            <text class="stock-val {{item.reservedQty > 0 ? 'stock-reserved' : ''}}">{{item.reservedQty}}</text>
+          </view>
+        </view>
+
+        <!-- 低库存 / 缺货提示 -->
+        <view class="stock-alert stock-alert-danger" wx:if="{{item.availableQty <= 0}}">⚠ 缺货</view>
+        <view class="stock-alert stock-alert-warning" wx:elif="{{item.availableQty <= 3}}">⚠ 低库存</view>
+
+        <!-- 更新时间（有值才显示） -->
+        <text class="card-time" wx:if="{{item.lastChangedAtText}}">{{item.lastChangedAtText}}</text>
+      </view>
+    </block>
+    <view wx:else class="empty">
+      <view class="empty-icon">📦</view>
+      <text class="empty-text">暂无库存数据</text>
+    </view>
   </view>
 </view>

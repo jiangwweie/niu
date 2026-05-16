@@ -1,8 +1,6 @@
 <view class="container">
-  <view class="header user-card">
-    <view class="avatar-wrap">
-      <t-icon name="user-circle" size="96rpx" color="#df001f" />
-    </view>
+  <view class="user-card">
+    <view class="avatar-wrap">👤</view>
     <view class="user-info" wx:if="{{currentUser}}">
       <text class="user-name">{{displayUserName}}</text>
       <view class="meta-list">
@@ -13,8 +11,9 @@
     </view>
   </view>
 
+  <!-- mock 模式下的用户切换，real 模式自动隐藏 -->
   <view class="section" wx:if="{{apiMode === 'mock'}}">
-    <text class="section-title">切换 Mock 用户</text>
+    <text class="section-title">切换用户（调试）</text>
     <view class="user-list">
       <view 
         class="user-item {{currentUser.userId === item.userId ? 'active' : ''}}" 
@@ -28,9 +27,9 @@
     </view>
   </view>
 
-  <view class="section">
+  <view class="section" wx:if="{{hasReimbursementPermission}}">
     <text class="section-title">常用功能</text>
-    <t-button wx:if="{{hasReimbursementPermission}}" theme="primary" block size="large" bind:tap="goToReimbursement">提交报销</t-button>
+    <t-button theme="primary" block size="large" bind:tap="goToReimbursement">提交报销申请</t-button>
   </view>
 
   <view class="section account-section">

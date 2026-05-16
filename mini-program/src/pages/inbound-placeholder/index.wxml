@@ -14,7 +14,7 @@
       <view class="change-hint">点击更换配件</view>
     </view>
 
-    <t-button block theme="default" icon="scan" bind:tap="handleScan" style="margin-top: 16px;">扫码识别 (Mock)</t-button>
+    <t-button block theme="default" icon="scan" disabled bind:tap="handleScan" style="margin-top: 16px; opacity: 0.5;">扫码识别（暂未开放，请手动选择配件）</t-button>
   </view>
 
   <view class="section" wx:if="{{!successResult}}">

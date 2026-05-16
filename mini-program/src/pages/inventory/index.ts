@@ -3,9 +3,15 @@ import { getInventoryStocks } from '../../api/inventory';
 import { InventoryStock } from '../../types/inventory';
 import { hasPermission } from '../../utils/permission';
 
+const SOURCE_TEXT_MAP: Record<string, string> = {
+  OFFICIAL: '官方',
+  THIRD_PARTY: '第三方',
+};
+
 type InventoryListItem = InventoryStock & {
   availableQtyClass: string;
   lastChangedAtText: string;
+  sourceText: string;
 };
 
 function pad(value: number) {
@@ -13,15 +19,15 @@ function pad(value: number) {
 }
 
 function formatDateTime(value?: string) {
-  if (!value || value === '-') return '暂无';
+  if (!value || value === '-') return '';
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '暂无';
+  if (Number.isNaN(date.getTime())) return '';
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 function getAvailableQtyClass(availableQty: number) {
   if (availableQty <= 0) return 'stock-danger';
-  if (availableQty <= 2) return 'stock-warning';
+  if (availableQty <= 3) return 'stock-warning';
   return 'stock-normal';
 }
 
@@ -55,11 +61,18 @@ Page({
   async fetchData() {
     try {
       const res = await getInventoryStocks({ keyword: this.data.keyword });
-      const stocks = (res.data.records || []).map((item: InventoryStock) => ({
-        ...item,
-        availableQtyClass: getAvailableQtyClass(Number(item.availableQty || 0)),
-        lastChangedAtText: formatDateTime(item.lastChangedAt)
-      }));
+      const stocks = (res.data.records || []).map((item: InventoryStock) => {
+        const avail = Number(item.availableQty || 0);
+        // 兼容 partSource / source 两种字段名
+        const sourceKey = (item as any).partSource || (item as any).source || '';
+        return {
+          ...item,
+          availableQtyClass: getAvailableQtyClass(avail),
+          lastChangedAtText: formatDateTime(item.lastChangedAt),
+          sourceText: SOURCE_TEXT_MAP[sourceKey] || '',
+          partSource: sourceKey,
+        };
+      });
       this.setData({ stocks });
     } catch (e) {
       wx.showToast({ title: '加载失败', icon: 'none' });
@@ -67,6 +80,6 @@ Page({
   },
   onTapDetail(e: any) {
     const id = e.currentTarget.dataset.id;
-    wx.showToast({ title: `查看库存 ${id}`, icon: 'none' });
+    wx.showToast({ title: `配件 ID: ${id}`, icon: 'none' });
   }
 });

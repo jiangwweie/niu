@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "配件入库",
+  "navigationBarTitleText": "入库",
   "usingComponents": {
     "t-input": "tdesign-miniprogram/input/input",
     "t-button": "tdesign-miniprogram/button/button",

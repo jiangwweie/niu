@@ -13,19 +13,8 @@ const STATUS_TEXT_MAP: Record<string, string> = {
   CANCELLED: '已取消'
 };
 
-const STATUS_THEME_MAP: Record<string, string> = {
-  DRAFT: 'default',
-  PENDING_ACCEPT: 'warning',
-  ACCEPTED: 'primary',
-  PART_ORDERED: 'warning',
-  PART_ARRIVED: 'success',
-  SETTLED: 'success',
-  CANCELLED: 'danger'
-};
-
 type WorkOrderListItem = WorkOrder & {
   statusText: string;
-  statusTheme: string;
   createdAtText: string;
 };
 
@@ -34,16 +23,18 @@ function pad(value: number) {
 }
 
 function formatDateTime(value?: string) {
-  if (!value) return '暂无';
+  if (!value) return '';
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '暂无';
+  if (Number.isNaN(date.getTime())) return '';
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 Page({
   data: {
     keyword: '',
+    activeStatus: '',
     orders: [] as WorkOrderListItem[],
+    filteredOrders: [] as WorkOrderListItem[],
     hasCreateOrderPermission: false,
   },
   onShow() {
@@ -67,16 +58,28 @@ Page({
     this.setData({ keyword: '' });
     this.fetchData();
   },
+  onTabChange(e: any) {
+    const status = e.currentTarget.dataset.status as string;
+    this.setData({ activeStatus: status });
+    this.applyFilter();
+  },
+  applyFilter() {
+    const { orders, activeStatus } = this.data;
+    const filtered = activeStatus
+      ? orders.filter(o => o.status === activeStatus)
+      : orders;
+    this.setData({ filteredOrders: filtered });
+  },
   async fetchData() {
     try {
       const res = await getWorkOrders({ keyword: this.data.keyword });
       const orders = (res.data.records || []).map((item: WorkOrder) => ({
         ...item,
         statusText: STATUS_TEXT_MAP[item.status] || item.status || '未知',
-        statusTheme: STATUS_THEME_MAP[item.status] || 'default',
         createdAtText: formatDateTime(item.createdAt)
       }));
       this.setData({ orders });
+      this.applyFilter();
     } catch (e) {
       wx.showToast({ title: '加载失败', icon: 'none' });
     }
