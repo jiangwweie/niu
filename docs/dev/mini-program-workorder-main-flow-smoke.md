@@ -14,8 +14,8 @@
 ## 2. 闭环链路支持情况
 1. **创建/编辑草稿**：由 `create-work-order-placeholder` 提供。
 2. **提交工单**：动态 import 修复后已可用，走 `POST /api/staff/work-orders/{id}/submit`。
-3. **记录支付**：已在工单详情页 `work-order-detail` 补齐对应 Action Bar 的 `onPayment` 事件和弹窗 UI。点击确认后调用 `POST /api/staff/work-orders/{id}/payments`。支付不会自动结算工单。
-4. **结算工单**：已在详情页补齐弹窗 UI。确认后调用 `POST /api/staff/work-orders/{id}/settle`。
+3. **记录支付**：已在工单详情页 `work-order-detail` 补齐对应 Action Bar 的 `openPaymentPopup` 事件和 `t-popup` 弹窗 UI。底部按钮只打开弹窗，点击“确认记录”后调用 `POST /api/staff/work-orders/{id}/payments`。支付不会自动结算工单。
+4. **结算工单**：已在详情页补齐 `t-dialog` 确认弹窗 UI。底部按钮只打开确认弹窗，点击确认后调用 `POST /api/staff/work-orders/{id}/settle`。
 5. **状态刷新**：所有上述接口请求成功（`then` 块）后，均触发 `this.fetchData()` 刷新当前页的渲染详情，其中 `receivedAmount` 和 `status` 等将得到立竿见影的刷新。
 
 ## 3. 权限与状态控制边界
@@ -24,16 +24,19 @@
 - **记录退款**：仅受 `REFUND_RECORD` 权限控制，不根据工单状态隐藏。SETTLED 后仍可记录退款（仅记录财务影响，不反结算、不回滚库存、不改变工单状态）；CANCELLED 后也可记录退款（用于定金退款等场景）。最终是否可退、退款金额上限由后端判断。
 - 不存在任何前端自设条件去判断库存该不该预占/该不该扣减。后端接口如果不满足实收条件，直接从 request wrapper 中打出现有 toast 错误阻挡流转。
 - Request wrapper / auth / config 均原样保留，未做任何更改。
+- `work-order-detail/index.json` 已注册当前详情页使用的 `t-button`、`t-input`、`t-popup`、`t-dialog`、`t-toast`、`t-icon` 等 TDesign 组件；页面保留 `<t-toast id="t-toast" />`，Toast selector 统一为 `#t-toast`。
 
 ## 4. 手工验证用例 (Smoke)
 1. 登录员工测试号。
 2. 进入“工单”，创建并提交一份全新的草稿，确保不再爆红/提示模块无法拉取。
-3. 进入该新工单详情，点击“记录支付”，录入 100 元现金。弹窗关闭后，上方“实收金额”实时刷新为 `¥100`。
-4. 点击“结算工单”。若费用达标，系统正常扣减库存并在页面标记“SETTLED”。如果实收金额不足，后端返回 400，前端 Toast“报错内容：xxx”，状态依然保留在 `PENDING_SETTLEMENT` 等阶段。
-5. 后退返回列表时，通过 `onShow` 的生命周期拉取最新列表，同步刷新卡片状态。
+3. 进入该新工单详情，默认不直接显示支付/退款表单；点击“记录支付”，底部 `t-popup` 正常弹出。不填金额点击确认时，Toast 正常提示且不报 selector 错误。
+4. 录入 100 元现金并确认。接口成功后弹窗关闭，上方“实收金额”实时刷新为 `¥100`。
+5. 点击“结算工单”，`t-dialog` 确认弹窗正常显示。若费用达标，系统正常扣减库存并在页面标记“SETTLED”。如果实收金额不足，后端返回 400，前端 Toast“报错内容：xxx”，状态依然保留在 `PENDING_SETTLEMENT` 等阶段。
+6. 后退返回列表时，通过 `onShow` 的生命周期拉取最新列表，同步刷新卡片状态。
 
 ## 5. 类型与编译结果
-- `npx tsc --noEmit` 报告 39 个错误，全部为 tdesign/miniprogram 类型定义和 placeholder import 的历史问题，本次未新增。
+- 仓库根目录执行 `npx tsc --noEmit` 会命中 npx 的 TypeScript 占位提示，因为根目录没有 `package.json`。
+- 在 `mini-program` 目录执行 `npx tsc --noEmit` 报告 38 个错误，集中在 tdesign/miniprogram 类型定义、缺失三方类型和既有 Toast/Dialog import 类型解析问题，本次未新增业务代码类型错误。
 
 ## 6. 遗留与排除说明
 - M17 范围内无阻塞遗留；扫码、临时配件、车架号历史、微信/手机号登录等属于后续增强。

@@ -4,7 +4,7 @@
     <aside class="sidebar">
       <div class="sidebar-logo">
         <div class="logo-icon">NIU</div>
-        <span class="logo-text">管理端骨架 v1.0</span>
+        <span class="logo-text">小牛售后管理</span>
       </div>
       
       <el-menu
@@ -12,23 +12,30 @@
         :default-active="activeMenu"
         router
       >
-        <el-menu-item index="/dashboard"><template #title>Dashboard 首页</template></el-menu-item>
+        <el-menu-item index="/dashboard"><template #title>首页</template></el-menu-item>
         <el-menu-item index="/work-order"><template #title>工单管理</template></el-menu-item>
         <el-menu-item index="/parts"><template #title>配件管理</template></el-menu-item>
-        <el-menu-item index="/inventory"><template #title>库存管理</template></el-menu-item>
-        <el-menu-item index="/payment"><template #title>支付记录</template></el-menu-item>
-        <el-menu-item index="/refund"><template #title>退款记录</template></el-menu-item>
-        <el-menu-item index="/settlement"><template #title>官方售后结算</template></el-menu-item>
-        <el-menu-item index="/reimbursement"><template #title>报销台账</template></el-menu-item>
+        <el-menu-item
+          v-if="hasAnyPermission(['INVENTORY_VIEW', 'INVENTORY_INBOUND', 'INVENTORY_ADJUST'])"
+          index="/inventory"
+        ><template #title>库存管理</template></el-menu-item>
+        <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/payment"><template #title>支付记录</template></el-menu-item>
+        <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/refund"><template #title>退款记录</template></el-menu-item>
+        <el-menu-item
+          v-if="hasAnyPermission(['OFFICIAL_SETTLEMENT_MANAGE', 'FINANCE_VIEW'])"
+          index="/settlement"
+        ><template #title>官方售后结算</template></el-menu-item>
+        <el-menu-item
+          v-if="hasAnyPermission(['REIMBURSEMENT_CONFIRM', 'FINANCE_VIEW'])"
+          index="/reimbursement"
+        ><template #title>报销台账</template></el-menu-item>
         <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/finance"><template #title>财务报表</template></el-menu-item>
-        <el-menu-item index="/dictionary"><template #title>字典配置</template></el-menu-item>
-        <el-menu-item index="/user"><template #title>用户与权限</template></el-menu-item>
-        <el-menu-item index="/export"><template #title>Excel 导出中心</template></el-menu-item>
+        <el-menu-item v-if="hasPermission('DICT_MANAGE')" index="/dictionary"><template #title>字典配置</template></el-menu-item>
+        <!-- 用户与权限、Excel 导出中心：当前后端未完成，从菜单隐藏 -->
       </el-menu>
       
       <div class="sidebar-footer">
-        <div class="version-label">当前版本</div>
-        <div class="version-text">Phase 1 Build: 20231024</div>
+        <div class="version-text">MVP 试运行版</div>
       </div>
     </aside>
 
@@ -38,26 +45,25 @@
       <header class="app-header">
         <div class="header-left">
           <h1>小牛维修售后库存管理系统</h1>
-          <span class="version-badge">Admin v1.0</span>
+          <span class="version-badge">Admin</span>
         </div>
         <div class="header-right">
           <div class="store-info">
             <span class="dot"></span>
             <span class="label">当前门店:</span>
-            <span class="value">{{ userStore.currentStoreName }}</span>
+            <span class="value">{{ storeDisplayName }}</span>
           </div>
           <div class="divider"></div>
           <el-dropdown trigger="click">
             <div class="user-profile">
-              <div class="avatar">AD</div>
+              <div class="avatar">{{ avatarText }}</div>
               <div class="user-meta">
                 <span class="username">{{ authStore.user?.realName || authStore.user?.username || '未登录' }}</span>
-                <span class="role">NIU-OFFICER</span>
+                <span class="role">{{ roleDisplayName }}</span>
               </div>
             </div>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item>个人中心</el-dropdown-item>
                 <el-dropdown-item divided @click="handleLogout">退出登录</el-dropdown-item>
               </el-dropdown-menu>
             </template>
@@ -74,11 +80,9 @@
         </router-view>
       </main>
 
-      <!-- Footer Stats -->
+      <!-- Footer -->
       <footer class="app-footer">
-        <div>Environment: Development</div>
-        <div>System Status: Operational</div>
-        <div>Copyright &copy; 2023 NIU Service Management</div>
+        <div>小牛维修售后管理系统</div>
       </footer>
     </div>
   </div>
@@ -87,20 +91,45 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useUserStore } from '@/stores/user';
 import { useAuthStore } from '@/stores/auth';
 import { logout } from '@/api/auth';
-import { hasPermission } from '@/utils/permission';
+import { hasPermission, hasAnyPermission } from '@/utils/permission';
 import { ElMessage } from 'element-plus';
 
 const route = useRoute();
 const router = useRouter();
-const userStore = useUserStore();
 const authStore = useAuthStore();
 
 // Highlight current menu item
 const activeMenu = computed(() => {
   return route.path;
+});
+
+// Role code → Chinese display mapping
+const ROLE_LABEL_MAP: Record<string, string> = {
+  SUPER_ADMIN: '系统超管',
+  STORE_ADMIN: '门店管理员',
+  FINANCE: '财务',
+  TECHNICIAN_FRONT_DESK: '前台员工',
+};
+
+const roleDisplayName = computed(() => {
+  const codes = authStore.user?.roleCodes;
+  if (!codes || codes.length === 0) return '当前用户';
+  return ROLE_LABEL_MAP[codes[0]] || codes[0];
+});
+
+// Store display: no hardcoded name
+const storeDisplayName = computed(() => {
+  const storeId = authStore.user?.storeId;
+  if (!storeId) return '默认门店';
+  return `门店 ID: ${storeId}`;
+});
+
+// Avatar: first char of realName or username
+const avatarText = computed(() => {
+  const name = authStore.user?.realName || authStore.user?.username || '';
+  return name.charAt(0).toUpperCase() || 'U';
 });
 
 const handleLogout = async () => {
@@ -170,16 +199,9 @@ const handleLogout = async () => {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.version-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  opacity: 0.5;
-}
-
 .version-text {
-  font-size: 12px;
-  color: #6b7280;
+  font-size: 11px;
+  color: #4b5563;
 }
 
 /* Menu Customization */
@@ -303,7 +325,7 @@ const handleLogout = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: bold;
   color: #4b5563;
 }
@@ -336,17 +358,15 @@ const handleLogout = async () => {
 
 /* Footer */
 .app-footer {
-  height: 40px;
+  height: 36px;
   background-color: white;
   border-top: 1px solid #e5e7eb;
-  color: #9ca3af;
+  color: #d1d5db;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding: 0 32px;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+  font-size: 11px;
   flex-shrink: 0;
 }
 

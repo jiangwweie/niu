@@ -1,348 +1,165 @@
 <template>
-  <PageContainer title="Dashboard 首页" description="门店今日经营概览">
-    <el-alert
-      title="当前 Dashboard 为 mock 展示，真实统计数据 API 尚未实现。"
-      type="info"
-      show-icon
-      :closable="false"
-      style="margin-bottom: 20px;"
-    />
-    <div v-if="loading" class="loading-state">
-      <el-icon class="is-loading"><Loading /></el-icon> 加载中...
-    </div>
-    
-    <div v-else-if="dashboardData" class="dashboard-content">
-      
-      <!-- Top Stats Cards -->
-      <el-row :gutter="20" class="stats-row">
-        <el-col :span="4">
-          <el-card shadow="hover" class="stat-card">
-            <div class="stat-header text-gray"><el-icon><Document /></el-icon> 今日工单数</div>
-            <div class="stat-value">{{ dashboardData.stats.todayOrders }}</div>
-          </el-card>
-        </el-col>
-        <el-col :span="4">
-          <el-card shadow="hover" class="stat-card">
-            <div class="stat-header text-primary"><el-icon><Money /></el-icon> 客户支付收入</div>
-            <div class="stat-value"><MoneyText :amount="dashboardData.stats.todayCustomerIncome" bold type="primary" /></div>
-          </el-card>
-        </el-col>
-        <el-col :span="4">
-          <el-card shadow="hover" class="stat-card">
-            <div class="stat-header text-success"><el-icon><Finished /></el-icon> 官方结算收入</div>
-            <div class="stat-value"><MoneyText :amount="dashboardData.stats.todayOfficialIncome" bold type="success" /></div>
-          </el-card>
-        </el-col>
-        <el-col :span="4">
-          <el-card shadow="hover" class="stat-card">
-            <div class="stat-header text-info"><el-icon><List /></el-icon> 待确认报销</div>
-            <div class="stat-value">{{ dashboardData.stats.pendingReimbursement }}</div>
-          </el-card>
-        </el-col>
-        <el-col :span="4">
-          <el-card shadow="hover" class="stat-card">
-            <div class="stat-header text-warning"><el-icon><Warning /></el-icon> 库存预警数量</div>
-            <div class="stat-value text-orange">{{ dashboardData.stats.inventoryWarnings }}</div>
-          </el-card>
-        </el-col>
-        <el-col :span="4">
-          <el-card shadow="hover" class="stat-card">
-            <div class="stat-header text-danger"><el-icon><WarningFilled /></el-icon> 未结算工单</div>
-            <div class="stat-value text-red">{{ dashboardData.stats.unsettledOrders }}</div>
+  <PageContainer title="首页" description="欢迎使用小牛维修售后库存管理系统">
+    <!-- 欢迎信息 -->
+    <el-card shadow="never" class="welcome-card">
+      <div class="welcome-content">
+        <div class="welcome-icon">👋</div>
+        <div class="welcome-text">
+          <div class="welcome-title">
+            {{ greeting }}，{{ authStore.user?.realName || authStore.user?.username || '管理员' }}
+          </div>
+          <div class="welcome-sub">当前角色：{{ roleDisplayName }}　｜　统计模块待接入真实接口，请通过左侧菜单查看真实业务数据。</div>
+        </div>
+      </div>
+    </el-card>
+
+    <!-- 快捷入口 -->
+    <div class="shortcut-section">
+      <div class="section-title">常用功能</div>
+      <el-row :gutter="16">
+        <el-col
+          v-for="item in shortcuts"
+          :key="item.path"
+          :xs="12" :sm="8" :md="6" :lg="4"
+          style="margin-bottom: 16px;"
+        >
+          <el-card
+            shadow="hover"
+            class="shortcut-card"
+            @click="router.push(item.path)"
+          >
+            <div class="shortcut-icon">{{ item.icon }}</div>
+            <div class="shortcut-label">{{ item.label }}</div>
           </el-card>
         </el-col>
       </el-row>
-
-      <el-row :gutter="20" class="mid-row">
-        <!-- Income Split -->
-        <el-col :span="12">
-          <el-card shadow="hover" class="split-card">
-            <template #header>
-              <div class="card-header">
-                <span>今日收入拆分</span>
-              </div>
-            </template>
-            <div class="income-split-container">
-              <div class="income-section">
-                <div class="income-title">客户支付收入 ( <MoneyText :amount="dashboardData.stats.todayCustomerIncome" type="primary" /> )</div>
-                <div class="income-details">
-                  <div class="income-item">
-                    <span>配件收入:</span>
-                    <MoneyText :amount="dashboardData.incomeSplit.customerIncome.parts" />
-                  </div>
-                  <div class="income-item">
-                    <span>人工费收入:</span>
-                    <MoneyText :amount="dashboardData.incomeSplit.customerIncome.labor" />
-                  </div>
-                  <div class="income-item">
-                    <span>其他收入:</span>
-                    <MoneyText :amount="dashboardData.incomeSplit.customerIncome.other" />
-                  </div>
-                </div>
-              </div>
-              <el-divider direction="vertical" class="split-divider" />
-              <div class="income-section">
-                <div class="income-title">官方结算收入 ( <MoneyText :amount="dashboardData.stats.todayOfficialIncome" type="success" /> )</div>
-                <div class="income-details">
-                  <div class="income-item">
-                    <span>官方结算收入:</span>
-                    <MoneyText :amount="dashboardData.incomeSplit.officialIncome.amount" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-
-        <!-- Todos -->
-        <el-col :span="12">
-          <el-card shadow="hover" class="todo-card">
-            <template #header>
-              <div class="card-header">
-                <span>待办提醒</span>
-              </div>
-            </template>
-            <div class="todo-list">
-              <div class="todo-item" v-for="todo in dashboardData.todos" :key="todo.id">
-                <span class="todo-content">{{ todo.content }}</span>
-                <el-badge :value="todo.count" :type="todo.type === 'inventory' ? 'warning' : 'danger'" />
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
-
-      <el-row :gutter="20" class="bottom-row">
-        <!-- Recent Orders -->
-        <el-col :span="12">
-          <el-card shadow="hover" class="table-card">
-            <template #header>
-              <div class="card-header">
-                <span>最近工单</span>
-              </div>
-            </template>
-            <el-table :data="dashboardData.recentOrders" style="width: 100%" size="small">
-              <el-table-column prop="orderNo" label="工单编号" width="140" />
-              <el-table-column prop="customerName" label="客户姓名" width="80" />
-              <el-table-column prop="scooterModel" label="车型" width="100" />
-              <el-table-column label="状态" width="80">
-                <template #default="{ row }">
-                  <StatusTag :status="row.status" :label="getStatusLabel(row.status)" />
-                </template>
-              </el-table-column>
-              <el-table-column label="金额详情">
-                <template #default="{ row }">
-                  <div class="amount-column">
-                    <div>应收: <MoneyText :amount="row.receivableAmount" /></div>
-                    <div>实收: <MoneyText :amount="row.actualAmount" type="success" /></div>
-                  </div>
-                </template>
-              </el-table-column>
-              <el-table-column label="其他" width="100">
-                <template #default="{ row }">
-                  <el-tag size="small" :type="row.isOfficial ? 'success' : 'info'">{{ row.isOfficial ? '官方售后' : '普通单' }}</el-tag>
-                </template>
-              </el-table-column>
-            </el-table>
-          </el-card>
-        </el-col>
-
-        <!-- Inventory Warnings -->
-        <el-col :span="12">
-          <el-card shadow="hover" class="table-card">
-            <template #header>
-              <div class="card-header">
-                <span>库存预警</span>
-              </div>
-            </template>
-            <el-table :data="dashboardData.inventoryWarnings" style="width: 100%" size="small">
-              <el-table-column prop="partCode" label="配件编码" width="120" />
-              <el-table-column prop="partName" label="配件名称" />
-              <el-table-column label="可用库存" width="100">
-                <template #default="{ row }">
-                  <span class="text-red font-bold">{{ row.availableStock }}</span>
-                </template>
-              </el-table-column>
-              <el-table-column prop="warningThreshold" label="预警阈值" width="100" />
-              <el-table-column prop="location" label="库存位置" />
-            </el-table>
-          </el-card>
-        </el-col>
-      </el-row>
-
     </div>
   </PageContainer>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { computed } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
+import { hasPermission, hasAnyPermission } from '@/utils/permission';
 import PageContainer from '@/components/PageContainer.vue';
-import StatusTag from '@/components/StatusTag.vue';
-import MoneyText from '@/components/MoneyText.vue';
-import { getDashboardStats } from '@/api/dashboard';
-import type { DashboardData } from '@/types/dashboard';
 
-const loading = ref(true);
-const dashboardData = ref<DashboardData | null>(null);
+const router = useRouter();
+const authStore = useAuthStore();
 
-const fetchData = async () => {
-  try {
-    const res = await getDashboardStats();
-    if (res.code === 'SUCCESS') {
-      dashboardData.value = res.data;
-    }
-  } catch (error) {
-    console.error(error);
-  } finally {
-    loading.value = false;
-  }
+const ROLE_LABEL_MAP: Record<string, string> = {
+  SUPER_ADMIN: '系统超管',
+  STORE_ADMIN: '门店管理员',
+  FINANCE: '财务',
+  TECHNICIAN_FRONT_DESK: '前台员工',
 };
 
-const getStatusLabel = (status: string) => {
-  const map: Record<string, string> = {
-    pending: '待处理',
-    paid: '已支付',
-    completed: '已完成',
-    closed: '已关闭'
-  };
-  return map[status] || status;
-};
+const roleDisplayName = computed(() => {
+  const codes = authStore.user?.roleCodes;
+  if (!codes || codes.length === 0) return '当前用户';
+  return ROLE_LABEL_MAP[codes[0]] || codes[0];
+});
 
-onMounted(() => {
-  fetchData();
+const greeting = computed(() => {
+  const hour = new Date().getHours();
+  if (hour < 12) return '早上好';
+  if (hour < 18) return '下午好';
+  return '晚上好';
+});
+
+// Shortcut entries, only show what user has permission to see
+const shortcuts = computed(() => {
+  const all = [
+    { path: '/work-order', icon: '🔧', label: '工单管理', always: true },
+    { path: '/parts', icon: '📦', label: '配件管理', always: true },
+    {
+      path: '/inventory',
+      icon: '🗄️',
+      label: '库存管理',
+      always: false,
+      check: () => hasAnyPermission(['INVENTORY_VIEW', 'INVENTORY_INBOUND', 'INVENTORY_ADJUST']),
+    },
+    {
+      path: '/settlement',
+      icon: '🏢',
+      label: '官方售后结算',
+      always: false,
+      check: () => hasAnyPermission(['OFFICIAL_SETTLEMENT_MANAGE', 'FINANCE_VIEW']),
+    },
+    {
+      path: '/reimbursement',
+      icon: '💰',
+      label: '报销台账',
+      always: false,
+      check: () => hasAnyPermission(['REIMBURSEMENT_CONFIRM', 'FINANCE_VIEW']),
+    },
+    {
+      path: '/finance',
+      icon: '📊',
+      label: '财务报表',
+      always: false,
+      check: () => hasPermission('FINANCE_VIEW'),
+    },
+  ];
+
+  return all.filter(item => item.always || (item.check && item.check()));
 });
 </script>
 
 <style scoped>
-.loading-state {
+.welcome-card {
+  margin-bottom: 28px;
+}
+
+.welcome-content {
   display: flex;
   align-items: center;
-  justify-content: center;
-  height: 200px;
-  color: #909399;
-  font-size: 14px;
-}
-.is-loading {
-  animation: rotating 2s linear infinite;
-  margin-right: 8px;
-}
-@keyframes rotating {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  gap: 16px;
 }
 
-.dashboard-content {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+.welcome-icon {
+  font-size: 36px;
+  flex-shrink: 0;
 }
 
-.stats-row .el-col {
-  margin-bottom: 20px;
+.welcome-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #1f2937;
+  margin-bottom: 6px;
 }
-.stat-card {
-  height: 100px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-.stat-header {
+
+.welcome-sub {
   font-size: 13px;
+  color: #6b7280;
+}
+
+.section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 16px;
+}
+
+.shortcut-card {
+  cursor: pointer;
+  text-align: center;
+  padding: 8px 0;
+  transition: transform 0.15s;
+}
+
+.shortcut-card:hover {
+  transform: translateY(-2px);
+}
+
+.shortcut-icon {
+  font-size: 28px;
   margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.stat-value {
-  font-size: 24px;
-  font-weight: bold;
-  color: #303133;
-}
-.text-gray { color: #909399; }
-.text-primary { color: #409eff; }
-.text-success { color: #67c23a; }
-.text-warning { color: #e6a23c; }
-.text-danger { color: #f56c6c; }
-.text-info { color: #909399; }
-.text-orange { color: #ff9900; }
-.text-red { color: #f56c6c; }
-.font-bold { font-weight: bold; }
-
-.mid-row .el-col, .bottom-row .el-col {
-  margin-bottom: 20px;
 }
 
-.card-header {
-  font-weight: bold;
-  color: #303133;
-}
-
-.split-card, .todo-card, .table-card {
-  height: 100%;
-}
-
-.income-split-container {
-  display: flex;
-  align-items: flex-start;
-}
-
-.income-section {
-  flex: 1;
-  padding: 0 10px;
-}
-
-.split-divider {
-  height: auto;
-  min-height: 100px;
-  margin: 0 16px;
-}
-
-.income-title {
-  font-weight: bold;
-  font-size: 14px;
-  margin-bottom: 12px;
-  color: #303133;
-}
-
-.income-details {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.income-item {
-  display: flex;
-  justify-content: space-between;
+.shortcut-label {
   font-size: 13px;
-  color: #606266;
-  background-color: #f8f9fa;
-  padding: 8px 12px;
-  border-radius: 4px;
-}
-
-.todo-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.todo-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px;
-  background-color: #f8f9fa;
-  border-radius: 4px;
-  border-left: 3px solid #df001f;
-}
-
-.todo-content {
-  font-size: 14px;
-  color: #303133;
-}
-
-.amount-column {
-  font-size: 12px;
-  line-height: 1.5;
+  color: #374151;
+  font-weight: 500;
 }
 </style>

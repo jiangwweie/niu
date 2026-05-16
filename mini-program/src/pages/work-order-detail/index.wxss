@@ -116,3 +116,29 @@
   flex: 1;
   min-width: 160rpx;
 }
+.popup-panel {
+  background: #fff;
+  border-radius: 24rpx 24rpx 0 0;
+  overflow: hidden;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28rpx 32rpx;
+  border-bottom: 1rpx solid #eee;
+}
+.popup-title {
+  font-size: 34rpx;
+  font-weight: bold;
+  color: #222;
+}
+.popup-body {
+  max-height: 72vh;
+  box-sizing: border-box;
+}
+.popup-footer {
+  padding: 32rpx;
+  background: #fff;
+}

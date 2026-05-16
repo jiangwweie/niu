@@ -50,9 +50,9 @@
   <view class="action-section">
     <view class="action-grid">
       <t-button wx:if="{{hasCancelPermission && order.status !== 'CANCELLED' && order.status !== 'SETTLED'}}" theme="danger" variant="outline" bind:tap="onCancel">取消工单</t-button>
-      <t-button wx:if="{{hasPaymentPermission && order.status !== 'CANCELLED' && order.status !== 'SETTLED'}}" theme="primary" variant="outline" bind:tap="onPayment">记录支付</t-button>
-      <t-button wx:if="{{hasRefundPermission}}" theme="warning" variant="outline" bind:tap="onRefund">记录退款</t-button>
-      <t-button wx:if="{{hasSettlePermission && order.status !== 'CANCELLED' && order.status !== 'SETTLED'}}" theme="primary" bind:tap="onSettle">结算工单</t-button>
+      <t-button wx:if="{{hasPaymentPermission && order.status !== 'CANCELLED' && order.status !== 'SETTLED'}}" theme="primary" variant="outline" bind:tap="openPaymentPopup">记录支付</t-button>
+      <t-button wx:if="{{hasRefundPermission}}" theme="warning" variant="outline" bind:tap="openRefundPopup">记录退款</t-button>
+      <t-button wx:if="{{hasSettlePermission && order.status !== 'CANCELLED' && order.status !== 'SETTLED'}}" theme="primary" bind:tap="openSettleDialog">结算工单</t-button>
     </view>
   </view>
 </view>
@@ -78,11 +78,12 @@
   </t-dialog>
 
   <t-popup visible="{{paymentDialogVisible}}" bind:visible-change="onPaymentPopupVisibleChange" placement="bottom">
-    <view class="popup-header">
-      <text class="popup-title">记录线下支付</text>
-      <t-icon name="close" size="24" bind:tap="closePaymentDialog" />
-    </view>
-    <scroll-view scroll-y class="popup-body">
+    <view class="popup-panel">
+      <view class="popup-header">
+        <text class="popup-title">记录线下支付</text>
+        <t-icon name="close" size="24" bind:tap="closePaymentDialog" />
+      </view>
+      <scroll-view scroll-y class="popup-body">
       <view style="padding: 16px; background: #fff4e5; color: #d97100; font-size: 12px; margin-bottom: 16px;">
         当前仅记录线下/人工确认后的客户支付结果，不发起真实微信支付或支付宝支付。支付记录会更新工单实收金额，但不会自动结算工单。
       </view>
@@ -111,15 +112,17 @@
       <view class="popup-footer">
         <t-button theme="primary" block size="large" bind:tap="confirmRecordPayment" loading="{{paymentLoading}}">确认记录</t-button>
       </view>
-    </scroll-view>
+      </scroll-view>
+    </view>
   </t-popup>
 
   <t-popup visible="{{refundDialogVisible}}" bind:visible-change="onRefundPopupVisibleChange" placement="bottom">
-    <view class="popup-header">
-      <text class="popup-title">记录线下退款</text>
-      <t-icon name="close" size="24" bind:tap="closeRefundDialog" />
-    </view>
-    <scroll-view scroll-y class="popup-body">
+    <view class="popup-panel">
+      <view class="popup-header">
+        <text class="popup-title">记录线下退款</text>
+        <t-icon name="close" size="24" bind:tap="closeRefundDialog" />
+      </view>
+      <scroll-view scroll-y class="popup-body">
       <view style="padding: 16px; background: #fff4e5; color: #d97100; font-size: 12px; margin-bottom: 16px;">
         仅记录人工确认的退款结果，不接真实支付网关。不自动反结算工单，不触碰库存。
       </view>
@@ -147,7 +150,8 @@
       <view class="popup-footer">
         <t-button theme="danger" block size="large" bind:tap="confirmRecordRefund" loading="{{refundLoading}}">确认退款</t-button>
       </view>
-    </scroll-view>
+      </scroll-view>
+    </view>
   </t-popup>
 
   <t-dialog

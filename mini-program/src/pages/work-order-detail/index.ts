@@ -107,7 +107,7 @@ Page({
   },
 
   // --- Record Payment ---
-  onPayment() {
+  openPaymentPopup() {
     this.setData({
       paymentDialogVisible: true,
       paymentForm: {
@@ -116,6 +116,10 @@ Page({
         remark: ''
       }
     });
+  },
+
+  onPayment() {
+    this.openPaymentPopup();
   },
 
   closePaymentDialog() {
@@ -167,7 +171,7 @@ Page({
   },
 
   // --- Record Refund ---
-  onRefund() {
+  openRefundPopup() {
     this.setData({
       refundDialogVisible: true,
       refundForm: {
@@ -177,6 +181,10 @@ Page({
         remark: ''
       }
     });
+  },
+
+  onRefund() {
+    this.openRefundPopup();
   },
 
   closeRefundDialog() {
@@ -234,11 +242,15 @@ Page({
   },
 
   // --- Settle Work Order ---
-  onSettle() {
+  openSettleDialog() {
     this.setData({
       settleDialogVisible: true,
       settleRemark: ''
     });
+  },
+
+  onSettle() {
+    this.openSettleDialog();
   },
 
   onCancelSettleDialog() {
@@ -252,9 +264,10 @@ Page({
   onConfirmSettle() {
     if (this.data.settleLoading || !this.data.orderId) return;
     
-    this.setData({ settleLoading: true, settleDialogVisible: false });
+    this.setData({ settleLoading: true });
 
     settleWorkOrder(this.data.orderId as string, { remark: this.data.settleRemark }).then(res => {
+      this.setData({ settleDialogVisible: false });
       Toast({ context: this, selector: '#t-toast', message: '结算成功。', icon: 'check-circle' });
       this.fetchData();
     }).catch(err => {
