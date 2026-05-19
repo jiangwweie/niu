@@ -10,6 +10,8 @@ import com.xiaoniu.aftermarket.auth.security.JwtProvider;
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.common.enums.CommonStatus;
 import com.xiaoniu.aftermarket.common.exception.BusinessException;
+import com.xiaoniu.aftermarket.common.mapper.StoreMapper;
+import com.xiaoniu.aftermarket.common.persistence.entity.StoreEntity;
 import com.xiaoniu.aftermarket.user.entity.SysRoleEntity;
 import com.xiaoniu.aftermarket.user.entity.SysUserEntity;
 import com.xiaoniu.aftermarket.user.entity.SysUserRoleEntity;
@@ -33,6 +35,7 @@ public class AuthService {
     private final SysUserMapper userMapper;
     private final SysUserRoleMapper userRoleMapper;
     private final SysRoleMapper roleMapper;
+    private final StoreMapper storeMapper;
     private final PermissionQueryService permissionQueryService;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
@@ -40,12 +43,14 @@ public class AuthService {
     public AuthService(SysUserMapper userMapper,
                        SysUserRoleMapper userRoleMapper,
                        SysRoleMapper roleMapper,
+                       StoreMapper storeMapper,
                        PermissionQueryService permissionQueryService,
                        PasswordEncoder passwordEncoder,
                        JwtProvider jwtProvider) {
         this.userMapper = userMapper;
         this.userRoleMapper = userRoleMapper;
         this.roleMapper = roleMapper;
+        this.storeMapper = storeMapper;
         this.permissionQueryService = permissionQueryService;
         this.passwordEncoder = passwordEncoder;
         this.jwtProvider = jwtProvider;
@@ -100,6 +105,7 @@ public class AuthService {
         return new AuthUserResponse(
                 user.userId(),
                 user.storeId(),
+                storeName(user.storeId()),
                 user.username(),
                 user.realName(),
                 currentPasswordMustChange(user.userId()),
@@ -130,6 +136,14 @@ public class AuthService {
     private Boolean currentPasswordMustChange(Long userId) {
         SysUserEntity user = userMapper.selectById(userId);
         return user != null && Boolean.TRUE.equals(user.getPasswordMustChange());
+    }
+
+    private String storeName(Long storeId) {
+        if (storeId == null) {
+            return null;
+        }
+        StoreEntity store = storeMapper.selectById(storeId);
+        return store == null ? null : store.getStoreName();
     }
 
     private void validatePassword(String password) {

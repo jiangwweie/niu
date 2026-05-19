@@ -91,18 +91,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { logout } from '@/api/auth';
-import { getCurrentStore } from '@/api/store';
 import { hasPermission, hasAnyPermission } from '@/utils/permission';
 import { ElMessage } from 'element-plus';
 
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
-const storeName = ref('');
 
 // Highlight current menu item
 const activeMenu = computed(() => {
@@ -125,7 +123,7 @@ const roleDisplayName = computed(() => {
 
 // Store display: no hardcoded name
 const storeDisplayName = computed(() => {
-  return storeName.value || '默认门店';
+  return authStore.user?.storeName || '默认门店';
 });
 
 // Avatar: first char of realName or username
@@ -146,16 +144,6 @@ const handleLogout = async () => {
   }
 };
 
-onMounted(async () => {
-  if (hasPermission('STORE_MANAGE')) {
-    try {
-      const store = await getCurrentStore();
-      storeName.value = store.storeName || '默认门店';
-    } catch {
-      storeName.value = '默认门店';
-    }
-  }
-});
 </script>
 
 <style scoped>

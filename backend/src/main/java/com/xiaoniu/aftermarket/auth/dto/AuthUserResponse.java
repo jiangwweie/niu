@@ -5,6 +5,7 @@ import java.util.Set;
 public record AuthUserResponse(
         Long userId,
         Long storeId,
+        String storeName,
         String username,
         String realName,
         Boolean passwordMustChange,

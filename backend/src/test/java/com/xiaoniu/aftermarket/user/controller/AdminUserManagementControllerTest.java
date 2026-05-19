@@ -53,8 +53,13 @@ class AdminUserManagementControllerTest {
 
     @Test
     void normalUserCannotAccessUserManagement() throws Exception {
+        SysUserEntity user = userMapper.selectById(2L);
+        user.setStatus("ENABLED");
+        user.setPasswordMustChange(false);
+        userMapper.updateById(user);
+
         mockMvc.perform(get("/api/admin/users")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(1L, Set.of("WORK_ORDER_CREATE"))))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(2L, Set.of("WORK_ORDER_CREATE"))))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("FORBIDDEN"));
     }

@@ -4,6 +4,7 @@ import { ref } from 'vue';
 export interface AuthUser {
   userId: number;
   storeId: number;
+  storeName?: string;
   username: string;
   realName?: string;
   passwordMustChange?: boolean;

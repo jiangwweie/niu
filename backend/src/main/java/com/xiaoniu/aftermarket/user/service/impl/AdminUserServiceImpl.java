@@ -129,7 +129,7 @@ public class AdminUserServiceImpl implements AdminUserService {
         user.setUpdatedAt(LocalDateTime.now());
         user.setDeleted(0);
         userMapper.insert(user);
-        replaceRoles(user.getId(), currentStoreId, currentUserId, request.roleCodes());
+        replaceRoles(user.getId(), targetStoreId, currentUserId, request.roleCodes());
         return toDetail(user);
     }
 
@@ -299,15 +299,30 @@ public class AdminUserServiceImpl implements AdminUserService {
     }
 
     private void replaceRoles(Long userId, Long storeId, Long operatorId, List<String> roleCodes) {
-        userRoleMapper.delete(new LambdaQueryWrapper<SysUserRoleEntity>().eq(SysUserRoleEntity::getUserId, userId));
-        if (roleCodes == null || roleCodes.isEmpty()) {
-            return;
-        }
-        if (roleCodes.contains("SUPER_ADMIN") && !isSuperAdmin(operatorId)) {
+        Set<String> oldRoleCodes = roleCodesByUser(userId);
+        Set<String> newRoleCodes = roleCodes == null
+                ? Set.of()
+                : roleCodes.stream().filter(this::hasText).map(String::trim).collect(Collectors.toCollection(LinkedHashSet::new));
+
+        if ((oldRoleCodes.contains("SUPER_ADMIN") || newRoleCodes.contains("SUPER_ADMIN")) && !isSuperAdmin(operatorId)) {
             throw new BusinessException(ErrorCode.USER_OPERATION_NOT_ALLOWED);
         }
-        List<SysRoleEntity> roles = rolesByCodes(storeId, roleCodes);
-        if (roles.size() != new LinkedHashSet<>(roleCodes).size()) {
+        if (oldRoleCodes.contains("SUPER_ADMIN") && !newRoleCodes.contains("SUPER_ADMIN")) {
+            if (operatorId.equals(userId)) {
+                throw new BusinessException(ErrorCode.USER_OPERATION_NOT_ALLOWED);
+            }
+            SysUserEntity targetUser = userMapper.selectById(userId);
+            if (targetUser != null && enabledSuperAdminCount(targetUser.getStoreId()) <= 1) {
+                throw new BusinessException(ErrorCode.USER_DISABLE_NOT_ALLOWED);
+            }
+        }
+
+        userRoleMapper.delete(new LambdaQueryWrapper<SysUserRoleEntity>().eq(SysUserRoleEntity::getUserId, userId));
+        if (newRoleCodes.isEmpty()) {
+            return;
+        }
+        List<SysRoleEntity> roles = rolesByCodes(storeId, newRoleCodes.stream().toList());
+        if (roles.size() != newRoleCodes.size()) {
             throw new BusinessException(ErrorCode.ROLE_NOT_FOUND);
         }
         for (SysRoleEntity role : roles) {

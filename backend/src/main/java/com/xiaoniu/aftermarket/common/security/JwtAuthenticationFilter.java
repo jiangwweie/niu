@@ -4,11 +4,17 @@ import com.xiaoniu.aftermarket.auth.security.AuthenticatedUser;
 import com.xiaoniu.aftermarket.auth.security.JwtAuthenticationException;
 import com.xiaoniu.aftermarket.auth.security.JwtAuthenticationToken;
 import com.xiaoniu.aftermarket.auth.security.JwtProvider;
+import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.common.context.CurrentUser;
 import com.xiaoniu.aftermarket.common.context.CurrentUserContext;
+import com.xiaoniu.aftermarket.common.enums.CommonStatus;
 import com.xiaoniu.aftermarket.common.web.DevCurrentUserInterceptor;
+import com.xiaoniu.aftermarket.user.entity.SysRoleEntity;
+import com.xiaoniu.aftermarket.user.entity.SysUserRoleEntity;
 import com.xiaoniu.aftermarket.user.entity.SysUserEntity;
+import com.xiaoniu.aftermarket.user.mapper.SysRoleMapper;
 import com.xiaoniu.aftermarket.user.mapper.SysUserMapper;
+import com.xiaoniu.aftermarket.user.mapper.SysUserRoleMapper;
 import com.xiaoniu.aftermarket.user.service.PermissionQueryService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -16,6 +22,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.core.env.Environment;
@@ -36,17 +44,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final AuthenticationEntryPoint authenticationEntryPoint;
     private final PermissionQueryService permissionQueryService;
     private final SysUserMapper sysUserMapper;
+    private final SysUserRoleMapper sysUserRoleMapper;
+    private final SysRoleMapper sysRoleMapper;
+    private final SecurityApiResponseWriter responseWriter;
     private final boolean devHeaderFallbackEnabled;
 
     public JwtAuthenticationFilter(JwtProvider jwtProvider,
                                    AuthenticationEntryPoint authenticationEntryPoint,
                                    PermissionQueryService permissionQueryService,
                                    SysUserMapper sysUserMapper,
+                                   SysUserRoleMapper sysUserRoleMapper,
+                                   SysRoleMapper sysRoleMapper,
+                                   SecurityApiResponseWriter responseWriter,
                                    Environment environment) {
         this.jwtProvider = jwtProvider;
         this.authenticationEntryPoint = authenticationEntryPoint;
         this.permissionQueryService = permissionQueryService;
         this.sysUserMapper = sysUserMapper;
+        this.sysUserRoleMapper = sysUserRoleMapper;
+        this.sysRoleMapper = sysRoleMapper;
+        this.responseWriter = responseWriter;
         this.devHeaderFallbackEnabled = Arrays.stream(environment.getActiveProfiles())
                 .anyMatch(profile -> "dev".equals(profile) || "test".equals(profile));
     }
@@ -65,8 +82,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
             if (authorization != null && authorization.startsWith(BEARER_PREFIX)) {
                 AuthenticatedUser jwtUser = jwtProvider.parseAndValidate(authorization.substring(BEARER_PREFIX.length()));
-                verifyUserActive(jwtUser.userId());
-                authenticate(jwtUser);
+                SysUserEntity activeUser = requireActiveUser(jwtUser.userId());
+                if (Boolean.TRUE.equals(activeUser.getPasswordMustChange()) && !isPasswordChangeAllowedPath(request)) {
+                    responseWriter.write(response, HttpServletResponse.SC_FORBIDDEN, ErrorCode.PASSWORD_CHANGE_REQUIRED);
+                    return;
+                }
+                authenticate(buildCurrentUser(activeUser));
             } else if (devHeaderFallbackEnabled) {
                 authenticateFromDevHeaders(request);
             }
@@ -98,13 +119,50 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         ));
     }
 
-    private void verifyUserActive(Long userId) {
+    private SysUserEntity requireActiveUser(Long userId) {
         SysUserEntity user = sysUserMapper.selectById(userId);
         if (user == null
                 || (user.getDeleted() != null && user.getDeleted() != 0)
-                || !"ENABLED".equals(user.getStatus())) {
+                || !CommonStatus.ENABLED.name().equals(user.getStatus())) {
             throw new JwtAuthenticationException("User account is disabled or deleted");
         }
+        return user;
+    }
+
+    private AuthenticatedUser buildCurrentUser(SysUserEntity user) {
+        return new AuthenticatedUser(
+                user.getId(),
+                user.getStoreId(),
+                user.getUsername(),
+                user.getRealName(),
+                Set.copyOf(listRoleCodes(user.getId())),
+                Set.copyOf(permissionQueryService.listPermissionCodesByUserId(user.getId()))
+        );
+    }
+
+    private Set<String> listRoleCodes(Long userId) {
+        List<Long> roleIds = sysUserRoleMapper.selectList(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<SysUserRoleEntity>()
+                        .eq(SysUserRoleEntity::getUserId, userId)
+        ).stream().map(SysUserRoleEntity::getRoleId).toList();
+        if (roleIds.isEmpty()) {
+            return Set.of();
+        }
+        return sysRoleMapper.selectList(
+                        new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<SysRoleEntity>()
+                                .in(SysRoleEntity::getId, roleIds)
+                                .eq(SysRoleEntity::getStatus, CommonStatus.ENABLED.name())
+                                .eq(SysRoleEntity::getDeleted, 0)
+                ).stream()
+                .map(SysRoleEntity::getRoleCode)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    private boolean isPasswordChangeAllowedPath(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return "/api/auth/me".equals(path)
+                || "/api/auth/change-password".equals(path)
+                || "/api/auth/logout".equals(path);
     }
 
     private void authenticateFromDevHeaders(HttpServletRequest request) {

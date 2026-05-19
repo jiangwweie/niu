@@ -25,7 +25,6 @@ public class AdminStoreController {
         this.storeConfigService = storeConfigService;
     }
 
-    @PreAuthorize("hasAuthority('STORE_MANAGE')")
     @GetMapping("/current")
     public ApiResponse<StoreResponse> getCurrentStore() {
         AuthenticatedUser user = requireCurrentUser();

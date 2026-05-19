@@ -29,7 +29,12 @@ M17A 提供正式交付前最小可用的账号生命周期与单门店配置能
 - 管理员重置用户密码后，`passwordMustChange=true`。
 - 当前用户修改密码成功后，`passwordMustChange=false`，并写入 `passwordChangedAt`。
 - admin-web 登录后如果 `passwordMustChange=true`，强制跳转 `/change-password`。
+- 后端同时强制校验：`passwordMustChange=true` 时，只允许访问 `/api/auth/me`、`/api/auth/change-password`、`/api/auth/logout`，其他业务接口返回 `PASSWORD_CHANGE_REQUIRED`。
 - 修改密码后当前 token 继续有效，前端刷新 `/api/auth/me` 同步状态。
+
+## Token 与权限生效
+
+JWT 只作为用户身份凭证使用。每次请求都会检查账号仍为启用且未删除，并从数据库重新加载当前角色/权限构建 Spring Security authority。因此停用账号、删除账号、调整角色权限后，旧 token 不再继续拥有旧权限。
 
 ## 密码规则
 

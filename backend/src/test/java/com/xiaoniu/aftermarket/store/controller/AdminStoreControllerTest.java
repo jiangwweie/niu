@@ -30,13 +30,14 @@ class AdminStoreControllerTest {
     private JwtProvider jwtProvider;
 
     @Test
-    void storeGetPutRequireStoreManage() throws Exception {
+    void storeGetIsReadableButPutRequiresStoreManage() throws Exception {
         mockMvc.perform(get("/api/admin/store/current")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(Set.of("USER_MANAGE"))))
-                .andExpect(status().isForbidden());
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(2L, Set.of("USER_MANAGE"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.storeName").exists());
 
         mockMvc.perform(put("/api/admin/store/current")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(Set.of("USER_MANAGE")))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(2L, Set.of("USER_MANAGE")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"storeName\":\"交付门店\"}"))
                 .andExpect(status().isForbidden());
@@ -44,7 +45,7 @@ class AdminStoreControllerTest {
 
     @Test
     void storeGetPutWithPermissionWorks() throws Exception {
-        String token = token(Set.of("STORE_MANAGE"));
+        String token = token(1L, Set.of("STORE_MANAGE"));
 
         mockMvc.perform(get("/api/admin/store/current")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
@@ -62,9 +63,9 @@ class AdminStoreControllerTest {
                 .andExpect(jsonPath("$.data.contactName").value("店长"));
     }
 
-    private String token(Set<String> permissions) {
+    private String token(Long userId, Set<String> permissions) {
         return jwtProvider.generateAccessToken(
-                new AuthenticatedUser(1L, 1L, "admin01", "张三", Set.of("ADMIN"), permissions),
+                new AuthenticatedUser(userId, 1L, "user" + userId, "测试用户", Set.of("ADMIN"), permissions),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
     }

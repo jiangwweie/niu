@@ -28,8 +28,11 @@ import { onMounted, reactive, ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import PageContainer from '@/components/PageContainer.vue';
 import { getCurrentStore, updateCurrentStore } from '@/api/store';
+import { getMe } from '@/api/auth';
+import { useAuthStore } from '@/stores/auth';
 
 const saving = ref(false);
+const authStore = useAuthStore();
 const form = reactive({
   storeName: '',
   contactName: '',
@@ -51,6 +54,7 @@ const save = async () => {
   saving.value = true;
   try {
     await updateCurrentStore(form);
+    authStore.setUser(await getMe());
     ElMessage.success('门店信息已保存');
   } finally {
     saving.value = false;

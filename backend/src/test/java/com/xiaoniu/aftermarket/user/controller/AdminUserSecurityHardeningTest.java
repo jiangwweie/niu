@@ -8,6 +8,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.xiaoniu.aftermarket.auth.security.AuthenticatedUser;
 import com.xiaoniu.aftermarket.auth.security.JwtProvider;
+import com.xiaoniu.aftermarket.user.entity.SysUserEntity;
+import com.xiaoniu.aftermarket.user.mapper.SysUserMapper;
 import java.time.Instant;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -30,6 +32,9 @@ class AdminUserSecurityHardeningTest {
     @Autowired
     private JwtProvider jwtProvider;
 
+    @Autowired
+    private SysUserMapper sysUserMapper;
+
     // --- Fix 1: Disabled/deleted user existing token should be rejected ---
 
     @Test
@@ -48,6 +53,36 @@ class AdminUserSecurityHardeningTest {
         mockMvc.perform(get("/api/auth/me")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + deletedUserToken))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void staleJwtPermissionShouldNotGrantAccessAfterDbReload() throws Exception {
+        SysUserEntity user = sysUserMapper.selectById(2L);
+        user.setPasswordMustChange(false);
+        sysUserMapper.updateById(user);
+
+        mockMvc.perform(get("/api/admin/users")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(2L, 1L, Set.of("USER_MANAGE"))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+    }
+
+    @Test
+    void passwordMustChangeUserCanOnlyCallPasswordEndpoints() throws Exception {
+        SysUserEntity user = sysUserMapper.selectById(2L);
+        user.setPasswordMustChange(true);
+        sysUserMapper.updateById(user);
+
+        String token = token(2L, 1L, Set.of("WORK_ORDER_CREATE"));
+        mockMvc.perform(get("/api/auth/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.passwordMustChange").value(true));
+
+        mockMvc.perform(get("/api/admin/inventory/stocks")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("PASSWORD_CHANGE_REQUIRED"));
     }
 
     // --- Fix 2: Role escalation protection ---
@@ -181,6 +216,38 @@ class AdminUserSecurityHardeningTest {
                         .param("username", "cross_store_user"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.records").isEmpty());
+    }
+
+    @Test
+    void superAdminCreatesCrossStoreUserWithTargetStoreRole() throws Exception {
+        mockMvc.perform(post("/api/admin/users")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(1L, 1L, Set.of("USER_MANAGE")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username": "store2_created_by_super",
+                                  "realName": "跨店超管创建",
+                                  "phone": "13900007777",
+                                  "storeId": 2,
+                                  "roleCodes": ["STORE_ADMIN"],
+                                  "initialPassword": "Niu12345"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.storeId").value(2))
+                .andExpect(jsonPath("$.data.roleCodes[0]").value("STORE_ADMIN"));
+    }
+
+    @Test
+    void cannotRemoveLastSuperAdminRole() throws Exception {
+        mockMvc.perform(put("/api/admin/users/1")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(1L, 1L, Set.of("USER_MANAGE")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"realName":"张三","roleCodes":["ADMIN"]}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("USER_OPERATION_NOT_ALLOWED"));
     }
 
     private String token(Long userId, Long storeId, Set<String> permissions) {
