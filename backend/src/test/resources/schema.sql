@@ -55,7 +55,26 @@ CREATE TABLE IF NOT EXISTS sys_user (
     wechat_openid VARCHAR(128) NULL,
     wechat_unionid VARCHAR(128) NULL,
     status VARCHAR(32) NOT NULL,
+    password_must_change BOOLEAN NOT NULL DEFAULT FALSE,
+    password_changed_at TIMESTAMP NULL,
     last_login_at TIMESTAMP NULL,
+    remark VARCHAR(512) NULL,
+    created_by BIGINT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by BIGINT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS store (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    store_code VARCHAR(64) NOT NULL,
+    store_name VARCHAR(128) NOT NULL,
+    contact_name VARCHAR(64) NULL,
+    contact_phone VARCHAR(32) NULL,
+    address VARCHAR(255) NULL,
+    status VARCHAR(32) NOT NULL,
     remark VARCHAR(512) NULL,
     created_by BIGINT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

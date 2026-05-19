@@ -2,11 +2,14 @@ package com.xiaoniu.aftermarket.auth.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.xiaoniu.aftermarket.auth.dto.AuthUserResponse;
+import com.xiaoniu.aftermarket.auth.dto.ChangePasswordRequest;
 import com.xiaoniu.aftermarket.auth.dto.LoginResponse;
 import com.xiaoniu.aftermarket.auth.dto.PasswordLoginRequest;
 import com.xiaoniu.aftermarket.auth.security.AuthenticatedUser;
 import com.xiaoniu.aftermarket.auth.security.JwtProvider;
+import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.common.enums.CommonStatus;
+import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import com.xiaoniu.aftermarket.user.entity.SysRoleEntity;
 import com.xiaoniu.aftermarket.user.entity.SysUserEntity;
 import com.xiaoniu.aftermarket.user.entity.SysUserRoleEntity;
@@ -99,9 +102,42 @@ public class AuthService {
                 user.storeId(),
                 user.username(),
                 user.realName(),
+                currentPasswordMustChange(user.userId()),
                 user.roleCodes(),
                 user.permissionCodes()
         );
+    }
+
+    @Transactional
+    public void changePassword(Long userId, ChangePasswordRequest request) {
+        SysUserEntity user = userMapper.selectById(userId);
+        if (user == null || user.getDeleted() != null && user.getDeleted() != 0) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+        if (user.getPasswordHash() == null || user.getPasswordHash().isBlank()
+                || !passwordEncoder.matches(request.oldPassword(), user.getPasswordHash())) {
+            throw new BusinessException(ErrorCode.OLD_PASSWORD_INCORRECT);
+        }
+        validatePassword(request.newPassword());
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        user.setPasswordMustChange(false);
+        user.setPasswordChangedAt(LocalDateTime.now());
+        user.setUpdatedBy(userId);
+        user.setUpdatedAt(LocalDateTime.now());
+        userMapper.updateById(user);
+    }
+
+    private Boolean currentPasswordMustChange(Long userId) {
+        SysUserEntity user = userMapper.selectById(userId);
+        return user != null && Boolean.TRUE.equals(user.getPasswordMustChange());
+    }
+
+    private void validatePassword(String password) {
+        if (password == null || password.length() < 8
+                || !password.matches(".*[A-Za-z].*")
+                || !password.matches(".*\\d.*")) {
+            throw new BusinessException(ErrorCode.PASSWORD_INVALID);
+        }
     }
 
     private Set<String> listRoleCodes(Long userId) {

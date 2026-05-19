@@ -80,6 +80,18 @@ const routes: Array<RouteRecordRaw> = [
         meta: { title: '用户与权限' }
       },
       {
+        path: 'store',
+        name: 'Store',
+        component: () => import('@/views/store/index.vue'),
+        meta: { title: '门店配置' }
+      },
+      {
+        path: 'change-password',
+        name: 'ChangePassword',
+        component: () => import('@/views/change-password/index.vue'),
+        meta: { title: '修改密码' }
+      },
+      {
         path: 'export',
         name: 'Export',
         component: () => import('@/views/export/index.vue'),
@@ -117,6 +129,9 @@ router.beforeEach(async (to, from, next) => {
     try {
       const user = await getMe();
       authStore.setUser(user);
+      if (user.passwordMustChange && to.path !== '/change-password') {
+        return next({ path: '/change-password' });
+      }
       next();
     } catch (error) {
       // 401 interceptor handles redirection, but in case it doesn't:
@@ -124,6 +139,9 @@ router.beforeEach(async (to, from, next) => {
       next({ path: '/login', query: { redirect: to.fullPath } });
     }
   } else {
+    if (authStore.user.passwordMustChange && to.path !== '/change-password') {
+      return next({ path: '/change-password' });
+    }
     next();
   }
 });

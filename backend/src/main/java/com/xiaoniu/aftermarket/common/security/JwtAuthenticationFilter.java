@@ -7,6 +7,8 @@ import com.xiaoniu.aftermarket.auth.security.JwtProvider;
 import com.xiaoniu.aftermarket.common.context.CurrentUser;
 import com.xiaoniu.aftermarket.common.context.CurrentUserContext;
 import com.xiaoniu.aftermarket.common.web.DevCurrentUserInterceptor;
+import com.xiaoniu.aftermarket.user.entity.SysUserEntity;
+import com.xiaoniu.aftermarket.user.mapper.SysUserMapper;
 import com.xiaoniu.aftermarket.user.service.PermissionQueryService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -33,15 +35,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtProvider jwtProvider;
     private final AuthenticationEntryPoint authenticationEntryPoint;
     private final PermissionQueryService permissionQueryService;
+    private final SysUserMapper sysUserMapper;
     private final boolean devHeaderFallbackEnabled;
 
     public JwtAuthenticationFilter(JwtProvider jwtProvider,
                                    AuthenticationEntryPoint authenticationEntryPoint,
                                    PermissionQueryService permissionQueryService,
+                                   SysUserMapper sysUserMapper,
                                    Environment environment) {
         this.jwtProvider = jwtProvider;
         this.authenticationEntryPoint = authenticationEntryPoint;
         this.permissionQueryService = permissionQueryService;
+        this.sysUserMapper = sysUserMapper;
         this.devHeaderFallbackEnabled = Arrays.stream(environment.getActiveProfiles())
                 .anyMatch(profile -> "dev".equals(profile) || "test".equals(profile));
     }
@@ -59,7 +64,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
             if (authorization != null && authorization.startsWith(BEARER_PREFIX)) {
-                authenticate(jwtProvider.parseAndValidate(authorization.substring(BEARER_PREFIX.length())));
+                AuthenticatedUser jwtUser = jwtProvider.parseAndValidate(authorization.substring(BEARER_PREFIX.length()));
+                verifyUserActive(jwtUser.userId());
+                authenticate(jwtUser);
             } else if (devHeaderFallbackEnabled) {
                 authenticateFromDevHeaders(request);
             }
@@ -89,6 +96,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 user.username(),
                 user.permissionCodes()
         ));
+    }
+
+    private void verifyUserActive(Long userId) {
+        SysUserEntity user = sysUserMapper.selectById(userId);
+        if (user == null
+                || (user.getDeleted() != null && user.getDeleted() != 0)
+                || !"ENABLED".equals(user.getStatus())) {
+            throw new JwtAuthenticationException("User account is disabled or deleted");
+        }
     }
 
     private void authenticateFromDevHeaders(HttpServletRequest request) {

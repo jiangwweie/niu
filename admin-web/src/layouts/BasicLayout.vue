@@ -31,7 +31,8 @@
         ><template #title>报销台账</template></el-menu-item>
         <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/finance"><template #title>财务报表</template></el-menu-item>
         <el-menu-item v-if="hasPermission('DICT_MANAGE')" index="/dictionary"><template #title>字典配置</template></el-menu-item>
-        <!-- 用户与权限、Excel 导出中心：当前后端未完成，从菜单隐藏 -->
+        <el-menu-item v-if="hasAnyPermission(['USER_MANAGE', 'ROLE_MANAGE'])" index="/user"><template #title>用户与权限</template></el-menu-item>
+        <el-menu-item v-if="hasPermission('STORE_MANAGE')" index="/store"><template #title>门店配置</template></el-menu-item>
       </el-menu>
       
       <div class="sidebar-footer">
@@ -64,6 +65,7 @@
             </div>
             <template #dropdown>
               <el-dropdown-menu>
+                <el-dropdown-item @click="router.push('/change-password')">修改密码</el-dropdown-item>
                 <el-dropdown-item divided @click="handleLogout">退出登录</el-dropdown-item>
               </el-dropdown-menu>
             </template>
@@ -89,16 +91,18 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { logout } from '@/api/auth';
+import { getCurrentStore } from '@/api/store';
 import { hasPermission, hasAnyPermission } from '@/utils/permission';
 import { ElMessage } from 'element-plus';
 
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const storeName = ref('');
 
 // Highlight current menu item
 const activeMenu = computed(() => {
@@ -121,9 +125,7 @@ const roleDisplayName = computed(() => {
 
 // Store display: no hardcoded name
 const storeDisplayName = computed(() => {
-  const storeId = authStore.user?.storeId;
-  if (!storeId) return '默认门店';
-  return `门店 ID: ${storeId}`;
+  return storeName.value || '默认门店';
 });
 
 // Avatar: first char of realName or username
@@ -143,6 +145,17 @@ const handleLogout = async () => {
     router.push('/login');
   }
 };
+
+onMounted(async () => {
+  if (hasPermission('STORE_MANAGE')) {
+    try {
+      const store = await getCurrentStore();
+      storeName.value = store.storeName || '默认门店';
+    } catch {
+      storeName.value = '默认门店';
+    }
+  }
+});
 </script>
 
 <style scoped>

@@ -1,39 +1,61 @@
 export interface SystemUser {
-  id: string;
-  userNo: string;
-  name: string;
-  phone: string;
-  store: string;
-  roleName: string;
-  roleCode: string;
+  id: number;
+  storeId: number;
+  username: string;
+  realName: string;
+  phone?: string;
+  roleCodes: string[];
   enabled: boolean;
-  lastLoginTime?: string;
-  remark?: string;
+  passwordMustChange: boolean;
+  lastLoginAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  permissionCodes?: string[];
+  passwordChangedAt?: string;
 }
 
 export interface UserQuery {
-  name?: string;
-  phone?: string;
+  username?: string;
+  realName?: string;
   roleCode?: string;
   enabled?: boolean | string;
   pageNo: number;
   pageSize: number;
 }
 
+export interface CreateUserRequest {
+  username: string;
+  realName: string;
+  phone?: string;
+  roleCodes: string[];
+  initialPassword?: string;
+  enabled?: boolean;
+}
+
+export interface UpdateUserRequest {
+  realName?: string;
+  phone?: string;
+  roleCodes?: string[];
+  enabled?: boolean;
+}
+
+export interface ResetPasswordRequest {
+  temporaryPassword?: string;
+}
+
+export interface ResetPasswordResponse {
+  temporaryPassword: string;
+}
+
 export interface RoleInfo {
-  id: string;
   roleCode: string;
   roleName: string;
-  description: string;
-  userCount: number;
-  enabled: boolean;
+  description?: string;
+  permissionCodes: string[];
 }
 
 export interface PermissionNode {
-  id: string;
-  permCode: string;
-  permName: string;
+  permissionCode: string;
+  permissionName: string;
   module: string;
-  description: string;
-  isCore: boolean;
 }

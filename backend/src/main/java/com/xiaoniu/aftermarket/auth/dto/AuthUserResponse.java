@@ -7,6 +7,7 @@ public record AuthUserResponse(
         Long storeId,
         String username,
         String realName,
+        Boolean passwordMustChange,
         Set<String> roleCodes,
         Set<String> permissionCodes
 ) {

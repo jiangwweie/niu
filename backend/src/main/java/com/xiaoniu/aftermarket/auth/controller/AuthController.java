@@ -1,6 +1,7 @@
 package com.xiaoniu.aftermarket.auth.controller;
 
 import com.xiaoniu.aftermarket.auth.dto.AuthUserResponse;
+import com.xiaoniu.aftermarket.auth.dto.ChangePasswordRequest;
 import com.xiaoniu.aftermarket.auth.dto.LoginResponse;
 import com.xiaoniu.aftermarket.auth.dto.PasswordLoginRequest;
 import com.xiaoniu.aftermarket.auth.security.AuthenticatedUser;
@@ -49,6 +50,17 @@ public class AuthController {
                     .body(ApiResponse.failure(ErrorCode.UNAUTHORIZED));
         }
         return ResponseEntity.ok(ApiResponse.success(authService.toResponse(currentUser)));
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<ApiResponse<Void>> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        AuthenticatedUser currentUser = currentUser();
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.failure(ErrorCode.UNAUTHORIZED));
+        }
+        authService.changePassword(currentUser.userId(), request);
+        return ResponseEntity.ok(ApiResponse.success(null));
     }
 
     /**

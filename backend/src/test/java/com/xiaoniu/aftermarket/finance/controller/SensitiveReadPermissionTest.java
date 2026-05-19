@@ -45,7 +45,7 @@ class SensitiveReadPermissionTest {
 
     private String tokenWithOfficialSettlementManage() {
         return jwtProvider.generateAccessToken(
-                new AuthenticatedUser(3L, 1L, "settle01", "王结算",
+                new AuthenticatedUser(2L, 1L, "settle01", "王结算",
                         Set.of("SETTLEMENT"), Set.of("OFFICIAL_SETTLEMENT_MANAGE")),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
@@ -53,7 +53,7 @@ class SensitiveReadPermissionTest {
 
     private String tokenWithReimbursementConfirm() {
         return jwtProvider.generateAccessToken(
-                new AuthenticatedUser(4L, 1L, "reimb01", "刘报销",
+                new AuthenticatedUser(2L, 1L, "reimb01", "刘报销",
                         Set.of("REIMBURSEMENT"), Set.of("REIMBURSEMENT_CONFIRM")),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
@@ -61,7 +61,7 @@ class SensitiveReadPermissionTest {
 
     private String tokenWithPaymentRecord() {
         return jwtProvider.generateAccessToken(
-                new AuthenticatedUser(5L, 1L, "pay01", "孙收款",
+                new AuthenticatedUser(2L, 1L, "pay01", "孙收款",
                         Set.of("PAYMENT"), Set.of("PAYMENT_RECORD")),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
@@ -69,7 +69,7 @@ class SensitiveReadPermissionTest {
 
     private String tokenWithRefundRecord() {
         return jwtProvider.generateAccessToken(
-                new AuthenticatedUser(6L, 1L, "refund01", "周退款",
+                new AuthenticatedUser(2L, 1L, "refund01", "周退款",
                         Set.of("REFUND"), Set.of("REFUND_RECORD")),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();

@@ -1,59 +1,48 @@
-import type { BaseHttpResponse, PaginatedResult } from '@/types';
-import type { SystemUser, UserQuery, RoleInfo, PermissionNode } from '@/types/userPermission';
-import { mockUsers, mockRoles, mockPermissions } from '@/mock/userPermission';
+import request from '@/utils/request';
+import type { PaginatedResult } from '@/types';
+import type {
+  CreateUserRequest,
+  PermissionNode,
+  ResetPasswordRequest,
+  ResetPasswordResponse,
+  RoleInfo,
+  SystemUser,
+  UpdateUserRequest,
+  UserQuery,
+} from '@/types/userPermission';
 
-export const getUserList = (params: UserQuery): Promise<BaseHttpResponse<PaginatedResult<SystemUser>>> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      let filtered = [...mockUsers];
-      
-      if (params.name) filtered = filtered.filter(p => p.name.includes(params.name!));
-      if (params.phone) filtered = filtered.filter(p => p.phone.includes(params.phone!));
-      if (params.roleCode) filtered = filtered.filter(p => p.roleCode === params.roleCode);
-      if (params.enabled !== undefined && params.enabled !== '') {
-        const isEnabled = params.enabled === true || params.enabled === 'true';
-        filtered = filtered.filter(p => p.enabled === isEnabled);
-      }
-      
-      const pageNo = params.pageNo || 1;
-      const pageSize = params.pageSize || 10;
-      const start = (pageNo - 1) * pageSize;
-      const pagedData = filtered.slice(start, start + pageSize);
+export async function getUserList(params: UserQuery): Promise<PaginatedResult<SystemUser>> {
+  return await request.get('/api/admin/users', { params });
+}
 
-      resolve({
-        code: 'SUCCESS',
-        message: 'success',
-        data: {
-          records: pagedData,
-          total: filtered.length,
-          pageNo,
-          pageSize
-        }
-      });
-    }, 300);
-  });
-};
+export async function getUserDetail(id: number): Promise<SystemUser> {
+  return await request.get(`/api/admin/users/${id}`);
+}
 
-export const getRoleList = (): Promise<BaseHttpResponse<RoleInfo[]>> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        code: 'SUCCESS',
-        message: 'success',
-        data: [...mockRoles]
-      });
-    }, 300);
-  });
-};
+export async function createUser(data: CreateUserRequest): Promise<SystemUser> {
+  return await request.post('/api/admin/users', data);
+}
 
-export const getPermissionList = (): Promise<BaseHttpResponse<PermissionNode[]>> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        code: 'SUCCESS',
-        message: 'success',
-        data: [...mockPermissions]
-      });
-    }, 300);
-  });
-};
+export async function updateUser(id: number, data: UpdateUserRequest): Promise<SystemUser> {
+  return await request.put(`/api/admin/users/${id}`, data);
+}
+
+export async function enableUser(id: number): Promise<void> {
+  return await request.post(`/api/admin/users/${id}/enable`);
+}
+
+export async function disableUser(id: number): Promise<void> {
+  return await request.post(`/api/admin/users/${id}/disable`);
+}
+
+export async function resetUserPassword(id: number, data: ResetPasswordRequest): Promise<ResetPasswordResponse> {
+  return await request.post(`/api/admin/users/${id}/reset-password`, data);
+}
+
+export async function getRoleList(): Promise<RoleInfo[]> {
+  return await request.get('/api/admin/roles');
+}
+
+export async function getPermissionList(): Promise<PermissionNode[]> {
+  return await request.get('/api/admin/permissions');
+}

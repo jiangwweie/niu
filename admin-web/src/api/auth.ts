@@ -13,6 +13,11 @@ export interface LoginResponse {
   user: AuthUser;
 }
 
+export interface ChangePasswordRequest {
+  oldPassword: string;
+  newPassword: string;
+}
+
 export async function loginWithPassword(data: LoginRequest): Promise<LoginResponse> {
   return await request.post('/api/auth/login/password', data);
 }
@@ -23,4 +28,8 @@ export async function getMe(): Promise<AuthUser> {
 
 export async function logout(): Promise<void> {
   return await request.post('/api/auth/logout');
+}
+
+export async function changePassword(data: ChangePasswordRequest): Promise<void> {
+  return await request.post('/api/auth/change-password', data);
 }

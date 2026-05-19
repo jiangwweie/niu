@@ -11,6 +11,7 @@ public class StoreEntity extends SoftDeleteEntity {
 
     private String storeCode;
     private String storeName;
+    private String contactName;
     private String contactPhone;
     private String address;
     private String status;

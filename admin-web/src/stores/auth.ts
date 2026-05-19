@@ -6,6 +6,7 @@ export interface AuthUser {
   storeId: number;
   username: string;
   realName?: string;
+  passwordMustChange?: boolean;
   roleCodes: string[];
   permissionCodes: string[];
 }
