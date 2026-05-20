@@ -1,6 +1,7 @@
 package com.xiaoniu.aftermarket.user.controller;
 
 import com.xiaoniu.aftermarket.auth.security.AuthenticatedUser;
+import com.xiaoniu.aftermarket.auth.service.WechatService;
 import com.xiaoniu.aftermarket.common.api.ApiResponse;
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
@@ -34,9 +35,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminUserController {
 
     private final AdminUserService adminUserService;
+    private final WechatService wechatService;
 
-    public AdminUserController(AdminUserService adminUserService) {
+    public AdminUserController(AdminUserService adminUserService, WechatService wechatService) {
         this.adminUserService = adminUserService;
+        this.wechatService = wechatService;
     }
 
     @PreAuthorize("hasAnyAuthority('USER_MANAGE', 'ROLE_MANAGE')")
@@ -95,6 +98,14 @@ public class AdminUserController {
                                                             @RequestBody(required = false) ResetPasswordRequest request) {
         AuthenticatedUser user = requireCurrentUser();
         return ApiResponse.success(adminUserService.resetPassword(user.userId(), user.storeId(), id, request));
+    }
+
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
+    @PostMapping("/users/{id}/wechat/unbind")
+    public ApiResponse<Void> unbindWechat(@PathVariable Long id) {
+        AuthenticatedUser user = requireCurrentUser();
+        wechatService.unbindWechat(user.storeId(), id);
+        return ApiResponse.success(null);
     }
 
     @PreAuthorize("hasAnyAuthority('USER_MANAGE', 'ROLE_MANAGE')")

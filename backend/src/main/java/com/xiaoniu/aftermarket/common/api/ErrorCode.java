@@ -82,7 +82,12 @@ public enum ErrorCode {
     STORE_CODE_DUPLICATED("STORE_CODE_DUPLICATED", "门店编码已存在"),
     PLATFORM_ADMIN_USER_REQUIRED("PLATFORM_ADMIN_USER_REQUIRED", "平台管理员账号才能执行此操作"),
     STORE_CODE_GENERATE_FAILED("STORE_CODE_GENERATE_FAILED", "门店编码生成失败，请重试"),
-    INVALID_STORE_STATUS("INVALID_STORE_STATUS", "门店状态值无效");
+    INVALID_STORE_STATUS("INVALID_STORE_STATUS", "门店状态值无效"),
+    WECHAT_NOT_BOUND("WECHAT_NOT_BOUND", "该微信账号未绑定系统用户，请先使用账号密码登录并绑定微信"),
+    WECHAT_LOGIN_FAILED("WECHAT_LOGIN_FAILED", "微信登录失败"),
+    WECHAT_ALREADY_BOUND("WECHAT_ALREADY_BOUND", "当前账号已绑定微信，如需更换请联系管理员"),
+    WECHAT_OPENID_ALREADY_BOUND("WECHAT_OPENID_ALREADY_BOUND", "该微信已被其他账号绑定"),
+    PLATFORM_CANNOT_BIND_WECHAT("PLATFORM_CANNOT_BIND_WECHAT", "平台账号不支持绑定微信");
 
     private final String code;
     private final String message;

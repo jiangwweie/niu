@@ -37,13 +37,20 @@
           <el-tag :type="row.passwordMustChange ? 'warning' : 'info'" size="small">{{ row.passwordMustChange ? '是' : '否' }}</el-tag>
         </template>
       </el-table-column>
+      <el-table-column label="微信绑定" width="110">
+        <template #default="{ row }">
+          <el-tag :type="row.wechatBound ? 'success' : 'info'" size="small">{{ row.wechatBound ? '已绑定' : '未绑定' }}</el-tag>
+          <div v-if="row.wechatBoundAt" class="wechat-bound-time">{{ row.wechatBoundAt.slice(0, 10) }}</div>
+        </template>
+      </el-table-column>
       <el-table-column prop="updatedAt" label="更新时间" min-width="170" />
-      <el-table-column label="操作" width="260" fixed="right">
+      <el-table-column label="操作" width="340" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
           <el-button link type="primary" @click="openReset(row)">重置密码</el-button>
           <el-button v-if="row.enabled" link type="danger" @click="toggleUser(row, false)">停用</el-button>
           <el-button v-else link type="success" @click="toggleUser(row, true)">启用</el-button>
+          <el-button v-if="row.wechatBound && hasUserManage" link type="warning" @click="handleUnbindWechat(row)">解绑微信</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -120,7 +127,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus } from '@element-plus/icons-vue';
 import PageContainer from '@/components/PageContainer.vue';
@@ -132,8 +139,10 @@ import {
   getRoleList,
   getUserList,
   resetUserPassword,
+  unbindWechat,
   updateUser,
 } from '@/api/userPermission';
+import { hasPermission } from '@/utils/permission';
 import type { PermissionNode, RoleInfo, SystemUser, UserQuery } from '@/types/userPermission';
 
 const query = reactive<UserQuery>({ pageNo: 1, pageSize: 10 });
@@ -142,6 +151,7 @@ const users = ref<SystemUser[]>([]);
 const total = ref(0);
 const roles = ref<RoleInfo[]>([]);
 const permissions = ref<PermissionNode[]>([]);
+const hasUserManage = computed(() => hasPermission('USER_MANAGE'));
 
 const userDialog = reactive({
   visible: false,
@@ -229,6 +239,17 @@ const toggleUser = async (row: SystemUser, enabled: boolean) => {
   loadUsers();
 };
 
+const handleUnbindWechat = async (row: SystemUser) => {
+  await ElMessageBox.confirm(
+    `确认解绑用户 ${row.username} 的微信账号？解绑后该用户将无法使用微信快捷登录。`,
+    '解绑微信',
+    { type: 'warning', confirmButtonText: '确认解绑', cancelButtonText: '取消' }
+  );
+  await unbindWechat(row.id);
+  ElMessage.success('微信已解绑');
+  loadUsers();
+};
+
 const openReset = (row: SystemUser) => {
   resetDialog.userId = row.id;
   resetDialog.temporaryPassword = '';
@@ -286,5 +307,12 @@ onMounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.wechat-bound-time {
+  font-size: 12px;
+  color: #909399;
+  line-height: 1.2;
+  margin-top: 2px;
 }
 </style>

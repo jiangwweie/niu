@@ -12,6 +12,8 @@ export interface SystemUser {
   updatedAt?: string;
   permissionCodes?: string[];
   passwordChangedAt?: string;
+  wechatBound?: boolean;
+  wechatBoundAt?: string;
 }
 
 export interface UserQuery {

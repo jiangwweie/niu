@@ -11,3 +11,8 @@ spring:
       mode: always
       schema-locations: classpath:schema.sql
       data-locations: classpath:data.sql
+
+wx:
+  miniapp:
+    app-id: test-appid
+    app-secret: test-secret

@@ -19,6 +19,8 @@ public final class AdminUserDtos {
             Boolean enabled,
             Boolean passwordMustChange,
             Set<String> roleCodes,
+            Boolean wechatBound,
+            LocalDateTime wechatBoundAt,
             LocalDateTime lastLoginAt,
             LocalDateTime createdAt,
             LocalDateTime updatedAt
@@ -37,6 +39,8 @@ public final class AdminUserDtos {
             LocalDateTime lastLoginAt,
             Set<String> roleCodes,
             Set<String> permissionCodes,
+            Boolean wechatBound,
+            LocalDateTime wechatBoundAt,
             LocalDateTime createdAt,
             LocalDateTime updatedAt
     ) {

@@ -3,7 +3,7 @@
     <text class="title">小牛售后</text>
     <text class="subtitle">员工登录</text>
   </view>
-  
+
   <view class="form-container">
     <t-input
       value="{{username}}"
@@ -19,16 +19,34 @@
       prefixIcon="lock-on"
       clearable
     />
-    
-    <t-button 
-      theme="danger" 
-      size="large" 
-      block 
-      bind:tap="handleLogin" 
+
+    <t-button
+      theme="danger"
+      size="large"
+      block
+      bind:tap="handleLogin"
       loading="{{loading}}"
       class="login-btn"
     >
       登录
+    </t-button>
+
+    <view class="divider">
+      <view class="divider-line"></view>
+      <text class="divider-text">其他登录方式</text>
+      <view class="divider-line"></view>
+    </view>
+
+    <t-button
+      theme="primary"
+      size="large"
+      block
+      variant="outline"
+      bind:tap="handleWechatLogin"
+      loading="{{wechatLoading}}"
+      class="wechat-btn"
+    >
+      微信快捷登录
     </t-button>
   </view>
 </view>

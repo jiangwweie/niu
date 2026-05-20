@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS sys_user (
     phone VARCHAR(32) NULL,
     wechat_openid VARCHAR(128) NULL,
     wechat_unionid VARCHAR(128) NULL,
+    wechat_bound_at TIMESTAMP NULL,
     account_type VARCHAR(20) NOT NULL DEFAULT 'STORE',
     status VARCHAR(32) NOT NULL,
     password_must_change BOOLEAN NOT NULL DEFAULT FALSE,
@@ -65,7 +66,8 @@ CREATE TABLE IF NOT EXISTS sys_user (
     updated_by BIGINT NULL,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     deleted INTEGER NOT NULL DEFAULT 0,
-    PRIMARY KEY (id)
+    PRIMARY KEY (id),
+    UNIQUE (wechat_openid)
 );
 
 CREATE TABLE IF NOT EXISTS store (

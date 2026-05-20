@@ -39,6 +39,10 @@ export async function resetUserPassword(id: number, data: ResetPasswordRequest):
   return await request.post(`/api/admin/users/${id}/reset-password`, data);
 }
 
+export async function unbindWechat(id: number): Promise<void> {
+  return await request.post(`/api/admin/users/${id}/wechat/unbind`);
+}
+
 export async function getRoleList(): Promise<RoleInfo[]> {
   return await request.get('/api/admin/roles');
 }

@@ -5,7 +5,8 @@ Page({
   data: {
     username: '',
     password: '',
-    loading: false
+    loading: false,
+    wechatLoading: false
   },
 
   onLoad(options) {
@@ -39,9 +40,9 @@ Page({
       });
       authStore.setToken(res.data.accessToken);
       authStore.setUser(res.data.user as any);
-      
+
       wx.showToast({ title: '登录成功', icon: 'success' });
-      
+
       setTimeout(() => {
         if (this.redirectUrl && this.redirectUrl.startsWith('/pages/')) {
           const tabPages = ['/pages/dashboard/index', '/pages/work-orders/index', '/pages/inventory/index', '/pages/mine/index'];
@@ -58,6 +59,37 @@ Page({
       // request wrapper handles error toast
     } finally {
       this.setData({ loading: false });
+    }
+  },
+
+  async handleWechatLogin() {
+    this.setData({ wechatLoading: true });
+    try {
+      const loginRes: WechatMiniprogram.LoginSuccessCallbackResult = await new Promise((resolve, reject) => {
+        wx.login({
+          success: resolve,
+          fail: reject
+        });
+      });
+
+      if (!loginRes.code) {
+        wx.showToast({ title: '微信登录失败', icon: 'none' });
+        return;
+      }
+
+      const res = await authApi.wechatLogin(loginRes.code);
+      authStore.setToken(res.data.accessToken);
+      authStore.setUser(res.data.user as any);
+
+      wx.showToast({ title: '登录成功', icon: 'success' });
+
+      setTimeout(() => {
+        wx.switchTab({ url: '/pages/dashboard/index' });
+      }, 500);
+    } catch (e) {
+      // authApi.wechatLogin handles toast for WECHAT_NOT_BOUND and other errors
+    } finally {
+      this.setData({ wechatLoading: false });
     }
   }
 });

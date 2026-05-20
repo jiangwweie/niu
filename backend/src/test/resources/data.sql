@@ -15,7 +15,7 @@ MERGE INTO sys_dict_item (id, type_id, item_code, item_name, sort_order, status,
 MERGE INTO store (id, store_code, store_name, contact_name, contact_phone, address, status, deleted) KEY (id) VALUES (1, 'DEFAULT', '默认门店', '王店长', '13800000000', '测试地址', 'ENABLED', 0);
 
 MERGE INTO sys_user (id, store_id, username, password_hash, real_name, phone, account_type, status, password_must_change, deleted) KEY (phone) VALUES (1, 1, 'admin01', '{noop}dev123', '张三', '13800000001', 'STORE', 'ENABLED', FALSE, 0);
-MERGE INTO sys_user (id, store_id, username, password_hash, real_name, phone, account_type, status, password_must_change, deleted) KEY (phone) VALUES (2, 1, 'tech01', '{noop}dev123', '李四', '13800000002', 'STORE', 'ENABLED', FALSE, 0);
+MERGE INTO sys_user (id, store_id, username, password_hash, real_name, phone, account_type, status, password_must_change, deleted, wechat_openid, wechat_bound_at) KEY (phone) VALUES (2, 1, 'tech01', '{noop}dev123', '李四', '13800000002', 'STORE', 'ENABLED', FALSE, 0, 'test_bound_openid_001', TIMESTAMP '2026-05-20 10:00:00');
 MERGE INTO sys_user (id, store_id, username, password_hash, real_name, phone, account_type, status, password_must_change, deleted) KEY (phone) VALUES (3, 1, 'disabled01', '{noop}dev123', '停用员工', '13800000003', 'STORE', 'DISABLED', FALSE, 0);
 MERGE INTO sys_user (id, store_id, username, password_hash, real_name, phone, account_type, status, password_must_change, deleted) KEY (phone) VALUES (4, 1, 'deleted01', '{noop}dev123', '删除员工', '13800000004', 'STORE', 'ENABLED', FALSE, 1);
 -- M19: platform admin test user

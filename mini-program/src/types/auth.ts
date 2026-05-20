@@ -6,4 +6,6 @@ export interface User {
   storeId: string;
   storeName: string;
   permissionCodes: string[];
+  wechatBound?: boolean;
+  wechatBoundAt?: string;
 }

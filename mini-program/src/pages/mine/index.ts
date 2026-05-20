@@ -13,7 +13,10 @@ Page({
     displayStore: '',
     mockUsers: [],
     apiMode: API_MODE,
-    hasReimbursementPermission: false
+    hasReimbursementPermission: false,
+    wechatBound: false,
+    wechatBoundAt: '',
+    wechatBindingLoading: false
   },
   onLoad() {
     this.setData({
@@ -41,7 +44,9 @@ Page({
       displayAccount: account,
       displayRole: role,
       displayStore: store,
-      hasReimbursementPermission: hasPermission('REIMBURSEMENT_SUBMIT')
+      hasReimbursementPermission: hasPermission('REIMBURSEMENT_SUBMIT'),
+      wechatBound: !!user?.wechatBound,
+      wechatBoundAt: user?.wechatBoundAt || ''
     });
   },
   onSwitchUser(e: any) {
@@ -62,7 +67,43 @@ Page({
       url: '/pages/reimbursement-placeholder/index'
     });
   },
-  
+
+  async handleBindWechat() {
+    this.setData({ wechatBindingLoading: true });
+    try {
+      const loginRes: WechatMiniprogram.LoginSuccessCallbackResult = await new Promise((resolve, reject) => {
+        wx.login({ success: resolve, fail: reject });
+      });
+
+      if (!loginRes.code) {
+        wx.showToast({ title: '微信登录失败', icon: 'none' });
+        return;
+      }
+
+      await authApi.bindWechat(loginRes.code);
+
+      // 后端已校验绑定成功，直接更新本地状态，无需重新请求 /api/auth/me
+      const user = authStore.getCurrentUser() as any;
+      if (user) {
+        user.wechatBound = true;
+        user.wechatBoundAt = new Date().toISOString();
+        authStore.setUser(user);
+      }
+
+      this.setData({
+        currentUser: user,
+        wechatBound: true,
+        wechatBoundAt: user?.wechatBoundAt || ''
+      });
+
+      wx.showToast({ title: '绑定成功', icon: 'success' });
+    } catch (e) {
+      // request wrapper handles error toast
+    } finally {
+      this.setData({ wechatBindingLoading: false });
+    }
+  },
+
   async handleLogout() {
     try {
       await authApi.logout();

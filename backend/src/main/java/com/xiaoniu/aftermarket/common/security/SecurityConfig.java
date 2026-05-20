@@ -45,6 +45,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/me").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/wechat/bind").authenticated()
                         .requestMatchers("/api/auth/**", "/api/health").permitAll()
                         .requestMatchers("/api/platform/**").authenticated()
                         .requestMatchers("/api/admin/**", "/api/staff/**").authenticated()

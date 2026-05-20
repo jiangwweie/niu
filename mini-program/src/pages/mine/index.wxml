@@ -32,6 +32,26 @@
     <t-button theme="primary" block size="large" bind:tap="goToReimbursement">提交报销申请</t-button>
   </view>
 
+  <view class="section">
+    <text class="section-title">微信绑定</text>
+    <view wx:if="{{wechatBound}}" class="wechat-status bound">
+      <text class="wechat-status-text">已绑定微信</text>
+      <text class="wechat-bound-time" wx:if="{{wechatBoundAt}}">绑定时间：{{wechatBoundAt}}</text>
+    </view>
+    <view wx:else class="wechat-status unbound">
+      <text class="wechat-status-text">未绑定微信</text>
+      <t-button
+        theme="primary"
+        size="small"
+        variant="outline"
+        bind:tap="handleBindWechat"
+        loading="{{wechatBindingLoading}}"
+      >
+        绑定微信
+      </t-button>
+    </view>
+  </view>
+
   <view class="section account-section">
     <text class="section-title">账号操作</text>
     <t-button theme="default" variant="outline" block size="large" bind:tap="handleLogout">退出登录</t-button>

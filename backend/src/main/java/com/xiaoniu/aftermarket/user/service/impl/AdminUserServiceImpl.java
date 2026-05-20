@@ -245,6 +245,8 @@ public class AdminUserServiceImpl implements AdminUserService {
                 CommonStatus.ENABLED.name().equals(user.getStatus()),
                 Boolean.TRUE.equals(user.getPasswordMustChange()),
                 roleCodesByUser(user.getId()),
+                user.getWechatOpenid() != null,
+                user.getWechatBoundAt(),
                 user.getLastLoginAt(),
                 user.getCreatedAt(),
                 user.getUpdatedAt()
@@ -264,6 +266,8 @@ public class AdminUserServiceImpl implements AdminUserService {
                 user.getLastLoginAt(),
                 roleCodesByUser(user.getId()),
                 new LinkedHashSet<>(permissionQueryService.listPermissionCodesByUserId(user.getId())),
+                user.getWechatOpenid() != null,
+                user.getWechatBoundAt(),
                 user.getCreatedAt(),
                 user.getUpdatedAt()
         );

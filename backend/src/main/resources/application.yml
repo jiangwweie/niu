@@ -21,3 +21,8 @@ security:
   jwt:
     secret: ${JWT_SECRET:xiaoniu-aftermarket-dev-secret-change-me-please-2026}
     access-token-ttl-seconds: ${JWT_ACCESS_TOKEN_TTL_SECONDS:14400}
+
+wx:
+  miniapp:
+    app-id: ${WX_MINIAPP_APPID:}
+    app-secret: ${WX_MINIAPP_SECRET:}

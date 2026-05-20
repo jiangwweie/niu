@@ -87,3 +87,33 @@ page {
 .account-section {
   background: #fafafa;
 }
+
+/* 微信绑定状态 */
+.wechat-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 0;
+}
+
+.wechat-status.bound {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8rpx;
+}
+
+.wechat-status.bound .wechat-status-text {
+  color: #07c160;
+  font-size: 28rpx;
+  font-weight: 500;
+}
+
+.wechat-status.unbound .wechat-status-text {
+  color: #999;
+  font-size: 28rpx;
+}
+
+.wechat-bound-time {
+  font-size: 24rpx;
+  color: #999;
+}

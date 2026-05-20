@@ -4,10 +4,14 @@ import com.xiaoniu.aftermarket.auth.dto.AuthUserResponse;
 import com.xiaoniu.aftermarket.auth.dto.ChangePasswordRequest;
 import com.xiaoniu.aftermarket.auth.dto.LoginResponse;
 import com.xiaoniu.aftermarket.auth.dto.PasswordLoginRequest;
+import com.xiaoniu.aftermarket.auth.dto.WechatBindRequest;
+import com.xiaoniu.aftermarket.auth.dto.WechatLoginRequest;
 import com.xiaoniu.aftermarket.auth.security.AuthenticatedUser;
 import com.xiaoniu.aftermarket.auth.service.AuthService;
+import com.xiaoniu.aftermarket.auth.service.WechatService;
 import com.xiaoniu.aftermarket.common.api.ApiResponse;
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
+import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,9 +30,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final WechatService wechatService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, WechatService wechatService) {
         this.authService = authService;
+        this.wechatService = wechatService;
     }
 
     @PostMapping("/login/password")
@@ -71,6 +77,33 @@ public class AuthController {
     @PostMapping("/logout")
     public ApiResponse<Void> logout() {
         return ApiResponse.success(null);
+    }
+
+    @PostMapping("/login/wechat")
+    public ResponseEntity<ApiResponse<LoginResponse>> loginWithWechat(
+            @Valid @RequestBody WechatLoginRequest request) {
+        try {
+            return ResponseEntity.ok(ApiResponse.success(wechatService.loginWithWechat(request.code())));
+        } catch (BusinessException e) {
+            if (e.getErrorCode() == ErrorCode.WECHAT_NOT_BOUND
+                    || e.getErrorCode() == ErrorCode.WECHAT_LOGIN_FAILED) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.failure(e.getErrorCode(), e.getMessage()));
+            }
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.failure(e.getErrorCode(), e.getMessage()));
+        }
+    }
+
+    @PostMapping("/wechat/bind")
+    public ResponseEntity<ApiResponse<Void>> bindWechat(@Valid @RequestBody WechatBindRequest request) {
+        AuthenticatedUser user = currentUser();
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.failure(ErrorCode.UNAUTHORIZED));
+        }
+        wechatService.bindWechat(user.userId(), request.code());
+        return ResponseEntity.ok(ApiResponse.success(null));
     }
 
     private AuthenticatedUser currentUser() {
