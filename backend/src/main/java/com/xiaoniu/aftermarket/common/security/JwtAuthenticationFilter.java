@@ -104,11 +104,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private void authenticate(AuthenticatedUser user) {
+        Set<SimpleGrantedAuthority> authorities = new LinkedHashSet<>();
+        // Permission-based authorities
+        user.permissionCodes().stream()
+                .map(SimpleGrantedAuthority::new)
+                .forEach(authorities::add);
+        // Role-based authorities (ROLE_ prefix for hasRole() support)
+        user.roleCodes().stream()
+                .map(code -> new SimpleGrantedAuthority("ROLE_" + code))
+                .forEach(authorities::add);
         JwtAuthenticationToken authentication = new JwtAuthenticationToken(
                 user,
-                user.permissionCodes().stream()
-                        .map(SimpleGrantedAuthority::new)
-                        .collect(Collectors.toUnmodifiableSet())
+                Set.copyOf(authorities)
         );
         SecurityContextHolder.getContext().setAuthentication(authentication);
         CurrentUserContext.set(new CurrentUser(
@@ -172,12 +179,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
         Long userId = Long.valueOf(userIdHeader);
+        Long storeId = Long.valueOf(storeIdHeader);
         AuthenticatedUser user = new AuthenticatedUser(
                 userId,
-                Long.valueOf(storeIdHeader),
+                storeId,
                 null,
                 null,
-                Set.of(),
+                Set.copyOf(listRoleCodes(userId)),
                 Set.copyOf(permissionQueryService.listPermissionCodesByUserId(userId))
         );
         authenticate(user);

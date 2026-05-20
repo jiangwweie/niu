@@ -8,44 +8,192 @@
           <div class="welcome-title">
             {{ greeting }}，{{ authStore.user?.realName || authStore.user?.username || '管理员' }}
           </div>
-          <div class="welcome-sub">当前角色：{{ roleDisplayName }}　｜　统计模块待接入真实接口，请通过左侧菜单查看真实业务数据。</div>
+          <div class="welcome-sub">当前角色：{{ roleDisplayName }}　｜　当前门店：{{ authStore.user?.storeName || '默认门店' }}</div>
         </div>
       </div>
     </el-card>
 
-    <!-- 快捷入口 -->
-    <div class="shortcut-section">
-      <div class="section-title">常用功能</div>
-      <el-row :gutter="16">
-        <el-col
-          v-for="item in shortcuts"
-          :key="item.path"
-          :xs="12" :sm="8" :md="6" :lg="4"
-          style="margin-bottom: 16px;"
-        >
-          <el-card
-            shadow="hover"
-            class="shortcut-card"
-            @click="router.push(item.path)"
-          >
-            <div class="shortcut-icon">{{ item.icon }}</div>
-            <div class="shortcut-label">{{ item.label }}</div>
+    <!-- 加载中 / 错误状态 -->
+    <div v-if="loading" class="loading-state">
+      <el-icon class="is-loading" :size="24"><Loading /></el-icon>
+      <span>加载中...</span>
+    </div>
+    <div v-else-if="loadError" class="error-state">
+      <el-empty description="数据加载失败，请刷新重试" />
+    </div>
+
+    <!-- 统计卡片 -->
+    <template v-if="summary">
+      <el-row :gutter="16" class="stats-row">
+        <el-col :xs="12" :sm="8" :md="6" v-for="card in statCards" :key="card.label">
+          <el-card shadow="hover" class="stat-card" :body-style="{ padding: '20px' }">
+            <div class="stat-label">{{ card.label }}</div>
+            <div class="stat-value" :class="card.colorClass">{{ card.value }}</div>
           </el-card>
         </el-col>
       </el-row>
-    </div>
+
+      <!-- 本月财务概览 -->
+      <el-card shadow="never" class="section-card">
+        <template #header>
+          <span class="section-header">本月财务概览</span>
+        </template>
+        <el-row :gutter="16">
+          <el-col :span="6">
+            <div class="finance-item">
+              <div class="finance-label">客户支付净收入</div>
+              <MoneyText :amount="summary.monthCustomerIncome" bold type="success" />
+            </div>
+          </el-col>
+          <el-col :span="6">
+            <div class="finance-item">
+              <div class="finance-label">官方结算收入</div>
+              <MoneyText :amount="summary.monthOfficialIncome" bold type="primary" />
+            </div>
+          </el-col>
+          <el-col :span="6">
+            <div class="finance-item">
+              <div class="finance-label">配件成本</div>
+              <MoneyText :amount="summary.monthPartsCost" bold type="warning" />
+            </div>
+          </el-col>
+          <el-col :span="6">
+            <div class="finance-item">
+              <div class="finance-label">报销成本</div>
+              <MoneyText :amount="summary.monthReimbursementCost" bold type="warning" />
+            </div>
+          </el-col>
+        </el-row>
+        <el-divider />
+        <div class="profit-row">
+          <span class="profit-label">本月利润</span>
+          <MoneyText :amount="summary.monthProfit" bold :type="summary.monthProfit >= 0 ? 'success' : 'danger'" class="profit-value" />
+        </div>
+      </el-card>
+
+      <!-- 待处理事项 -->
+      <el-card shadow="never" class="section-card" v-if="hasPendingActions">
+        <template #header>
+          <span class="section-header">待处理事项</span>
+        </template>
+        <el-row :gutter="16">
+          <el-col :span="8" v-if="summary.pendingActions.pendingSettleCount > 0">
+            <el-alert
+              :title="`${summary.pendingActions.pendingSettleCount} 个工单待结算`"
+              type="warning"
+              :closable="false"
+              show-icon
+            />
+          </el-col>
+          <el-col :span="8" v-if="summary.pendingActions.pendingReimbursementCount > 0">
+            <el-alert
+              :title="`${summary.pendingActions.pendingReimbursementCount} 条报销待确认`"
+              type="info"
+              :closable="false"
+              show-icon
+            />
+          </el-col>
+          <el-col :span="8" v-if="summary.pendingActions.pendingOfficialSettlementCount > 0">
+            <el-alert
+              :title="`${summary.pendingActions.pendingOfficialSettlementCount} 笔官方结算待处理`"
+              type="info"
+              :closable="false"
+              show-icon
+            />
+          </el-col>
+        </el-row>
+      </el-card>
+
+      <!-- 最近工单 -->
+      <el-card shadow="never" class="section-card" v-if="summary.recentWorkOrders.length > 0">
+        <template #header>
+          <div class="section-header-row">
+            <span class="section-header">最近工单</span>
+            <el-button text type="primary" @click="router.push('/work-order')">查看全部</el-button>
+          </div>
+        </template>
+        <el-table :data="summary.recentWorkOrders" stripe size="small">
+          <el-table-column prop="workOrderNo" label="工单号" width="160" />
+          <el-table-column prop="customerName" label="客户名" width="120">
+            <template #default="{ row }">{{ row.customerName || '-' }}</template>
+          </el-table-column>
+          <el-table-column prop="status" label="状态" width="120">
+            <template #default="{ row }">
+              <StatusTag :status="row.status" :label="statusLabel(row.status)" />
+            </template>
+          </el-table-column>
+          <el-table-column prop="receivableAmount" label="应收" width="120" align="right">
+            <template #default="{ row }">
+              <MoneyText :amount="row.receivableAmount" />
+            </template>
+          </el-table-column>
+          <el-table-column prop="receivedAmount" label="实收" width="120" align="right">
+            <template #default="{ row }">
+              <MoneyText :amount="row.receivedAmount" />
+            </template>
+          </el-table-column>
+          <el-table-column prop="createdAt" label="创建时间" min-width="160" />
+        </el-table>
+      </el-card>
+
+      <!-- 快捷入口 -->
+      <div class="shortcut-section">
+        <div class="section-title">常用功能</div>
+        <el-row :gutter="16">
+          <el-col
+            v-for="item in shortcuts"
+            :key="item.path"
+            :xs="12" :sm="8" :md="6" :lg="4"
+            style="margin-bottom: 16px;"
+          >
+            <el-card
+              shadow="hover"
+              class="shortcut-card"
+              @click="router.push(item.path)"
+            >
+              <div class="shortcut-icon">{{ item.icon }}</div>
+              <div class="shortcut-label">{{ item.label }}</div>
+            </el-card>
+          </el-col>
+        </el-row>
+      </div>
+    </template>
   </PageContainer>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { Loading } from '@element-plus/icons-vue';
 import { useAuthStore } from '@/stores/auth';
 import { hasPermission, hasAnyPermission } from '@/utils/permission';
+import { getDashboardSummary } from '@/api/dashboard';
+import { ElMessage } from 'element-plus';
 import PageContainer from '@/components/PageContainer.vue';
+import MoneyText from '@/components/MoneyText.vue';
+import StatusTag from '@/components/StatusTag.vue';
+import type { DashboardSummaryResponse } from '@/types/dashboard';
 
 const router = useRouter();
 const authStore = useAuthStore();
+
+const loading = ref(true);
+const loadError = ref(false);
+const summary = ref<DashboardSummaryResponse | null>(null);
+
+const STATUS_LABEL_MAP: Record<string, string> = {
+  DRAFT: '草稿',
+  PENDING_ACCEPT: '待接单',
+  ACCEPTED: '已接单',
+  PART_ORDERED: '配件已订',
+  PART_ARRIVED: '配件已到',
+  SETTLED: '已结算',
+  CANCELLED: '已取消',
+};
+
+function statusLabel(status: string): string {
+  return STATUS_LABEL_MAP[status] || status;
+}
 
 const ROLE_LABEL_MAP: Record<string, string> = {
   SUPER_ADMIN: '系统超管',
@@ -67,7 +215,22 @@ const greeting = computed(() => {
   return '晚上好';
 });
 
-// Shortcut entries, only show what user has permission to see
+const hasPendingActions = computed(() => {
+  if (!summary.value?.pendingActions) return false;
+  const a = summary.value.pendingActions;
+  return a.pendingSettleCount > 0 || a.pendingReimbursementCount > 0 || a.pendingOfficialSettlementCount > 0;
+});
+
+const statCards = computed(() => {
+  if (!summary.value) return [];
+  return [
+    { label: '今日工单', value: summary.value.todayWorkOrderCount, colorClass: 'text-primary' },
+    { label: '待结算工单', value: summary.value.pendingSettleWorkOrderCount, colorClass: 'text-warning' },
+    { label: '待确认报销', value: summary.value.pendingReimbursementCount, colorClass: 'text-info' },
+    { label: '低库存配件', value: summary.value.lowStockPartCount, colorClass: summary.value.lowStockPartCount > 0 ? 'text-danger' : 'text-success' },
+  ];
+});
+
 const shortcuts = computed(() => {
   const all = [
     { path: '/work-order', icon: '🔧', label: '工单管理', always: true },
@@ -101,14 +264,24 @@ const shortcuts = computed(() => {
       check: () => hasPermission('FINANCE_VIEW'),
     },
   ];
-
   return all.filter(item => item.always || (item.check && item.check()));
+});
+
+onMounted(async () => {
+  try {
+    summary.value = await getDashboardSummary();
+  } catch {
+    loadError.value = true;
+    ElMessage.error('加载首页数据失败');
+  } finally {
+    loading.value = false;
+  }
 });
 </script>
 
 <style scoped>
 .welcome-card {
-  margin-bottom: 28px;
+  margin-bottom: 20px;
 }
 
 .welcome-content {
@@ -132,6 +305,91 @@ const shortcuts = computed(() => {
 .welcome-sub {
   font-size: 13px;
   color: #6b7280;
+}
+
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 60px 0;
+  color: #909399;
+}
+
+.error-state {
+  padding: 40px 0;
+}
+
+.stats-row {
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  margin-bottom: 16px;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #909399;
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.text-primary { color: #409eff; }
+.text-success { color: #67c23a; }
+.text-warning { color: #e6a23c; }
+.text-danger { color: #f56c6c; }
+.text-info { color: #909399; }
+
+.section-card {
+  margin-bottom: 20px;
+}
+
+.section-header {
+  font-size: 15px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.finance-item {
+  text-align: center;
+}
+
+.finance-label {
+  font-size: 13px;
+  color: #909399;
+  margin-bottom: 8px;
+}
+
+.profit-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 8px;
+}
+
+.profit-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.profit-value {
+  font-size: 20px;
+}
+
+.shortcut-section {
+  margin-top: 8px;
 }
 
 .section-title {

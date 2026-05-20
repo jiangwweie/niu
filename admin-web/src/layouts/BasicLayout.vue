@@ -33,6 +33,7 @@
         <el-menu-item v-if="hasPermission('DICT_MANAGE')" index="/dictionary"><template #title>字典配置</template></el-menu-item>
         <el-menu-item v-if="hasAnyPermission(['USER_MANAGE', 'ROLE_MANAGE'])" index="/user"><template #title>用户与权限</template></el-menu-item>
         <el-menu-item v-if="hasPermission('STORE_MANAGE')" index="/store"><template #title>门店配置</template></el-menu-item>
+        <el-menu-item v-if="hasRole('SUPER_ADMIN')" index="/trial-data"><template #title>正式启用</template></el-menu-item>
       </el-menu>
       
       <div class="sidebar-footer">
@@ -95,7 +96,7 @@ import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { logout } from '@/api/auth';
-import { hasPermission, hasAnyPermission } from '@/utils/permission';
+import { hasPermission, hasAnyPermission, hasRole } from '@/utils/permission';
 import { ElMessage } from 'element-plus';
 
 const route = useRoute();

@@ -26,3 +26,12 @@ export function hasAllPermissions(codes: string[]): boolean {
   if (!authStore.user || !authStore.user.permissionCodes) return false;
   return codes.every(code => authStore.user!.permissionCodes.includes(code));
 }
+
+/**
+ * 检查当前用户是否包含指定角色
+ */
+export function hasRole(roleCode: string): boolean {
+  const authStore = useAuthStore();
+  if (!authStore.user || !authStore.user.roleCodes) return false;
+  return authStore.user.roleCodes.includes(roleCode);
+}

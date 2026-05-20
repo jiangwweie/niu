@@ -1,18 +1,6 @@
-import type { DashboardData } from '@/types';
-import type { BaseHttpResponse } from '@/types';
-import { mockDashboardData } from '@/mock/dashboard';
+import request from '@/utils/request';
+import type { DashboardSummaryResponse } from '@/types/dashboard';
 
-/**
- * 获取首页核心指标看板数据
- */
-export const getDashboardStats = (): Promise<BaseHttpResponse<DashboardData>> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        code: 'SUCCESS',
-        message: 'success',
-        data: mockDashboardData
-      });
-    }, 300);
-  });
-};
+export async function getDashboardSummary(): Promise<DashboardSummaryResponse> {
+  return await request.get('/api/admin/dashboard/summary');
+}

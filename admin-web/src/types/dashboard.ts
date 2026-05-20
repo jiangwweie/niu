@@ -1,55 +1,29 @@
-export interface DashboardStats {
-  todayOrders: number;
-  todayCustomerIncome: number;
-  todayOfficialIncome: number;
-  pendingReimbursement: number;
-  inventoryWarnings: number;
-  unsettledOrders: number;
-}
-
-export interface IncomeSplit {
-  customerIncome: {
-    parts: number;
-    labor: number;
-    other: number;
-  };
-  officialIncome: {
-    amount: number;
-  };
-}
-
-export interface TodoReminder {
-  id: string;
-  type: string;
-  content: string;
-  count: number;
-}
-
-export interface RecentWorkOrder {
-  id: string;
-  orderNo: string;
-  customerName: string;
-  scooterModel: string;
+export interface RecentWorkOrderItem {
+  id: number;
+  workOrderNo: string;
+  customerName: string | null;
   status: string;
   receivableAmount: number;
-  actualAmount: number;
-  isOfficial: boolean;
+  receivedAmount: number;
   createdAt: string;
 }
 
-export interface InventoryWarning {
-  id: string;
-  partCode: string;
-  partName: string;
-  availableStock: number;
-  warningThreshold: number;
-  location: string;
+export interface PendingActionsSummary {
+  pendingSettleCount: number;
+  pendingReimbursementCount: number;
+  pendingOfficialSettlementCount: number;
 }
 
-export interface DashboardData {
-  stats: DashboardStats;
-  incomeSplit: IncomeSplit;
-  todos: TodoReminder[];
-  recentOrders: RecentWorkOrder[];
-  inventoryWarnings: InventoryWarning[];
+export interface DashboardSummaryResponse {
+  todayWorkOrderCount: number;
+  pendingSettleWorkOrderCount: number;
+  pendingReimbursementCount: number;
+  lowStockPartCount: number;
+  monthCustomerIncome: number;
+  monthOfficialIncome: number;
+  monthPartsCost: number;
+  monthReimbursementCost: number;
+  monthProfit: number;
+  recentWorkOrders: RecentWorkOrderItem[];
+  pendingActions: PendingActionsSummary;
 }

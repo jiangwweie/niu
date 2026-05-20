@@ -96,6 +96,12 @@ const routes: Array<RouteRecordRaw> = [
         name: 'Export',
         component: () => import('@/views/export/index.vue'),
         meta: { title: 'Excel 导出中心' }
+      },
+      {
+        path: 'trial-data',
+        name: 'TrialData',
+        component: () => import('@/views/trial-data/index.vue'),
+        meta: { title: '正式启用' }
       }
     ]
   }
