@@ -14,4 +14,6 @@ public class ClearTrialDataResponse {
     private Integer reimbursementsDeleted;
     private Integer inventoryFlowsDeleted;
     private Integer inventoryStocksReset;
+    private Integer vehiclesDeleted;
+    private Integer customersDeleted;
 }

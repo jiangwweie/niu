@@ -35,6 +35,12 @@ public interface TrialDataMapper {
     @Select("SELECT COUNT(*) FROM inventory_stock WHERE store_id = #{storeId}")
     Integer countInventoryStocks(@Param("storeId") Long storeId);
 
+    @Select("SELECT COUNT(*) FROM vehicle WHERE store_id = #{storeId}")
+    Integer countVehicles(@Param("storeId") Long storeId);
+
+    @Select("SELECT COUNT(*) FROM customer WHERE store_id = #{storeId}")
+    Integer countCustomers(@Param("storeId") Long storeId);
+
     // --- Delete operations ---
 
     @Update("DELETE FROM work_order_status_log WHERE store_id = #{storeId}")
@@ -60,6 +66,12 @@ public interface TrialDataMapper {
 
     @Update("DELETE FROM inventory_flow WHERE store_id = #{storeId}")
     int deleteInventoryFlows(@Param("storeId") Long storeId);
+
+    @Update("DELETE FROM vehicle WHERE store_id = #{storeId}")
+    int deleteVehicles(@Param("storeId") Long storeId);
+
+    @Update("DELETE FROM customer WHERE store_id = #{storeId}")
+    int deleteCustomers(@Param("storeId") Long storeId);
 
     @Update("""
             UPDATE inventory_stock

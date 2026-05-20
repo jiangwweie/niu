@@ -69,7 +69,19 @@ class TrialDataControllerTest {
         jdbcTemplate.execute("DELETE FROM inventory_flow WHERE store_id IN (1, 2)");
         jdbcTemplate.execute("DELETE FROM inventory_stock WHERE store_id IN (1, 2)");
         jdbcTemplate.execute("DELETE FROM work_order WHERE store_id IN (1, 2)");
+        jdbcTemplate.execute("DELETE FROM vehicle WHERE store_id IN (1, 2)");
+        jdbcTemplate.execute("DELETE FROM customer WHERE store_id IN (1, 2)");
         jdbcTemplate.execute("DELETE FROM part WHERE store_id IN (1, 2)");
+
+        // Seed customer and vehicle data that must be removed before formal use
+        jdbcTemplate.execute("""
+            INSERT INTO customer (id, store_id, customer_name, phone, remark)
+            VALUES (6001, 1, '试运行客户', '13800000001', '试运行数据')
+            """);
+        jdbcTemplate.execute("""
+            INSERT INTO vehicle (id, store_id, customer_id, model, frame_no, battery_no, remark)
+            VALUES (6001, 1, 6001, '小牛测试车', 'TRIAL-FRAME-001', 'TRIAL-BATTERY-001', '试运行数据')
+            """);
 
         // Seed business data for store 1
         jdbcTemplate.execute("""
@@ -159,7 +171,9 @@ class TrialDataControllerTest {
                 .andExpect(jsonPath("$.data.officialAfterSalesCount").value(1))
                 .andExpect(jsonPath("$.data.reimbursementCount").value(1))
                 .andExpect(jsonPath("$.data.inventoryFlowCount").value(1))
-                .andExpect(jsonPath("$.data.inventoryStockCount").value(1));
+                .andExpect(jsonPath("$.data.inventoryStockCount").value(1))
+                .andExpect(jsonPath("$.data.vehicleCount").value(1))
+                .andExpect(jsonPath("$.data.customerCount").value(1));
     }
 
     @Test
@@ -217,6 +231,15 @@ class TrialDataControllerTest {
     }
 
     @Test
+    void clear_emptyBodyReturnsBusinessError() throws Exception {
+        mockMvc.perform(post("/api/admin/trial-data/clear")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + superAdminToken())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
+    }
+
+    @Test
     void clear_successClearsBusinessData() throws Exception {
         mockMvc.perform(post("/api/admin/trial-data/clear")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + superAdminToken())
@@ -231,7 +254,9 @@ class TrialDataControllerTest {
                 .andExpect(jsonPath("$.data.officialAfterSalesDeleted").value(1))
                 .andExpect(jsonPath("$.data.reimbursementsDeleted").value(1))
                 .andExpect(jsonPath("$.data.inventoryFlowsDeleted").value(1))
-                .andExpect(jsonPath("$.data.inventoryStocksReset").value(1));
+                .andExpect(jsonPath("$.data.inventoryStocksReset").value(1))
+                .andExpect(jsonPath("$.data.vehiclesDeleted").value(1))
+                .andExpect(jsonPath("$.data.customersDeleted").value(1));
     }
 
     @Test
@@ -246,6 +271,23 @@ class TrialDataControllerTest {
         Integer partCount = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM part WHERE id = 9001", Integer.class);
         assert partCount != null && partCount == 1 : "Part should be preserved after clear";
+    }
+
+    @Test
+    void clear_removesCustomerAndVehicleData() throws Exception {
+        mockMvc.perform(post("/api/admin/trial-data/clear")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + superAdminToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"confirmText\":\"CONFIRM_CLEAR_TRIAL_DATA\"}"))
+                .andExpect(status().isOk());
+
+        Integer vehicleCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM vehicle WHERE id = 6001", Integer.class);
+        assert vehicleCount != null && vehicleCount == 0 : "Vehicle should be deleted after clear";
+
+        Integer customerCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM customer WHERE id = 6001", Integer.class);
+        assert customerCount != null && customerCount == 0 : "Customer should be deleted after clear";
     }
 
     @Test
@@ -310,6 +352,8 @@ class TrialDataControllerTest {
                 .andExpect(jsonPath("$.data.refundRecordCount").value(0))
                 .andExpect(jsonPath("$.data.officialAfterSalesCount").value(0))
                 .andExpect(jsonPath("$.data.reimbursementCount").value(0))
-                .andExpect(jsonPath("$.data.inventoryFlowCount").value(0));
+                .andExpect(jsonPath("$.data.inventoryFlowCount").value(0))
+                .andExpect(jsonPath("$.data.vehicleCount").value(0))
+                .andExpect(jsonPath("$.data.customerCount").value(0));
     }
 }

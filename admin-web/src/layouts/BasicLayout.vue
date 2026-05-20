@@ -12,7 +12,7 @@
         :default-active="activeMenu"
         router
       >
-        <el-menu-item index="/dashboard"><template #title>首页</template></el-menu-item>
+        <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/dashboard"><template #title>首页</template></el-menu-item>
         <el-menu-item index="/work-order"><template #title>工单管理</template></el-menu-item>
         <el-menu-item index="/parts"><template #title>配件管理</template></el-menu-item>
         <el-menu-item

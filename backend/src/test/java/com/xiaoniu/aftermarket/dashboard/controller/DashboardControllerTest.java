@@ -170,12 +170,12 @@ class DashboardControllerTest {
 
     @Test
     void summaryCountsPendingSettleWorkOrders() throws Exception {
-        // DRAFT + ACCEPTED = 2 (not SETTLED or CANCELLED)
+        // ACCEPTED = 1. DRAFT is not eligible for settlement.
         mockMvc.perform(get("/api/admin/dashboard/summary")
                         .header(USER_HEADER, "1")
                         .header(STORE_HEADER, "1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.pendingSettleWorkOrderCount").value(2));
+                .andExpect(jsonPath("$.data.pendingSettleWorkOrderCount").value(1));
     }
 
     @Test
@@ -256,7 +256,7 @@ class DashboardControllerTest {
                         .header(USER_HEADER, "1")
                         .header(STORE_HEADER, "1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.pendingActions.pendingSettleCount").value(2))
+                .andExpect(jsonPath("$.data.pendingActions.pendingSettleCount").value(1))
                 .andExpect(jsonPath("$.data.pendingActions.pendingReimbursementCount").value(1))
                 .andExpect(jsonPath("$.data.pendingActions.pendingOfficialSettlementCount").value(1));
     }
@@ -269,7 +269,7 @@ class DashboardControllerTest {
                         .header(STORE_HEADER, "2"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.todayWorkOrderCount").value(1))
-                .andExpect(jsonPath("$.data.pendingSettleWorkOrderCount").value(1))
+                .andExpect(jsonPath("$.data.pendingSettleWorkOrderCount").value(0))
                 .andExpect(jsonPath("$.data.monthCustomerIncome").value(0))
                 .andExpect(jsonPath("$.data.recentWorkOrders.length()").value(1));
     }

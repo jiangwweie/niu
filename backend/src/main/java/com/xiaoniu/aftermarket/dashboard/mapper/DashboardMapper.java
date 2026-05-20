@@ -23,7 +23,7 @@ public interface DashboardMapper {
     @Select("""
             SELECT COUNT(*) FROM work_order
             WHERE store_id = #{storeId}
-              AND status NOT IN ('SETTLED', 'CANCELLED')
+              AND status IN ('PENDING_ACCEPT', 'ACCEPTED', 'PART_ORDERED', 'PART_ARRIVED')
               AND deleted = 0
             """)
     Integer countPendingSettleWorkOrders(@Param("storeId") Long storeId);
@@ -65,7 +65,7 @@ public interface DashboardMapper {
             WHERE wo.store_id = #{storeId}
               AND wo.deleted = 0
             ORDER BY wo.created_at DESC
-            FETCH FIRST 5 ROWS ONLY
+            LIMIT 5
             """)
     @Results(id = "recentWorkOrderResults", value = {
             @Result(property = "id", column = "id"),

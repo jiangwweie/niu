@@ -37,10 +37,10 @@ public class TrialDataController {
 
     @PostMapping("/clear")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
-    public ApiResponse<ClearTrialDataResponse> clear(@RequestBody ClearTrialDataRequest request) {
+    public ApiResponse<ClearTrialDataResponse> clear(@RequestBody(required = false) ClearTrialDataRequest request) {
         CurrentUser user = requireCurrentUser();
 
-        if (!CONFIRM_TEXT.equals(request.getConfirmText())) {
+        if (request == null || !CONFIRM_TEXT.equals(request.getConfirmText())) {
             return ApiResponse.failure(ErrorCode.COMMON_BAD_REQUEST,
                     "确认文本不正确，请输入 " + CONFIRM_TEXT);
         }

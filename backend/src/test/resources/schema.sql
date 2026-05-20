@@ -84,6 +84,37 @@ CREATE TABLE IF NOT EXISTS store (
     PRIMARY KEY (id)
 );
 
+CREATE TABLE IF NOT EXISTS customer (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    store_id BIGINT NOT NULL,
+    customer_name VARCHAR(64) NOT NULL,
+    phone VARCHAR(32) NULL,
+    remark VARCHAR(512) NULL,
+    created_by BIGINT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by BIGINT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS vehicle (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    store_id BIGINT NOT NULL,
+    customer_id BIGINT NULL,
+    model VARCHAR(128) NULL,
+    frame_no VARCHAR(128) NOT NULL,
+    battery_no VARCHAR(128) NULL,
+    remark VARCHAR(512) NULL,
+    created_by BIGINT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by BIGINT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (id),
+    UNIQUE (store_id, frame_no)
+);
+
 CREATE TABLE IF NOT EXISTS sys_role (
     id BIGINT NOT NULL AUTO_INCREMENT,
     store_id BIGINT NULL,

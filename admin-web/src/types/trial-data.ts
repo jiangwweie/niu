@@ -9,6 +9,8 @@ export interface TrialDataSummaryResponse {
   reimbursementCount: number;
   inventoryFlowCount: number;
   inventoryStockCount: number;
+  vehicleCount: number;
+  customerCount: number;
 }
 
 export interface ClearTrialDataResponse {
@@ -21,4 +23,6 @@ export interface ClearTrialDataResponse {
   reimbursementsDeleted: number;
   inventoryFlowsDeleted: number;
   inventoryStocksReset: number;
+  vehiclesDeleted: number;
+  customersDeleted: number;
 }

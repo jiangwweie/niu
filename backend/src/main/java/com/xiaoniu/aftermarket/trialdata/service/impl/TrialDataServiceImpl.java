@@ -29,6 +29,8 @@ public class TrialDataServiceImpl implements TrialDataService {
         response.setReimbursementCount(trialDataMapper.countReimbursements(storeId));
         response.setInventoryFlowCount(trialDataMapper.countInventoryFlows(storeId));
         response.setInventoryStockCount(trialDataMapper.countInventoryStocks(storeId));
+        response.setVehicleCount(trialDataMapper.countVehicles(storeId));
+        response.setCustomerCount(trialDataMapper.countCustomers(storeId));
         return response;
     }
 
@@ -49,6 +51,10 @@ public class TrialDataServiceImpl implements TrialDataService {
         // Inventory: delete flows, reset stock quantities
         response.setInventoryFlowsDeleted(trialDataMapper.deleteInventoryFlows(storeId));
         response.setInventoryStocksReset(trialDataMapper.resetInventoryStocks(storeId));
+
+        // Customer/vehicle data can contain trial personal information.
+        response.setVehiclesDeleted(trialDataMapper.deleteVehicles(storeId));
+        response.setCustomersDeleted(trialDataMapper.deleteCustomers(storeId));
 
         return response;
     }

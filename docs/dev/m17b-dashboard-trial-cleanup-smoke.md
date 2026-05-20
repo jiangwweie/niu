@@ -5,7 +5,7 @@
 M17B 提供两项正式交付前能力：
 
 1. **Dashboard 真实统计**：admin-web 首页接入真实业务数据，展示今日工单、待结算、低库存、本月财务概览、最近工单、待处理事项。
-2. **正式启用数据清理**：SUPER_ADMIN 可清理试运行期间的业务数据（工单、支付、退款、报销、官方结算、库存流水），保留基础配置数据，使系统可以正式启用。
+2. **正式启用数据清理**：SUPER_ADMIN 可清理试运行期间的业务数据（工单、支付、退款、报销、官方结算、库存流水、客户、车辆），保留基础配置数据，使系统可以正式启用。
 
 ## 一、Dashboard 统计
 
@@ -25,7 +25,7 @@ M17B 提供两项正式交付前能力：
 | 字段 | 说明 | 来源 |
 |------|------|------|
 | `todayWorkOrderCount` | 今日创建工单数 | `work_order`，按 `DATE(created_at) = 今日` 统计，`store_id` 隔离 |
-| `pendingSettleWorkOrderCount` | 待结算工单数 | `work_order`，status 不在 SETTLED/CANCELLED，`store_id` 隔离 |
+| `pendingSettleWorkOrderCount` | 待结算工单数 | `work_order`，status 属于 PENDING_ACCEPT/ACCEPTED/PART_ORDERED/PART_ARRIVED，`store_id` 隔离 |
 | `pendingReimbursementCount` | 待确认报销数 | `reimbursement`，status = PENDING，`store_id` 隔离 |
 | `lowStockPartCount` | 低库存配件数 | `inventory_stock` JOIN `part`，`availableQty <= 3` 且 part ENABLED，`store_id` 隔离 |
 | `monthCustomerIncome` | 本月客户支付净收入 | 复用 `FinanceService.queryMonthly`，支付总额 - 退款总额 |
@@ -73,6 +73,8 @@ Dashboard 的月度财务字段（`monthCustomerIncome`、`monthOfficialIncome`�
 | `work_order` | 删除 | 工单主表 |
 | `inventory_flow` | 删除 | 库存流水 |
 | `inventory_stock` | 归零 | `actual_qty=0, available_qty=0, reserved_qty=0`，记录保留 |
+| `vehicle` | 删除 | 试运行车辆资料 |
+| `customer` | 删除 | 试运行客户资料 |
 
 ### 保留范围
 
@@ -131,4 +133,4 @@ Dashboard 的月度财务字段（`monthCustomerIncome`、`monthOfficialIncome`�
 - 本月财务统计以自然月为口径，不支持自定义时间范围。
 - 正式启用清理不支持选择性清理（只能全部清理）。
 - 清理操作不支持回滚（需数据库备份恢复）。
-- `work_order_status_log` 的删除通过 `work_order_id IN (SELECT ...)` 实现，依赖工单表先查询后删除。
+- `work_order_status_log` 的删除按 `store_id` 执行，依赖当前单门店 MVP 的门店隔离字段。

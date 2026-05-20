@@ -19,7 +19,7 @@
         </template>
         <template #default>
           <div class="risk-content">
-            <p>此操作将<strong>永久删除</strong>所有试运行业务数据，包括工单、支付、退款、报销、官方结算、库存流水等。</p>
+            <p>此操作将<strong>永久删除</strong>所有试运行业务数据，包括工单、支付、退款、报销、官方结算、库存流水、客户、车辆等。</p>
             <p>清理后<strong>不可恢复</strong>，除非有数据库备份。</p>
             <p><strong>强烈建议在操作前备份数据库！</strong></p>
           </div>
@@ -41,6 +41,8 @@
           <el-descriptions-item label="报销记录">{{ summary.reimbursementCount }}</el-descriptions-item>
           <el-descriptions-item label="库存流水">{{ summary.inventoryFlowCount }}</el-descriptions-item>
           <el-descriptions-item label="库存记录（将归零）">{{ summary.inventoryStockCount }}</el-descriptions-item>
+          <el-descriptions-item label="车辆资料">{{ summary.vehicleCount }}</el-descriptions-item>
+          <el-descriptions-item label="客户资料">{{ summary.customerCount }}</el-descriptions-item>
         </el-descriptions>
       </el-card>
 
@@ -99,6 +101,8 @@
           <el-descriptions-item label="报销记录已删除">{{ clearResult.reimbursementsDeleted }}</el-descriptions-item>
           <el-descriptions-item label="库存流水已删除">{{ clearResult.inventoryFlowsDeleted }}</el-descriptions-item>
           <el-descriptions-item label="库存已归零">{{ clearResult.inventoryStocksReset }}</el-descriptions-item>
+          <el-descriptions-item label="车辆资料已删除">{{ clearResult.vehiclesDeleted }}</el-descriptions-item>
+          <el-descriptions-item label="客户资料已删除">{{ clearResult.customersDeleted }}</el-descriptions-item>
         </el-descriptions>
         <el-alert type="success" :closable="false" show-icon style="margin-top: 16px;">
           清理完成。系统已可以正式启用。

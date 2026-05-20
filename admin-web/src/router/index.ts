@@ -113,7 +113,25 @@ const router = createRouter({
 });
 
 import { useAuthStore } from '@/stores/auth';
+import type { AuthUser } from '@/stores/auth';
 import { getMe } from '@/api/auth';
+
+function firstAccessiblePath(user: AuthUser | null): string {
+  const permissions = user?.permissionCodes || [];
+  const roles = user?.roleCodes || [];
+  const hasPermission = (code: string) => permissions.includes(code);
+  const hasAnyPermission = (codes: string[]) => codes.some(code => permissions.includes(code));
+  const hasRole = (code: string) => roles.includes(code);
+
+  if (hasPermission('FINANCE_VIEW')) return '/dashboard';
+  if (hasAnyPermission(['WORK_ORDER_VIEW', 'WORK_ORDER_CREATE', 'WORK_ORDER_SETTLE'])) return '/work-order';
+  if (hasAnyPermission(['PART_VIEW', 'PART_MANAGE'])) return '/parts';
+  if (hasAnyPermission(['INVENTORY_VIEW', 'INVENTORY_INBOUND', 'INVENTORY_ADJUST'])) return '/inventory';
+  if (hasAnyPermission(['USER_MANAGE', 'ROLE_MANAGE'])) return '/user';
+  if (hasPermission('STORE_MANAGE')) return '/store';
+  if (hasRole('SUPER_ADMIN')) return '/trial-data';
+  return '/change-password';
+}
 
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
@@ -138,6 +156,9 @@ router.beforeEach(async (to, from, next) => {
       if (user.passwordMustChange && to.path !== '/change-password') {
         return next({ path: '/change-password' });
       }
+      if (to.path === '/dashboard' && !user.permissionCodes.includes('FINANCE_VIEW')) {
+        return next({ path: firstAccessiblePath(user) });
+      }
       next();
     } catch (error) {
       // 401 interceptor handles redirection, but in case it doesn't:
@@ -147,6 +168,9 @@ router.beforeEach(async (to, from, next) => {
   } else {
     if (authStore.user.passwordMustChange && to.path !== '/change-password') {
       return next({ path: '/change-password' });
+    }
+    if (to.path === '/dashboard' && !authStore.user.permissionCodes.includes('FINANCE_VIEW')) {
+      return next({ path: firstAccessiblePath(authStore.user) });
     }
     next();
   }
