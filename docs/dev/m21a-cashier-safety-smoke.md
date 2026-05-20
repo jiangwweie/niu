@@ -7,7 +7,12 @@
 
 ## 1. 超收拦截规则
 
-新增错误码：`PAYMENT_EXCEEDS_RECEIVABLE`，当累计已收 + 本次收款 > 应收时，记录支付接口直接拒绝。
+新增错误码：`PAYMENT_EXCEEDS_RECEIVABLE`。
+
+**口径**：超收校验基于**净实收**（`sum(payments) - sum(refunds)`），不是支付记录总额。
+- 判断条件：`净实收 + 本次收款 > 应收` → 拒绝
+- 退款后释放的额度可以重新收取（例如：应收 100，收 100，退 30，再收 30 → 允许）
+- 历史 `payment_record` 总额可能超过 `receivableAmount`（如上例总额 130），但净实收始终 ≤ 应收
 
 **实现位置**：`PaymentServiceImpl.recordPayment()`，在 `selectByIdForUpdate` 获取工悲观锁之后、插入 `payment_record` 之前执行校验。
 
@@ -42,7 +47,6 @@ GET /api/admin/finance/cashier-report?date=2026-05-20
 |------|------|------|
 | date | LocalDate | 查询日期 |
 | storeId | Long | 当前门店 ID |
-| storeName | String | 门店名称（预留，当前为 null） |
 | totalPaymentAmount | BigDecimal | 当日收款总额 |
 | totalRefundAmount | BigDecimal | 当日退款总额 |
 | netAmount | BigDecimal | 当日净收款 |
@@ -83,7 +87,7 @@ GET /api/admin/finance/cashier-report?date=2026-05-20
 
 ## 7. 测试清单
 
-### PaymentOverpayTest（6 场景）
+### PaymentOverpayTest（7 场景）
 
 | 场景 | 预期 |
 |------|------|
@@ -91,6 +95,7 @@ GET /api/admin/finance/cashier-report?date=2026-05-20
 | recordPaymentEqualRemainingReceivableSucceeds | 成功，足额收款 |
 | recordPaymentExceedingReceivableFailsWithPaymentExceedsReceivable | PAYMENT_EXCEEDS_RECEIVABLE |
 | multiplePartialPaymentsCannotExceedReceivable | 多次累计后超收被拦截 |
+| fullPayRefundThenRepayWithinReceivableSucceeds | 退款后补收，净实收 ≤ 应收，允许 |
 | draftWorkOrderPaymentStillRejected | PAYMENT_WORK_ORDER_STATUS_INVALID |
 | settledWorkOrderPaymentStillRejected | PAYMENT_WORK_ORDER_STATUS_INVALID |
 

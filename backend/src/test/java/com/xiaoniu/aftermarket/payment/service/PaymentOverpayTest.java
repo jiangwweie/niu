@@ -7,6 +7,7 @@ import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.common.enums.WorkOrderStatus;
 import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import com.xiaoniu.aftermarket.payment.dto.RecordPaymentCommand;
+import com.xiaoniu.aftermarket.payment.dto.RecordRefundCommand;
 import com.xiaoniu.aftermarket.payment.mapper.PaymentRecordMapper;
 import com.xiaoniu.aftermarket.workorder.dto.AddWorkOrderChargeItemCommand;
 import com.xiaoniu.aftermarket.workorder.dto.CreateDraftWorkOrderCommand;
@@ -32,6 +33,9 @@ class PaymentOverpayTest {
 
     @Autowired
     private PaymentService paymentService;
+
+    @Autowired
+    private RefundService refundService;
 
     @Autowired
     private WorkOrderService workOrderService;
@@ -107,6 +111,33 @@ class PaymentOverpayTest {
 
         assertEquals(ErrorCode.PAYMENT_EXCEEDS_RECEIVABLE, ex.getErrorCode());
         assertEquals(0, new BigDecimal("200.00")
+                .compareTo(workOrderMapper.selectById(woId).getReceivedAmount()));
+    }
+
+    @Test
+    void fullPayRefundThenRepayWithinReceivableSucceeds() {
+        Long woId = createSubmittedWorkOrder(new BigDecimal("100.00"));
+
+        // Pay full amount
+        paymentService.recordPayment(buildCommand(woId, new BigDecimal("100.00")));
+        assertEquals(0, new BigDecimal("100.00")
+                .compareTo(workOrderMapper.selectById(woId).getReceivedAmount()));
+
+        // Refund 30
+        RecordRefundCommand refundCmd = new RecordRefundCommand();
+        refundCmd.setStoreId(STORE_ID);
+        refundCmd.setWorkOrderId(woId);
+        refundCmd.setAmount(new BigDecimal("30.00"));
+        refundCmd.setRefundMethod("WECHAT");
+        refundCmd.setOperatorId(OPERATOR_ID);
+        refundCmd.setReason("部分退款");
+        refundService.recordRefund(refundCmd);
+        assertEquals(0, new BigDecimal("70.00")
+                .compareTo(workOrderMapper.selectById(woId).getReceivedAmount()));
+
+        // Re-pay the refunded 30 — allowed because net received (70) + 30 = 100 <= receivable
+        paymentService.recordPayment(buildCommand(woId, new BigDecimal("30.00")));
+        assertEquals(0, new BigDecimal("100.00")
                 .compareTo(workOrderMapper.selectById(woId).getReceivedAmount()));
     }
 

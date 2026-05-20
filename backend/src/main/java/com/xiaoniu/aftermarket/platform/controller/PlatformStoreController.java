@@ -3,12 +3,11 @@ package com.xiaoniu.aftermarket.platform.controller;
 import com.xiaoniu.aftermarket.auth.security.AuthenticatedUser;
 import com.xiaoniu.aftermarket.common.api.ApiResponse;
 import com.xiaoniu.aftermarket.common.enums.AccountType;
-import com.xiaoniu.aftermarket.common.exception.BusinessException;
-import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.platform.dto.PlatformStoreDtos.*;
 import com.xiaoniu.aftermarket.platform.service.PlatformStoreService;
 import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -56,7 +55,7 @@ public class PlatformStoreController {
     private AuthenticatedUser requirePlatformAccount() {
         AuthenticatedUser user = (AuthenticatedUser) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         if (!AccountType.PLATFORM_VALUE.equals(user.accountType())) {
-            throw new BusinessException(ErrorCode.PLATFORM_ADMIN_USER_REQUIRED);
+            throw new AccessDeniedException("平台管理员账号才能执行此操作");
         }
         return user;
     }

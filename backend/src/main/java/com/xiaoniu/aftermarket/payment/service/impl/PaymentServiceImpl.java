@@ -67,11 +67,13 @@ public class PaymentServiceImpl implements PaymentService {
         validatePayableStatus(workOrder);
 
         // Overpayment guard: check inside @Transactional, after selectByIdForUpdate lock on work_order.
+        // Uses net received (payments - refunds), so after a refund the freed amount can be re-collected.
+        // "Overpayment" means: netReceived + thisPayment > receivable.
         // Concurrent payment requests are serialized by the pessimistic lock, so two requests cannot
         // both read a stale receivedAmount and pass this check simultaneously.
         BigDecimal normalizedAmount = paymentAmountService.normalizeAmount(command.getAmount());
-        BigDecimal currentReceived = paymentAmountService.calculateReceivedAmount(command.getWorkOrderId());
-        BigDecimal newTotal = currentReceived.add(normalizedAmount);
+        BigDecimal netReceived = paymentAmountService.calculateReceivedAmount(command.getWorkOrderId());
+        BigDecimal newTotal = netReceived.add(normalizedAmount);
         BigDecimal receivable = paymentAmountService.normalizeAmount(workOrder.getReceivableAmount());
         if (newTotal.compareTo(receivable) > 0) {
             throw new BusinessException(ErrorCode.PAYMENT_EXCEEDS_RECEIVABLE);

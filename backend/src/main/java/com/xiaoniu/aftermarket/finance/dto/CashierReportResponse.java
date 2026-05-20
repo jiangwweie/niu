@@ -12,7 +12,6 @@ public class CashierReportResponse {
 
     private LocalDate date;
     private Long storeId;
-    private String storeName;
 
     private BigDecimal totalPaymentAmount;
     private BigDecimal totalRefundAmount;
