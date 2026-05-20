@@ -8,6 +8,7 @@ public record AuthUserResponse(
         String storeName,
         String username,
         String realName,
+        String accountType,
         Boolean passwordMustChange,
         Set<String> roleCodes,
         Set<String> permissionCodes

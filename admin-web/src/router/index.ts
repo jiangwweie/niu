@@ -14,6 +14,12 @@ const routes: Array<RouteRecordRaw> = [
     redirect: '/dashboard',
     children: [
       {
+        path: 'platform/stores',
+        name: 'PlatformStores',
+        component: () => import('@/views/platform/store/index.vue'),
+        meta: { title: '门店管理', requiresPlatform: true }
+      },
+      {
         path: 'dashboard',
         name: 'Dashboard',
         component: () => import('@/views/dashboard/index.vue'),
@@ -129,6 +135,8 @@ import type { AuthUser } from '@/stores/auth';
 import { getMe } from '@/api/auth';
 
 function firstAccessiblePath(user: AuthUser | null): string {
+  if (user?.accountType === 'PLATFORM') return '/platform/stores';
+
   const permissions = user?.permissionCodes || [];
   const roles = user?.roleCodes || [];
   const hasPermission = (code: string) => permissions.includes(code);
@@ -169,6 +177,12 @@ router.beforeEach(async (to, from, next) => {
       if (user.passwordMustChange && to.path !== '/change-password') {
         return next({ path: '/change-password' });
       }
+      if (user.accountType === 'PLATFORM' && !to.path.startsWith('/platform') && to.path !== '/change-password') {
+        return next({ path: '/platform/stores' });
+      }
+      if (user.accountType === 'STORE' && to.path.startsWith('/platform')) {
+        return next({ path: firstAccessiblePath(user) });
+      }
       if (to.path === '/dashboard' && !user.permissionCodes.includes('FINANCE_VIEW')) {
         return next({ path: firstAccessiblePath(user) });
       }
@@ -181,6 +195,12 @@ router.beforeEach(async (to, from, next) => {
   } else {
     if (authStore.user.passwordMustChange && to.path !== '/change-password') {
       return next({ path: '/change-password' });
+    }
+    if (authStore.user.accountType === 'PLATFORM' && !to.path.startsWith('/platform') && to.path !== '/change-password') {
+      return next({ path: '/platform/stores' });
+    }
+    if (authStore.user.accountType === 'STORE' && to.path.startsWith('/platform')) {
+      return next({ path: firstAccessiblePath(authStore.user) });
     }
     if (to.path === '/dashboard' && !authStore.user.permissionCodes.includes('FINANCE_VIEW')) {
       return next({ path: firstAccessiblePath(authStore.user) });

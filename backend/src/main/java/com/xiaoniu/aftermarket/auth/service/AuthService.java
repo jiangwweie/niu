@@ -96,6 +96,7 @@ public class AuthService {
                 user.getStoreId(),
                 user.getUsername(),
                 user.getRealName(),
+                user.getAccountType(),
                 Set.copyOf(roleCodes),
                 Set.copyOf(permissionCodes)
         );
@@ -108,6 +109,7 @@ public class AuthService {
                 storeName(user.storeId()),
                 user.username(),
                 user.realName(),
+                user.accountType(),
                 currentPasswordMustChange(user.userId()),
                 user.roleCodes(),
                 user.permissionCodes()

@@ -30,6 +30,7 @@ class SensitiveReadPermissionTest {
     private String tokenWithFinanceView() {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(1L, 1L, "admin01", "张三",
+                null,
                         Set.of("ADMIN"), Set.of("FINANCE_VIEW")),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
@@ -38,6 +39,7 @@ class SensitiveReadPermissionTest {
     private String tokenWithoutFinanceView() {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(2L, 1L, "tech01", "赵维修",
+                null,
                         Set.of("TECHNICIAN_FRONT_DESK"), Set.of("WORK_ORDER_SUBMIT")),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
@@ -46,6 +48,7 @@ class SensitiveReadPermissionTest {
     private String tokenWithOfficialSettlementManage() {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(1L, 1L, "admin01", "张三",
+                null,
                         Set.of("ADMIN"), Set.of("OFFICIAL_SETTLEMENT_MANAGE")),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
@@ -54,6 +57,7 @@ class SensitiveReadPermissionTest {
     private String tokenWithReimbursementConfirm() {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(1L, 1L, "admin01", "张三",
+                null,
                         Set.of("ADMIN"), Set.of("REIMBURSEMENT_CONFIRM")),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
@@ -62,6 +66,7 @@ class SensitiveReadPermissionTest {
     private String tokenWithPaymentRecord() {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(1L, 1L, "admin01", "张三",
+                null,
                         Set.of("ADMIN"), Set.of("PAYMENT_RECORD")),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
@@ -70,6 +75,7 @@ class SensitiveReadPermissionTest {
     private String tokenWithRefundRecord() {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(1L, 1L, "admin01", "张三",
+                null,
                         Set.of("ADMIN"), Set.of("REFUND_RECORD")),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();

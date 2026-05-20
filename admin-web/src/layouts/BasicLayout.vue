@@ -12,36 +12,42 @@
         :default-active="activeMenu"
         router
       >
-        <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/dashboard"><template #title>首页</template></el-menu-item>
-        <el-menu-item index="/work-order"><template #title>工单管理</template></el-menu-item>
-        <el-menu-item
-          v-if="hasAnyPermission(['CUSTOMER_VIEW', 'CUSTOMER_MANAGE'])"
-          index="/customers"
-        ><template #title>客户档案</template></el-menu-item>
-        <el-menu-item
-          v-if="hasAnyPermission(['CUSTOMER_VIEW', 'CUSTOMER_MANAGE'])"
-          index="/vehicles"
-        ><template #title>车辆档案</template></el-menu-item>
-        <el-menu-item index="/parts"><template #title>配件管理</template></el-menu-item>
-        <el-menu-item
-          v-if="hasAnyPermission(['INVENTORY_VIEW', 'INVENTORY_INBOUND', 'INVENTORY_ADJUST'])"
-          index="/inventory"
-        ><template #title>库存管理</template></el-menu-item>
-        <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/payment"><template #title>支付记录</template></el-menu-item>
-        <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/refund"><template #title>退款记录</template></el-menu-item>
-        <el-menu-item
-          v-if="hasAnyPermission(['OFFICIAL_SETTLEMENT_MANAGE', 'FINANCE_VIEW'])"
-          index="/settlement"
-        ><template #title>官方售后结算</template></el-menu-item>
-        <el-menu-item
-          v-if="hasAnyPermission(['REIMBURSEMENT_CONFIRM', 'FINANCE_VIEW'])"
-          index="/reimbursement"
-        ><template #title>报销台账</template></el-menu-item>
-        <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/finance"><template #title>财务报表</template></el-menu-item>
-        <el-menu-item v-if="hasPermission('DICT_MANAGE')" index="/dictionary"><template #title>字典配置</template></el-menu-item>
-        <el-menu-item v-if="hasAnyPermission(['USER_MANAGE', 'ROLE_MANAGE'])" index="/user"><template #title>用户与权限</template></el-menu-item>
-        <el-menu-item v-if="hasPermission('STORE_MANAGE')" index="/store"><template #title>门店配置</template></el-menu-item>
-        <el-menu-item v-if="hasRole('SUPER_ADMIN')" index="/trial-data"><template #title>正式启用</template></el-menu-item>
+        <el-menu-item v-if="isPlatform" index="/platform/stores">
+          <template #title>门店管理</template>
+        </el-menu-item>
+
+        <template v-if="!isPlatform">
+          <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/dashboard"><template #title>首页</template></el-menu-item>
+          <el-menu-item index="/work-order"><template #title>工单管理</template></el-menu-item>
+          <el-menu-item
+            v-if="hasAnyPermission(['CUSTOMER_VIEW', 'CUSTOMER_MANAGE'])"
+            index="/customers"
+          ><template #title>客户档案</template></el-menu-item>
+          <el-menu-item
+            v-if="hasAnyPermission(['CUSTOMER_VIEW', 'CUSTOMER_MANAGE'])"
+            index="/vehicles"
+          ><template #title>车辆档案</template></el-menu-item>
+          <el-menu-item index="/parts"><template #title>配件管理</template></el-menu-item>
+          <el-menu-item
+            v-if="hasAnyPermission(['INVENTORY_VIEW', 'INVENTORY_INBOUND', 'INVENTORY_ADJUST'])"
+            index="/inventory"
+          ><template #title>库存管理</template></el-menu-item>
+          <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/payment"><template #title>支付记录</template></el-menu-item>
+          <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/refund"><template #title>退款记录</template></el-menu-item>
+          <el-menu-item
+            v-if="hasAnyPermission(['OFFICIAL_SETTLEMENT_MANAGE', 'FINANCE_VIEW'])"
+            index="/settlement"
+          ><template #title>官方售后结算</template></el-menu-item>
+          <el-menu-item
+            v-if="hasAnyPermission(['REIMBURSEMENT_CONFIRM', 'FINANCE_VIEW'])"
+            index="/reimbursement"
+          ><template #title>报销台账</template></el-menu-item>
+          <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/finance"><template #title>财务报表</template></el-menu-item>
+          <el-menu-item v-if="hasPermission('DICT_MANAGE')" index="/dictionary"><template #title>字典配置</template></el-menu-item>
+          <el-menu-item v-if="hasAnyPermission(['USER_MANAGE', 'ROLE_MANAGE'])" index="/user"><template #title>用户与权限</template></el-menu-item>
+          <el-menu-item v-if="hasPermission('STORE_MANAGE')" index="/store"><template #title>门店配置</template></el-menu-item>
+          <el-menu-item v-if="hasRole('SUPER_ADMIN')" index="/trial-data"><template #title>正式启用</template></el-menu-item>
+        </template>
       </el-menu>
       
       <div class="sidebar-footer">
@@ -58,10 +64,13 @@
           <span class="version-badge">Admin</span>
         </div>
         <div class="header-right">
-          <div class="store-info">
+          <div class="store-info" v-if="!isPlatform">
             <span class="dot"></span>
             <span class="label">当前门店:</span>
             <span class="value">{{ storeDisplayName }}</span>
+          </div>
+          <div class="store-info" v-else>
+            <span class="label">平台管理</span>
           </div>
           <div class="divider"></div>
           <el-dropdown trigger="click">
@@ -116,6 +125,8 @@ const activeMenu = computed(() => {
   return route.path;
 });
 
+const isPlatform = computed(() => authStore.user?.accountType === 'PLATFORM');
+
 // Role code → Chinese display mapping
 const ROLE_LABEL_MAP: Record<string, string> = {
   SUPER_ADMIN: '系统超管',
@@ -125,6 +136,7 @@ const ROLE_LABEL_MAP: Record<string, string> = {
 };
 
 const roleDisplayName = computed(() => {
+  if (authStore.user?.accountType === 'PLATFORM') return '平台管理员';
   const codes = authStore.user?.roleCodes;
   if (!codes || codes.length === 0) return '当前用户';
   return ROLE_LABEL_MAP[codes[0]] || codes[0];
@@ -132,7 +144,7 @@ const roleDisplayName = computed(() => {
 
 // Store display: no hardcoded name
 const storeDisplayName = computed(() => {
-  return authStore.user?.storeName || '默认门店';
+  return authStore.user?.storeName || '未绑定门店';
 });
 
 // Avatar: first char of realName or username

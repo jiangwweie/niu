@@ -47,13 +47,14 @@ CREATE TABLE IF NOT EXISTS sys_dict_item (
 
 CREATE TABLE IF NOT EXISTS sys_user (
     id BIGINT NOT NULL AUTO_INCREMENT,
-    store_id BIGINT NOT NULL,
+    store_id BIGINT NULL,
     username VARCHAR(64) NULL,
     password_hash VARCHAR(255) NULL,
     real_name VARCHAR(64) NOT NULL,
     phone VARCHAR(32) NULL,
     wechat_openid VARCHAR(128) NULL,
     wechat_unionid VARCHAR(128) NULL,
+    account_type VARCHAR(20) NOT NULL DEFAULT 'STORE',
     status VARCHAR(32) NOT NULL,
     password_must_change BOOLEAN NOT NULL DEFAULT FALSE,
     password_changed_at TIMESTAMP NULL,
@@ -81,7 +82,8 @@ CREATE TABLE IF NOT EXISTS store (
     updated_by BIGINT NULL,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     deleted INTEGER NOT NULL DEFAULT 0,
-    PRIMARY KEY (id)
+    PRIMARY KEY (id),
+    UNIQUE (store_code)
 );
 
 CREATE TABLE IF NOT EXISTS customer (

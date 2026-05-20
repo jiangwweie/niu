@@ -65,7 +65,7 @@ class AdminStoreControllerTest {
 
     private String token(Long userId, Set<String> permissions) {
         return jwtProvider.generateAccessToken(
-                new AuthenticatedUser(userId, 1L, "user" + userId, "测试用户", Set.of("ADMIN"), permissions),
+                new AuthenticatedUser(userId, 1L, "user" + userId, "测试用户", null, Set.of("ADMIN"), permissions),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
     }

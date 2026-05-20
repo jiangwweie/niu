@@ -29,6 +29,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    JwtAuthenticationFilter jwtAuthenticationFilter,
+                                                   PlatformAccessGuard platformAccessGuard,
                                                    ApiAuthenticationEntryPoint authenticationEntryPoint,
                                                    ApiAccessDeniedHandler accessDeniedHandler) throws Exception {
         return http
@@ -45,10 +46,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/me").authenticated()
                         .requestMatchers("/api/auth/**", "/api/health").permitAll()
+                        .requestMatchers("/api/platform/**").authenticated()
                         .requestMatchers("/api/admin/**", "/api/staff/**").authenticated()
                         .anyRequest().denyAll()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(platformAccessGuard, JwtAuthenticationFilter.class)
                 .build();
     }
 

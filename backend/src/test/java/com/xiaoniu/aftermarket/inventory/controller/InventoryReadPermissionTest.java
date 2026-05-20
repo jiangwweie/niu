@@ -30,6 +30,7 @@ class InventoryReadPermissionTest {
     private String tokenWithInventoryView() {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(1L, 1L, "admin01", "张三",
+                null,
                         Set.of("ADMIN"), Set.of("INVENTORY_VIEW")),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
@@ -38,6 +39,7 @@ class InventoryReadPermissionTest {
     private String tokenWithoutInventoryView() {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(2L, 1L, "finance01", "李财务",
+                null,
                         Set.of("FINANCE"), Set.of("FINANCE_VIEW")),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();

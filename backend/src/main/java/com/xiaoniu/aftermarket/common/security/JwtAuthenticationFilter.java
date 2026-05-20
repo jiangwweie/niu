@@ -7,6 +7,7 @@ import com.xiaoniu.aftermarket.auth.security.JwtProvider;
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.common.context.CurrentUser;
 import com.xiaoniu.aftermarket.common.context.CurrentUserContext;
+import com.xiaoniu.aftermarket.common.enums.AccountType;
 import com.xiaoniu.aftermarket.common.enums.CommonStatus;
 import com.xiaoniu.aftermarket.common.web.DevCurrentUserInterceptor;
 import com.xiaoniu.aftermarket.user.entity.SysRoleEntity;
@@ -122,6 +123,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 user.userId(),
                 user.storeId(),
                 user.username(),
+                user.accountType(),
                 user.permissionCodes()
         ));
     }
@@ -142,6 +144,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 user.getStoreId(),
                 user.getUsername(),
                 user.getRealName(),
+                user.getAccountType(),
                 Set.copyOf(listRoleCodes(user.getId())),
                 Set.copyOf(permissionQueryService.listPermissionCodesByUserId(user.getId()))
         );
@@ -185,6 +188,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 storeId,
                 null,
                 null,
+                AccountType.STORE_VALUE,
                 Set.copyOf(listRoleCodes(userId)),
                 Set.copyOf(permissionQueryService.listPermissionCodesByUserId(userId))
         );

@@ -253,7 +253,7 @@ class AdminUserSecurityHardeningTest {
     private String token(Long userId, Long storeId, Set<String> permissions) {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(userId, storeId, "user" + userId, "测试用户",
-                        Set.of("ADMIN"), permissions),
+                        null, Set.of("ADMIN"), permissions),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
     }

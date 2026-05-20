@@ -165,6 +165,7 @@ class AuthControllerTest {
                 1L,
                 "admin01",
                 "张三",
+                null,
                 Set.of("ADMIN"),
                 Set.of("work_order:create")
         );

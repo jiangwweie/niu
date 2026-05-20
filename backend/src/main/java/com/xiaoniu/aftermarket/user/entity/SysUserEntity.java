@@ -18,6 +18,7 @@ public class SysUserEntity extends SoftDeleteEntity {
     private String phone;
     private String wechatOpenid;
     private String wechatUnionid;
+    private String accountType;
     private String status;
     private Boolean passwordMustChange;
     private LocalDateTime passwordChangedAt;

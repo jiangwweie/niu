@@ -7,6 +7,7 @@ public record AuthenticatedUser(
         Long storeId,
         String username,
         String realName,
+        String accountType,
         Set<String> roleCodes,
         Set<String> permissionCodes
 ) {

@@ -34,7 +34,7 @@ class PartControllerPermissionTest {
     private String tokenWithPartManage() {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(1L, 1L, "admin01", "张三",
-                        Set.of("ADMIN"), Set.of("PART_MANAGE")),
+                        null, Set.of("ADMIN"), Set.of("PART_MANAGE")),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
     }
@@ -42,7 +42,7 @@ class PartControllerPermissionTest {
     private String tokenWithoutPartManage() {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(2L, 1L, "tech01", "赵维修",
-                        Set.of("TECHNICIAN_FRONT_DESK"), Set.of("WORK_ORDER_SUBMIT")),
+                        null, Set.of("TECHNICIAN_FRONT_DESK"), Set.of("WORK_ORDER_SUBMIT")),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
     }

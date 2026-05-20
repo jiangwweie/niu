@@ -36,6 +36,7 @@ class CustomerVehicleControllerTest {
     private String tokenWithCustomerView() {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(1L, 1L, "admin01", "张三",
+                null,
                         Set.of("ADMIN"), Set.of("CUSTOMER_VIEW")),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
@@ -44,6 +45,7 @@ class CustomerVehicleControllerTest {
     private String tokenWithCustomerManage() {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(1L, 1L, "admin01", "张三",
+                null,
                         Set.of("ADMIN"), Set.of("CUSTOMER_VIEW", "CUSTOMER_MANAGE")),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
@@ -52,6 +54,7 @@ class CustomerVehicleControllerTest {
     private String tokenWithoutCustomerPermission() {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(2L, 1L, "tech01", "赵维修",
+                null,
                         Set.of("TECHNICIAN"), Set.of("WORK_ORDER_SUBMIT")),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
@@ -60,6 +63,7 @@ class CustomerVehicleControllerTest {
     private String tokenWithWorkOrderCreate() {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(1L, 1L, "admin01", "张三",
+                null,
                         Set.of("ADMIN"), Set.of("WORK_ORDER_CREATE", "CUSTOMER_VIEW", "CUSTOMER_MANAGE")),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
@@ -68,6 +72,7 @@ class CustomerVehicleControllerTest {
     private String tokenStore2() {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(10L, 2L, "store_admin01", "王二",
+                null,
                         Set.of("STORE_ADMIN"), Set.of("CUSTOMER_VIEW", "CUSTOMER_MANAGE")),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();

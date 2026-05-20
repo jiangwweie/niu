@@ -3,10 +3,11 @@ import { ref } from 'vue';
 
 export interface AuthUser {
   userId: number;
-  storeId: number;
+  storeId: number | null;
   storeName?: string;
   username: string;
   realName?: string;
+  accountType: string; // 'PLATFORM' | 'STORE'
   passwordMustChange?: boolean;
   roleCodes: string[];
   permissionCodes: string[];

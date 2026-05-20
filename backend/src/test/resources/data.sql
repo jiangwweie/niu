@@ -14,16 +14,21 @@ MERGE INTO sys_dict_item (id, type_id, item_code, item_name, sort_order, status,
 -- users
 MERGE INTO store (id, store_code, store_name, contact_name, contact_phone, address, status, deleted) KEY (id) VALUES (1, 'DEFAULT', '默认门店', '王店长', '13800000000', '测试地址', 'ENABLED', 0);
 
-MERGE INTO sys_user (id, store_id, username, password_hash, real_name, phone, status, password_must_change, deleted) KEY (phone) VALUES (1, 1, 'admin01', '{noop}dev123', '张三', '13800000001', 'ENABLED', FALSE, 0);
-MERGE INTO sys_user (id, store_id, username, password_hash, real_name, phone, status, password_must_change, deleted) KEY (phone) VALUES (2, 1, 'tech01', '{noop}dev123', '李四', '13800000002', 'ENABLED', FALSE, 0);
-MERGE INTO sys_user (id, store_id, username, password_hash, real_name, phone, status, password_must_change, deleted) KEY (phone) VALUES (3, 1, 'disabled01', '{noop}dev123', '停用员工', '13800000003', 'DISABLED', FALSE, 0);
-MERGE INTO sys_user (id, store_id, username, password_hash, real_name, phone, status, password_must_change, deleted) KEY (phone) VALUES (4, 1, 'deleted01', '{noop}dev123', '删除员工', '13800000004', 'ENABLED', FALSE, 1);
+MERGE INTO sys_user (id, store_id, username, password_hash, real_name, phone, account_type, status, password_must_change, deleted) KEY (phone) VALUES (1, 1, 'admin01', '{noop}dev123', '张三', '13800000001', 'STORE', 'ENABLED', FALSE, 0);
+MERGE INTO sys_user (id, store_id, username, password_hash, real_name, phone, account_type, status, password_must_change, deleted) KEY (phone) VALUES (2, 1, 'tech01', '{noop}dev123', '李四', '13800000002', 'STORE', 'ENABLED', FALSE, 0);
+MERGE INTO sys_user (id, store_id, username, password_hash, real_name, phone, account_type, status, password_must_change, deleted) KEY (phone) VALUES (3, 1, 'disabled01', '{noop}dev123', '停用员工', '13800000003', 'STORE', 'DISABLED', FALSE, 0);
+MERGE INTO sys_user (id, store_id, username, password_hash, real_name, phone, account_type, status, password_must_change, deleted) KEY (phone) VALUES (4, 1, 'deleted01', '{noop}dev123', '删除员工', '13800000004', 'STORE', 'ENABLED', FALSE, 1);
+-- M19: platform admin test user
+MERGE INTO sys_user (id, store_id, username, password_hash, real_name, phone, account_type, status, password_must_change, deleted) KEY (phone) VALUES (20, NULL, 'platform_admin', '{noop}dev123', '平台管理员', '13800000020', 'PLATFORM', 'ENABLED', FALSE, 0);
 
 -- roles
 MERGE INTO sys_role (id, store_id, role_code, role_name, status) KEY (store_id, role_code) VALUES (1, 1, 'ADMIN', '管理员', 'ENABLED');
 MERGE INTO sys_role (id, store_id, role_code, role_name, status) KEY (store_id, role_code) VALUES (2, 1, 'TECHNICIAN', '技术员', 'ENABLED');
 MERGE INTO sys_role (id, store_id, role_code, role_name, status) KEY (store_id, role_code) VALUES (3, 1, 'DISCOUNT_STAFF', '折扣员', 'DISABLED');
 MERGE INTO sys_role (id, store_id, role_code, role_name, status) KEY (store_id, role_code) VALUES (4, 1, 'SUPER_ADMIN', '超级管理员', 'ENABLED');
+MERGE INTO sys_role (id, store_id, role_code, role_name, status) KEY (store_id, role_code) VALUES (100, 1, 'STORE_ADMIN', '门店管理员', 'ENABLED');
+MERGE INTO sys_role (id, store_id, role_code, role_name, status) KEY (store_id, role_code) VALUES (101, 1, 'FINANCE', '财务', 'ENABLED');
+MERGE INTO sys_role (id, store_id, role_code, role_name, status) KEY (store_id, role_code) VALUES (102, 1, 'TECHNICIAN_FRONT_DESK', '前台员工', 'ENABLED');
 
 -- permissions (ids 1-5 are test-only; 1004+ match V2 seed; 1028-1029 are test-only extras not in V10)
 MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1, 'work_order:create', '创建工单', 'WORK_ORDER', 'ENABLED');
@@ -53,6 +58,7 @@ MERGE INTO sys_permission (id, permission_code, permission_name, module_code, st
 MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1024, 'STORE_MANAGE', '门店配置管理', 'STORE', 'ENABLED');
 MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1028, 'WORK_ORDER_UPDATE', '工单编辑', 'WORK_ORDER', 'ENABLED');
 MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1029, 'USER_MANAGE', '用户管理', 'USER', 'ENABLED');
+MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1031, 'PLATFORM_MANAGE', '平台管理', 'PLATFORM', 'ENABLED');
 
 -- user-role relations
 MERGE INTO sys_user_role (id, user_id, role_id) KEY (user_id, role_id) VALUES (1, 1, 1);
@@ -96,12 +102,14 @@ MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permis
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1025, 4, 1029);
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1026, 4, 1023);
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1027, 4, 1024);
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1044, 4, 1031);
 
--- M17A hardening: cross-store test data
+-- M19: platform admin role assignment
+MERGE INTO sys_user_role (id, user_id, role_id) KEY (user_id, role_id) VALUES (301, 20, 4);
 MERGE INTO store (id, store_code, store_name, contact_name, contact_phone, address, status, deleted) KEY (id) VALUES (2, 'STORE2', '第二门店', '李店长', '13800000010', '第二门店地址', 'ENABLED', 0);
 MERGE INTO sys_role (id, store_id, role_code, role_name, status) KEY (store_id, role_code) VALUES (5, 2, 'STORE_ADMIN', '门店管理员', 'ENABLED');
-MERGE INTO sys_user (id, store_id, username, password_hash, real_name, phone, status, password_must_change, deleted) KEY (phone) VALUES (10, 2, 'store_admin01', '{noop}dev123', '王二', '13800000010', 'ENABLED', FALSE, 0);
-MERGE INTO sys_user (id, store_id, username, password_hash, real_name, phone, status, password_must_change, deleted) KEY (phone) VALUES (11, 2, 'test02', '{noop}dev123', '测试用户2', '13800000011', 'ENABLED', FALSE, 0);
+MERGE INTO sys_user (id, store_id, username, password_hash, real_name, phone, account_type, status, password_must_change, deleted) KEY (phone) VALUES (10, 2, 'store_admin01', '{noop}dev123', '王二', '13800000010', 'STORE', 'ENABLED', FALSE, 0);
+MERGE INTO sys_user (id, store_id, username, password_hash, real_name, phone, account_type, status, password_must_change, deleted) KEY (phone) VALUES (11, 2, 'test02', '{noop}dev123', '测试用户2', '13800000011', 'STORE', 'ENABLED', FALSE, 0);
 MERGE INTO sys_user_role (id, user_id, role_id) KEY (user_id, role_id) VALUES (201, 10, 5);
 MERGE INTO sys_user_role (id, user_id, role_id) KEY (user_id, role_id) VALUES (202, 11, 5);
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (2001, 5, 1029);
@@ -110,3 +118,11 @@ MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permis
 -- M18 customer/vehicle permissions for store2 admin role (via V10 migration auto-assign)
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1042, 5, 1021);
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1043, 5, 1022);
+-- M19 template roles for store_id=1 (used by createBaseRolesForStore)
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1050, 100, 1004);
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1051, 100, 1010);
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1052, 100, 1021);
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1053, 100, 1022);
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1054, 101, 1024);
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1055, 102, 1010);
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1056, 102, 1023);

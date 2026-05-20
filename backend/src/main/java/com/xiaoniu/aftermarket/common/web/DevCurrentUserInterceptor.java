@@ -2,6 +2,7 @@ package com.xiaoniu.aftermarket.common.web;
 
 import com.xiaoniu.aftermarket.common.context.CurrentUser;
 import com.xiaoniu.aftermarket.common.context.CurrentUserContext;
+import com.xiaoniu.aftermarket.common.enums.AccountType;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.Set;
@@ -32,6 +33,7 @@ public class DevCurrentUserInterceptor implements HandlerInterceptor {
                     Long.valueOf(userIdHeader),
                     Long.valueOf(storeIdHeader),
                     null,
+                    AccountType.STORE_VALUE,
                     Set.of()
             ));
         }

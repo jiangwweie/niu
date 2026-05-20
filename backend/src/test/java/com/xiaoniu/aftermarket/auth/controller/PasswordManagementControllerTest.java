@@ -77,7 +77,7 @@ class PasswordManagementControllerTest {
 
     private String token(Long userId) {
         return jwtProvider.generateAccessToken(
-                new AuthenticatedUser(userId, 1L, "user" + userId, "测试用户", Set.of("ADMIN"), Set.of()),
+                new AuthenticatedUser(userId, 1L, "user" + userId, "测试用户", null, Set.of("ADMIN"), Set.of()),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
     }

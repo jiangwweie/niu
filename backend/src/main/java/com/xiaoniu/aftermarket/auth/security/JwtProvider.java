@@ -80,9 +80,10 @@ public class JwtProvider {
 
         return new AuthenticatedUser(
                 asLong(claims.get("userId"), "userId"),
-                asLong(claims.get("storeId"), "storeId"),
+                asNullableLong(claims.get("storeId")),
                 asString(claims.get("username")),
                 asString(claims.get("realName")),
+                null, // accountType: not stored in JWT, rebuilt from DB
                 asStringSet(claims.get("roleCodes")),
                 asStringSet(claims.get("permissionCodes"))
         );
@@ -139,6 +140,16 @@ public class JwtProvider {
             return Long.valueOf(text);
         }
         throw new JwtAuthenticationException("Missing JWT claim: " + claimName);
+    }
+
+    private Long asNullableLong(Object value) {
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        if (value instanceof String text && !text.isBlank()) {
+            return Long.valueOf(text);
+        }
+        return null;
     }
 
     private String asString(Object value) {
