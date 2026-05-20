@@ -107,3 +107,52 @@ page { background-color: #f5f5f5; }
 .part-item-header { margin-bottom: 4px; }
 .part-name { font-size: 15px; color: #333; }
 .part-desc { display: block; font-size: 13px; color: #666; margin-top: 4px; }
+
+.search-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+  padding: 0 16px;
+  margin-bottom: 8px;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  margin-bottom: 4px;
+}
+
+.selected-tag {
+  flex: 1;
+}
+
+.search-result-list {
+  height: calc(70vh - 120px);
+  padding: 0 16px;
+}
+
+.search-result-item {
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.search-result-item:active {
+  background-color: #f5f5f5;
+}
+
+.result-name {
+  font-size: 16px;
+  color: #333;
+  font-weight: 500;
+}
+
+.result-desc {
+  font-size: 13px;
+  color: #999;
+  margin-top: 4px;
+}

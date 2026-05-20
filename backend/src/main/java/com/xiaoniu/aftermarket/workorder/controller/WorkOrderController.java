@@ -7,6 +7,10 @@ import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
 import com.xiaoniu.aftermarket.common.util.DateParamParser;
+import com.xiaoniu.aftermarket.customer.entity.CustomerEntity;
+import com.xiaoniu.aftermarket.customer.entity.VehicleEntity;
+import com.xiaoniu.aftermarket.customer.mapper.CustomerMapper;
+import com.xiaoniu.aftermarket.customer.mapper.VehicleMapper;
 import com.xiaoniu.aftermarket.workorder.application.CancelWorkOrderApplicationService;
 import com.xiaoniu.aftermarket.workorder.application.SettleWorkOrderApplicationService;
 import com.xiaoniu.aftermarket.workorder.application.SubmitWorkOrderApplicationService;
@@ -31,15 +35,21 @@ import org.springframework.web.bind.annotation.*;
 public class WorkOrderController {
 
     private final WorkOrderService workOrderService;
+    private final CustomerMapper customerMapper;
+    private final VehicleMapper vehicleMapper;
     private final SubmitWorkOrderApplicationService submitService;
     private final CancelWorkOrderApplicationService cancelService;
     private final SettleWorkOrderApplicationService settleService;
 
     public WorkOrderController(WorkOrderService workOrderService,
+                               CustomerMapper customerMapper,
+                               VehicleMapper vehicleMapper,
                                SubmitWorkOrderApplicationService submitService,
                                CancelWorkOrderApplicationService cancelService,
                                SettleWorkOrderApplicationService settleService) {
         this.workOrderService = workOrderService;
+        this.customerMapper = customerMapper;
+        this.vehicleMapper = vehicleMapper;
         this.submitService = submitService;
         this.cancelService = cancelService;
         this.settleService = settleService;
@@ -101,6 +111,27 @@ public class WorkOrderController {
         command.setOperatorId(user.userId());
         command.setCustomerId(request.customerId());
         command.setVehicleId(request.vehicleId());
+
+        // Validate customerId if provided
+        if (request.customerId() != null) {
+            CustomerEntity customer = customerMapper.selectById(request.customerId());
+            if (customer == null || !user.storeId().equals(customer.getStoreId())) {
+                throw new BusinessException(ErrorCode.CUSTOMER_NOT_FOUND, "客户不存在");
+            }
+        }
+
+        // Validate vehicleId if provided
+        if (request.vehicleId() != null) {
+            VehicleEntity vehicle = vehicleMapper.selectById(request.vehicleId());
+            if (vehicle == null || !user.storeId().equals(vehicle.getStoreId())) {
+                throw new BusinessException(ErrorCode.VEHICLE_NOT_FOUND, "车辆不存在");
+            }
+            // If both provided, verify vehicle belongs to customer
+            if (request.customerId() != null && !request.customerId().equals(vehicle.getCustomerId())) {
+                throw new BusinessException(ErrorCode.VEHICLE_NOT_IN_CUSTOMER);
+            }
+        }
+
         command.setCustomerNameSnapshot(request.customerNameSnapshot());
         command.setCustomerPhoneSnapshot(request.customerPhoneSnapshot());
         command.setVehicleModelSnapshot(request.vehicleModelSnapshot());

@@ -6,6 +6,10 @@ import com.xiaoniu.aftermarket.common.context.CurrentUser;
 import com.xiaoniu.aftermarket.common.context.CurrentUserContext;
 import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
+import com.xiaoniu.aftermarket.customer.entity.CustomerEntity;
+import com.xiaoniu.aftermarket.customer.entity.VehicleEntity;
+import com.xiaoniu.aftermarket.customer.mapper.CustomerMapper;
+import com.xiaoniu.aftermarket.customer.mapper.VehicleMapper;
 import com.xiaoniu.aftermarket.payment.application.RecordPaymentApplicationService;
 import com.xiaoniu.aftermarket.payment.application.RecordRefundApplicationService;
 import com.xiaoniu.aftermarket.payment.dto.PaymentRecordResponse;
@@ -48,6 +52,8 @@ public class StaffWorkOrderController {
 
     private final WorkOrderService workOrderService;
     private final WorkOrderMapper workOrderMapper;
+    private final CustomerMapper customerMapper;
+    private final VehicleMapper vehicleMapper;
     private final RecordPaymentApplicationService recordPaymentService;
     private final PaymentService paymentService;
     private final RecordRefundApplicationService recordRefundService;
@@ -56,6 +62,8 @@ public class StaffWorkOrderController {
 
     public StaffWorkOrderController(WorkOrderService workOrderService,
                                     WorkOrderMapper workOrderMapper,
+                                    CustomerMapper customerMapper,
+                                    VehicleMapper vehicleMapper,
                                     RecordPaymentApplicationService recordPaymentService,
                                     PaymentService paymentService,
                                     RecordRefundApplicationService recordRefundService,
@@ -63,6 +71,8 @@ public class StaffWorkOrderController {
                                     SettleWorkOrderApplicationService settleService) {
         this.workOrderService = workOrderService;
         this.workOrderMapper = workOrderMapper;
+        this.customerMapper = customerMapper;
+        this.vehicleMapper = vehicleMapper;
         this.recordPaymentService = recordPaymentService;
         this.paymentService = paymentService;
         this.recordRefundService = recordRefundService;
@@ -118,6 +128,28 @@ public class StaffWorkOrderController {
         command.setBatteryNoSnapshot(request.batteryNoSnapshot());
         command.setRepairItem(request.repairItem());
         command.setRemark(request.remark());
+
+        // Validate customerId if provided
+        if (request.customerId() != null) {
+            CustomerEntity customer = customerMapper.selectById(request.customerId());
+            if (customer == null || !user.storeId().equals(customer.getStoreId())) {
+                throw new BusinessException(ErrorCode.CUSTOMER_NOT_FOUND, "客户不存在");
+            }
+            command.setCustomerId(request.customerId());
+        }
+
+        // Validate vehicleId if provided
+        if (request.vehicleId() != null) {
+            VehicleEntity vehicle = vehicleMapper.selectById(request.vehicleId());
+            if (vehicle == null || !user.storeId().equals(vehicle.getStoreId())) {
+                throw new BusinessException(ErrorCode.VEHICLE_NOT_FOUND, "车辆不存在");
+            }
+            // If both provided, verify vehicle belongs to customer
+            if (request.customerId() != null && !request.customerId().equals(vehicle.getCustomerId())) {
+                throw new BusinessException(ErrorCode.VEHICLE_NOT_IN_CUSTOMER);
+            }
+            command.setVehicleId(request.vehicleId());
+        }
 
         Long workOrderId = workOrderService.createDraft(command);
         WorkOrderDetailResponse detail = workOrderService.getById(workOrderId);

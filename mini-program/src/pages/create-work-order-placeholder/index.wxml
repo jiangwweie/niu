@@ -7,7 +7,40 @@
   <!-- Step 1: 基础信息 -->
   <view class="section" wx:if="{{step === 1}}">
     <view class="section-title">工单基础信息</view>
-    <t-cell-group>
+
+    <!-- Customer Search -->
+    <view class="search-hint">
+      <t-icon name="user" size="16" />
+      <text>客户信息</text>
+    </view>
+    <view class="search-bar">
+      <t-button size="small" theme="primary" variant="outline" bind:tap="openCustomerSearch">搜索已有客户</t-button>
+      <view class="selected-tag" wx:if="{{selectedCustomerId}}">
+        <t-tag theme="primary" variant="light" closable bind:close="clearSelectedCustomer">
+          {{draft.customerNameSnapshot}}
+        </t-tag>
+      </view>
+    </view>
+
+    <!-- Vehicle Search -->
+    <view class="search-hint" style="margin-top: 16px;">
+      <t-icon name="car" size="16" />
+      <text>车辆信息</text>
+    </view>
+    <view class="search-bar">
+      <t-button size="small" theme="primary" variant="outline" bind:tap="openVehicleSearch">搜索已有车辆</t-button>
+      <view class="selected-tag" wx:if="{{selectedVehicleId}}">
+        <t-tag theme="primary" variant="light" closable bind:close="clearSelectedVehicle">
+          {{draft.frameNoSnapshot}} {{draft.vehicleModelSnapshot}}
+        </t-tag>
+      </view>
+    </view>
+
+    <view style="margin-top: 12px; font-size: 12px; color: #999; padding: 0 4px;">
+      也可直接在下方手工录入客户/车辆信息
+    </view>
+
+    <t-cell-group style="margin-top: 8px;">
       <t-input label="客户姓名" placeholder="必填" value="{{draft.customerNameSnapshot}}" bind:change="onDraftChange" data-field="customerNameSnapshot" align="right" />
       <t-input label="手机号" placeholder="选填" value="{{draft.customerPhoneSnapshot}}" bind:change="onDraftChange" data-field="customerPhoneSnapshot" align="right" />
       <t-input label="车型" placeholder="选填" value="{{draft.vehicleModelSnapshot}}" bind:change="onDraftChange" data-field="vehicleModelSnapshot" align="right" />
@@ -16,7 +49,7 @@
       <t-input label="维修项目" placeholder="必填" value="{{draft.repairItem}}" bind:change="onDraftChange" data-field="repairItem" align="right" />
       <t-input label="备注" placeholder="选填" value="{{draft.remark}}" bind:change="onDraftChange" data-field="remark" align="right" />
     </t-cell-group>
-    
+
     <view class="action-bar">
       <t-button theme="primary" block size="large" bind:tap="saveDraft" loading="{{saving}}">保存草稿</t-button>
     </view>
@@ -269,6 +302,44 @@
       <t-input placeholder="可输入结算备注(选填)" value="{{settleRemark}}" bind:change="onSettleRemarkChange" borderless style="background: #f5f5f5; border-radius: 4px;" />
     </view>
   </t-dialog>
+
+  <!-- Customer Search Popup -->
+  <t-popup visible="{{customerSearchVisible}}" bind:visible-change="onCustomerSearchPopupChange" placement="bottom" custom-style="height: 70vh; z-index: 11000;">
+    <view class="popup-header">
+      <text class="popup-title">搜索客户</text>
+      <t-icon name="close" size="24" bind:tap="closeCustomerSearch" />
+    </view>
+    <view style="padding: 12px 16px; display: flex; gap: 8px;">
+      <t-search placeholder="姓名或手机号" value="{{customerSearchKeyword}}" bind:change="onCustomerSearchInput" bind:submit="onCustomerSearch" />
+    </view>
+    <scroll-view scroll-y class="search-result-list">
+      <view class="search-result-item" wx:for="{{customerSearchResults}}" wx:key="id" bind:tap="selectCustomer" data-item="{{item}}">
+        <view class="result-name">{{item.customerName}}</view>
+        <view class="result-desc">{{item.phone || '无手机号'}}</view>
+      </view>
+      <view class="empty-state" wx:if="{{customerSearchResults.length === 0 && customerSearchKeyword}}">未找到匹配客户</view>
+      <view class="empty-state" wx:if="{{customerSearchResults.length === 0 && !customerSearchKeyword}}">输入姓名或手机号搜索</view>
+    </scroll-view>
+  </t-popup>
+
+  <!-- Vehicle Search Popup -->
+  <t-popup visible="{{vehicleSearchVisible}}" bind:visible-change="onVehicleSearchPopupChange" placement="bottom" custom-style="height: 70vh; z-index: 11000;">
+    <view class="popup-header">
+      <text class="popup-title">搜索车辆</text>
+      <t-icon name="close" size="24" bind:tap="closeVehicleSearch" />
+    </view>
+    <view style="padding: 12px 16px; display: flex; gap: 8px;">
+      <t-search placeholder="车架号/车型/客户手机号" value="{{vehicleSearchKeyword}}" bind:change="onVehicleSearchInput" bind:submit="onVehicleSearch" />
+    </view>
+    <scroll-view scroll-y class="search-result-list">
+      <view class="search-result-item" wx:for="{{vehicleSearchResults}}" wx:key="id" bind:tap="selectVehicle" data-item="{{item}}">
+        <view class="result-name">{{item.frameNo}}</view>
+        <view class="result-desc">{{item.model || '-'}} | 车主: {{item.customerName}}</view>
+      </view>
+      <view class="empty-state" wx:if="{{vehicleSearchResults.length === 0 && vehicleSearchKeyword}}">未找到匹配车辆</view>
+      <view class="empty-state" wx:if="{{vehicleSearchResults.length === 0 && !vehicleSearchKeyword}}">输入车架号/车型/客户手机号搜索</view>
+    </scroll-view>
+  </t-popup>
 
   <t-toast id="t-toast" />
 </view>

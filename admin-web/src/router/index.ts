@@ -26,6 +26,18 @@ const routes: Array<RouteRecordRaw> = [
         meta: { title: '工单管理' }
       },
       {
+        path: 'customers',
+        name: 'Customers',
+        component: () => import('@/views/customer/index.vue'),
+        meta: { title: '客户档案' }
+      },
+      {
+        path: 'vehicles',
+        name: 'Vehicles',
+        component: () => import('@/views/vehicle/index.vue'),
+        meta: { title: '车辆档案' }
+      },
+      {
         path: 'parts',
         name: 'Parts',
         component: () => import('@/views/parts/index.vue'),
@@ -124,6 +136,7 @@ function firstAccessiblePath(user: AuthUser | null): string {
   const hasRole = (code: string) => roles.includes(code);
 
   if (hasPermission('FINANCE_VIEW')) return '/dashboard';
+  if (hasAnyPermission(['CUSTOMER_VIEW', 'CUSTOMER_MANAGE'])) return '/customers';
   if (hasAnyPermission(['WORK_ORDER_VIEW', 'WORK_ORDER_CREATE', 'WORK_ORDER_SETTLE'])) return '/work-order';
   if (hasAnyPermission(['PART_VIEW', 'PART_MANAGE'])) return '/parts';
   if (hasAnyPermission(['INVENTORY_VIEW', 'INVENTORY_INBOUND', 'INVENTORY_ADJUST'])) return '/inventory';

@@ -1,9 +1,10 @@
 import { getParts } from '../../api/parts';
-import { 
-  createDraftWorkOrder, 
-  getWorkOrderDetail, 
-  addChargeItem, 
-  updateChargeItem, 
+import { searchCustomers, searchVehicles, CustomerSearchResult, VehicleSearchResult } from '../../api/customer';
+import {
+  createDraftWorkOrder,
+  getWorkOrderDetail,
+  addChargeItem,
+  updateChargeItem,
   deleteChargeItem,
   submitWorkOrder,
   cancelWorkOrder,
@@ -39,6 +40,16 @@ Page({
       remark: ''
     },
     saving: false,
+
+    // Customer/Vehicle search
+    selectedCustomerId: null as number | null,
+    selectedVehicleId: null as number | null,
+    customerSearchResults: [] as CustomerSearchResult[],
+    vehicleSearchResults: [] as VehicleSearchResult[],
+    customerSearchVisible: false,
+    vehicleSearchVisible: false,
+    customerSearchKeyword: '',
+    vehicleSearchKeyword: '',
 
     // Charge Item Form
     itemPopupVisible: false,
@@ -134,7 +145,11 @@ Page({
 
     this.setData({ saving: true });
 
-    const req: CreateDraftWorkOrderRequest = { ...this.data.draft };
+    const req: CreateDraftWorkOrderRequest = {
+      ...this.data.draft,
+      customerId: this.data.selectedCustomerId || undefined,
+      vehicleId: this.data.selectedVehicleId || undefined
+    };
 
     createDraftWorkOrder(req).then(res => {
       this.setData({
@@ -319,6 +334,107 @@ Page({
       selectedPart: item,
       'currentItemForm.itemName': item.partName,
       partSelectorVisible: false
+    });
+  },
+
+  // --- Customer Search ---
+  onCustomerSearchInput(e: any) {
+    this.setData({ customerSearchKeyword: e.detail.value });
+  },
+
+  onCustomerSearch() {
+    const keyword = this.data.customerSearchKeyword.trim();
+    if (!keyword) {
+      Toast({ context: this, selector: '#t-toast', message: '请输入客户姓名或手机号', icon: 'close-circle' });
+      return;
+    }
+    searchCustomers(keyword).then(res => {
+      this.setData({ customerSearchResults: res.data || [] });
+    }).catch(console.error);
+  },
+
+  openCustomerSearch() {
+    this.setData({
+      customerSearchVisible: true,
+      customerSearchKeyword: '',
+      customerSearchResults: []
+    });
+  },
+
+  closeCustomerSearch() {
+    this.setData({ customerSearchVisible: false });
+  },
+
+  onCustomerSearchPopupChange(e: any) {
+    this.setData({ customerSearchVisible: e.detail.visible || false });
+  },
+
+  selectCustomer(e: any) {
+    const customer: CustomerSearchResult = e.currentTarget.dataset.item;
+    this.setData({
+      selectedCustomerId: customer.id,
+      'draft.customerNameSnapshot': customer.customerName,
+      'draft.customerPhoneSnapshot': customer.phone || '',
+      customerSearchVisible: false
+    });
+  },
+
+  clearSelectedCustomer() {
+    this.setData({
+      selectedCustomerId: null,
+      'draft.customerNameSnapshot': '',
+      'draft.customerPhoneSnapshot': ''
+    });
+  },
+
+  // --- Vehicle Search ---
+  onVehicleSearchInput(e: any) {
+    this.setData({ vehicleSearchKeyword: e.detail.value });
+  },
+
+  onVehicleSearch() {
+    const keyword = this.data.vehicleSearchKeyword.trim();
+    if (!keyword) {
+      Toast({ context: this, selector: '#t-toast', message: '请输入车架号、车型或客户手机号', icon: 'close-circle' });
+      return;
+    }
+    searchVehicles(keyword).then(res => {
+      this.setData({ vehicleSearchResults: res.data || [] });
+    }).catch(console.error);
+  },
+
+  openVehicleSearch() {
+    this.setData({
+      vehicleSearchVisible: true,
+      vehicleSearchKeyword: '',
+      vehicleSearchResults: []
+    });
+  },
+
+  closeVehicleSearch() {
+    this.setData({ vehicleSearchVisible: false });
+  },
+
+  onVehicleSearchPopupChange(e: any) {
+    this.setData({ vehicleSearchVisible: e.detail.visible || false });
+  },
+
+  selectVehicle(e: any) {
+    const vehicle: VehicleSearchResult = e.currentTarget.dataset.item;
+    this.setData({
+      selectedVehicleId: vehicle.id,
+      'draft.vehicleModelSnapshot': vehicle.model || '',
+      'draft.frameNoSnapshot': vehicle.frameNo || '',
+      vehicleSearchVisible: false
+    });
+  },
+
+  clearSelectedVehicle() {
+    this.setData({
+      selectedVehicleId: null,
+      'draft.vehicleModelSnapshot': '',
+      'draft.frameNoSnapshot': '',
+      'draft.batteryNoSnapshot': ''
     });
   },
 

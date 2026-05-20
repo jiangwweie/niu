@@ -14,6 +14,14 @@
       >
         <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/dashboard"><template #title>首页</template></el-menu-item>
         <el-menu-item index="/work-order"><template #title>工单管理</template></el-menu-item>
+        <el-menu-item
+          v-if="hasAnyPermission(['CUSTOMER_VIEW', 'CUSTOMER_MANAGE'])"
+          index="/customers"
+        ><template #title>客户档案</template></el-menu-item>
+        <el-menu-item
+          v-if="hasAnyPermission(['CUSTOMER_VIEW', 'CUSTOMER_MANAGE'])"
+          index="/vehicles"
+        ><template #title>车辆档案</template></el-menu-item>
         <el-menu-item index="/parts"><template #title>配件管理</template></el-menu-item>
         <el-menu-item
           v-if="hasAnyPermission(['INVENTORY_VIEW', 'INVENTORY_INBOUND', 'INVENTORY_ADJUST'])"

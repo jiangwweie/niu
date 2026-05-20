@@ -30,6 +30,8 @@ export interface WorkOrder {
 }
 
 export interface CreateDraftWorkOrderRequest {
+  customerId?: number;
+  vehicleId?: number;
   customerNameSnapshot: string;
   customerPhoneSnapshot?: string;
   vehicleModelSnapshot?: string;

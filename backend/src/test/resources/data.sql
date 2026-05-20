@@ -25,7 +25,7 @@ MERGE INTO sys_role (id, store_id, role_code, role_name, status) KEY (store_id, 
 MERGE INTO sys_role (id, store_id, role_code, role_name, status) KEY (store_id, role_code) VALUES (3, 1, 'DISCOUNT_STAFF', '折扣员', 'DISABLED');
 MERGE INTO sys_role (id, store_id, role_code, role_name, status) KEY (store_id, role_code) VALUES (4, 1, 'SUPER_ADMIN', '超级管理员', 'ENABLED');
 
--- permissions
+-- permissions (ids 1-5 are test-only; 1004+ match V2 seed; 1028-1029 are test-only extras not in V10)
 MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1, 'work_order:create', '创建工单', 'WORK_ORDER', 'ENABLED');
 MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (2, 'work_order:settle', '结算工单', 'WORK_ORDER', 'ENABLED');
 MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (3, 'inventory:manage', '库存管理', 'INVENTORY', 'ENABLED');
@@ -46,10 +46,13 @@ MERGE INTO sys_permission (id, permission_code, permission_name, module_code, st
 MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1018, 'FINANCE_VIEW', '财务查看', 'FINANCE', 'ENABLED');
 MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1019, 'EXCEL_EXPORT', 'Excel导出', 'EXPORT', 'ENABLED');
 MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1020, 'WORK_ORDER_CREATE', '工单创建', 'WORK_ORDER', 'ENABLED');
-MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1021, 'WORK_ORDER_UPDATE', '工单编辑', 'WORK_ORDER', 'ENABLED');
-MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1022, 'USER_MANAGE', '用户管理', 'USER', 'ENABLED');
+-- 1021/1022: defined here (Flyway disabled in test profile, so V10 does not run)
+MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1021, 'CUSTOMER_VIEW', '客户档案查看', 'CUSTOMER', 'ENABLED');
+MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1022, 'CUSTOMER_MANAGE', '客户档案管理', 'CUSTOMER', 'ENABLED');
 MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1023, 'ROLE_MANAGE', '角色权限管理', 'USER', 'ENABLED');
 MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1024, 'STORE_MANAGE', '门店配置管理', 'STORE', 'ENABLED');
+MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1028, 'WORK_ORDER_UPDATE', '工单编辑', 'WORK_ORDER', 'ENABLED');
+MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1029, 'USER_MANAGE', '用户管理', 'USER', 'ENABLED');
 
 -- user-role relations
 MERGE INTO sys_user_role (id, user_id, role_id) KEY (user_id, role_id) VALUES (1, 1, 1);
@@ -81,12 +84,16 @@ MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permis
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1018, 1, 1018);
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1005, 1, 1005);
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1020, 1, 1020);
-MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1021, 1, 1021);
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1028, 1, 1028);
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1019, 1, 1019);
-MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1022, 1, 1022);
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1029, 1, 1029);
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1023, 1, 1023);
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1024, 1, 1024);
-MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1025, 4, 1022);
+-- 1021 (CUSTOMER_VIEW) and 1022 (CUSTOMER_MANAGE) are assigned to role 1 by V10 migration only for SUPER_ADMIN/STORE_ADMIN/TECHNICIAN_FRONT_DESK codes;
+-- ADMIN (role 1) is a test-only code not in V10, so assign explicitly here.
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1030, 1, 1021);
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1031, 1, 1022);
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1025, 4, 1029);
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1026, 4, 1023);
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1027, 4, 1024);
 
@@ -97,6 +104,9 @@ MERGE INTO sys_user (id, store_id, username, password_hash, real_name, phone, st
 MERGE INTO sys_user (id, store_id, username, password_hash, real_name, phone, status, password_must_change, deleted) KEY (phone) VALUES (11, 2, 'test02', '{noop}dev123', '测试用户2', '13800000011', 'ENABLED', FALSE, 0);
 MERGE INTO sys_user_role (id, user_id, role_id) KEY (user_id, role_id) VALUES (201, 10, 5);
 MERGE INTO sys_user_role (id, user_id, role_id) KEY (user_id, role_id) VALUES (202, 11, 5);
-MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (2001, 5, 1022);
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (2001, 5, 1029);
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (2002, 5, 1023);
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (2003, 5, 1024);
+-- M18 customer/vehicle permissions for store2 admin role (via V10 migration auto-assign)
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1042, 5, 1021);
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1043, 5, 1022);

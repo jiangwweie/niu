@@ -1,9 +1,10 @@
 package com.xiaoniu.aftermarket.staff.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 
 public record StaffCreateDraftWorkOrderRequest(
+    Long customerId,
+    Long vehicleId,
     @NotBlank(message = "customerNameSnapshot不能为空") String customerNameSnapshot,
     String customerPhoneSnapshot,
     String vehicleModelSnapshot,

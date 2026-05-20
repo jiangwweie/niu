@@ -8,6 +8,8 @@ import java.util.List;
 
 public record StaffWorkOrderDetail(
         Long id,
+        Long customerId,
+        Long vehicleId,
         String workOrderNo,
         String customerNameSnapshot,
         String customerPhoneSnapshot,
@@ -29,6 +31,8 @@ public record StaffWorkOrderDetail(
                 : List.of();
         return new StaffWorkOrderDetail(
                 d.getId(),
+                d.getCustomerId(),
+                d.getVehicleId(),
                 d.getWorkOrderNo(),
                 d.getCustomerNameSnapshot(),
                 d.getCustomerPhoneSnapshot(),
