@@ -57,6 +57,14 @@ class CustomerVehicleControllerTest {
         ).token();
     }
 
+    private String tokenWithWorkOrderCreate() {
+        return jwtProvider.generateAccessToken(
+                new AuthenticatedUser(1L, 1L, "admin01", "张三",
+                        Set.of("ADMIN"), Set.of("WORK_ORDER_CREATE", "CUSTOMER_VIEW", "CUSTOMER_MANAGE")),
+                Instant.now(), Instant.now().plusSeconds(3600)
+        ).token();
+    }
+
     private String tokenStore2() {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(10L, 2L, "store_admin01", "王二",
@@ -309,8 +317,7 @@ class CustomerVehicleControllerTest {
     @Test
     void staffSearchCustomers_returnsMatchingResults() throws Exception {
         mockMvc.perform(get("/api/staff/customers/search")
-                        .header("X-User-Id", "1")
-                        .header("X-Store-Id", "1")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithCustomerView())
                         .param("keyword", "张"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("SUCCESS"))
@@ -321,19 +328,36 @@ class CustomerVehicleControllerTest {
     @Test
     void staffSearchCustomers_isolatedByStore() throws Exception {
         mockMvc.perform(get("/api/staff/customers/search")
-                        .header("X-User-Id", "10")
-                        .header("X-Store-Id", "2")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenStore2())
                         .param("keyword", "张"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data", hasSize(0)));
     }
 
     @Test
+    void staffSearchCustomers_withoutCustomerView_returns403() throws Exception {
+        mockMvc.perform(get("/api/staff/customers/search")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithoutCustomerPermission())
+                        .param("keyword", "张"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void staffSearchVehicles_returnsMatchingResults() throws Exception {
         mockMvc.perform(get("/api/staff/vehicles/search")
-                        .header("X-User-Id", "1")
-                        .header("X-Store-Id", "1")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithCustomerView())
                         .param("keyword", "VIN-ZHANG"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].frameNo").value("VIN-ZHANG-001"));
+    }
+
+    @Test
+    void staffSearchVehicles_byCustomerPhone_returnsMatchingResults() throws Exception {
+        mockMvc.perform(get("/api/staff/vehicles/search")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithCustomerView())
+                        .param("keyword", "13800001111"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("SUCCESS"))
                 .andExpect(jsonPath("$.data", hasSize(1)))
@@ -343,11 +367,18 @@ class CustomerVehicleControllerTest {
     @Test
     void staffSearchVehicles_isolatedByStore() throws Exception {
         mockMvc.perform(get("/api/staff/vehicles/search")
-                        .header("X-User-Id", "10")
-                        .header("X-Store-Id", "2")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenStore2())
                         .param("keyword", "VIN-ZHANG"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data", hasSize(0)));
+    }
+
+    @Test
+    void staffSearchVehicles_withoutCustomerView_returns403() throws Exception {
+        mockMvc.perform(get("/api/staff/vehicles/search")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithoutCustomerPermission())
+                        .param("keyword", "VIN-ZHANG"))
+                .andExpect(status().isForbidden());
     }
 
     // ========== createDraft with customerId/vehicleId ==========
@@ -355,8 +386,7 @@ class CustomerVehicleControllerTest {
     @Test
     void createDraft_withExistingCustomerAndVehicle_success() throws Exception {
         mockMvc.perform(post("/api/staff/work-orders/drafts")
-                        .header("X-User-Id", "1")
-                        .header("X-Store-Id", "1")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithWorkOrderCreate())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"customerId\":9001,\"vehicleId\":8001,"
                                 + "\"customerNameSnapshot\":\"张三\",\"customerPhoneSnapshot\":\"13800001111\","
@@ -370,10 +400,115 @@ class CustomerVehicleControllerTest {
     }
 
     @Test
+    void createDraftWithExistingCustomerVehicleShouldPersistSnapshots() throws Exception {
+        mockMvc.perform(post("/api/staff/work-orders/drafts")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithWorkOrderCreate())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"customerId\":9001,\"vehicleId\":8001,"
+                                + "\"customerNameSnapshot\":\"伪造客户\",\"customerPhoneSnapshot\":\"000\","
+                                + "\"vehicleModelSnapshot\":\"伪造车型\",\"frameNoSnapshot\":\"FAKE\","
+                                + "\"batteryNoSnapshot\":\"FAKE-BAT\",\"repairItem\":\"快照测试\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.customerId").value(9001))
+                .andExpect(jsonPath("$.data.vehicleId").value(8001))
+                .andExpect(jsonPath("$.data.customerNameSnapshot").value("张三"))
+                .andExpect(jsonPath("$.data.customerPhoneSnapshot").value("13800001111"))
+                .andExpect(jsonPath("$.data.vehicleModelSnapshot").value("NQi"))
+                .andExpect(jsonPath("$.data.frameNoSnapshot").value("VIN-ZHANG-001"))
+                .andExpect(jsonPath("$.data.batteryNoSnapshot").value("BAT-001"));
+    }
+
+    @Test
+    void createDraftWithVehicleOnlyShouldUseVehicleOwnerCustomer() throws Exception {
+        mockMvc.perform(post("/api/staff/work-orders/drafts")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithWorkOrderCreate())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"vehicleId\":8001,"
+                                + "\"customerNameSnapshot\":\"手工客户\","
+                                + "\"vehicleModelSnapshot\":\"手工车型\","
+                                + "\"frameNoSnapshot\":\"手工车架\","
+                                + "\"repairItem\":\"只选车辆\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.customerId").value(9001))
+                .andExpect(jsonPath("$.data.vehicleId").value(8001))
+                .andExpect(jsonPath("$.data.customerNameSnapshot").value("张三"))
+                .andExpect(jsonPath("$.data.customerPhoneSnapshot").value("13800001111"))
+                .andExpect(jsonPath("$.data.vehicleModelSnapshot").value("NQi"))
+                .andExpect(jsonPath("$.data.frameNoSnapshot").value("VIN-ZHANG-001"));
+    }
+
+    @Test
+    void createDraftWithCustomerOnlyShouldPersistCustomerSnapshot() throws Exception {
+        mockMvc.perform(post("/api/staff/work-orders/drafts")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithWorkOrderCreate())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"customerId\":9001,"
+                                + "\"customerNameSnapshot\":\"手工客户\","
+                                + "\"customerPhoneSnapshot\":\"000\","
+                                + "\"repairItem\":\"只选客户\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.customerId").value(9001))
+                .andExpect(jsonPath("$.data.vehicleId").doesNotExist())
+                .andExpect(jsonPath("$.data.customerNameSnapshot").value("张三"))
+                .andExpect(jsonPath("$.data.customerPhoneSnapshot").value("13800001111"));
+    }
+
+    @Test
+    void updateCustomerAfterWorkOrderCreatedShouldNotChangeWorkOrderSnapshot() throws Exception {
+        mockMvc.perform(post("/api/staff/work-orders/drafts")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithWorkOrderCreate())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"customerId\":9001,\"vehicleId\":8001,\"repairItem\":\"客户快照不变\"}"))
+                .andExpect(status().isOk());
+
+        Long workOrderId = jdbcTemplate.queryForObject(
+                "SELECT id FROM work_order WHERE repair_item = '客户快照不变'", Long.class);
+
+        mockMvc.perform(put("/api/admin/customers/9001")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithCustomerManage())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"customerName\":\"张三改名\",\"phone\":\"13800009999\"}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/staff/work-orders/" + workOrderId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithWorkOrderCreate()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.customerNameSnapshot").value("张三"))
+                .andExpect(jsonPath("$.data.customerPhoneSnapshot").value("13800001111"));
+    }
+
+    @Test
+    void updateVehicleAfterWorkOrderCreatedShouldNotChangeWorkOrderSnapshot() throws Exception {
+        mockMvc.perform(post("/api/staff/work-orders/drafts")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithWorkOrderCreate())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"customerId\":9001,\"vehicleId\":8001,\"repairItem\":\"车辆快照不变\"}"))
+                .andExpect(status().isOk());
+
+        Long workOrderId = jdbcTemplate.queryForObject(
+                "SELECT id FROM work_order WHERE repair_item = '车辆快照不变'", Long.class);
+
+        mockMvc.perform(put("/api/admin/vehicles/8001")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithCustomerManage())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"frameNo\":\"VIN-ZHANG-NEW\",\"model\":\"NQi Pro\",\"batteryNo\":\"BAT-NEW\"}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/staff/work-orders/" + workOrderId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithWorkOrderCreate()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.vehicleModelSnapshot").value("NQi"))
+                .andExpect(jsonPath("$.data.frameNoSnapshot").value("VIN-ZHANG-001"))
+                .andExpect(jsonPath("$.data.batteryNoSnapshot").value("BAT-001"));
+    }
+
+    @Test
     void createDraft_crossStoreCustomerId_returns400() throws Exception {
         mockMvc.perform(post("/api/staff/work-orders/drafts")
-                        .header("X-User-Id", "1")
-                        .header("X-Store-Id", "1")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithWorkOrderCreate())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"customerId\":9099,"
                                 + "\"customerNameSnapshot\":\"其他店客户\","
@@ -385,8 +520,7 @@ class CustomerVehicleControllerTest {
     @Test
     void createDraft_crossStoreVehicleId_returns400() throws Exception {
         mockMvc.perform(post("/api/staff/work-orders/drafts")
-                        .header("X-User-Id", "1")
-                        .header("X-Store-Id", "1")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithWorkOrderCreate())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"vehicleId\":8099,"
                                 + "\"customerNameSnapshot\":\"其他店客户\","
@@ -399,8 +533,7 @@ class CustomerVehicleControllerTest {
     @Test
     void createDraft_vehicleNotBelongingToCustomer_returns400() throws Exception {
         mockMvc.perform(post("/api/staff/work-orders/drafts")
-                        .header("X-User-Id", "1")
-                        .header("X-Store-Id", "1")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithWorkOrderCreate())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"customerId\":9001,\"vehicleId\":8002,"
                                 + "\"customerNameSnapshot\":\"张三\","
@@ -413,8 +546,7 @@ class CustomerVehicleControllerTest {
     @Test
     void createDraft_withoutCustomerIdOrVehicleId_stillWorks() throws Exception {
         mockMvc.perform(post("/api/staff/work-orders/drafts")
-                        .header("X-User-Id", "1")
-                        .header("X-Store-Id", "1")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithWorkOrderCreate())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"customerNameSnapshot\":\"手工录入客户\","
                                 + "\"customerPhoneSnapshot\":\"13800009999\","

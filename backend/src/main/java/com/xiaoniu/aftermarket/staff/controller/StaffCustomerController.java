@@ -10,6 +10,7 @@ import com.xiaoniu.aftermarket.customer.dto.CustomerPageQuery;
 import com.xiaoniu.aftermarket.customer.dto.CustomerResponse;
 import com.xiaoniu.aftermarket.customer.service.CustomerService;
 import java.util.List;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -22,6 +23,7 @@ public class StaffCustomerController {
         this.customerService = customerService;
     }
 
+    @PreAuthorize("hasAuthority('CUSTOMER_VIEW')")
     @GetMapping("/search")
     public ApiResponse<List<CustomerSearchResult>> search(
             @RequestParam String keyword) {

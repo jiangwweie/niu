@@ -422,7 +422,9 @@ Page({
   selectVehicle(e: any) {
     const vehicle: VehicleSearchResult = e.currentTarget.dataset.item;
     this.setData({
+      selectedCustomerId: vehicle.customerId || this.data.selectedCustomerId,
       selectedVehicleId: vehicle.id,
+      'draft.customerNameSnapshot': vehicle.customerName || this.data.draft.customerNameSnapshot,
       'draft.vehicleModelSnapshot': vehicle.model || '',
       'draft.frameNoSnapshot': vehicle.frameNo || '',
       vehicleSearchVisible: false

@@ -9,7 +9,10 @@ import com.xiaoniu.aftermarket.common.pagination.PageResponse;
 import com.xiaoniu.aftermarket.customer.dto.VehiclePageQuery;
 import com.xiaoniu.aftermarket.customer.dto.VehicleResponse;
 import com.xiaoniu.aftermarket.customer.service.VehicleService;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -22,6 +25,7 @@ public class StaffVehicleController {
         this.vehicleService = vehicleService;
     }
 
+    @PreAuthorize("hasAuthority('CUSTOMER_VIEW')")
     @GetMapping("/search")
     public ApiResponse<List<VehicleSearchResult>> search(
             @RequestParam String keyword) {
@@ -32,11 +36,26 @@ public class StaffVehicleController {
         query.setPageNo(1);
         query.setPageSize(20);
         PageResponse<VehicleResponse> page = vehicleService.pageQuery(query);
-        List<VehicleSearchResult> results = page.records().stream()
-                .map(r -> new VehicleSearchResult(r.getId(), r.getFrameNo(), r.getModel(),
-                        r.getCustomerId(), r.getCustomerName()))
+        Map<Long, VehicleSearchResult> resultMap = new LinkedHashMap<>();
+        page.records().forEach(r -> resultMap.put(r.getId(), toSearchResult(r)));
+
+        VehiclePageQuery phoneQuery = new VehiclePageQuery();
+        phoneQuery.setStoreId(user.storeId());
+        phoneQuery.setCustomerPhone(keyword);
+        phoneQuery.setPageNo(1);
+        phoneQuery.setPageSize(20);
+        vehicleService.pageQuery(phoneQuery).records()
+                .forEach(r -> resultMap.putIfAbsent(r.getId(), toSearchResult(r)));
+
+        List<VehicleSearchResult> results = resultMap.values().stream()
+                .limit(20)
                 .toList();
         return ApiResponse.success(results);
+    }
+
+    private VehicleSearchResult toSearchResult(VehicleResponse r) {
+        return new VehicleSearchResult(r.getId(), r.getFrameNo(), r.getModel(),
+                r.getCustomerId(), r.getCustomerName());
     }
 
     private CurrentUser requireCurrentUser() {
