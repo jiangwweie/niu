@@ -87,7 +87,8 @@ public enum ErrorCode {
     WECHAT_LOGIN_FAILED("WECHAT_LOGIN_FAILED", "微信登录失败"),
     WECHAT_ALREADY_BOUND("WECHAT_ALREADY_BOUND", "当前账号已绑定微信，如需更换请联系管理员"),
     WECHAT_OPENID_ALREADY_BOUND("WECHAT_OPENID_ALREADY_BOUND", "该微信已被其他账号绑定"),
-    PLATFORM_CANNOT_BIND_WECHAT("PLATFORM_CANNOT_BIND_WECHAT", "平台账号不支持绑定微信");
+    PLATFORM_CANNOT_BIND_WECHAT("PLATFORM_CANNOT_BIND_WECHAT", "平台账号不支持绑定微信"),
+    PAYMENT_EXCEEDS_RECEIVABLE("PAYMENT_EXCEEDS_RECEIVABLE", "收款金额超出应收，不允许超收");
 
     private final String code;
     private final String message;

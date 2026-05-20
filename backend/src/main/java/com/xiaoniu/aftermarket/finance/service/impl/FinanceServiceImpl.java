@@ -1,13 +1,21 @@
 package com.xiaoniu.aftermarket.finance.service.impl;
 
+import com.xiaoniu.aftermarket.common.enums.PaymentMethod;
+import com.xiaoniu.aftermarket.finance.dto.CashierReportResponse;
+import com.xiaoniu.aftermarket.finance.dto.CashierReportResponse.MethodBreakdown;
 import com.xiaoniu.aftermarket.finance.dto.FinanceReportResponse;
 import com.xiaoniu.aftermarket.finance.mapper.FinanceMapper;
+import com.xiaoniu.aftermarket.finance.mapper.FinanceMapper.MethodAmount;
 import com.xiaoniu.aftermarket.finance.service.FinanceService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -40,6 +48,60 @@ public class FinanceServiceImpl implements FinanceService {
         LocalDateTime startTime = startDate.atStartOfDay();
         LocalDateTime endTime = endDate.atTime(LocalTime.MAX);
         return buildReport(storeId, startDate, endDate, startTime, endTime);
+    }
+
+    @Override
+    public CashierReportResponse getCashierReport(Long storeId, LocalDate date) {
+        LocalDateTime startTime = date.atStartOfDay();
+        LocalDateTime endExclusive = date.plusDays(1).atStartOfDay();
+
+        BigDecimal totalPaymentAmount = nz(financeMapper.sumPaidByStoreAndDate(storeId, startTime, endExclusive));
+        BigDecimal totalRefundAmount = nz(financeMapper.sumRefundByStoreAndDate(storeId, startTime, endExclusive));
+        BigDecimal netAmount = totalPaymentAmount.subtract(totalRefundAmount).setScale(2, RoundingMode.HALF_UP);
+
+        int paymentCount = financeMapper.countPaymentsByStoreAndDate(storeId, startTime, endExclusive);
+        int refundCount = financeMapper.countRefundsByStoreAndDate(storeId, startTime, endExclusive);
+
+        Map<String, MethodAmount> paymentByMethod = financeMapper.sumPaidByStoreDateGroupByMethod(storeId, startTime, endExclusive)
+                .stream().collect(Collectors.toMap(MethodAmount::method, m -> m));
+        Map<String, MethodAmount> refundByMethod = financeMapper.sumRefundByStoreDateGroupByMethod(storeId, startTime, endExclusive)
+                .stream().collect(Collectors.toMap(MethodAmount::method, m -> m));
+
+        List<MethodBreakdown> byMethod = new ArrayList<>();
+        for (PaymentMethod pm : PaymentMethod.values()) {
+            MethodAmount p = paymentByMethod.get(pm.getCode());
+            MethodAmount r = refundByMethod.get(pm.getCode());
+            BigDecimal pAmt = p != null ? nz(p.amount()) : BigDecimal.ZERO;
+            BigDecimal rAmt = r != null ? nz(r.amount()) : BigDecimal.ZERO;
+            int pCnt = p != null ? p.count() : 0;
+            int rCnt = r != null ? r.count() : 0;
+            // Only include methods that have activity
+            if (pCnt == 0 && rCnt == 0) continue;
+            MethodBreakdown mb = new MethodBreakdown();
+            mb.setMethod(pm.getCode());
+            mb.setPaymentAmount(pAmt.setScale(2, RoundingMode.HALF_UP));
+            mb.setRefundAmount(rAmt.setScale(2, RoundingMode.HALF_UP));
+            mb.setNetAmount(pAmt.subtract(rAmt).setScale(2, RoundingMode.HALF_UP));
+            mb.setPaymentCount(pCnt);
+            mb.setRefundCount(rCnt);
+            byMethod.add(mb);
+        }
+
+        int currentUnpaidWorkOrderCount = financeMapper.countCurrentUnpaidWorkOrders(storeId);
+        int currentPartialPaidWorkOrderCount = financeMapper.countCurrentPartialPaidWorkOrders(storeId);
+
+        CashierReportResponse response = new CashierReportResponse();
+        response.setDate(date);
+        response.setStoreId(storeId);
+        response.setTotalPaymentAmount(totalPaymentAmount.setScale(2, RoundingMode.HALF_UP));
+        response.setTotalRefundAmount(totalRefundAmount.setScale(2, RoundingMode.HALF_UP));
+        response.setNetAmount(netAmount);
+        response.setPaymentCount(paymentCount);
+        response.setRefundCount(refundCount);
+        response.setByMethod(byMethod);
+        response.setCurrentUnpaidWorkOrderCount(currentUnpaidWorkOrderCount);
+        response.setCurrentPartialPaidWorkOrderCount(currentPartialPaidWorkOrderCount);
+        return response;
     }
 
     private FinanceReportResponse buildReport(Long storeId, LocalDate periodStart, LocalDate periodEnd,
@@ -77,5 +139,9 @@ public class FinanceServiceImpl implements FinanceService {
 
     private BigDecimal normalize(BigDecimal amount) {
         return (amount != null ? amount : BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal nz(BigDecimal amount) {
+        return amount != null ? amount : BigDecimal.ZERO;
     }
 }

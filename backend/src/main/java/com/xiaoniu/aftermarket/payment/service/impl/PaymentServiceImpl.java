@@ -66,6 +66,17 @@ public class PaymentServiceImpl implements PaymentService {
         WorkOrderEntity workOrder = loadWorkOrderForPayment(command.getStoreId(), command.getWorkOrderId());
         validatePayableStatus(workOrder);
 
+        // Overpayment guard: check inside @Transactional, after selectByIdForUpdate lock on work_order.
+        // Concurrent payment requests are serialized by the pessimistic lock, so two requests cannot
+        // both read a stale receivedAmount and pass this check simultaneously.
+        BigDecimal normalizedAmount = paymentAmountService.normalizeAmount(command.getAmount());
+        BigDecimal currentReceived = paymentAmountService.calculateReceivedAmount(command.getWorkOrderId());
+        BigDecimal newTotal = currentReceived.add(normalizedAmount);
+        BigDecimal receivable = paymentAmountService.normalizeAmount(workOrder.getReceivableAmount());
+        if (newTotal.compareTo(receivable) > 0) {
+            throw new BusinessException(ErrorCode.PAYMENT_EXCEEDS_RECEIVABLE);
+        }
+
         PaymentRecordEntity entity = new PaymentRecordEntity();
         entity.setStoreId(workOrder.getStoreId());
         entity.setWorkOrderId(workOrder.getId());

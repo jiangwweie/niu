@@ -5,9 +5,11 @@ import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.common.context.CurrentUser;
 import com.xiaoniu.aftermarket.common.context.CurrentUserContext;
 import com.xiaoniu.aftermarket.common.exception.BusinessException;
+import com.xiaoniu.aftermarket.finance.dto.CashierReportResponse;
 import com.xiaoniu.aftermarket.finance.dto.FinanceReportResponse;
 import com.xiaoniu.aftermarket.finance.service.FinanceService;
 import java.time.LocalDate;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -51,6 +53,14 @@ public class FinanceController {
             return ApiResponse.failure(ErrorCode.COMMON_BAD_REQUEST, "开始日期不能晚于结束日期");
         }
         return ApiResponse.success(financeService.queryRange(user.storeId(), start, end));
+    }
+
+    @GetMapping("/cashier-report")
+    @PreAuthorize("hasAuthority('FINANCE_VIEW')")
+    public ApiResponse<CashierReportResponse> cashierReport(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        Long storeId = CurrentUserContext.requireStoreId();
+        return ApiResponse.success(financeService.getCashierReport(storeId, date));
     }
 
     private CurrentUser requireCurrentUser() {

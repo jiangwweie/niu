@@ -1262,15 +1262,15 @@ class WorkOrderServiceTest {
     }
 
     @Test
-    void settleAllowsOverPayment() {
+    void settleWithExactPaymentSucceeds() {
         Long woId = createSubmittedLaborWorkOrder(new BigDecimal("100.00"));
-        recordPayment(woId, new BigDecimal("120.00"));
+        recordPayment(woId, new BigDecimal("100.00"));
 
         workOrderService.settle(buildSettleCommand(woId));
 
         WorkOrderEntity workOrder = workOrderMapper.selectById(woId);
         assertEquals(WorkOrderStatus.SETTLED.getCode(), workOrder.getStatus());
-        assertEquals(0, new BigDecimal("120.00").compareTo(workOrder.getReceivedAmount()));
+        assertEquals(0, new BigDecimal("100.00").compareTo(workOrder.getReceivedAmount()));
     }
 
     @Test
@@ -1410,8 +1410,7 @@ class WorkOrderServiceTest {
     @Test
     void settleRecalculatesReceivedAmount() {
         Long woId = createSubmittedLaborWorkOrder(new BigDecimal("100.00"));
-        recordPayment(woId, new BigDecimal("120.00"));
-        recordRefund(woId, new BigDecimal("20.00"));
+        recordPayment(woId, new BigDecimal("100.00"));
         WorkOrderEntity workOrder = workOrderMapper.selectById(woId);
         workOrder.setReceivedAmount(new BigDecimal("999.00"));
         workOrderMapper.updateById(workOrder);

@@ -228,7 +228,7 @@ class PaymentServiceTest {
 
     @Test
     void paymentDoesNotSettleOrConsumeInventory() {
-        Long workOrderId = createSubmittedWorkOrder(new BigDecimal("100.00"));
+        Long workOrderId = createSubmittedWorkOrder(new BigDecimal("200.00"));
 
         paymentService.recordPayment(buildPaymentCommand(workOrderId, new BigDecimal("150.00"), "UNIONPAY"));
 
@@ -397,18 +397,18 @@ class PaymentServiceTest {
 
     @Test
     void paymentSummaryShowsTotalsAndCanSettle() {
-        Long workOrderId = createSubmittedWorkOrder(new BigDecimal("300.00"));
+        Long workOrderId = createSubmittedWorkOrder(new BigDecimal("400.00"));
         paymentService.recordPayment(buildPaymentCommand(workOrderId, new BigDecimal("200.00"), "WECHAT"));
         paymentService.recordPayment(buildPaymentCommand(workOrderId, new BigDecimal("150.00"), "CASH"));
         refundService.recordRefund(buildRefundCommand(workOrderId, new BigDecimal("50.00"), "WECHAT", "退款"));
 
         PaymentSummaryResponse summary = paymentService.getPaymentSummary(STORE_ID, workOrderId);
 
-        assertEquals(0, new BigDecimal("300.00").compareTo(summary.getReceivableAmount()));
+        assertEquals(0, new BigDecimal("400.00").compareTo(summary.getReceivableAmount()));
         assertEquals(0, new BigDecimal("350.00").compareTo(summary.getPaymentTotal()));
         assertEquals(0, new BigDecimal("50.00").compareTo(summary.getRefundTotal()));
         assertEquals(0, new BigDecimal("300.00").compareTo(summary.getReceivedAmount()));
-        assertTrue(summary.getCanSettle());
+        assertFalse(summary.getCanSettle());
     }
 
     @Test
