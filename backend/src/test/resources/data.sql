@@ -126,3 +126,6 @@ MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permis
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1054, 101, 1024);
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1055, 102, 1010);
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1056, 102, 1023);
+-- bindtest01: dedicated user for bindWechatThenAuthMeShowsWechatBoundTrue (no wechat binding)
+MERGE INTO sys_user (id, store_id, username, password_hash, real_name, phone, account_type, status, password_must_change, deleted) KEY (phone) VALUES (30, 1, 'bindtest01', '{noop}dev123', '绑定测试员', '13800000030', 'STORE', 'ENABLED', FALSE, 0);
+MERGE INTO sys_user_role (id, user_id, role_id) KEY (user_id, role_id) VALUES (401, 30, 1);

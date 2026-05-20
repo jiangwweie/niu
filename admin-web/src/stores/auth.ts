@@ -11,6 +11,8 @@ export interface AuthUser {
   passwordMustChange?: boolean;
   roleCodes: string[];
   permissionCodes: string[];
+  wechatBound?: boolean;
+  wechatBoundAt?: string;
 }
 
 export const useAuthStore = defineStore('auth', () => {

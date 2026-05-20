@@ -139,6 +139,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private AuthenticatedUser buildCurrentUser(SysUserEntity user) {
+        boolean wechatBound = user.getWechatOpenid() != null && !user.getWechatOpenid().isBlank();
         return new AuthenticatedUser(
                 user.getId(),
                 user.getStoreId(),
@@ -146,7 +147,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 user.getRealName(),
                 user.getAccountType(),
                 Set.copyOf(listRoleCodes(user.getId())),
-                Set.copyOf(permissionQueryService.listPermissionCodesByUserId(user.getId()))
+                Set.copyOf(permissionQueryService.listPermissionCodesByUserId(user.getId())),
+                wechatBound,
+                user.getWechatBoundAt()
         );
     }
 
@@ -190,7 +193,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 null,
                 AccountType.STORE_VALUE,
                 Set.copyOf(listRoleCodes(userId)),
-                Set.copyOf(permissionQueryService.listPermissionCodesByUserId(userId))
+                Set.copyOf(permissionQueryService.listPermissionCodesByUserId(userId)),
+                false,
+                null
         );
         authenticate(user);
     }

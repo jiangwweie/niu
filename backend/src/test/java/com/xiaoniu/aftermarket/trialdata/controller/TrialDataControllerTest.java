@@ -37,7 +37,7 @@ class TrialDataControllerTest {
     private String superAdminToken() {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(1L, 1L, "admin01", "张三",
-                        null, Set.of("SUPER_ADMIN"), Set.of("FINANCE_VIEW")),
+                        null, Set.of("SUPER_ADMIN"), Set.of("FINANCE_VIEW"), false, null),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
     }
@@ -45,7 +45,7 @@ class TrialDataControllerTest {
     private String storeAdminToken() {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(10L, 2L, "store_admin01", "王二",
-                        null, Set.of("STORE_ADMIN"), Set.of("PART_MANAGE", "USER_MANAGE")),
+                        null, Set.of("STORE_ADMIN"), Set.of("PART_MANAGE", "USER_MANAGE"), false, null),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
     }
@@ -53,7 +53,7 @@ class TrialDataControllerTest {
     private String technicianToken() {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(2L, 1L, "tech01", "李四",
-                        null, Set.of("TECHNICIAN_FRONT_DESK"), Set.of("WORK_ORDER_CREATE", "INVENTORY_VIEW")),
+                        null, Set.of("TECHNICIAN_FRONT_DESK"), Set.of("WORK_ORDER_CREATE", "INVENTORY_VIEW"), false, null),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
     }

@@ -34,7 +34,7 @@ class WorkOrderDraftPermissionTest {
     private String tokenWithWorkOrderCreate() {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(1L, 1L, "admin01", "张三",
-                        null, Set.of("ADMIN"), Set.of("WORK_ORDER_CREATE")),
+                        null, Set.of("ADMIN"), Set.of("WORK_ORDER_CREATE"), false, null),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
     }
@@ -42,7 +42,7 @@ class WorkOrderDraftPermissionTest {
     private String tokenWithWorkOrderUpdate() {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(1L, 1L, "admin01", "张三",
-                        null, Set.of("ADMIN"), Set.of("WORK_ORDER_UPDATE")),
+                        null, Set.of("ADMIN"), Set.of("WORK_ORDER_UPDATE"), false, null),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
     }
@@ -50,7 +50,7 @@ class WorkOrderDraftPermissionTest {
     private String tokenWithoutDraftPermissions() {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(2L, 1L, "tech01", "赵维修",
-                        null, Set.of("TECHNICIAN_FRONT_DESK"), Set.of("WORK_ORDER_SUBMIT")),
+                        null, Set.of("TECHNICIAN_FRONT_DESK"), Set.of("WORK_ORDER_SUBMIT"), false, null),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
     }

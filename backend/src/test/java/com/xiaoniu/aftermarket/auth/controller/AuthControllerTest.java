@@ -167,7 +167,9 @@ class AuthControllerTest {
                 "张三",
                 null,
                 Set.of("ADMIN"),
-                Set.of("work_order:create")
+                Set.of("work_order:create"),
+                false,
+                null
         );
         String expiredToken = jwtProvider.generateAccessToken(
                 user,

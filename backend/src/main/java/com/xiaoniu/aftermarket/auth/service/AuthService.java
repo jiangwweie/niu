@@ -91,6 +91,7 @@ public class AuthService {
     public AuthenticatedUser buildAuthenticatedUser(SysUserEntity user) {
         Set<String> roleCodes = listRoleCodes(user.getId());
         Set<String> permissionCodes = new LinkedHashSet<>(permissionQueryService.listPermissionCodesByUserId(user.getId()));
+        boolean wechatBound = user.getWechatOpenid() != null && !user.getWechatOpenid().isBlank();
         return new AuthenticatedUser(
                 user.getId(),
                 user.getStoreId(),
@@ -98,7 +99,9 @@ public class AuthService {
                 user.getRealName(),
                 user.getAccountType(),
                 Set.copyOf(roleCodes),
-                Set.copyOf(permissionCodes)
+                Set.copyOf(permissionCodes),
+                wechatBound,
+                user.getWechatBoundAt()
         );
     }
 
@@ -112,7 +115,9 @@ public class AuthService {
                 user.accountType(),
                 currentPasswordMustChange(user.userId()),
                 user.roleCodes(),
-                user.permissionCodes()
+                user.permissionCodes(),
+                user.wechatBound(),
+                user.wechatBoundAt()
         );
     }
 

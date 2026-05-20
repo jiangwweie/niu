@@ -255,4 +255,83 @@ class WechatAuthTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("WECHAT_NOT_BOUND"));
     }
+
+    // --- wechatBound field in auth responses ---
+
+    @Test
+    void passwordLoginReturnsWechatBoundFields() throws Exception {
+        // tech01 (id=2) has wechat_openid='test_bound_openid_001' → wechatBound=true
+        mockMvc.perform(post("/api/auth/login/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"tech01\",\"password\":\"dev123\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.user.wechatBound").value(true))
+                .andExpect(jsonPath("$.data.user.wechatBoundAt").isNotEmpty());
+
+        // admin01 (id=1) has no wechat binding → wechatBound=false
+        mockMvc.perform(post("/api/auth/login/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"admin01\",\"password\":\"dev123\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.user.wechatBound").value(false));
+    }
+
+    @Test
+    void authMeReturnsWechatBoundFields() throws Exception {
+        String token = loginAndGetToken("tech01", "dev123");
+
+        mockMvc.perform(get("/api/auth/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.wechatBound").value(true))
+                .andExpect(jsonPath("$.data.wechatBoundAt").isNotEmpty());
+
+        String adminToken = loginAndGetToken("admin01", "dev123");
+        mockMvc.perform(get("/api/auth/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.wechatBound").value(false));
+    }
+
+    @Test
+    void wechatLoginReturnsWechatBoundFields() throws Exception {
+        when(wxMaUserService.getSessionInfo("code_bound_fields"))
+                .thenReturn(mockSessionResult("test_bound_openid_001"));
+
+        mockMvc.perform(post("/api/auth/login/wechat")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\":\"code_bound_fields\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.user.wechatBound").value(true))
+                .andExpect(jsonPath("$.data.user.wechatBoundAt").isNotEmpty());
+    }
+
+    @Test
+    void bindWechatThenAuthMeShowsWechatBoundTrue() throws Exception {
+        // bindtest01 (id=30, storeId=1) dedicated for this test, no wechat binding
+        String token = loginAndGetToken("bindtest01", "dev123");
+
+        // Verify wechatBound=false before binding
+        mockMvc.perform(get("/api/auth/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.wechatBound").value(false));
+
+        // Bind wechat
+        when(wxMaUserService.getSessionInfo("code_bind_me"))
+                .thenReturn(mockSessionResult("openid_bindtest01_fresh"));
+
+        mockMvc.perform(post("/api/auth/wechat/bind")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\":\"code_bind_me\"}"))
+                .andExpect(status().isOk());
+
+        // Verify wechatBound=true after binding
+        mockMvc.perform(get("/api/auth/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.wechatBound").value(true))
+                .andExpect(jsonPath("$.data.wechatBoundAt").isNotEmpty());
+    }
 }

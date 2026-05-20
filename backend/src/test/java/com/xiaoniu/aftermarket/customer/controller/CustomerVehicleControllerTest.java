@@ -37,7 +37,7 @@ class CustomerVehicleControllerTest {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(1L, 1L, "admin01", "张三",
                 null,
-                        Set.of("ADMIN"), Set.of("CUSTOMER_VIEW")),
+                        Set.of("ADMIN"), Set.of("CUSTOMER_VIEW"), false, null),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
     }
@@ -46,7 +46,7 @@ class CustomerVehicleControllerTest {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(1L, 1L, "admin01", "张三",
                 null,
-                        Set.of("ADMIN"), Set.of("CUSTOMER_VIEW", "CUSTOMER_MANAGE")),
+                        Set.of("ADMIN"), Set.of("CUSTOMER_VIEW", "CUSTOMER_MANAGE"), false, null),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
     }
@@ -55,7 +55,7 @@ class CustomerVehicleControllerTest {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(2L, 1L, "tech01", "赵维修",
                 null,
-                        Set.of("TECHNICIAN"), Set.of("WORK_ORDER_SUBMIT")),
+                        Set.of("TECHNICIAN"), Set.of("WORK_ORDER_SUBMIT"), false, null),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
     }
@@ -64,7 +64,7 @@ class CustomerVehicleControllerTest {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(1L, 1L, "admin01", "张三",
                 null,
-                        Set.of("ADMIN"), Set.of("WORK_ORDER_CREATE", "CUSTOMER_VIEW", "CUSTOMER_MANAGE")),
+                        Set.of("ADMIN"), Set.of("WORK_ORDER_CREATE", "CUSTOMER_VIEW", "CUSTOMER_MANAGE"), false, null),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
     }
@@ -73,7 +73,7 @@ class CustomerVehicleControllerTest {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(10L, 2L, "store_admin01", "王二",
                 null,
-                        Set.of("STORE_ADMIN"), Set.of("CUSTOMER_VIEW", "CUSTOMER_MANAGE")),
+                        Set.of("STORE_ADMIN"), Set.of("CUSTOMER_VIEW", "CUSTOMER_MANAGE"), false, null),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
     }

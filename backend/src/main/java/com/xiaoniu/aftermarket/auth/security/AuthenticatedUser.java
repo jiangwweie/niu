@@ -9,6 +9,8 @@ public record AuthenticatedUser(
         String realName,
         String accountType,
         Set<String> roleCodes,
-        Set<String> permissionCodes
+        Set<String> permissionCodes,
+        Boolean wechatBound,
+        java.time.LocalDateTime wechatBoundAt
 ) {
 }

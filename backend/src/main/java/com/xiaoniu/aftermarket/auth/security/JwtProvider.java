@@ -85,7 +85,9 @@ public class JwtProvider {
                 asString(claims.get("realName")),
                 null, // accountType: not stored in JWT, rebuilt from DB
                 asStringSet(claims.get("roleCodes")),
-                asStringSet(claims.get("permissionCodes"))
+                asStringSet(claims.get("permissionCodes")),
+                null, // wechatBound: rebuilt from DB in JwtAuthenticationFilter
+                null  // wechatBoundAt: rebuilt from DB in JwtAuthenticationFilter
         );
     }
 

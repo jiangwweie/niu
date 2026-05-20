@@ -31,7 +31,7 @@ class SensitiveReadPermissionTest {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(1L, 1L, "admin01", "张三",
                 null,
-                        Set.of("ADMIN"), Set.of("FINANCE_VIEW")),
+                        Set.of("ADMIN"), Set.of("FINANCE_VIEW"), false, null),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
     }
@@ -40,7 +40,7 @@ class SensitiveReadPermissionTest {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(2L, 1L, "tech01", "赵维修",
                 null,
-                        Set.of("TECHNICIAN_FRONT_DESK"), Set.of("WORK_ORDER_SUBMIT")),
+                        Set.of("TECHNICIAN_FRONT_DESK"), Set.of("WORK_ORDER_SUBMIT"), false, null),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
     }
@@ -49,7 +49,7 @@ class SensitiveReadPermissionTest {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(1L, 1L, "admin01", "张三",
                 null,
-                        Set.of("ADMIN"), Set.of("OFFICIAL_SETTLEMENT_MANAGE")),
+                        Set.of("ADMIN"), Set.of("OFFICIAL_SETTLEMENT_MANAGE"), false, null),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
     }
@@ -58,7 +58,7 @@ class SensitiveReadPermissionTest {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(1L, 1L, "admin01", "张三",
                 null,
-                        Set.of("ADMIN"), Set.of("REIMBURSEMENT_CONFIRM")),
+                        Set.of("ADMIN"), Set.of("REIMBURSEMENT_CONFIRM"), false, null),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
     }
@@ -67,7 +67,7 @@ class SensitiveReadPermissionTest {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(1L, 1L, "admin01", "张三",
                 null,
-                        Set.of("ADMIN"), Set.of("PAYMENT_RECORD")),
+                        Set.of("ADMIN"), Set.of("PAYMENT_RECORD"), false, null),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
     }
@@ -76,7 +76,7 @@ class SensitiveReadPermissionTest {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(1L, 1L, "admin01", "张三",
                 null,
-                        Set.of("ADMIN"), Set.of("REFUND_RECORD")),
+                        Set.of("ADMIN"), Set.of("REFUND_RECORD"), false, null),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
     }

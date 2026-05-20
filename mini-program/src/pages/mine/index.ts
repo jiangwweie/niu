@@ -82,19 +82,29 @@ Page({
 
       await authApi.bindWechat(loginRes.code);
 
-      // 后端已校验绑定成功，直接更新本地状态，无需重新请求 /api/auth/me
-      const user = authStore.getCurrentUser() as any;
-      if (user) {
-        user.wechatBound = true;
-        user.wechatBoundAt = new Date().toISOString();
-        authStore.setUser(user);
+      // 优先从服务端刷新用户信息（包含 wechatBound/wechatBoundAt）
+      try {
+        const meRes = await authApi.getMe();
+        authStore.setUser(meRes.data as any);
+        this.setData({
+          currentUser: meRes.data as any,
+          wechatBound: !!(meRes.data as any).wechatBound,
+          wechatBoundAt: (meRes.data as any).wechatBoundAt || ''
+        });
+      } catch {
+        // 兜底：/me 失败时本地更新
+        const user = authStore.getCurrentUser() as any;
+        if (user) {
+          user.wechatBound = true;
+          user.wechatBoundAt = new Date().toISOString();
+          authStore.setUser(user);
+          this.setData({
+            currentUser: user,
+            wechatBound: true,
+            wechatBoundAt: user.wechatBoundAt
+          });
+        }
       }
-
-      this.setData({
-        currentUser: user,
-        wechatBound: true,
-        wechatBoundAt: user?.wechatBoundAt || ''
-      });
 
       wx.showToast({ title: '绑定成功', icon: 'success' });
     } catch (e) {

@@ -31,7 +31,7 @@ class InventoryReadPermissionTest {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(1L, 1L, "admin01", "张三",
                 null,
-                        Set.of("ADMIN"), Set.of("INVENTORY_VIEW")),
+                        Set.of("ADMIN"), Set.of("INVENTORY_VIEW"), false, null),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
     }
@@ -40,7 +40,7 @@ class InventoryReadPermissionTest {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(2L, 1L, "finance01", "李财务",
                 null,
-                        Set.of("FINANCE"), Set.of("FINANCE_VIEW")),
+                        Set.of("FINANCE"), Set.of("FINANCE_VIEW"), false, null),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
     }
