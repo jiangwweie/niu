@@ -104,7 +104,7 @@ public class AdminUserController {
     @PostMapping("/users/{id}/wechat/unbind")
     public ApiResponse<Void> unbindWechat(@PathVariable Long id) {
         AuthenticatedUser user = requireCurrentUser();
-        wechatService.unbindWechat(user.storeId(), id);
+        wechatService.unbindWechat(user.storeId(), id, user.userId());
         return ApiResponse.success(null);
     }
 

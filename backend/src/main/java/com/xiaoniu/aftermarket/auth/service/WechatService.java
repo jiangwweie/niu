@@ -105,7 +105,7 @@ public class WechatService {
     }
 
     @Transactional
-    public void unbindWechat(Long storeId, Long userId) {
+    public void unbindWechat(Long storeId, Long userId, Long operatorId) {
         SysUserEntity user = userMapper.selectOne(
                 new LambdaQueryWrapper<SysUserEntity>()
                         .eq(SysUserEntity::getStoreId, storeId)
@@ -120,17 +120,26 @@ public class WechatService {
                 .eq(SysUserEntity::getId, userId)
                 .set(SysUserEntity::getWechatOpenid, null)
                 .set(SysUserEntity::getWechatUnionid, null)
-                .set(SysUserEntity::getWechatBoundAt, null));
+                .set(SysUserEntity::getWechatBoundAt, null)
+                .set(SysUserEntity::getUpdatedBy, operatorId)
+                .set(SysUserEntity::getUpdatedAt, LocalDateTime.now()));
     }
 
     private String code2Session(String code) {
+        WxMaJscode2SessionResult result;
         try {
-            WxMaJscode2SessionResult result = wxMaService.getUserService().getSessionInfo(code);
-            return result.getOpenid();
+            result = wxMaService.getUserService().getSessionInfo(code);
         } catch (WxErrorException e) {
             log.error("WeChat code2Session failed, error code: {}, error msg: {}",
                     e.getError().getErrorCode(), e.getError().getErrorMsg());
             throw new BusinessException(ErrorCode.WECHAT_LOGIN_FAILED, "微信登录失败");
+        } catch (Exception e) {
+            log.error("WeChat code2Session unexpected error", e);
+            throw new BusinessException(ErrorCode.WECHAT_LOGIN_FAILED, "微信登录失败");
         }
+        if (result == null || result.getOpenid() == null || result.getOpenid().isBlank()) {
+            throw new BusinessException(ErrorCode.WECHAT_LOGIN_FAILED, "微信登录失败");
+        }
+        return result.getOpenid();
     }
 }

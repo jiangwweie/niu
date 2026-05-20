@@ -173,6 +173,8 @@ public class PlatformStoreService {
         return new CreateStoreAdminResponse(user.getId(), user.getUsername(), temporaryPassword);
     }
 
+    private static final ErrorCode TEMPLATE_ROLE_MISSING = ErrorCode.COMMON_INTERNAL_ERROR;
+
     private void createBaseRolesForStore(Long storeId, Long operatorId) {
         for (String roleCode : BASE_ROLE_CODES) {
             // Check if already exists (idempotent)
@@ -191,8 +193,8 @@ public class PlatformStoreService {
                     .eq(SysRoleEntity::getDeleted, 0)
                     .last("LIMIT 1"));
             if (templateRole == null) {
-                log.warn("Template role not found in default store for roleCode={}, skipping", roleCode);
-                continue; // template not found, skip
+                throw new BusinessException(TEMPLATE_ROLE_MISSING,
+                        "基础角色模板缺失: " + roleCode + "，门店初始化失败");
             }
 
             // Create new role for the store
