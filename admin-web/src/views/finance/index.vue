@@ -1,7 +1,7 @@
 <template>
   <PageContainer title="财务报表" description="查看客户支付收入、官方结算收入、成本与利润报表">
     <el-alert
-      title="财务口径：利润 = (客户支付净收入 + 官方结算收入) - (配件成本 + 报销成本)。金额保留两位小数。"
+      title="财务口径：净利润 = 总收入 - 总成本；总收入 = 客户实收收入 + 官方结算收入；总成本 = 配件成本 + 已确认报销成本；客户实收收入 = 收款金额 - 退款金额。金额保留两位小数。"
       type="info"
       show-icon
       :closable="false"
@@ -78,15 +78,15 @@
         <div class="split-section">
           <div class="split-group">
             <div class="group-item">
-              <span class="item-label">客户收入 (customerIncome)</span>
+              <span class="item-label">客户实收收入</span>
               <MoneyText :amount="summaryData?.customerIncome || 0" />
             </div>
-            <div class="group-desc text-info">支付 - 退款（仅统计本期）</div>
+            <div class="group-desc text-info">收款金额 - 退款金额（仅统计本期）</div>
           </div>
           <el-divider />
           <div class="split-group">
             <div class="group-item">
-              <span class="item-label">官方结算收入 (officialIncome)</span>
+              <span class="item-label">官方结算收入</span>
               <MoneyText :amount="summaryData?.officialIncome || 0" />
             </div>
             <div class="group-desc text-info">状态为 SETTLED 的官方结算</div>
@@ -105,7 +105,7 @@
         <div class="split-section">
           <div class="split-group">
             <div class="group-item">
-              <span class="item-label">配件成本 (partsCost)</span>
+              <span class="item-label">配件成本</span>
               <MoneyText :amount="summaryData?.partsCost || 0" />
             </div>
             <div class="group-desc text-info">SETTLED 工单的配件成本 (line_cost_amount)</div>
@@ -113,7 +113,7 @@
           <el-divider />
           <div class="split-group">
             <div class="group-item">
-              <span class="item-label">报销成本 (reimbursementCost)</span>
+              <span class="item-label">已确认报销成本</span>
               <MoneyText :amount="summaryData?.reimbursementCost || 0" />
             </div>
             <div class="group-desc text-info">状态为 CONFIRMED 的报销</div>
@@ -125,18 +125,18 @@
       <el-card shadow="never" class="summary-card" v-loading="loading">
         <template #header>
           <div class="card-header">
-            <span>净利润 (Profit)</span>
+            <span>净利润</span>
             <span class="total-text"><MoneyText :amount="summaryData?.profit || 0" :type="(summaryData?.profit || 0) >= 0 ? 'success' : 'danger'" /></span>
           </div>
         </template>
         <div class="split-section profit-section">
           <div class="profit-row">
-            <span class="item-label">已结算工单数 (settledWorkOrderCount)</span>
+            <span class="item-label">已结算工单数</span>
             <span class="font-bold">{{ summaryData?.settledWorkOrderCount || 0 }}</span>
           </div>
           <el-divider style="margin: 12px 0;" />
           <div class="profit-row">
-            <span class="item-label">已确认报销数 (confirmedReimbursementCount)</span>
+            <span class="item-label">已确认报销数</span>
             <span class="font-bold">{{ summaryData?.confirmedReimbursementCount || 0 }}</span>
           </div>
         </div>
@@ -155,10 +155,11 @@
       </template>
       <div class="notice-content text-info text-sm">
         <ol class="list-decimal pl-4">
-          <li><strong>总收入 (totalIncome)</strong> = customerIncome + officialIncome</li>
-          <li><strong>总成本 (totalCost)</strong> = partsCost + reimbursementCost</li>
-          <li><strong>净利润 (profit)</strong> = totalIncome - totalCost</li>
-          <li>所有金额均保留 2 位小数。空数据或无流水时金额展示为 0。</li>
+          <li><strong>总收入</strong> = 客户实收收入 + 官方结算收入</li>
+          <li><strong>总成本</strong> = 配件成本 + 已确认报销成本</li>
+          <li><strong>净利润</strong> = 总收入 - 总成本</li>
+          <li><strong>客户实收收入</strong> = 收款金额 - 退款金额</li>
+          <li>所有金额均保留两位小数，无数据或无流水时展示为 ¥0.00。</li>
         </ol>
       </div>
     </el-card>

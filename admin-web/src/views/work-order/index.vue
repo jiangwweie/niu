@@ -200,8 +200,8 @@
             <el-descriptions-item label="应收金额" align="center">
               <MoneyText :amount="currentOrder.receivableAmount" bold />
             </el-descriptions-item>
-            <el-descriptions-item label="已收金额" align="center">
-              <MoneyText :amount="currentOrder.paidAmount" bold type="success" />
+            <el-descriptions-item label="实收金额" align="center">
+              <MoneyText :amount="currentOrder.actualAmount" bold type="success" />
             </el-descriptions-item>
             <el-descriptions-item label="待收金额" align="center">
               <MoneyText :amount="pendingAmount" bold :type="pendingAmount > 0 ? 'warning' : 'info'" />
@@ -307,13 +307,13 @@
           <el-input-number
             v-model="refundForm.amount"
             :min="0.01"
-            :max="currentOrder?.paidAmount ?? 0"
+            :max="currentOrder?.actualAmount ?? 0"
             :precision="2"
             :step="10"
             style="width: 100%"
           />
           <div style="font-size: 12px; color: #909399; margin-top: 4px;">
-            最大可退：<MoneyText :amount="currentOrder?.paidAmount ?? 0" />
+            最大可退：<MoneyText :amount="currentOrder?.actualAmount ?? 0" />
           </div>
         </el-form-item>
         <el-form-item label="退款方式">
@@ -342,7 +342,7 @@
     <el-dialog v-model="settleDialogVisible" title="结算工单" width="420px" :close-on-click-modal="false">
       <el-descriptions :column="1" border size="small" style="margin-bottom: 12px;">
         <el-descriptions-item label="应收金额"><MoneyText :amount="currentOrder?.receivableAmount ?? 0" bold /></el-descriptions-item>
-        <el-descriptions-item label="已收金额"><MoneyText :amount="currentOrder?.paidAmount ?? 0" bold type="success" /></el-descriptions-item>
+        <el-descriptions-item label="实收金额"><MoneyText :amount="currentOrder?.actualAmount ?? 0" bold type="success" /></el-descriptions-item>
         <el-descriptions-item label="待收金额">
           <MoneyText :amount="pendingAmount" bold :type="pendingAmount > 0 ? 'danger' : 'info'" />
           <el-tag v-if="pendingAmount > 0" type="danger" size="small" style="margin-left: 8px;">未收齐</el-tag>
@@ -490,7 +490,7 @@ const workOrderRefunds = ref<any[]>([]);
 
 const pendingAmount = computed(() => {
   if (!currentOrder.value) return 0;
-  return Math.max(0, currentOrder.value.receivableAmount - currentOrder.value.paidAmount);
+  return Math.max(0, currentOrder.value.receivableAmount - currentOrder.value.actualAmount);
 });
 
 const canShowCashierSection = computed(() => {
@@ -512,7 +512,7 @@ const canRecordRefund = computed(() => {
   return (
     authStore.user?.permissionCodes?.includes('REFUND_RECORD') &&
     PAYABLE_STATUSES.includes(currentOrder.value.status) &&
-    currentOrder.value.paidAmount > 0
+    currentOrder.value.actualAmount > 0
   );
 });
 
@@ -521,7 +521,7 @@ const canSettle = computed(() => {
   return (
     authStore.user?.permissionCodes?.includes('WORK_ORDER_SETTLE') &&
     PAYABLE_STATUSES.includes(currentOrder.value.status) &&
-    currentOrder.value.paidAmount >= currentOrder.value.receivableAmount
+    currentOrder.value.actualAmount >= currentOrder.value.receivableAmount
   );
 });
 
@@ -541,15 +541,21 @@ const handleView = async (row: WorkOrderRecord) => {
 };
 
 const loadCashierRecords = async (workOrderId: string) => {
-  try {
-    const [payments, refunds] = await Promise.all([
-      getWorkOrderPayments(workOrderId),
-      getWorkOrderRefunds(workOrderId),
-    ]);
-    workOrderPayments.value = payments || [];
-    workOrderRefunds.value = refunds || [];
-  } catch {
-    // non-critical, ignore
+  const [paymentsResult, refundsResult] = await Promise.allSettled([
+    getWorkOrderPayments(workOrderId),
+    getWorkOrderRefunds(workOrderId),
+  ]);
+  if (paymentsResult.status === 'fulfilled') {
+    workOrderPayments.value = paymentsResult.value || [];
+  } else {
+    ElMessage.error('支付记录加载失败');
+    workOrderPayments.value = [];
+  }
+  if (refundsResult.status === 'fulfilled') {
+    workOrderRefunds.value = refundsResult.value || [];
+  } else {
+    ElMessage.error('退款记录加载失败');
+    workOrderRefunds.value = [];
   }
 };
 
@@ -621,7 +627,7 @@ const refundDialogVisible = ref(false);
 const refundForm = reactive({ amount: 0.01, refundMethod: '', reason: '', remark: '' });
 
 const openRefundDialog = () => {
-  refundForm.amount = Math.max(0.01, currentOrder.value?.paidAmount ?? 0);
+  refundForm.amount = Math.max(0.01, currentOrder.value?.actualAmount ?? 0);
   refundForm.refundMethod = '';
   refundForm.reason = '';
   refundForm.remark = '';
@@ -642,8 +648,8 @@ const submitRefund = async () => {
     ElMessage.warning('退款金额必须大于0');
     return;
   }
-  if (refundForm.amount > currentOrder.value.paidAmount) {
-    ElMessage.warning('退款金额不能超过已收金额');
+  if (refundForm.amount > currentOrder.value.actualAmount) {
+    ElMessage.warning('退款金额不能超过实收金额');
     return;
   }
   try {

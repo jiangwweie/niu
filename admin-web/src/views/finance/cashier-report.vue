@@ -23,7 +23,7 @@
         <el-descriptions-item label="日期">{{ report.date }}</el-descriptions-item>
         <el-descriptions-item label="收款笔数">{{ report.paymentCount }}</el-descriptions-item>
         <el-descriptions-item label="退款笔数">{{ report.refundCount }}</el-descriptions-item>
-        <el-descriptions-item label="未结工单数">{{ report.currentUnpaidWorkOrderCount + report.currentPartialPaidWorkOrderCount }}</el-descriptions-item>
+        <el-descriptions-item label="未结工单数">{{ report.currentUnpaidWorkOrderCount }}</el-descriptions-item>
       </el-descriptions>
 
       <el-descriptions :column="3" border size="default" style="margin-top: 16px;">

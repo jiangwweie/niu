@@ -122,9 +122,9 @@
 
     <view class="payment-action" wx:if="{{workOrder && workOrder.status !== 'DRAFT' && workOrder.status !== 'CANCELLED' && workOrder.status !== 'SETTLED'}}" style="margin-top: 16px; padding: 0 16px;">
       <view style="font-size: 12px; color: #666; margin-bottom: 12px; text-align: center;">
-        是否允许记录支付最终以后端校验为准。支付记录不会自动结算工单。
+        操作提示：操作结果以系统校验为准。
       </view>
-      <t-button block theme="primary" size="large" bind:tap="openPaymentDialog" loading="{{paymentLoading}}">记录支付</t-button>
+      <t-button block theme="primary" size="large" bind:tap="openPaymentDialog" loading="{{paymentLoading}}">记录收款</t-button>
     </view>
 
     <view class="refund-action" wx:if="{{workOrder && workOrder.status !== 'DRAFT' && workOrder.status !== 'CANCELLED' && workOrder.status !== 'SETTLED'}}" style="margin-top: 16px; padding: 0 16px;">
@@ -210,7 +210,7 @@
     bind:cancel="onCancelCancelDialog"
   >
     <view slot="content" style="font-size: 14px; color: #666;">
-      <text style="display: block; margin-bottom: 12px;">取消工单后，若工单已提交且存在预占库存，将由后端释放预占库存并生成 RELEASE 库存流水。DRAFT 草稿取消不会释放库存。取消不会自动退款，不会删除支付记录。是否确认取消？</text>
+      <text style="display: block; margin-bottom: 12px;">确认取消工单吗？取消后将释放预占库存，但不会自动退款。</text>
       <t-input placeholder="请输入取消原因(必填)" value="{{cancelReason}}" bind:change="onCancelReasonChange" borderless style="background: #f5f5f5; border-radius: 4px; margin-bottom: 8px;" />
       <t-input placeholder="可输入备注(选填)" value="{{cancelRemark}}" bind:change="onCancelRemarkChange" borderless style="background: #f5f5f5; border-radius: 4px;" />
     </view>
@@ -218,21 +218,21 @@
 
   <t-popup visible="{{paymentDialogVisible}}" bind:visible-change="onPaymentPopupVisibleChange" placement="bottom">
     <view class="popup-header">
-      <text class="popup-title">记录线下支付</text>
+      <text class="popup-title">记录线下收款</text>
       <t-icon name="close" size="24" bind:tap="closePaymentDialog" />
     </view>
     <scroll-view scroll-y class="popup-body">
       <view style="padding: 16px; background: #fff4e5; color: #d97100; font-size: 12px; margin-bottom: 16px;">
-        当前仅记录线下/人工确认后的客户支付结果，不发起真实微信支付或支付宝支付。支付记录会更新工单实收金额，但不会自动结算工单。
+        操作提示：本系统仅记录线下收款结果，不发起真实线上支付。
       </view>
       <t-cell-group>
         <t-input label="工单编号" value="{{workOrder.workOrderNo || 'DRAFT'}}" align="right" readonly />
         <t-input label="应收总计" value="¥{{workOrder.receivableAmount != null ? workOrder.receivableAmount : '0'}}" align="right" readonly />
         <t-input label="已收金额" value="¥{{workOrder.receivedAmount != null ? workOrder.receivedAmount : '0'}}" align="right" readonly />
-        <t-input label="支付金额" type="digit" placeholder="必填(>0)" value="{{paymentForm.amount}}" bind:change="onPaymentFormChange" data-field="amount" align="right" />
+        <t-input label="收款金额" type="digit" placeholder="必填(>0)" value="{{paymentForm.amount}}" bind:change="onPaymentFormChange" data-field="amount" align="right" />
         
         <view style="padding: 16px; display: flex; align-items: center; justify-content: space-between;">
-          <text style="font-size: 16px; color: #333;">支付方式</text>
+          <text style="font-size: 16px; color: #333;">收款方式</text>
         </view>
         <view style="padding: 0 16px 16px;">
           <view style="display: flex; flex-wrap: wrap; gap: 8px;">
@@ -248,7 +248,7 @@
       </t-cell-group>
       
       <view class="popup-footer">
-        <t-button theme="primary" block size="large" bind:tap="confirmRecordPayment" loading="{{paymentLoading}}">确认记录</t-button>
+        <t-button theme="primary" block size="large" bind:tap="confirmRecordPayment" loading="{{paymentLoading}}">确认收款</t-button>
       </view>
     </scroll-view>
   </t-popup>
@@ -260,7 +260,7 @@
     </view>
     <scroll-view scroll-y class="popup-body">
       <view style="padding: 16px; background: #fff4e5; color: #d97100; font-size: 12px; margin-bottom: 16px;">
-        仅记录人工确认的退款结果，不接真实支付网关。不自动反结算工单，不触碰库存。
+        操作提示：本系统仅记录线下退款结果，不接真实支付网关。
       </view>
       <t-cell-group>
         <t-input label="已收金额" value="¥{{workOrder.receivedAmount != null ? workOrder.receivedAmount : '0'}}" align="right" readonly />
@@ -298,7 +298,7 @@
     bind:cancel="onCancelSettleDialog"
   >
     <view slot="content" style="font-size: 14px; color: #666;">
-      <text style="display: block; margin-bottom: 12px;">结算后工单将变为已结算，且后端将正式扣减已预占库存。是否允许结算以后端校验为准（例如实收金额需达标）。</text>
+      <text style="display: block; margin-bottom: 12px;">确认结算工单吗？结算后将正式扣减预占库存。</text>
       <t-input placeholder="可输入结算备注(选填)" value="{{settleRemark}}" bind:change="onSettleRemarkChange" borderless style="background: #f5f5f5; border-radius: 4px;" />
     </view>
   </t-dialog>

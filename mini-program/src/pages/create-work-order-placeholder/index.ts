@@ -560,12 +560,12 @@ Page({
     
     const amount = parseFloat(this.data.paymentForm.amount);
     if (isNaN(amount) || amount <= 0) {
-      Toast({ context: this, selector: '#t-toast', message: '请输入大于0的支付金额', icon: 'close-circle' });
+      Toast({ context: this, selector: '#t-toast', message: '请输入大于0的收款金额', icon: 'close-circle' });
       return;
     }
 
     if (!this.data.paymentForm.paymentMethod) {
-      Toast({ context: this, selector: '#t-toast', message: '请选择支付方式', icon: 'close-circle' });
+      Toast({ context: this, selector: '#t-toast', message: '请选择收款方式', icon: 'close-circle' });
       return;
     }
 
@@ -577,7 +577,7 @@ Page({
       remark: this.data.paymentForm.remark
     }).then(res => {
       this.setData({ paymentDialogVisible: false });
-      Toast({ context: this, selector: '#t-toast', message: '支付记录已保存。支付不会自动结算工单。', icon: 'check-circle' });
+      Toast({ context: this, selector: '#t-toast', message: '收款记录已保存。收款不会自动结算工单。', icon: 'check-circle' });
       this.refreshWorkOrder();
     }).catch(err => {
       console.error('Record payment failed:', err);

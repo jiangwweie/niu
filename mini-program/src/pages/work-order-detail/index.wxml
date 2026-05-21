@@ -39,21 +39,42 @@
     <view class="empty" wx:else>暂无费用明细</view>
   </view>
 
-  <view class="section summary-section">
-    <text class="section-title">金额摘要</text>
-    <t-cell-group>
-      <t-cell title="应收金额" note="{{order.receivableAmount != null ? '¥' + order.receivableAmount : '-'}}" />
-      <t-cell title="实收金额" note="{{order.receivedAmount != null ? '¥' + order.receivedAmount : '-'}}" />
-      <t-cell title="待收金额" note="{{outstandingAmount > 0 ? '¥' + outstandingAmount : '¥0'}}" />
-    </t-cell-group>
+  <!-- 收银操作卡片 -->
+  <view class="section cashier-card">
+    <text class="section-title">收银操作</text>
+    <view class="cashier-grid">
+      <view class="cashier-grid-item">
+        <text class="cashier-label">应收金额</text>
+        <text class="cashier-value">¥{{receivableAmountStr}}</text>
+      </view>
+      <view class="cashier-grid-item">
+        <text class="cashier-label">已收金额</text>
+        <text class="cashier-value">¥{{receivedAmountStr}}</text>
+      </view>
+      <view class="cashier-grid-item">
+        <text class="cashier-label">待收金额</text>
+        <text class="cashier-value {{outstandingAmount > 0 ? 'highlight-red' : ''}}">¥{{outstandingAmountStr}}</text>
+      </view>
+      <view class="cashier-grid-item">
+        <text class="cashier-label">可退金额</text>
+        <text class="cashier-value">¥{{receivedAmountStr}}</text>
+      </view>
+    </view>
+
+    <view class="cashier-tip">操作结果以系统校验为准。</view>
+
+    <view class="cashier-actions" wx:if="{{order.status !== 'SETTLED' && order.status !== 'CANCELLED'}}">
+      <t-button wx:if="{{hasPaymentPermission && isPayableStatus}}" theme="primary" variant="base" block size="medium" bind:tap="openPaymentPopup">记录收款</t-button>
+      <t-button wx:if="{{hasRefundPermission}}" theme="warning" variant="outline" block size="medium" bind:tap="openRefundPopup">记录退款</t-button>
+      <t-button wx:if="{{hasSettlePermission && isPayableStatus}}" theme="{{outstandingAmount > 0 ? 'default' : 'primary'}}" variant="{{outstandingAmount > 0 ? 'outline' : 'base'}}" block size="medium" bind:tap="openSettleDialog">结算工单</t-button>
+    </view>
   </view>
 
-  <view class="action-section">
-    <view class="action-grid">
-      <t-button wx:if="{{hasCancelPermission && order.status !== 'CANCELLED' && order.status !== 'SETTLED'}}" theme="danger" variant="outline" bind:tap="onCancel">取消工单</t-button>
-      <t-button wx:if="{{hasPaymentPermission && isPayableStatus}}" theme="primary" variant="outline" bind:tap="openPaymentPopup">记录支付</t-button>
-      <t-button wx:if="{{hasRefundPermission}}" theme="warning" variant="outline" bind:tap="openRefundPopup">记录退款</t-button>
-      <t-button wx:if="{{hasSettlePermission && isPayableStatus}}" theme="{{outstandingAmount > 0 ? 'default' : 'primary'}}" variant="{{outstandingAmount > 0 ? 'outline' : 'base'}}" disabled="{{outstandingAmount > 0}}" bind:tap="openSettleDialog">结算工单</t-button>
+  <!-- 其他操作区域 -->
+  <view class="section other-actions-card" wx:if="{{hasCancelPermission && order.status !== 'CANCELLED' && order.status !== 'SETTLED'}}">
+    <text class="section-title">其他操作</text>
+    <view class="other-actions-body">
+      <t-button theme="danger" variant="outline" block size="medium" bind:tap="onCancel">取消工单</t-button>
     </view>
   </view>
 </view>
@@ -62,42 +83,43 @@
   <t-loading theme="circular" size="48rpx" text="加载中..." />
 </view>
 
-  <t-dialog id="t-dialog" />
-  <t-dialog
-    visible="{{cancelDialogVisible}}"
-    title="取消工单"
-    confirm-btn="确认取消"
-    cancel-btn="返回"
-    bind:confirm="onConfirmCancel"
-    bind:cancel="onCancelCancelDialog"
-  >
-    <view slot="content" style="font-size: 14px; color: #666;">
-      <text style="display: block; margin-bottom: 12px;">取消工单后，若工单已提交且存在预占库存，将由后端释放预占库存并生成 RELEASE 库存流水。取消不会自动退款，不会删除支付记录。是否确认取消？</text>
-      <t-input placeholder="请输入取消原因(必填)" value="{{cancelReason}}" bind:change="onCancelReasonChange" borderless style="background: #f5f5f5; border-radius: 4px; margin-bottom: 8px;" />
-      <t-input placeholder="可输入备注(选填)" value="{{cancelRemark}}" bind:change="onCancelRemarkChange" borderless style="background: #f5f5f5; border-radius: 4px;" />
-    </view>
-  </t-dialog>
+<t-dialog id="t-dialog" />
 
-  <t-popup visible="{{paymentDialogVisible}}" bind:visible-change="onPaymentPopupVisibleChange" placement="bottom">
-    <view class="popup-panel">
-      <view class="popup-header">
-        <text class="popup-title">记录线下支付</text>
-        <t-icon name="close" size="24" bind:tap="closePaymentDialog" />
-      </view>
-      <scroll-view scroll-y class="popup-body">
+<t-dialog
+  visible="{{cancelDialogVisible}}"
+  title="取消工单"
+  confirm-btn="确认取消"
+  cancel-btn="返回"
+  bind:confirm="onConfirmCancel"
+  bind:cancel="onCancelCancelDialog"
+>
+  <view slot="content" style="font-size: 14px; color: #666;">
+    <text style="display: block; margin-bottom: 12px;">确认取消工单吗？取消后将释放预占库存，但不会自动退款。</text>
+    <t-input placeholder="请输入取消原因(必填)" value="{{cancelReason}}" bind:change="onCancelReasonChange" borderless style="background: #f5f5f5; border-radius: 4px; margin-bottom: 8px;" />
+    <t-input placeholder="可输入备注(选填)" value="{{cancelRemark}}" bind:change="onCancelRemarkChange" borderless style="background: #f5f5f5; border-radius: 4px;" />
+  </view>
+</t-dialog>
+
+<t-popup visible="{{paymentDialogVisible}}" bind:visible-change="onPaymentPopupVisibleChange" placement="bottom">
+  <view class="popup-panel">
+    <view class="popup-header">
+      <text class="popup-title">记录线下收款</text>
+      <t-icon name="close" size="24" bind:tap="closePaymentDialog" />
+    </view>
+    <scroll-view scroll-y class="popup-body">
       <view style="padding: 16px; background: #fff4e5; color: #d97100; font-size: 12px; margin-bottom: 16px;">
-        当前仅记录线下/人工确认后的客户支付结果，不发起真实微信支付或支付宝支付。支付记录会更新工单实收金额，但不会自动结算工单。
+        操作提示：本系统仅记录线下收款结果，不发起真实线上支付。
       </view>
       <t-cell-group>
         <t-input label="工单编号" value="{{order.workOrderNo || 'DRAFT'}}" align="right" readonly />
-        <t-input label="应收总计" value="¥{{order.receivableAmount != null ? order.receivableAmount : '0'}}" align="right" readonly />
-        <t-input label="已收金额" value="¥{{order.receivedAmount != null ? order.receivedAmount : '0'}}" align="right" readonly />
-        <t-input label="待收金额" value="¥{{outstandingAmount}}" align="right" readonly />
+        <t-input label="应收总计" value="¥{{receivableAmountStr}}" align="right" readonly />
+        <t-input label="已收金额" value="¥{{receivedAmountStr}}" align="right" readonly />
+        <t-input label="待收金额" value="¥{{outstandingAmountStr}}" align="right" readonly />
         <view wx:if="{{outstandingAmount <= 0}}" style="padding: 8px 16px; background: #f0f9eb; color: #52c41a; font-size: 12px; margin-bottom: 12px;">已无待收金额</view>
-        <t-input label="支付金额" type="digit" placeholder="{{outstandingAmount > 0 ? '不超过待收¥' + outstandingAmount : '已收齐'}}" value="{{paymentForm.amount}}" bind:change="onPaymentFormChange" data-field="amount" align="right" />
+        <t-input label="收款金额" type="digit" placeholder="{{outstandingAmount > 0 ? '不超过待收¥' + outstandingAmountStr : '已收齐'}}" value="{{paymentForm.amount}}" bind:change="onPaymentFormChange" data-field="amount" align="right" />
         
         <view style="padding: 16px; display: flex; align-items: center; justify-content: space-between;">
-          <text style="font-size: 16px; color: #333;">支付方式</text>
+          <text style="font-size: 16px; color: #333;">收款方式</text>
         </view>
         <view style="padding: 0 16px 16px;">
           <view style="display: flex; flex-wrap: wrap; gap: 8px;">
@@ -113,25 +135,25 @@
       </t-cell-group>
       
       <view class="popup-footer">
-        <t-button theme="primary" block size="large" bind:tap="confirmRecordPayment" loading="{{paymentLoading}}">确认记录</t-button>
+        <t-button theme="primary" block size="large" bind:tap="confirmRecordPayment" loading="{{paymentLoading}}">确认收款</t-button>
       </view>
-      </scroll-view>
-    </view>
-  </t-popup>
+    </scroll-view>
+  </view>
+</t-popup>
 
-  <t-popup visible="{{refundDialogVisible}}" bind:visible-change="onRefundPopupVisibleChange" placement="bottom">
-    <view class="popup-panel">
-      <view class="popup-header">
-        <text class="popup-title">记录线下退款</text>
-        <t-icon name="close" size="24" bind:tap="closeRefundDialog" />
-      </view>
-      <scroll-view scroll-y class="popup-body">
+<t-popup visible="{{refundDialogVisible}}" bind:visible-change="onRefundPopupVisibleChange" placement="bottom">
+  <view class="popup-panel">
+    <view class="popup-header">
+      <text class="popup-title">记录线下退款</text>
+      <t-icon name="close" size="24" bind:tap="closeRefundDialog" />
+    </view>
+    <scroll-view scroll-y class="popup-body">
       <view style="padding: 16px; background: #fff4e5; color: #d97100; font-size: 12px; margin-bottom: 16px;">
-        仅记录人工确认的退款结果，不接真实支付网关。不自动反结算工单，不触碰库存。
+        操作提示：本系统仅记录线下退款结果，不接真实支付网关。
       </view>
       <t-cell-group>
-        <t-input label="可退金额" value="¥{{order.receivedAmount != null ? order.receivedAmount : '0'}}" align="right" readonly />
-        <t-input label="退款金额" type="digit" placeholder="{{order.receivedAmount > 0 ? '不超过可退¥' + order.receivedAmount : '无可退金额'}}" value="{{refundForm.amount}}" bind:change="onRefundFormChange" data-field="amount" align="right" />
+        <t-input label="可退金额" value="¥{{receivedAmountStr}}" align="right" readonly />
+        <t-input label="退款金额" type="digit" placeholder="{{order.receivedAmount > 0 ? '不超过可退¥' + receivedAmountStr : '无可退金额'}}" value="{{refundForm.amount}}" bind:change="onRefundFormChange" data-field="amount" align="right" />
         
         <view style="padding: 16px; display: flex; align-items: center; justify-content: space-between;">
           <text style="font-size: 16px; color: #333;">退款方式</text>
@@ -153,22 +175,22 @@
       <view class="popup-footer">
         <t-button theme="danger" block size="large" bind:tap="confirmRecordRefund" loading="{{refundLoading}}">确认退款</t-button>
       </view>
-      </scroll-view>
-    </view>
-  </t-popup>
+    </scroll-view>
+  </view>
+</t-popup>
 
-  <t-dialog
-    visible="{{settleDialogVisible}}"
-    title="结算工单"
-    confirm-btn="确认结算"
-    cancel-btn="返回"
-    bind:confirm="onConfirmSettle"
-    bind:cancel="onCancelSettleDialog"
-  >
-    <view slot="content" style="font-size: 14px; color: #666;">
-      <text style="display: block; margin-bottom: 12px;">结算后工单将变为已结算，且后端将正式扣减已预占库存。是否允许结算以后端校验为准（例如实收金额需达标）。</text>
-      <t-input placeholder="可输入结算备注(选填)" value="{{settleRemark}}" bind:change="onSettleRemarkChange" borderless style="background: #f5f5f5; border-radius: 4px;" />
-    </view>
-  </t-dialog>
+<t-dialog
+  visible="{{settleDialogVisible}}"
+  title="结算工单"
+  confirm-btn="确认结算"
+  cancel-btn="返回"
+  bind:confirm="onConfirmSettle"
+  bind:cancel="onCancelSettleDialog"
+>
+  <view slot="content" style="font-size: 14px; color: #666;">
+    <text style="display: block; margin-bottom: 12px;">确认结算工单吗？结算后将正式扣减预占库存。</text>
+    <t-input placeholder="可输入结算备注(选填)" value="{{settleRemark}}" bind:change="onSettleRemarkChange" borderless style="background: #f5f5f5; border-radius: 4px;" />
+  </view>
+</t-dialog>
 
-  <t-toast id="t-toast" />
+<t-toast id="t-toast" />

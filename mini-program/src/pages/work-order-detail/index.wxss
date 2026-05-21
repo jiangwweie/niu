@@ -1,5 +1,5 @@
 .container {
-  padding-bottom: 180rpx;
+  padding-bottom: 40rpx;
 }
 .header-card {
   background: #fff;
@@ -94,27 +94,56 @@
   color: #e33e33;
   font-weight: bold;
 }
-.action-section {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  background: #fff;
-  padding: 24rpx 32rpx;
-  box-shadow: 0 -4rpx 16rpx rgba(0,0,0,0.05);
-  z-index: 100;
-  box-sizing: border-box;
-  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+.cashier-card {
+  padding: 32rpx;
 }
-.action-grid {
+.cashier-grid {
   display: flex;
-  flex-wrap: wrap;
-  gap: 16rpx;
-  justify-content: flex-end;
+  justify-content: space-between;
+  margin-top: 24rpx;
+  background: #f8f9fa;
+  border-radius: 12rpx;
+  padding: 20rpx 16rpx;
 }
-.action-grid t-button {
+.cashier-grid-item {
   flex: 1;
-  min-width: 160rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.cashier-label {
+  font-size: 22rpx;
+  color: #888;
+  margin-bottom: 8rpx;
+}
+.cashier-value {
+  font-size: 26rpx;
+  font-weight: bold;
+  color: #333;
+}
+.highlight-red {
+  color: #e34d59;
+}
+.cashier-tip {
+  font-size: 22rpx;
+  color: #999;
+  margin-top: 20rpx;
+  text-align: center;
+}
+.cashier-actions {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 24rpx;
+}
+.cashier-actions t-button {
+  flex: 1;
+}
+.other-actions-card {
+  padding: 32rpx;
+}
+.other-actions-body {
+  margin-top: 24rpx;
 }
 .popup-panel {
   background: #fff;
