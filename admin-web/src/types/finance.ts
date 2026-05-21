@@ -37,3 +37,27 @@ export interface FinanceQuery {
   month?: number; // used for MONTHLY
   dateRange?: [string, string]; // used for CUSTOM
 }
+
+/* ── Cashier Report ── */
+
+export interface CashierMethodBreakdown {
+  method: string;
+  paymentAmount: number;
+  refundAmount: number;
+  netAmount: number;
+  paymentCount: number;
+  refundCount: number;
+}
+
+export interface CashierReportResponse {
+  date: string;
+  storeId: number;
+  totalPaymentAmount: number;
+  totalRefundAmount: number;
+  netAmount: number;
+  paymentCount: number;
+  refundCount: number;
+  byMethod: CashierMethodBreakdown[];
+  currentUnpaidWorkOrderCount: number;
+  currentPartialPaidWorkOrderCount: number;
+}

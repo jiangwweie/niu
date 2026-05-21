@@ -1,5 +1,5 @@
 import request from '@/utils/request';
-import type { DailyFinanceQuery, MonthlyFinanceQuery, RangeFinanceQuery, FinanceReportResponse } from '@/types/finance';
+import type { DailyFinanceQuery, MonthlyFinanceQuery, RangeFinanceQuery, FinanceReportResponse, CashierReportResponse } from '@/types/finance';
 
 export async function getDailyFinance(params: DailyFinanceQuery): Promise<FinanceReportResponse> {
   return await request.get('/api/admin/finance/daily', { params });
@@ -11,4 +11,9 @@ export async function getMonthlyFinance(params: MonthlyFinanceQuery): Promise<Fi
 
 export async function getRangeFinance(params: RangeFinanceQuery): Promise<FinanceReportResponse> {
   return await request.get('/api/admin/finance/range', { params });
+}
+
+/** GET /api/admin/finance/cashier-report?date=YYYY-MM-DD */
+export async function getCashierReport(date: string): Promise<CashierReportResponse> {
+  return await request.get('/api/admin/finance/cashier-report', { params: { date } });
 }

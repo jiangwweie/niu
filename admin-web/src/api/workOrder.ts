@@ -110,3 +110,41 @@ export async function getWorkOrderDetail(
   );
   return adaptWorkOrderDetail(resp);
 }
+
+/* ── Cashier APIs ── */
+
+/** GET /api/admin/work-orders/{id}/payments */
+export async function getWorkOrderPayments(workOrderId: string | number) {
+  const data: any[] = await request.get(`/api/admin/work-orders/${workOrderId}/payments`);
+  return data;
+}
+
+/** GET /api/admin/work-orders/{id}/refunds */
+export async function getWorkOrderRefunds(workOrderId: string | number) {
+  const data: any[] = await request.get(`/api/admin/work-orders/${workOrderId}/refunds`);
+  return data;
+}
+
+/** POST /api/admin/work-orders/{id}/payments */
+export async function recordPayment(
+  workOrderId: string | number,
+  data: { amount: number; paymentMethod: string; receiverId: number; remark?: string },
+) {
+  return await request.post(`/api/admin/work-orders/${workOrderId}/payments`, data);
+}
+
+/** POST /api/admin/work-orders/{id}/refunds */
+export async function recordRefund(
+  workOrderId: string | number,
+  data: { amount: number; refundMethod: string; reason: string; remark?: string },
+) {
+  return await request.post(`/api/admin/work-orders/${workOrderId}/refunds`, data);
+}
+
+/** POST /api/admin/work-orders/{id}/settle */
+export async function settleWorkOrder(
+  workOrderId: string | number,
+  data: { remark?: string },
+) {
+  return await request.post(`/api/admin/work-orders/${workOrderId}/settle`, data);
+}

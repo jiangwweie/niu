@@ -43,6 +43,7 @@
             index="/reimbursement"
           ><template #title>报销台账</template></el-menu-item>
           <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/finance"><template #title>财务报表</template></el-menu-item>
+          <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/finance/cashier-report"><template #title>收银日报</template></el-menu-item>
           <el-menu-item v-if="hasPermission('DICT_MANAGE')" index="/dictionary"><template #title>字典配置</template></el-menu-item>
           <el-menu-item v-if="hasAnyPermission(['USER_MANAGE', 'ROLE_MANAGE'])" index="/user"><template #title>用户与权限</template></el-menu-item>
           <el-menu-item v-if="hasPermission('STORE_MANAGE')" index="/store"><template #title>门店配置</template></el-menu-item>

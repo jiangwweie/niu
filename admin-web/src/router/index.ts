@@ -86,6 +86,12 @@ const routes: Array<RouteRecordRaw> = [
         meta: { title: '财务报表' }
       },
       {
+        path: 'finance/cashier-report',
+        name: 'CashierReport',
+        component: () => import('@/views/finance/cashier-report.vue'),
+        meta: { title: '收银日报' }
+      },
+      {
         path: 'dictionary',
         name: 'Dictionary',
         component: () => import('@/views/dictionary/index.vue'),
