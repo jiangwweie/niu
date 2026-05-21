@@ -291,7 +291,7 @@ onMounted(async () => {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background-color: rgba(0, 141, 158, 0.08);
+  background-color: rgba(22, 119, 255, 0.08);
   font-size: 24px;
   flex-shrink: 0;
 }
@@ -419,8 +419,8 @@ onMounted(async () => {
 }
 
 .shortcut-item:hover {
-  border-color: #008d9e;
-  box-shadow: 0 4px 12px rgba(0, 141, 158, 0.05);
+  border-color: #1677ff;
+  box-shadow: 0 4px 12px rgba(22, 119, 255, 0.05);
   transform: translateY(-1px);
 }
 
@@ -431,7 +431,7 @@ onMounted(async () => {
   width: 36px;
   height: 36px;
   border-radius: 8px;
-  background-color: rgba(0, 141, 158, 0.08);
+  background-color: rgba(22, 119, 255, 0.08);
   font-size: 18px;
   flex-shrink: 0;
 }

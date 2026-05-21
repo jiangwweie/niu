@@ -200,7 +200,7 @@ const handleLogout = async () => {
 .logo-icon {
   width: 32px;
   height: 32px;
-  background-color: #008d9e;
+  background-color: #1677ff;
   border-radius: 4px;
   display: flex;
   align-items: center;
@@ -250,7 +250,7 @@ const handleLogout = async () => {
 }
 
 :deep(.custom-menu .el-menu-item.is-active) {
-  background-color: #008d9e !important;
+  background-color: #1677ff !important;
   color: #ffffff !important;
   font-weight: 500;
 }
