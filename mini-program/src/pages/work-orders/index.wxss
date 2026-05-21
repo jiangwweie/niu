@@ -37,9 +37,9 @@ page {
   transition: all 0.2s;
 }
 .tab-active {
-  color: #df001f;
-  border-color: #df001f;
-  background: rgba(223,0,31,0.05);
+  color: #008d9e;
+  border-color: #008d9e;
+  background: rgba(0, 141, 158, 0.05);
   font-weight: 600;
 }
 

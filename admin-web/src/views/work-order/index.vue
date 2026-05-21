@@ -10,21 +10,21 @@
 
     <!-- 查询过滤区 -->
     <el-card shadow="never" class="search-card">
-      <el-form :inline="true" :model="queryParams" class="search-form" size="default">
-        <el-form-item label="工单编号">
-          <el-input v-model="queryParams.orderNo" placeholder="请输入" clearable />
+      <el-form :model="queryParams" label-width="80px" class="search-form-flex" size="default">
+        <el-form-item label="工单号">
+          <el-input v-model="queryParams.orderNo" placeholder="请输入工单号" clearable style="width: 220px;" />
         </el-form-item>
         <el-form-item label="客户姓名">
-          <el-input v-model="queryParams.customerName" placeholder="请输入" clearable />
+          <el-input v-model="queryParams.customerName" placeholder="请输入客户姓名" clearable style="width: 220px;" />
         </el-form-item>
         <el-form-item label="手机号">
-          <el-input v-model="queryParams.phone" placeholder="请输入" clearable />
+          <el-input v-model="queryParams.phone" placeholder="请输入手机号" clearable style="width: 220px;" />
         </el-form-item>
         <el-form-item label="车架号">
-          <el-input v-model="queryParams.vin" placeholder="请输入" clearable />
+          <el-input v-model="queryParams.vin" placeholder="请输入车架号" clearable style="width: 220px;" />
         </el-form-item>
         <el-form-item label="工单状态">
-          <el-select v-model="queryParams.status" placeholder="全部" clearable style="width: 160px">
+          <el-select v-model="queryParams.status" placeholder="请选择" clearable style="width: 220px;">
             <el-option label="草稿" value="DRAFT" />
             <el-option label="待接单" value="PENDING_ACCEPT" />
             <el-option label="已接单" value="ACCEPTED" />
@@ -34,8 +34,8 @@
             <el-option label="已取消" value="CANCELLED" />
           </el-select>
         </el-form-item>
-        <el-form-item label="是否官方售后">
-          <el-select v-model="queryParams.isOfficial" placeholder="全部" clearable style="width: 120px">
+        <el-form-item label="官方售后">
+          <el-select v-model="queryParams.isOfficial" placeholder="请选择" clearable style="width: 220px;">
             <el-option label="是" :value="true" />
             <el-option label="否" :value="false" />
           </el-select>
@@ -48,7 +48,7 @@
             start-placeholder="开始日期"
             end-placeholder="结束日期"
             value-format="YYYY-MM-DD"
-            style="width: 240px"
+            style="width: 280px;"
           />
         </el-form-item>
         <el-form-item class="search-actions">

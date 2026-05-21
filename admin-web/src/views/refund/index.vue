@@ -10,22 +10,22 @@
 
     <!-- 查询过滤区 -->
     <el-card shadow="never" class="search-card">
-      <el-form :inline="true" :model="queryParams" class="search-form" size="default">
-        <el-form-item label="工单编号">
-          <el-input v-model="queryParams.workOrderNo" placeholder="请输入" clearable />
+      <el-form :model="queryParams" label-width="80px" class="search-form-flex" size="default">
+        <el-form-item label="工单号">
+          <el-input v-model="queryParams.workOrderNo" placeholder="请输入工单号" clearable style="width: 220px;" />
         </el-form-item>
         <el-form-item label="客户姓名">
-          <el-input v-model="queryParams.customerName" placeholder="请输入" clearable />
+          <el-input v-model="queryParams.customerName" placeholder="请输入客户姓名" clearable style="width: 220px;" />
         </el-form-item>
         <el-form-item label="退款方式">
-          <el-select v-model="queryParams.refundMethod" placeholder="全部" clearable style="width: 120px">
+          <el-select v-model="queryParams.refundMethod" placeholder="请选择" clearable style="width: 220px;">
             <el-option label="微信" value="WECHAT" />
             <el-option label="支付宝" value="ALIPAY" />
             <el-option label="银联" value="UNIONPAY" />
             <el-option label="现金" value="CASH" />
           </el-select>
         </el-form-item>
-        <el-form-item label="退款时间">
+        <el-form-item label="退款日期">
           <el-date-picker
             v-model="dateRange"
             type="daterange"
@@ -34,7 +34,7 @@
             end-placeholder="结束日期"
             format="YYYY-MM-DD"
             value-format="YYYY-MM-DD"
-            style="width: 260px"
+            style="width: 280px;"
           />
         </el-form-item>
         <el-form-item class="search-actions">
@@ -58,7 +58,7 @@
           <el-table-column prop="customerName" label="客户姓名" width="110" />
           <el-table-column label="退款金额" width="120" align="right">
             <template #default="{ row }">
-              <span class="text-danger">- </span><MoneyText :amount="row.amount" />
+              <MoneyText :amount="row.amount" type="danger" symbol="-￥" bold />
             </template>
           </el-table-column>
           <el-table-column label="退款方式" width="100" align="center">
@@ -103,7 +103,7 @@
         <el-descriptions-item label="工单编号">{{ viewDrawer.current.workOrderNo }}</el-descriptions-item>
         <el-descriptions-item label="客户姓名">{{ viewDrawer.current.customerName }}</el-descriptions-item>
         <el-descriptions-item label="退款金额">
-          <span class="text-danger">- </span><MoneyText :amount="viewDrawer.current.amount" />
+          <MoneyText :amount="viewDrawer.current.amount" type="danger" symbol="-￥" bold />
         </el-descriptions-item>
         <el-descriptions-item label="退款方式">
           <el-tag :type="getMethodTag(viewDrawer.current.refundMethod)" size="small">
@@ -111,7 +111,7 @@
           </el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="退款时间">{{ viewDrawer.current.refundedAt }}</el-descriptions-item>
-        <el-descriptions-item label="操作人ID">{{ viewDrawer.current.operatorId ?? '-' }}</el-descriptions-item>
+        <el-descriptions-item label="操作人">{{ viewDrawer.current.operatorId ?? '-' }}</el-descriptions-item>
         <el-descriptions-item label="退款原因">{{ viewDrawer.current.reason || '-' }}</el-descriptions-item>
         <el-descriptions-item label="备注">{{ viewDrawer.current.remark || '-' }}</el-descriptions-item>
       </el-descriptions>

@@ -10,15 +10,15 @@
 
     <!-- 查询过滤区 -->
     <el-card shadow="never" class="search-card">
-      <el-form :inline="true" :model="queryParams" class="search-form" size="default">
+      <el-form :model="queryParams" label-width="80px" class="search-form-flex" size="default">
         <el-form-item label="报销编号">
-          <el-input v-model="queryParams.reimbursementNo" placeholder="请输入" clearable />
+          <el-input v-model="queryParams.reimbursementNo" placeholder="请输入报销编号" clearable style="width: 220px;" />
         </el-form-item>
         <el-form-item label="报销人">
-          <el-input v-model="queryParams.applicantId" placeholder="请输入" clearable />
+          <el-input v-model="queryParams.applicantId" placeholder="请输入报销人" clearable style="width: 220px;" />
         </el-form-item>
         <el-form-item label="报销状态">
-          <el-select v-model="queryParams.status" placeholder="全部" clearable style="width: 120px">
+          <el-select v-model="queryParams.status" placeholder="请选择" clearable style="width: 220px;">
             <el-option label="待确认" value="PENDING" />
             <el-option label="已确认" value="CONFIRMED" />
             <el-option label="已驳回" value="REJECTED" />
@@ -29,22 +29,31 @@
           <el-date-picker
             v-model="dateRange"
             type="daterange"
+            range-separator="至"
             start-placeholder="开始日期"
             end-placeholder="结束日期"
             value-format="YYYY-MM-DD"
-            style="width: 260px"
+            style="width: 280px;"
           />
         </el-form-item>
         <el-form-item class="search-actions">
           <el-button type="primary" @click="handleSearch" :loading="loading">查询</el-button>
           <el-button @click="handleReset">重置</el-button>
-          <el-button v-if="hasPermission('EXCEL_EXPORT')" type="success" @click="handleExport" :loading="exportLoading">导出</el-button>
         </el-form-item>
       </el-form>
     </el-card>
 
     <!-- 列表区 -->
     <el-card shadow="never" class="table-card">
+      <div class="table-toolbar">
+        <div class="toolbar-left">
+          <span class="table-title">报销台账列表</span>
+        </div>
+        <div class="toolbar-right">
+          <el-button v-if="hasPermission('EXCEL_EXPORT')" type="success" @click="handleExport" :loading="exportLoading">数据导出</el-button>
+        </div>
+      </div>
+
       <div class="table-wrapper">
         <el-table
           v-loading="loading"

@@ -52,7 +52,7 @@
           <span class="section-header">清理后保留内容</span>
         </template>
         <ul class="retain-list">
-          <li>用户账号、角色、权限</li>
+          <li>员工账号、角色、权限</li>
           <li>门店配置</li>
           <li>配件基础资料（库存数量将归零）</li>
           <li>字典配置</li>

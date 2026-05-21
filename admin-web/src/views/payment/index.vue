@@ -10,22 +10,22 @@
 
     <!-- 查询过滤区 -->
     <el-card shadow="never" class="search-card">
-      <el-form :inline="true" :model="queryParams" class="search-form" size="default">
-        <el-form-item label="工单编号">
-          <el-input v-model="queryParams.workOrderNo" placeholder="请输入" clearable />
+      <el-form :model="queryParams" label-width="80px" class="search-form-flex" size="default">
+        <el-form-item label="工单号">
+          <el-input v-model="queryParams.workOrderNo" placeholder="请输入工单号" clearable style="width: 220px;" />
         </el-form-item>
         <el-form-item label="客户姓名">
-          <el-input v-model="queryParams.customerName" placeholder="请输入" clearable />
+          <el-input v-model="queryParams.customerName" placeholder="请输入客户姓名" clearable style="width: 220px;" />
         </el-form-item>
-        <el-form-item label="支付方式">
-          <el-select v-model="queryParams.paymentMethod" placeholder="全部" clearable style="width: 120px">
+        <el-form-item label="收款方式">
+          <el-select v-model="queryParams.paymentMethod" placeholder="请选择" clearable style="width: 220px;">
             <el-option label="微信支付" value="WECHAT" />
             <el-option label="支付宝支付" value="ALIPAY" />
             <el-option label="银联支付" value="UNIONPAY" />
             <el-option label="现金支付" value="CASH" />
           </el-select>
         </el-form-item>
-        <el-form-item label="支付时间">
+        <el-form-item label="收款日期">
           <el-date-picker
             v-model="dateRange"
             type="daterange"
@@ -34,7 +34,7 @@
             end-placeholder="结束日期"
             format="YYYY-MM-DD"
             value-format="YYYY-MM-DD"
-            style="width: 260px"
+            style="width: 280px;"
           />
         </el-form-item>
         <el-form-item class="search-actions">
@@ -53,22 +53,22 @@
           style="width: 100%; min-width: 1000px"
           border
         >
-          <el-table-column prop="paymentNo" label="支付编号" width="180" />
+          <el-table-column prop="paymentNo" label="收款编号" width="180" />
           <el-table-column prop="workOrderNo" label="工单编号" width="160" />
           <el-table-column prop="customerName" label="客户姓名" width="110" />
-          <el-table-column label="支付金额" width="120" align="right">
+          <el-table-column label="收款金额" width="120" align="right">
             <template #default="{ row }">
               <MoneyText :amount="row.amount" />
             </template>
           </el-table-column>
-          <el-table-column label="支付方式" width="100" align="center">
+          <el-table-column label="收款方式" width="100" align="center">
             <template #default="{ row }">
               <el-tag :type="getMethodTag(row.paymentMethod)" size="small">
                 {{ getMethodLabel(row.paymentMethod) }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="paidAt" label="支付时间" width="170" />
+          <el-table-column prop="paidAt" label="收款时间" width="170" />
           <el-table-column label="备注" min-width="120" show-overflow-tooltip>
             <template #default="{ row }">
               {{ row.remark || '-' }}
@@ -96,18 +96,18 @@
     </el-card>
 
     <!-- 详情抽屉 -->
-    <el-drawer v-model="viewDrawer.visible" title="支付详情" size="500px">
+    <el-drawer v-model="viewDrawer.visible" title="收款详情" size="500px">
       <el-descriptions v-if="viewDrawer.current" :column="1" border>
-        <el-descriptions-item label="支付编号">{{ viewDrawer.current.paymentNo }}</el-descriptions-item>
+        <el-descriptions-item label="收款编号">{{ viewDrawer.current.paymentNo }}</el-descriptions-item>
         <el-descriptions-item label="工单编号">{{ viewDrawer.current.workOrderNo }}</el-descriptions-item>
         <el-descriptions-item label="客户姓名">{{ viewDrawer.current.customerName }}</el-descriptions-item>
-        <el-descriptions-item label="支付金额"><MoneyText :amount="viewDrawer.current.amount" /></el-descriptions-item>
-        <el-descriptions-item label="支付方式">
+        <el-descriptions-item label="收款金额"><MoneyText :amount="viewDrawer.current.amount" /></el-descriptions-item>
+        <el-descriptions-item label="收款方式">
           <el-tag :type="getMethodTag(viewDrawer.current.paymentMethod)" size="small">
             {{ getMethodLabel(viewDrawer.current.paymentMethod) }}
           </el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="支付时间">{{ viewDrawer.current.paidAt }}</el-descriptions-item>
+        <el-descriptions-item label="收款时间">{{ viewDrawer.current.paidAt }}</el-descriptions-item>
         <el-descriptions-item label="操作人">{{ viewDrawer.current.operatorId ?? '-' }}</el-descriptions-item>
         <el-descriptions-item label="收款人">{{ viewDrawer.current.receiverId ?? '-' }}</el-descriptions-item>
         <el-descriptions-item label="备注">{{ viewDrawer.current.remark || '-' }}</el-descriptions-item>

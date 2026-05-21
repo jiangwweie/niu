@@ -129,7 +129,7 @@
 
     <view class="refund-action" wx:if="{{workOrder && workOrder.status !== 'DRAFT' && workOrder.status !== 'CANCELLED' && workOrder.status !== 'SETTLED'}}" style="margin-top: 16px; padding: 0 16px;">
       <view style="font-size: 12px; color: #666; margin-bottom: 12px; text-align: center;">
-        可退金额上限以系统校验为准。
+        退款上限以系统校验为准。
       </view>
       <t-button block theme="danger" variant="outline" size="large" bind:tap="openRefundDialog" loading="{{refundLoading}}">记录退款</t-button>
     </view>

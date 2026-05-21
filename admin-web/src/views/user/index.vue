@@ -1,68 +1,84 @@
 <template>
   <PageContainer title="员工与权限" description="账号生命周期与预设角色查看">
     <template #action>
-      <el-button type="primary" :icon="Plus" @click="openCreate">新增用户</el-button>
+      <el-button type="primary" :icon="Plus" @click="openCreate">新增员工</el-button>
     </template>
 
-    <div class="toolbar">
-      <el-input v-model="query.username" placeholder="用户名" clearable />
-      <el-input v-model="query.realName" placeholder="姓名" clearable />
-      <el-select v-model="query.roleCode" placeholder="角色" clearable>
-        <el-option v-for="role in roles" :key="role.roleCode" :label="role.roleName" :value="role.roleCode" />
-      </el-select>
-      <el-select v-model="query.enabled" placeholder="状态" clearable>
-        <el-option label="启用" :value="true" />
-        <el-option label="停用" :value="false" />
-      </el-select>
-      <el-button type="primary" @click="loadUsers">查询</el-button>
-      <el-button @click="resetQuery">重置</el-button>
-    </div>
+    <!-- 查询过滤区 -->
+    <el-card shadow="never" class="search-card">
+      <el-form :model="query" label-width="80px" class="search-form-flex" size="default">
+        <el-form-item label="员工账号">
+          <el-input v-model="query.username" placeholder="请输入员工账号" clearable style="width: 220px;" />
+        </el-form-item>
+        <el-form-item label="姓名">
+          <el-input v-model="query.realName" placeholder="请输入姓名" clearable style="width: 220px;" />
+        </el-form-item>
+        <el-form-item label="角色">
+          <el-select v-model="query.roleCode" placeholder="请选择" clearable style="width: 220px;">
+            <el-option v-for="role in roles" :key="role.roleCode" :label="role.roleName" :value="role.roleCode" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-select v-model="query.enabled" placeholder="请选择" clearable style="width: 220px;">
+            <el-option label="启用" :value="true" />
+            <el-option label="停用" :value="false" />
+          </el-select>
+        </el-form-item>
+        <el-form-item class="search-actions">
+          <el-button type="primary" @click="loadUsers">查询</el-button>
+          <el-button @click="resetQuery">重置</el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
 
-    <el-table :data="users" v-loading="loading" border>
-      <el-table-column prop="username" label="用户名" min-width="120" />
-      <el-table-column prop="realName" label="姓名" min-width="110" />
-      <el-table-column prop="phone" label="手机号" min-width="130" />
-      <el-table-column label="角色" min-width="180">
-        <template #default="{ row }">
-          <el-tag v-for="code in row.roleCodes" :key="code" size="small" class="role-tag">{{ roleName(code) }}</el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="状态" width="90">
-        <template #default="{ row }">
-          <el-tag :type="row.enabled ? 'success' : 'info'" size="small">{{ row.enabled ? '启用' : '停用' }}</el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="需改密" width="90">
-        <template #default="{ row }">
-          <el-tag :type="row.passwordMustChange ? 'warning' : 'info'" size="small">{{ row.passwordMustChange ? '是' : '否' }}</el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="微信绑定" width="110">
-        <template #default="{ row }">
-          <el-tag :type="row.wechatBound ? 'success' : 'info'" size="small">{{ row.wechatBound ? '已绑定' : '未绑定' }}</el-tag>
-          <div v-if="row.wechatBoundAt" class="wechat-bound-time">{{ row.wechatBoundAt.slice(0, 10) }}</div>
-        </template>
-      </el-table-column>
-      <el-table-column prop="updatedAt" label="更新时间" min-width="170" />
-      <el-table-column label="操作" width="340" fixed="right">
-        <template #default="{ row }">
-          <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
-          <el-button link type="primary" @click="openReset(row)">重置密码</el-button>
-          <el-button v-if="row.enabled" link type="danger" @click="toggleUser(row, false)">停用</el-button>
-          <el-button v-else link type="success" @click="toggleUser(row, true)">启用</el-button>
-          <el-button v-if="row.wechatBound && hasUserManage" link type="warning" @click="handleUnbindWechat(row)">解绑微信</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+    <!-- 列表卡片区 -->
+    <el-card shadow="never" class="table-card" style="margin-bottom: 24px;">
+      <el-table :data="users" v-loading="loading" border>
+        <el-table-column prop="username" label="员工账号" min-width="120" />
+        <el-table-column prop="realName" label="姓名" min-width="110" />
+        <el-table-column prop="phone" label="手机号" min-width="130" />
+        <el-table-column label="角色" min-width="180">
+          <template #default="{ row }">
+            <el-tag v-for="code in row.roleCodes" :key="code" size="small" class="role-tag">{{ roleName(code) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="90">
+          <template #default="{ row }">
+            <el-tag :type="row.enabled ? 'success' : 'info'" size="small">{{ row.enabled ? '启用' : '停用' }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="需改密" width="90">
+          <template #default="{ row }">
+            <el-tag :type="row.passwordMustChange ? 'warning' : 'info'" size="small">{{ row.passwordMustChange ? '是' : '否' }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="微信绑定" width="110">
+          <template #default="{ row }">
+            <el-tag :type="row.wechatBound ? 'success' : 'info'" size="small">{{ row.wechatBound ? '已绑定' : '未绑定' }}</el-tag>
+            <div v-if="row.wechatBoundAt" class="wechat-bound-time">{{ row.wechatBoundAt.slice(0, 10) }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="updatedAt" label="更新时间" min-width="170" />
+        <el-table-column label="操作" width="340" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
+            <el-button link type="primary" @click="openReset(row)">重置密码</el-button>
+            <el-button v-if="row.enabled" link type="danger" @click="toggleUser(row, false)">停用</el-button>
+            <el-button v-else link type="success" @click="toggleUser(row, true)">启用</el-button>
+            <el-button v-if="row.wechatBound && hasUserManage" link type="warning" @click="handleUnbindWechat(row)">解绑微信</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
 
-    <el-pagination
-      v-model:current-page="query.pageNo"
-      v-model:page-size="query.pageSize"
-      :total="total"
-      layout="total, sizes, prev, pager, next"
-      @current-change="loadUsers"
-      @size-change="loadUsers"
-    />
+      <el-pagination
+        v-model:current-page="query.pageNo"
+        v-model:page-size="query.pageSize"
+        :total="total"
+        layout="total, sizes, prev, pager, next"
+        @current-change="loadUsers"
+        @size-change="loadUsers"
+      />
+    </el-card>
 
     <div class="readonly-grid">
       <section>
@@ -85,9 +101,9 @@
       </section>
     </div>
 
-    <el-dialog v-model="userDialog.visible" :title="userDialog.editingId ? '编辑用户' : '新增用户'" width="520px">
+    <el-dialog v-model="userDialog.visible" :title="userDialog.editingId ? '编辑员工' : '新增员工'" width="520px">
       <el-form :model="userDialog.form" label-width="90px">
-        <el-form-item label="用户名" required>
+        <el-form-item label="员工账号" required>
           <el-input v-model="userDialog.form.username" :disabled="!!userDialog.editingId" />
         </el-form-item>
         <el-form-item label="姓名" required>
@@ -115,7 +131,7 @@
     </el-dialog>
 
     <el-dialog v-model="resetDialog.visible" title="重置密码" width="440px">
-      <el-alert title="重置后用户下次登录必须修改密码。" type="warning" show-icon :closable="false" />
+      <el-alert title="重置后员工下次登录必须修改密码。" type="warning" show-icon :closable="false" />
       <el-input v-model="resetDialog.temporaryPassword" type="password" show-password placeholder="留空由系统生成临时密码" style="margin-top: 16px" />
       <el-alert v-if="resetDialog.result" :title="`临时密码：${resetDialog.result}`" type="success" show-icon :closable="false" style="margin-top: 16px" />
       <template #footer>
@@ -229,7 +245,7 @@ const submitUser = async () => {
 };
 
 const toggleUser = async (row: SystemUser, enabled: boolean) => {
-  await ElMessageBox.confirm(`确认${enabled ? '启用' : '停用'}用户 ${row.username}？`, '确认操作', { type: 'warning' });
+  await ElMessageBox.confirm(`确认${enabled ? '启用' : '停用'}员工 ${row.username}？`, '确认操作', { type: 'warning' });
   if (enabled) {
     await enableUser(row.id);
   } else {
@@ -241,7 +257,7 @@ const toggleUser = async (row: SystemUser, enabled: boolean) => {
 
 const handleUnbindWechat = async (row: SystemUser) => {
   await ElMessageBox.confirm(
-    `确认解绑用户 ${row.username} 的微信账号？解绑后该用户将无法使用微信快捷登录。`,
+    `确认解绑员工 ${row.username} 的微信账号？解绑后该员工将无法使用微信快捷登录。`,
     '解绑微信',
     { type: 'warning', confirmButtonText: '确认解绑', cancelButtonText: '取消' }
   );

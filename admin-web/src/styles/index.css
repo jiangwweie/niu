@@ -25,8 +25,54 @@ html, body, #app {
 
 /* Custom Colors */
 :root {
-  --niu-red: #df001f;
+  --niu-red: #008d9e;
   --bg-dark: #1a1a1a;
   --text-gray-regular: #6b7280;
   --text-gray-dark: #1f2937;
+}
+
+/* ERP 列表查询过滤卡片与表单 */
+.search-card {
+  margin-bottom: 16px !important;
+  border-radius: 8px !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+}
+
+.search-form-flex {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  align-items: flex-start;
+}
+
+.search-form-flex .el-form-item {
+  margin-bottom: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* 表格工具栏 */
+.table-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 0 4px;
+}
+
+.table-toolbar .toolbar-left {
+  display: flex;
+  align-items: center;
+}
+
+.table-toolbar .toolbar-left .table-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.table-toolbar .toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }

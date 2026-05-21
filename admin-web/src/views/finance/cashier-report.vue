@@ -1,18 +1,18 @@
 <template>
   <PageContainer title="收银日报" description="查看指定日期的收款、退款与方式分组统计">
     <el-card shadow="never" class="search-card">
-      <el-form :inline="true" class="search-form" size="default">
-        <el-form-item label="日期">
+      <el-form label-width="80px" class="search-form-flex" size="default">
+        <el-form-item label="收银日期">
           <el-date-picker
             v-model="selectedDate"
             type="date"
             placeholder="选择日期"
             value-format="YYYY-MM-DD"
             :clearable="false"
-            style="width: 180px"
+            style="width: 220px;"
           />
         </el-form-item>
-        <el-form-item>
+        <el-form-item class="search-actions">
           <el-button type="primary" :loading="loading" @click="fetchReport">查询</el-button>
         </el-form-item>
       </el-form>

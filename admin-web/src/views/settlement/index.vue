@@ -10,15 +10,15 @@
 
     <!-- 查询过滤区 -->
     <el-card shadow="never" class="search-card">
-      <el-form :inline="true" :model="queryParams" class="search-form" size="default">
-        <el-form-item label="工单编号">
-          <el-input v-model="queryParams.workOrderNo" placeholder="请输入" clearable />
+      <el-form :model="queryParams" label-width="90px" class="search-form-flex" size="default">
+        <el-form-item label="工单号">
+          <el-input v-model="queryParams.workOrderNo" placeholder="请输入工单号" clearable style="width: 220px;" />
         </el-form-item>
         <el-form-item label="官方订单号">
-          <el-input v-model="queryParams.officialOrderNo" placeholder="请输入" clearable />
+          <el-input v-model="queryParams.officialOrderNo" placeholder="请输入官方订单号" clearable style="width: 220px;" />
         </el-form-item>
         <el-form-item label="结算状态">
-          <el-select v-model="queryParams.settlementStatus" placeholder="全部" clearable style="width: 120px">
+          <el-select v-model="queryParams.settlementStatus" placeholder="请选择" clearable style="width: 220px;">
             <el-option label="待结算" value="PENDING" />
             <el-option label="已结算" value="SETTLED" />
             <el-option label="无需结算" value="NOT_REQUIRED" />
@@ -28,10 +28,11 @@
           <el-date-picker
             v-model="dateRange"
             type="daterange"
+            range-separator="至"
             start-placeholder="开始日期"
             end-placeholder="结束日期"
             value-format="YYYY-MM-DD"
-            style="width: 260px"
+            style="width: 280px;"
           />
         </el-form-item>
         <el-form-item class="search-actions">

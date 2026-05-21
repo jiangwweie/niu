@@ -122,8 +122,8 @@
   font-weight: bold;
   color: #333;
 }
-.highlight-red {
-  color: #e34d59;
+.highlight-amber {
+  color: #fa8c16;
 }
 .cashier-tip {
   font-size: 22rpx;

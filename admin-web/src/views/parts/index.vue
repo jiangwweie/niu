@@ -3,30 +3,30 @@
 
     <!-- 查询过滤区 -->
     <el-card shadow="never" class="search-card">
-      <el-form :inline="true" :model="queryParams" class="search-form" size="default">
+      <el-form :model="queryParams" label-width="80px" class="search-form-flex" size="default">
         <el-form-item label="配件编码">
-          <el-input v-model="queryParams.partCode" placeholder="请输入" clearable />
+          <el-input v-model="queryParams.partCode" placeholder="请输入配件编码" clearable style="width: 220px;" />
         </el-form-item>
         <el-form-item label="配件名称">
-          <el-input v-model="queryParams.partName" placeholder="请输入" clearable />
+          <el-input v-model="queryParams.partName" placeholder="请输入配件名称" clearable style="width: 220px;" />
         </el-form-item>
         <el-form-item label="官方品号">
-          <el-input v-model="queryParams.officialCode" placeholder="请输入" clearable />
+          <el-input v-model="queryParams.officialCode" placeholder="请输入官方品号" clearable style="width: 220px;" />
         </el-form-item>
         <el-form-item label="型号">
-          <el-input v-model="queryParams.model" placeholder="请输入" clearable />
+          <el-input v-model="queryParams.model" placeholder="请输入型号" clearable style="width: 220px;" />
         </el-form-item>
         <el-form-item label="分类">
-          <el-input v-model="queryParams.category" placeholder="请输入" clearable />
+          <el-input v-model="queryParams.category" placeholder="请输入分类" clearable style="width: 220px;" />
         </el-form-item>
         <el-form-item label="来源">
-          <el-select v-model="queryParams.source" placeholder="全部" clearable style="width: 120px">
+          <el-select v-model="queryParams.source" placeholder="请选择" clearable style="width: 220px;">
             <el-option label="官方" value="OFFICIAL" />
             <el-option label="第三方" value="THIRD_PARTY" />
           </el-select>
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="queryParams.status" placeholder="全部" clearable style="width: 100px">
+          <el-select v-model="queryParams.status" placeholder="请选择" clearable style="width: 220px;">
             <el-option label="启用" :value="true" />
             <el-option label="停用" :value="false" />
           </el-select>
@@ -34,13 +34,21 @@
         <el-form-item class="search-actions">
           <el-button type="primary" @click="handleSearch" :loading="loading">查询</el-button>
           <el-button @click="handleReset">重置</el-button>
-          <el-button type="success" @click="openAddDialog">新增配件</el-button>
         </el-form-item>
       </el-form>
     </el-card>
 
     <!-- 列表区 -->
     <el-card shadow="never" class="table-card">
+      <div class="table-toolbar">
+        <div class="toolbar-left">
+          <span class="table-title">配件资料列表</span>
+        </div>
+        <div class="toolbar-right">
+          <el-button type="success" @click="openAddDialog">新增配件</el-button>
+        </div>
+      </div>
+
       <div class="table-wrapper">
         <el-table
           v-loading="loading"

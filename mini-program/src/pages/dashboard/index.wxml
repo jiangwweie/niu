@@ -41,7 +41,7 @@
     <text class="section-title">待办与提醒</text>
     <view class="empty-card">
       <view class="empty-emoji">📋</view>
-      <text class="empty-text">暂无待处理事项，可从快捷操作开始处理</text>
+      <text class="empty-text">当前无待办工单。请前台店员点击‘新建工单’或库管点击‘配件入库’开始录入数据。</text>
     </view>
   </view>
 </view>

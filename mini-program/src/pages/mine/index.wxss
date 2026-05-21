@@ -11,10 +11,10 @@ page {
 .user-card {
   display: flex;
   align-items: center;
-  background: linear-gradient(135deg, #df001f, #ff4d4f);
+  background: linear-gradient(135deg, #008d9e, #00b4d8);
   padding: 48rpx 36rpx;
   border-radius: 20rpx;
-  box-shadow: 0 8rpx 24rpx rgba(223, 0, 31, 0.2);
+  box-shadow: 0 8rpx 24rpx rgba(0, 141, 158, 0.15);
   margin-bottom: 32rpx;
   color: #fff;
 }
@@ -78,9 +78,9 @@ page {
   color: #444;
 }
 .user-item.active {
-  border-color: #df001f;
-  color: #df001f;
-  background: rgba(223, 0, 31, 0.04);
+  border-color: #008d9e;
+  color: #008d9e;
+  background: rgba(0, 141, 158, 0.04);
 }
 
 /* 账号操作区 */

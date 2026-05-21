@@ -1,5 +1,9 @@
 <template>
   <PageContainer title="财务报表" description="查看客户支付收入、官方结算收入、成本与利润报表">
+    <template #action>
+      <el-button v-if="hasPermission('EXCEL_EXPORT')" type="success" @click="handleExport" :loading="exportLoading">数据导出</el-button>
+    </template>
+
     <el-alert
       title="财务口径：净利润 = 总收入 - 总成本；总收入 = 客户实收收入 + 官方结算收入；总成本 = 配件成本 + 已确认报销成本；客户实收收入 = 收款金额 - 退款金额。金额保留两位小数。"
       type="info"
@@ -10,7 +14,7 @@
 
     <!-- 查询条件区 -->
     <el-card shadow="never" class="search-card">
-      <el-form :inline="true" :model="queryParams" class="search-form" size="default">
+      <el-form :model="queryParams" label-width="80px" class="search-form-flex" size="default">
         <el-form-item label="报表类型">
           <el-radio-group v-model="queryParams.reportType" @change="handleSearch">
             <el-radio-button value="DAILY">日报</el-radio-button>
@@ -28,21 +32,21 @@
             value-format="YYYY-MM-DD"
             :clearable="false"
             @change="handleSearch"
+            style="width: 220px;"
           />
         </el-form-item>
 
         <el-form-item label="选择月份" v-if="queryParams.reportType === 'MONTHLY'">
-          <div style="display: flex; gap: 10px;">
-            <el-date-picker
-              v-model="monthPickerValue"
-              type="month"
-              placeholder="选择月份"
-              format="YYYY-MM"
-              value-format="YYYY-MM"
-              :clearable="false"
-              @change="handleMonthChange"
-            />
-          </div>
+          <el-date-picker
+            v-model="monthPickerValue"
+            type="month"
+            placeholder="选择月份"
+            format="YYYY-MM"
+            value-format="YYYY-MM"
+            :clearable="false"
+            @change="handleMonthChange"
+            style="width: 220px;"
+          />
         </el-form-item>
 
         <el-form-item label="日期范围" v-if="queryParams.reportType === 'CUSTOM'">
@@ -55,12 +59,12 @@
             format="YYYY-MM-DD"
             value-format="YYYY-MM-DD"
             :clearable="false"
+            style="width: 280px;"
           />
         </el-form-item>
 
         <el-form-item class="search-actions">
           <el-button type="primary" @click="handleSearch" :loading="loading">查询</el-button>
-          <el-button v-if="hasPermission('EXCEL_EXPORT')" type="success" @click="handleExport" :loading="exportLoading">导出</el-button>
         </el-form-item>
       </el-form>
     </el-card>

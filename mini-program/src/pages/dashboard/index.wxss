@@ -8,12 +8,12 @@ page {
 
 /* 问候卡片 */
 .header-card {
-  background: linear-gradient(135deg, #df001f, #ff4d4f);
+  background: linear-gradient(135deg, #008d9e, #00b4d8);
   border-radius: 20rpx;
   padding: 40rpx 36rpx;
   margin-bottom: 32rpx;
   color: #fff;
-  box-shadow: 0 8rpx 24rpx rgba(223, 0, 31, 0.25);
+  box-shadow: 0 8rpx 24rpx rgba(0, 141, 158, 0.2);
 }
 .greeting {
   font-size: 38rpx;
@@ -63,16 +63,15 @@ page {
   align-items: center;
   justify-content: center;
   margin-bottom: 14rpx;
-  box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.08);
 }
 .emoji-icon {
-  font-size: 48rpx;
+  font-size: 44rpx;
   line-height: 1;
 }
-.bg-primary { background-color: #df001f; }
-.bg-success { background-color: #2BA471; }
-.bg-info    { background-color: #0052D9; }
-.bg-warning { background-color: #E37318; }
+.bg-primary { background-color: rgba(0, 141, 158, 0.08); }
+.bg-success { background-color: rgba(43, 164, 113, 0.08); }
+.bg-info    { background-color: rgba(0, 82, 217, 0.08); }
+.bg-warning { background-color: rgba(227, 115, 24, 0.08); }
 .action-name {
   font-size: 24rpx;
   color: #444;

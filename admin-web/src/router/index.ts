@@ -218,7 +218,7 @@ router.beforeEach(async (to, from, next) => {
 // Update page title automatically (optional enhancement)
 router.afterEach((to) => {
   if (to.meta && to.meta.title) {
-    document.title = `${to.meta.title} - 小牛售后库存管理系统`;
+    document.title = `${to.meta.title} - 授权店维修售后库存管理系统`;
   }
 });
 

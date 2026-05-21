@@ -80,7 +80,7 @@
       <p>门店管理员账号已创建成功。</p>
       <p><strong>用户名：</strong>{{ createdAdmin?.username }}</p>
       <p><strong>初始密码：</strong><el-tag type="warning">{{ createdAdmin?.temporaryPassword }}</el-tag></p>
-      <p style="color: #e6a23c; font-size: 12px;">请妥善保存初始密码，此密码不会再次显示。用户首次登录时需要修改密码。</p>
+      <p style="color: #e6a23c; font-size: 12px;">请妥善保存初始密码，此密码不会再次显示。员工首次登录时需要修改密码。</p>
       <template #footer>
         <el-button type="primary" @click="passwordDialogVisible = false">知道了</el-button>
       </template>

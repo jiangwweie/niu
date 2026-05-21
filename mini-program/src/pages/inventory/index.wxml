@@ -55,7 +55,7 @@
     </block>
     <view wx:else class="empty">
       <view class="empty-icon">📦</view>
-      <text class="empty-text">暂无库存数据</text>
+      <text class="empty-text">暂无库存数据。请库管前往‘配件管理’中录入基本信息并进行入库操作</text>
     </view>
   </view>
 </view>

@@ -15,12 +15,12 @@
   "window": {
     "backgroundTextStyle": "light",
     "navigationBarBackgroundColor": "#fff",
-    "navigationBarTitleText": "小牛售后",
+    "navigationBarTitleText": "授权店售后管家",
     "navigationBarTextStyle": "black"
   },
   "tabBar": {
     "color": "#999999",
-    "selectedColor": "#e33e33",
+    "selectedColor": "#008d9e",
     "backgroundColor": "#ffffff",
     "borderStyle": "black",
     "list": [

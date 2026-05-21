@@ -14,7 +14,7 @@
   display: block;
   font-size: 56rpx;
   font-weight: bold;
-  color: #df001f;
+  color: #008d9e;
   margin-bottom: 16rpx;
 }
 

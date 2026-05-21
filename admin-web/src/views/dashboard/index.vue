@@ -1,9 +1,9 @@
 <template>
-  <PageContainer title="首页" description="欢迎使用小牛维修售后库存管理系统">
+  <PageContainer title="首页" description="欢迎使用授权店维修售后库存管理系统">
     <!-- 欢迎信息 -->
     <el-card shadow="never" class="welcome-card">
       <div class="welcome-content">
-        <div class="welcome-icon">👋</div>
+        <div class="welcome-icon-wrapper">🏪</div>
         <div class="welcome-text">
           <div class="welcome-title">
             {{ greeting }}，{{ authStore.user?.realName || authStore.user?.username || '管理员' }}
@@ -139,23 +139,17 @@
       <!-- 快捷入口 -->
       <div class="shortcut-section">
         <div class="section-title">常用功能</div>
-        <el-row :gutter="16">
-          <el-col
+        <div class="shortcut-grid">
+          <div
             v-for="item in shortcuts"
             :key="item.path"
-            :xs="12" :sm="8" :md="6" :lg="4"
-            style="margin-bottom: 16px;"
+            class="shortcut-item"
+            @click="router.push(item.path)"
           >
-            <el-card
-              shadow="hover"
-              class="shortcut-card"
-              @click="router.push(item.path)"
-            >
-              <div class="shortcut-icon">{{ item.icon }}</div>
-              <div class="shortcut-label">{{ item.label }}</div>
-            </el-card>
-          </el-col>
-        </el-row>
+            <div class="shortcut-icon-wrapper">{{ item.icon }}</div>
+            <div class="shortcut-label">{{ item.label }}</div>
+          </div>
+        </div>
       </div>
     </template>
   </PageContainer>
@@ -204,7 +198,7 @@ const ROLE_LABEL_MAP: Record<string, string> = {
 
 const roleDisplayName = computed(() => {
   const codes = authStore.user?.roleCodes;
-  if (!codes || codes.length === 0) return '当前用户';
+  if (!codes || codes.length === 0) return '当前账号';
   return ROLE_LABEL_MAP[codes[0]] || codes[0];
 });
 
@@ -245,7 +239,7 @@ const shortcuts = computed(() => {
     {
       path: '/settlement',
       icon: '🏢',
-      label: '官方售后结算',
+      label: '官方结算',
       always: false,
       check: () => hasAnyPermission(['OFFICIAL_SETTLEMENT_MANAGE', 'FINANCE_VIEW']),
     },
@@ -290,8 +284,15 @@ onMounted(async () => {
   gap: 16px;
 }
 
-.welcome-icon {
-  font-size: 36px;
+.welcome-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: rgba(0, 141, 158, 0.08);
+  font-size: 24px;
   flex-shrink: 0;
 }
 
@@ -399,24 +400,44 @@ onMounted(async () => {
   margin-bottom: 16px;
 }
 
-.shortcut-card {
+.shortcut-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 16px;
+}
+
+.shortcut-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px 16px;
   cursor: pointer;
-  text-align: center;
-  padding: 8px 0;
-  transition: transform 0.15s;
+  transition: all 0.2s;
 }
 
-.shortcut-card:hover {
-  transform: translateY(-2px);
+.shortcut-item:hover {
+  border-color: #008d9e;
+  box-shadow: 0 4px 12px rgba(0, 141, 158, 0.05);
+  transform: translateY(-1px);
 }
 
-.shortcut-icon {
-  font-size: 28px;
-  margin-bottom: 8px;
+.shortcut-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background-color: rgba(0, 141, 158, 0.08);
+  font-size: 18px;
+  flex-shrink: 0;
 }
 
 .shortcut-label {
-  font-size: 13px;
+  font-size: 14px;
   color: #374151;
   font-weight: 500;
 }

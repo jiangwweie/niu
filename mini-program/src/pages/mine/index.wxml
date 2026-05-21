@@ -13,7 +13,7 @@
 
   <!-- mock 模式下的用户切换，real 模式自动隐藏 -->
   <view class="section" wx:if="{{apiMode === 'mock'}}">
-    <text class="section-title">切换用户（调试）</text>
+    <text class="section-title">切换账号（调试）</text>
     <view class="user-list">
       <view 
         class="user-item {{currentUser.userId === item.userId ? 'active' : ''}}" 

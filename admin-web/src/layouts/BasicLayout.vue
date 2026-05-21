@@ -3,8 +3,8 @@
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-logo">
-        <div class="logo-icon">NIU</div>
-        <span class="logo-text">小牛售后管理</span>
+        <div class="logo-icon">ERP</div>
+        <span class="logo-text">授权店售后管家</span>
       </div>
       
       <el-menu
@@ -61,7 +61,7 @@
       <!-- Header -->
       <header class="app-header">
         <div class="header-left">
-          <h1>小牛维修售后库存管理系统</h1>
+          <h1>授权店维修售后库存管理系统</h1>
           <span class="version-badge">管理端</span>
         </div>
         <div class="header-right">
@@ -103,7 +103,7 @@
 
       <!-- Footer -->
       <footer class="app-footer">
-        <div>小牛维修售后管理系统</div>
+        <div>授权店维修售后库存管理系统</div>
       </footer>
     </div>
   </div>
@@ -139,7 +139,7 @@ const ROLE_LABEL_MAP: Record<string, string> = {
 const roleDisplayName = computed(() => {
   if (authStore.user?.accountType === 'PLATFORM') return '平台管理员';
   const codes = authStore.user?.roleCodes;
-  if (!codes || codes.length === 0) return '当前用户';
+  if (!codes || codes.length === 0) return '当前账号';
   return ROLE_LABEL_MAP[codes[0]] || codes[0];
 });
 
@@ -200,7 +200,7 @@ const handleLogout = async () => {
 .logo-icon {
   width: 32px;
   height: 32px;
-  background-color: #df001f;
+  background-color: #008d9e;
   border-radius: 4px;
   display: flex;
   align-items: center;
@@ -250,7 +250,7 @@ const handleLogout = async () => {
 }
 
 :deep(.custom-menu .el-menu-item.is-active) {
-  background-color: #df001f !important;
+  background-color: #008d9e !important;
   color: #ffffff !important;
   font-weight: 500;
 }

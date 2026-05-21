@@ -2,7 +2,7 @@
   <div class="login-container">
     <el-card class="login-card">
       <div class="login-header">
-        <h2>小牛售后库存管理系统</h2>
+        <h2>授权店售后管家</h2>
         <p>登录</p>
       </div>
       <el-form :model="loginForm" :rules="loginRules" ref="loginFormRef" @keyup.enter="handleLogin">

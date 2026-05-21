@@ -53,11 +53,7 @@
       </view>
       <view class="cashier-grid-item">
         <text class="cashier-label">待收金额</text>
-        <text class="cashier-value {{outstandingAmount > 0 ? 'highlight-red' : ''}}">¥{{outstandingAmountStr}}</text>
-      </view>
-      <view class="cashier-grid-item">
-        <text class="cashier-label">可退金额</text>
-        <text class="cashier-value">¥{{receivedAmountStr}}</text>
+        <text class="cashier-value {{outstandingAmount > 0 ? 'highlight-amber' : ''}}">¥{{outstandingAmountStr}}</text>
       </view>
     </view>
 
@@ -65,7 +61,7 @@
 
     <view class="cashier-actions" wx:if="{{order.status !== 'SETTLED' && order.status !== 'CANCELLED'}}">
       <t-button wx:if="{{hasPaymentPermission && isPayableStatus}}" theme="primary" variant="base" block size="medium" bind:tap="openPaymentPopup">记录收款</t-button>
-      <t-button wx:if="{{hasRefundPermission}}" theme="warning" variant="outline" block size="medium" bind:tap="openRefundPopup">记录退款</t-button>
+      <t-button wx:if="{{hasRefundPermission && isPayableStatus && order.actualAmount > 0}}" theme="warning" variant="outline" block size="medium" bind:tap="openRefundPopup">记录退款</t-button>
       <t-button wx:if="{{hasSettlePermission && isPayableStatus}}" theme="{{outstandingAmount > 0 ? 'default' : 'primary'}}" variant="{{outstandingAmount > 0 ? 'outline' : 'base'}}" block size="medium" bind:tap="openSettleDialog">结算工单</t-button>
     </view>
   </view>
@@ -152,8 +148,8 @@
         注意：此处仅记录线下退款结果。
       </view>
       <t-cell-group>
-        <t-input label="可退金额" value="¥{{receivedAmountStr}}" align="right" readonly />
-        <t-input label="退款金额" type="digit" placeholder="{{order.receivedAmount > 0 ? '不超过可退 ¥' + receivedAmountStr : '无可退金额'}}" value="{{refundForm.amount}}" bind:change="onRefundFormChange" data-field="amount" align="right" />
+        <t-input label="最多可退" value="¥{{receivedAmountStr}}" align="right" readonly />
+        <t-input label="退款金额" type="digit" placeholder="{{order.receivedAmount > 0 ? '不超过最多可退 ¥' + receivedAmountStr : '无可退金额'}}" value="{{refundForm.amount}}" bind:change="onRefundFormChange" data-field="amount" align="right" />
         
         <view style="padding: 16px; display: flex; align-items: center; justify-content: space-between;">
           <text style="font-size: 16px; color: #333;">退款方式</text>
