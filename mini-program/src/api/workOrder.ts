@@ -96,6 +96,10 @@ export const submitWorkOrder = (workOrderId: string | number, data?: SubmitWorkO
 };
 
 export const cancelWorkOrder = (workOrderId: string | number, data: CancelWorkOrderRequest) => {
+  const record = mockWorkOrders.records.find(w => w.id == workOrderId);
+  if (record) {
+    record.status = 'CANCELLED';
+  }
   return request<WorkOrder>({
     url: `/api/staff/work-orders/${workOrderId}/cancel`,
     method: 'POST',
@@ -106,6 +110,10 @@ export const cancelWorkOrder = (workOrderId: string | number, data: CancelWorkOr
 };
 
 export const recordPayment = (workOrderId: string | number, data: RecordPaymentRequest) => {
+  const record = mockWorkOrders.records.find(w => w.id == workOrderId);
+  if (record) {
+    record.receivedAmount = (record.receivedAmount || 0) + data.amount;
+  }
   return request<StaffPaymentRecordResponse>({
     url: `/api/staff/work-orders/${workOrderId}/payments`,
     method: 'POST',
@@ -116,6 +124,10 @@ export const recordPayment = (workOrderId: string | number, data: RecordPaymentR
 };
 
 export const recordRefund = (workOrderId: string | number, data: RecordRefundRequest) => {
+  const record = mockWorkOrders.records.find(w => w.id == workOrderId);
+  if (record) {
+    record.receivedAmount = Math.max(0, (record.receivedAmount || 0) - data.amount);
+  }
   return request<StaffRefundRecordResponse>({
     url: `/api/staff/work-orders/${workOrderId}/refunds`,
     method: 'POST',
@@ -126,6 +138,10 @@ export const recordRefund = (workOrderId: string | number, data: RecordRefundReq
 };
 
 export const settleWorkOrder = (workOrderId: string | number, data?: SettleWorkOrderRequest) => {
+  const record = mockWorkOrders.records.find(w => w.id == workOrderId);
+  if (record) {
+    record.status = 'SETTLED';
+  }
   return request<StaffSettledWorkOrderResponse>({
     url: `/api/staff/work-orders/${workOrderId}/settle`,
     method: 'POST',

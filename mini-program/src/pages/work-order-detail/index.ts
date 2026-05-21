@@ -264,7 +264,7 @@ Page({
     }
 
     if (amount > maxRefundable) {
-      Toast({ context: this, selector: '#t-toast', message: '退款金额不能超过可退金额 ¥' + maxRefundable, icon: 'close-circle' });
+      Toast({ context: this, selector: '#t-toast', message: '退款金额超过可退金额', icon: 'close-circle' });
       return;
     }
 
