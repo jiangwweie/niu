@@ -10,6 +10,7 @@
       <el-menu
         class="custom-menu"
         :default-active="activeMenu"
+        :default-openeds="defaultOpeneds"
         router
       >
         <el-menu-item v-if="isPlatform" index="/platform/stores">
@@ -17,37 +18,115 @@
         </el-menu-item>
 
         <template v-if="!isPlatform">
-          <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/dashboard"><template #title>首页</template></el-menu-item>
-          <el-menu-item index="/work-order"><template #title>工单管理</template></el-menu-item>
-          <el-menu-item
-            v-if="hasAnyPermission(['CUSTOMER_VIEW', 'CUSTOMER_MANAGE'])"
-            index="/customers"
-          ><template #title>客户档案</template></el-menu-item>
-          <el-menu-item
-            v-if="hasAnyPermission(['CUSTOMER_VIEW', 'CUSTOMER_MANAGE'])"
-            index="/vehicles"
-          ><template #title>车辆档案</template></el-menu-item>
-          <el-menu-item index="/parts"><template #title>配件管理</template></el-menu-item>
-          <el-menu-item
-            v-if="hasAnyPermission(['INVENTORY_VIEW', 'INVENTORY_INBOUND', 'INVENTORY_ADJUST'])"
-            index="/inventory"
-          ><template #title>库存管理</template></el-menu-item>
-          <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/payment"><template #title>收款记录</template></el-menu-item>
-          <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/refund"><template #title>退款记录</template></el-menu-item>
-          <el-menu-item
-            v-if="hasAnyPermission(['OFFICIAL_SETTLEMENT_MANAGE', 'FINANCE_VIEW'])"
-            index="/settlement"
-          ><template #title>官方结算</template></el-menu-item>
-          <el-menu-item
-            v-if="hasAnyPermission(['REIMBURSEMENT_CONFIRM', 'FINANCE_VIEW'])"
-            index="/reimbursement"
-          ><template #title>报销台账</template></el-menu-item>
-          <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/finance"><template #title>财务报表</template></el-menu-item>
-          <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/finance/cashier-report"><template #title>收银日报</template></el-menu-item>
-          <el-menu-item v-if="hasPermission('DICT_MANAGE')" index="/dictionary"><template #title>基础配置</template></el-menu-item>
-          <el-menu-item v-if="hasAnyPermission(['USER_MANAGE', 'ROLE_MANAGE'])" index="/user"><template #title>员工与权限</template></el-menu-item>
-          <el-menu-item v-if="hasPermission('STORE_MANAGE')" index="/store"><template #title>门店配置</template></el-menu-item>
-          <el-menu-item v-if="hasRole('SUPER_ADMIN')" index="/trial-data"><template #title>正式启用</template></el-menu-item>
+          <!-- 首页 -->
+          <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/dashboard">
+            <template #title>首页</template>
+          </el-menu-item>
+
+          <!-- 业务管理 -->
+          <el-sub-menu index="business">
+            <template #title>
+              <span>业务管理</span>
+            </template>
+            <el-menu-item index="/work-order">
+              <template #title>工单管理</template>
+            </el-menu-item>
+            <el-menu-item
+              v-if="hasAnyPermission(['CUSTOMER_VIEW', 'CUSTOMER_MANAGE'])"
+              index="/customers"
+            >
+              <template #title>客户档案</template>
+            </el-menu-item>
+            <el-menu-item
+              v-if="hasAnyPermission(['CUSTOMER_VIEW', 'CUSTOMER_MANAGE'])"
+              index="/vehicles"
+            >
+              <template #title>车辆档案</template>
+            </el-menu-item>
+          </el-sub-menu>
+
+          <!-- 配件库存 -->
+          <el-sub-menu index="inventory">
+            <template #title>
+              <span>配件库存</span>
+            </template>
+            <el-menu-item index="/parts">
+              <template #title>配件管理</template>
+            </el-menu-item>
+            <el-menu-item
+              v-if="hasAnyPermission(['INVENTORY_VIEW', 'INVENTORY_INBOUND', 'INVENTORY_ADJUST'])"
+              index="/inventory"
+            >
+              <template #title>库存管理</template>
+            </el-menu-item>
+          </el-sub-menu>
+
+          <!-- 收银财务 -->
+          <el-sub-menu
+            v-if="
+              hasPermission('FINANCE_VIEW') ||
+              hasAnyPermission(['OFFICIAL_SETTLEMENT_MANAGE', 'REIMBURSEMENT_CONFIRM'])
+            "
+            index="finance"
+          >
+            <template #title>
+              <span>收银财务</span>
+            </template>
+            <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/payment">
+              <template #title>收款记录</template>
+            </el-menu-item>
+            <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/refund">
+              <template #title>退款记录</template>
+            </el-menu-item>
+            <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/finance/cashier-report">
+              <template #title>收银日报</template>
+            </el-menu-item>
+            <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/finance">
+              <template #title>财务报表</template>
+            </el-menu-item>
+            <el-menu-item
+              v-if="hasAnyPermission(['OFFICIAL_SETTLEMENT_MANAGE', 'FINANCE_VIEW'])"
+              index="/settlement"
+            >
+              <template #title>官方结算</template>
+            </el-menu-item>
+            <el-menu-item
+              v-if="hasAnyPermission(['REIMBURSEMENT_CONFIRM', 'FINANCE_VIEW'])"
+              index="/reimbursement"
+            >
+              <template #title>报销台账</template>
+            </el-menu-item>
+          </el-sub-menu>
+
+          <!-- 系统设置 -->
+          <el-sub-menu
+            v-if="
+              hasPermission('STORE_MANAGE') ||
+              hasAnyPermission(['USER_MANAGE', 'ROLE_MANAGE']) ||
+              hasPermission('DICT_MANAGE') ||
+              true
+            "
+            index="settings"
+          >
+            <template #title>
+              <span>系统设置</span>
+            </template>
+            <el-menu-item v-if="hasPermission('STORE_MANAGE')" index="/store">
+              <template #title>门店配置</template>
+            </el-menu-item>
+            <el-menu-item v-if="hasAnyPermission(['USER_MANAGE', 'ROLE_MANAGE'])" index="/user">
+              <template #title>员工与权限</template>
+            </el-menu-item>
+            <el-menu-item v-if="hasPermission('DICT_MANAGE')" index="/dictionary">
+              <template #title>基础配置</template>
+            </el-menu-item>
+            <el-menu-item index="/export">
+              <template #title>数据导出</template>
+            </el-menu-item>
+            <el-menu-item v-if="hasRole('SUPER_ADMIN')" index="/trial-data">
+              <template #title>正式启用</template>
+            </el-menu-item>
+          </el-sub-menu>
         </template>
       </el-menu>
       
@@ -124,6 +203,16 @@ const authStore = useAuthStore();
 // Highlight current menu item
 const activeMenu = computed(() => {
   return route.path;
+});
+
+// Auto-expand active menu group / default visible groups
+const defaultOpeneds = computed(() => {
+  const path = route.path;
+  const list = ['business', 'inventory', 'finance'];
+  if (['/store', '/user', '/dictionary', '/export', '/trial-data'].includes(path)) {
+    list.push('settings');
+  }
+  return list;
 });
 
 const isPlatform = computed(() => authStore.user?.accountType === 'PLATFORM');
@@ -236,7 +325,8 @@ const handleLogout = async () => {
   margin-top: 16px;
 }
 
-:deep(.custom-menu .el-menu-item) {
+:deep(.custom-menu .el-menu-item),
+:deep(.custom-menu .el-sub-menu__title) {
   color: #9ca3af !important;
   height: 44px !important;
   line-height: 44px !important;
@@ -244,7 +334,8 @@ const handleLogout = async () => {
   border-radius: 6px;
 }
 
-:deep(.custom-menu .el-menu-item:hover) {
+:deep(.custom-menu .el-menu-item:hover),
+:deep(.custom-menu .el-sub-menu__title:hover) {
   background-color: rgba(255, 255, 255, 0.05) !important;
   color: #ffffff !important;
 }
@@ -253,6 +344,25 @@ const handleLogout = async () => {
   background-color: #1677ff !important;
   color: #ffffff !important;
   font-weight: 500;
+}
+
+/* Submenu layout overrides */
+:deep(.custom-menu .el-menu) {
+  background-color: transparent !important;
+  border: none !important;
+}
+
+:deep(.custom-menu .el-sub-menu.is-active .el-sub-menu__title) {
+  color: #ffffff !important;
+}
+
+/* Second level menu indent overrides */
+:deep(.custom-menu .el-sub-menu .el-menu-item) {
+  padding-left: 48px !important;
+  margin: 2px 16px 2px 24px !important;
+  height: 38px !important;
+  line-height: 38px !important;
+  font-size: 13px !important;
 }
 
 /* Main Container */
