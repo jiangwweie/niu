@@ -13,6 +13,7 @@ Page({
   data: {
     orderId: '',
     order: null as WorkOrder | null,
+    outstandingAmount: 0,
     hasCancelPermission: false,
     hasSettlePermission: false,
     hasPaymentPermission: false,
@@ -64,9 +65,14 @@ Page({
   async fetchData() {
     try {
       const res = await getWorkOrderDetail(this.data.orderId);
+      const d = res.data;
+      const outstanding = Math.max(
+        (d?.receivableAmount ?? 0) - (d?.receivedAmount ?? 0), 0
+      );
       this.setData({
-        order: res.data,
-        isPayableStatus: isPayableStatus(res.data?.status)
+        order: d,
+        isPayableStatus: isPayableStatus(d?.status),
+        outstandingAmount: outstanding
       });
     } catch (e) {
       wx.showToast({ title: '加载失败', icon: 'none' });
@@ -168,6 +174,16 @@ Page({
       return;
     }
 
+    if (this.data.outstandingAmount <= 0) {
+      Toast({ context: this, selector: '#t-toast', message: '已无待收金额，无需继续收款', icon: 'close-circle' });
+      return;
+    }
+
+    if (amount > this.data.outstandingAmount) {
+      Toast({ context: this, selector: '#t-toast', message: '支付金额超过待收金额 ¥' + this.data.outstandingAmount, icon: 'close-circle' });
+      return;
+    }
+
     this.setData({ paymentLoading: true });
 
     recordPayment(this.data.orderId as string, {
@@ -238,6 +254,17 @@ Page({
       return;
     }
 
+    const maxRefundable = this.data.order?.receivedAmount ?? 0;
+    if (maxRefundable <= 0) {
+      Toast({ context: this, selector: '#t-toast', message: '当前无已收金额，无法退款', icon: 'close-circle' });
+      return;
+    }
+
+    if (amount > maxRefundable) {
+      Toast({ context: this, selector: '#t-toast', message: '退款金额不能超过可退金额 ¥' + maxRefundable, icon: 'close-circle' });
+      return;
+    }
+
     this.setData({ refundLoading: true });
 
     recordRefund(this.data.orderId as string, {
@@ -260,6 +287,11 @@ Page({
   openSettleDialog() {
     if (!isPayableStatus(this.data.order?.status)) {
       Toast({ context: this, selector: '#t-toast', message: '当前工单状态不允许结算', icon: 'close-circle' });
+      return;
+    }
+
+    if (this.data.outstandingAmount > 0) {
+      Toast({ context: this, selector: '#t-toast', message: '请先完成收款，当前待收 ¥' + this.data.outstandingAmount, icon: 'close-circle' });
       return;
     }
 
