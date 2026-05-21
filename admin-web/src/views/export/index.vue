@@ -1,5 +1,5 @@
 <template>
-  <PageContainer title="Excel 导出中心" description="数据导出">
+  <PageContainer title="数据导出" description="数据导出">
     <el-empty
       description=""
       :image-size="120"

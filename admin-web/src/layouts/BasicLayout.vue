@@ -32,27 +32,27 @@
             v-if="hasAnyPermission(['INVENTORY_VIEW', 'INVENTORY_INBOUND', 'INVENTORY_ADJUST'])"
             index="/inventory"
           ><template #title>库存管理</template></el-menu-item>
-          <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/payment"><template #title>支付记录</template></el-menu-item>
+          <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/payment"><template #title>收款记录</template></el-menu-item>
           <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/refund"><template #title>退款记录</template></el-menu-item>
           <el-menu-item
             v-if="hasAnyPermission(['OFFICIAL_SETTLEMENT_MANAGE', 'FINANCE_VIEW'])"
             index="/settlement"
-          ><template #title>官方售后结算</template></el-menu-item>
+          ><template #title>官方结算</template></el-menu-item>
           <el-menu-item
             v-if="hasAnyPermission(['REIMBURSEMENT_CONFIRM', 'FINANCE_VIEW'])"
             index="/reimbursement"
           ><template #title>报销台账</template></el-menu-item>
           <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/finance"><template #title>财务报表</template></el-menu-item>
           <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/finance/cashier-report"><template #title>收银日报</template></el-menu-item>
-          <el-menu-item v-if="hasPermission('DICT_MANAGE')" index="/dictionary"><template #title>字典配置</template></el-menu-item>
-          <el-menu-item v-if="hasAnyPermission(['USER_MANAGE', 'ROLE_MANAGE'])" index="/user"><template #title>用户与权限</template></el-menu-item>
+          <el-menu-item v-if="hasPermission('DICT_MANAGE')" index="/dictionary"><template #title>基础配置</template></el-menu-item>
+          <el-menu-item v-if="hasAnyPermission(['USER_MANAGE', 'ROLE_MANAGE'])" index="/user"><template #title>员工与权限</template></el-menu-item>
           <el-menu-item v-if="hasPermission('STORE_MANAGE')" index="/store"><template #title>门店配置</template></el-menu-item>
           <el-menu-item v-if="hasRole('SUPER_ADMIN')" index="/trial-data"><template #title>正式启用</template></el-menu-item>
         </template>
       </el-menu>
       
       <div class="sidebar-footer">
-        <div class="version-text">MVP 试运行版</div>
+        <div class="version-text">试运行版</div>
       </div>
     </aside>
 
@@ -62,7 +62,7 @@
       <header class="app-header">
         <div class="header-left">
           <h1>小牛维修售后库存管理系统</h1>
-          <span class="version-badge">Admin</span>
+          <span class="version-badge">管理端</span>
         </div>
         <div class="header-right">
           <div class="store-info" v-if="!isPlatform">

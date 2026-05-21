@@ -23,7 +23,7 @@ const routes: Array<RouteRecordRaw> = [
         path: 'dashboard',
         name: 'Dashboard',
         component: () => import('@/views/dashboard/index.vue'),
-        meta: { title: 'Dashboard 首页' }
+        meta: { title: '工作台' }
       },
       {
         path: 'work-order',
@@ -59,7 +59,7 @@ const routes: Array<RouteRecordRaw> = [
         path: 'payment',
         name: 'Payment',
         component: () => import('@/views/payment/index.vue'),
-        meta: { title: '支付记录' }
+        meta: { title: '收款记录' }
       },
       {
         path: 'refund',
@@ -71,7 +71,7 @@ const routes: Array<RouteRecordRaw> = [
         path: 'settlement',
         name: 'Settlement',
         component: () => import('@/views/settlement/index.vue'),
-        meta: { title: '官方售后结算' }
+        meta: { title: '官方结算' }
       },
       {
         path: 'reimbursement',
@@ -95,13 +95,13 @@ const routes: Array<RouteRecordRaw> = [
         path: 'dictionary',
         name: 'Dictionary',
         component: () => import('@/views/dictionary/index.vue'),
-        meta: { title: '字典配置' }
+        meta: { title: '基础配置' }
       },
       {
         path: 'user',
         name: 'User',
         component: () => import('@/views/user/index.vue'),
-        meta: { title: '用户与权限' }
+        meta: { title: '员工与权限' }
       },
       {
         path: 'store',
@@ -119,7 +119,7 @@ const routes: Array<RouteRecordRaw> = [
         path: 'export',
         name: 'Export',
         component: () => import('@/views/export/index.vue'),
-        meta: { title: 'Excel 导出中心' }
+        meta: { title: '数据导出' }
       },
       {
         path: 'trial-data',

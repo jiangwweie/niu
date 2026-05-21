@@ -1,5 +1,5 @@
 <template>
-  <PageContainer title="官方售后结算" description="查看官方售后订单结算信息，官方结算金额与客户支付金额分开统计">
+  <PageContainer title="官方结算" description="查看官方售后订单结算信息，官方结算金额与客户支付金额分开统计">
     <el-alert
       title="官方结算金额不是客户支付金额。客户支付记录与官方售后结算必须分开统计。"
       type="warning"

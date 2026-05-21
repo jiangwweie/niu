@@ -83,7 +83,7 @@ export const request = <T = any>(options: RequestOptions): Promise<ApiResponse<T
           }
         } else {
           const apiRes = res.data as Partial<ApiResponse<any>> | undefined;
-          const message = apiRes?.message || `请求失败(${res.statusCode})`;
+          const message = apiRes?.message || '请求失败，请稍后重试';
           const error = new Error(message) as ApiError;
           error.code = apiRes?.code;
           error.statusCode = res.statusCode;
@@ -94,7 +94,7 @@ export const request = <T = any>(options: RequestOptions): Promise<ApiResponse<T
       },
       fail: (err) => {
         complete();
-        wx.showToast({ title: '网络请求失败，请检查后端服务或开发环境配置', icon: 'none' });
+        wx.showToast({ title: '网络请求失败，请检查网络连接', icon: 'none' });
         reject(err);
       }
     });

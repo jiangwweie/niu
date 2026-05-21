@@ -35,8 +35,8 @@ Page({
       name = decodeURIComponent(name);
     } catch(e) {}
     const account = user?.userName || user?.username || '';
-    const role = user?.roleName || (Array.isArray(user?.roleCodes) ? user.roleCodes.join(' / ') : user?.roleCode || '');
-    const store = user?.storeName || (user?.storeId != null ? `门店ID ${user.storeId}` : '');
+    const role = user?.roleName || '';
+    const store = user?.storeName || '';
 
     this.setData({
       currentUser: user,

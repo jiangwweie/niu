@@ -1,7 +1,7 @@
 <template>
-  <PageContainer title="支付记录" description="查看客户付款明细，支持多次付款与混合付款记录展示">
+  <PageContainer title="收款记录" description="查看客户收款明细，支持多次收款与混合收款记录展示">
     <el-alert
-      title="列表已接入真实后端，记录支付属于员工小程序端现场操作。"
+      title="收款操作在员工小程序端完成，此处仅查看记录。"
       type="success"
       show-icon
       :closable="false"
@@ -108,8 +108,8 @@
           </el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="支付时间">{{ viewDrawer.current.paidAt }}</el-descriptions-item>
-        <el-descriptions-item label="操作人ID">{{ viewDrawer.current.operatorId ?? '-' }}</el-descriptions-item>
-        <el-descriptions-item label="收款人ID">{{ viewDrawer.current.receiverId ?? '-' }}</el-descriptions-item>
+        <el-descriptions-item label="操作人">{{ viewDrawer.current.operatorId ?? '-' }}</el-descriptions-item>
+        <el-descriptions-item label="收款人">{{ viewDrawer.current.receiverId ?? '-' }}</el-descriptions-item>
         <el-descriptions-item label="备注">{{ viewDrawer.current.remark || '-' }}</el-descriptions-item>
       </el-descriptions>
     </el-drawer>

@@ -3,6 +3,17 @@ import { WorkOrder, PaymentMethod } from '../../types/workOrder';
 import { hasPermission } from '../../utils/permission';
 import Toast from 'tdesign-miniprogram/toast/index';
 
+
+const STATUS_TEXT_MAP: Record<string, string> = {
+  DRAFT: '草稿',
+  PENDING_ACCEPT: '待接单',
+  ACCEPTED: '已接单',
+  PART_ORDERED: '已定件',
+  PART_ARRIVED: '已到件',
+  SETTLED: '已结算',
+  CANCELLED: '已取消'
+};
+
 const PAYABLE_STATUSES = ['PENDING_ACCEPT', 'ACCEPTED', 'PART_ORDERED', 'PART_ARRIVED'];
 
 function isPayableStatus(status?: string) {
@@ -48,7 +59,8 @@ Page({
     // Settle
     settleDialogVisible: false,
     settleRemark: '',
-    settleLoading: false
+    settleLoading: false,
+    statusText: ''
   },
   onLoad(options: any) {
     this.setData({
@@ -72,6 +84,7 @@ Page({
       this.setData({
         order: d,
         isPayableStatus: isPayableStatus(d?.status),
+        statusText: STATUS_TEXT_MAP[d?.status || ''] || '未知',
         outstandingAmount: outstanding,
         outstandingAmountStr: outstanding.toFixed(2),
         receivableAmountStr: (d?.receivableAmount ?? 0).toFixed(2),
@@ -116,7 +129,7 @@ Page({
       reason: this.data.cancelReason, 
       remark: this.data.cancelRemark 
     }).then(res => {
-      Toast({ context: this, selector: '#t-toast', message: '工单已取消，库存释放以后端结果为准。', icon: 'check-circle' });
+      Toast({ context: this, selector: '#t-toast', message: '工单已取消。', icon: 'check-circle' });
       this.fetchData();
     }).catch(err => {
       console.error('Cancel work order failed:', err);
@@ -195,7 +208,7 @@ Page({
       remark: this.data.paymentForm.remark
     }).then(res => {
       this.setData({ paymentDialogVisible: false });
-      Toast({ context: this, selector: '#t-toast', message: '收款记录已保存。收款不会自动结算工单。', icon: 'check-circle' });
+      Toast({ context: this, selector: '#t-toast', message: '收款记录已保存。', icon: 'check-circle' });
       this.fetchData();
     }).catch(err => {
       console.error('Record payment failed:', err);

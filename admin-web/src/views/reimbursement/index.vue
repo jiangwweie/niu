@@ -14,7 +14,7 @@
         <el-form-item label="报销编号">
           <el-input v-model="queryParams.reimbursementNo" placeholder="请输入" clearable />
         </el-form-item>
-        <el-form-item label="报销人ID">
+        <el-form-item label="报销人">
           <el-input v-model="queryParams.applicantId" placeholder="请输入" clearable />
         </el-form-item>
         <el-form-item label="报销状态">
@@ -53,7 +53,7 @@
           border
         >
           <el-table-column prop="reimbursementNo" label="报销编号" width="160" />
-          <el-table-column prop="applicantId" label="报销人ID" width="100" />
+          <el-table-column prop="applicantId" label="报销人" width="100" />
           <el-table-column prop="purpose" label="用途" min-width="160" show-overflow-tooltip />
           <el-table-column label="申请金额" width="120" align="right">
             <template #default="{ row }">
@@ -74,7 +74,7 @@
             </template>
           </el-table-column>
           <el-table-column prop="submittedAt" label="提交时间" width="160" />
-          <el-table-column label="确认人ID" width="100">
+          <el-table-column label="确认人" width="100">
             <template #default="{ row }">
               {{ row.confirmedBy || '-' }}
             </template>
@@ -114,7 +114,7 @@
       <div v-if="viewDrawer.current">
         <el-descriptions title="报销基础信息" :column="2" border size="small" style="margin-bottom: 20px;">
           <el-descriptions-item label="报销编号" :span="2">{{ viewDrawer.current.reimbursementNo }}</el-descriptions-item>
-          <el-descriptions-item label="报销人ID">{{ viewDrawer.current.applicantId }}</el-descriptions-item>
+          <el-descriptions-item label="报销人">{{ viewDrawer.current.applicantId }}</el-descriptions-item>
           <el-descriptions-item label="状态">
             <el-tag :type="getStatusTagType(viewDrawer.current.status)" size="small">
               {{ getStatusLabel(viewDrawer.current.status) }}
@@ -133,14 +133,14 @@
             <MoneyText v-if="viewDrawer.current.confirmedAmount !== undefined && viewDrawer.current.confirmedAmount !== null" :amount="viewDrawer.current.confirmedAmount" type="success" />
             <span v-else class="text-info">-</span>
           </el-descriptions-item>
-          <el-descriptions-item label="确认人ID">{{ viewDrawer.current.confirmedBy || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="确认人">{{ viewDrawer.current.confirmedBy || '-' }}</el-descriptions-item>
           <el-descriptions-item label="确认时间" :span="2">{{ viewDrawer.current.confirmedAt || '-' }}</el-descriptions-item>
         </el-descriptions>
 
         <el-descriptions v-if="viewDrawer.current.status === 'REJECTED' || viewDrawer.current.status === 'CANCELLED'" title="驳回/取消信息" :column="2" border size="small" style="margin-bottom: 20px;">
           <el-descriptions-item v-if="viewDrawer.current.status === 'REJECTED'" label="驳回原因" :span="2"><span class="text-danger">{{ viewDrawer.current.rejectReason || '-' }}</span></el-descriptions-item>
           <el-descriptions-item v-if="viewDrawer.current.status === 'CANCELLED'" label="取消原因" :span="2"><span class="text-warning">{{ viewDrawer.current.cancelReason || '-' }}</span></el-descriptions-item>
-          <el-descriptions-item label="处理人ID">{{ viewDrawer.current.rejectedBy || viewDrawer.current.cancelledBy || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="处理人">{{ viewDrawer.current.rejectedBy || viewDrawer.current.cancelledBy || '-' }}</el-descriptions-item>
           <el-descriptions-item label="处理时间">{{ viewDrawer.current.rejectedAt || viewDrawer.current.cancelledAt || '-' }}</el-descriptions-item>
         </el-descriptions>
       </div>

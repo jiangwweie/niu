@@ -1,1 +1,5 @@
-<view class="container"><text>payment-placeholder page</text></view>
+<view class="container" style="padding: 40px; text-align: center;">
+  <view style="font-size: 48px; margin-bottom: 16px;">💳</view>
+  <view style="font-size: 16px; color: #333; margin-bottom: 8px;">收款功能</view>
+  <view style="font-size: 14px; color: #999;">收款操作在工单详情页完成</view>
+</view>

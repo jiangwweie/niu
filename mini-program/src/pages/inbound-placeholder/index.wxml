@@ -37,9 +37,9 @@
   <view class="success-result" wx:if="{{successResult}}">
     <t-icon name="check-circle-filled" size="64" color="#00A870" />
     <view class="success-title">入库成功</view>
-    <view class="success-hint">入库成功后由后端生成 INBOUND 库存流水，库存数量以后端返回为准。</view>
+    <view class="success-hint">入库成功后将更新库存，库存数量以系统实际记录为准。</view>
     <view class="result-card">
-      <text class="info">流水号: {{successResult.flowId}}</text>
+      <text class="info">入库单号: {{successResult.flowId}}</text>
       <text class="info">配件名称: {{successResult.partName}}</text>
       <text class="info">配件编码: {{successResult.partCode}}</text>
       <text class="info highlight">可用库存: {{successResult.availableQty}}</text>

@@ -2,7 +2,7 @@
   <view class="header-card">
     <view class="header-row">
       <text class="title">{{order.workOrderNo}}</text>
-      <t-tag theme="primary" variant="light">{{order.status}}</t-tag>
+      <t-tag theme="primary" variant="light">{{statusText}}</t-tag>
     </view>
     <view class="customer-info">
       <text class="name">{{order.customerNameSnapshot}}</text>
@@ -61,7 +61,7 @@
       </view>
     </view>
 
-    <view class="cashier-tip">操作结果以系统校验为准。</view>
+    <view class="cashier-tip">具体以系统校验结果为准。</view>
 
     <view class="cashier-actions" wx:if="{{order.status !== 'SETTLED' && order.status !== 'CANCELLED'}}">
       <t-button wx:if="{{hasPaymentPermission && isPayableStatus}}" theme="primary" variant="base" block size="medium" bind:tap="openPaymentPopup">记录收款</t-button>
@@ -108,10 +108,10 @@
     </view>
     <scroll-view scroll-y class="popup-body">
       <view style="padding: 16px; background: #fff4e5; color: #d97100; font-size: 12px; margin-bottom: 16px;">
-        操作提示：本系统仅记录线下收款结果，不发起真实线上支付。
+        注意：此处仅记录线下收款结果。
       </view>
       <t-cell-group>
-        <t-input label="工单编号" value="{{order.workOrderNo || 'DRAFT'}}" align="right" readonly />
+        <t-input label="工单编号" value="{{order.workOrderNo || '草稿'}}" align="right" readonly />
         <t-input label="应收总计" value="¥{{receivableAmountStr}}" align="right" readonly />
         <t-input label="已收金额" value="¥{{receivedAmountStr}}" align="right" readonly />
         <t-input label="待收金额" value="¥{{outstandingAmountStr}}" align="right" readonly />
@@ -149,7 +149,7 @@
     </view>
     <scroll-view scroll-y class="popup-body">
       <view style="padding: 16px; background: #fff4e5; color: #d97100; font-size: 12px; margin-bottom: 16px;">
-        操作提示：本系统仅记录线下退款结果，不接真实支付网关。
+        注意：此处仅记录线下退款结果。
       </view>
       <t-cell-group>
         <t-input label="可退金额" value="¥{{receivedAmountStr}}" align="right" readonly />

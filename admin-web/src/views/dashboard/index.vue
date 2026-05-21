@@ -185,8 +185,8 @@ const STATUS_LABEL_MAP: Record<string, string> = {
   DRAFT: '草稿',
   PENDING_ACCEPT: '待接单',
   ACCEPTED: '已接单',
-  PART_ORDERED: '配件已订',
-  PART_ARRIVED: '配件已到',
+  PART_ORDERED: '已定件',
+  PART_ARRIVED: '已到件',
   SETTLED: '已结算',
   CANCELLED: '已取消',
 };

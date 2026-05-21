@@ -21,12 +21,24 @@ import {
   UpdateChargeItemRequest,
   PaymentMethod 
 } from '../../types/workOrder';
+
+const STATUS_TEXT_MAP: Record<string, string> = {
+  DRAFT: '草稿',
+  PENDING_ACCEPT: '待接单',
+  ACCEPTED: '已接单',
+  PART_ORDERED: '已定件',
+  PART_ARRIVED: '已到件',
+  SETTLED: '已结算',
+  CANCELLED: '已取消'
+};
+
 import Toast from 'tdesign-miniprogram/toast/index';
 import Dialog from 'tdesign-miniprogram/dialog/index';
 
 Page({
   data: {
-    step: 1, // 1: Draft Base Info, 2: Charge Items
+    step: 1,
+    statusText: '草稿',
     workOrderId: null as string | number | null,
     workOrder: null as WorkOrder | null,
     
@@ -167,7 +179,8 @@ Page({
   refreshWorkOrder() {
     if (!this.data.workOrderId) return;
     getWorkOrderDetail(this.data.workOrderId).then(res => {
-      this.setData({ workOrder: res.data });
+      const d = res.data;
+      this.setData({ workOrder: d, statusText: STATUS_TEXT_MAP[d?.status || ''] || '未知' });
     }).catch(console.error);
   },
 
@@ -281,7 +294,7 @@ Page({
       
       addChargeItem(this.data.workOrderId, req).then(() => {
         this.setData({ savingItem: false, itemPopupVisible: false });
-        Toast({ context: this, selector: '#t-toast', message: '费用明细已添加。DRAFT 阶段不会预占库存。', icon: 'check-circle' });
+        Toast({ context: this, selector: '#t-toast', message: '费用明细已添加。', icon: 'check-circle' });
         this.refreshWorkOrder();
       }).catch(() => {
         this.setData({ savingItem: false });
@@ -301,7 +314,7 @@ Page({
       if (!this.data.workOrderId) return;
       this.setData({ deletingItem: true });
       deleteChargeItem(this.data.workOrderId, id).then(() => {
-        Toast({ context: this, selector: '#t-toast', message: '费用明细已删除。DRAFT 阶段不会生成库存流水。', icon: 'check-circle' });
+        Toast({ context: this, selector: '#t-toast', message: '费用明细已删除。', icon: 'check-circle' });
         this.refreshWorkOrder();
       }).catch(console.error)
       .finally(() => {
@@ -472,7 +485,7 @@ Page({
     this.setData({ submitLoading: true, submitDialogVisible: false });
 
     submitWorkOrder(this.data.workOrderId!, { remark: this.data.submitRemark }).then(res => {
-      Toast({ context: this, selector: '#t-toast', message: '工单已提交，库存预占以后端结果为准。', icon: 'check-circle' });
+      Toast({ context: this, selector: '#t-toast', message: '工单已提交。', icon: 'check-circle' });
       this.refreshWorkOrder();
     }).catch(err => {
       // Backend error messages will be shown by request wrapper (Toast)
@@ -517,7 +530,7 @@ Page({
       reason: this.data.cancelReason, 
       remark: this.data.cancelRemark 
     }).then(res => {
-      Toast({ context: this, selector: '#t-toast', message: '工单已取消，库存释放以后端结果为准。', icon: 'check-circle' });
+      Toast({ context: this, selector: '#t-toast', message: '工单已取消。', icon: 'check-circle' });
       this.refreshWorkOrder();
     }).catch(err => {
       console.error('Cancel work order failed:', err);
@@ -577,7 +590,7 @@ Page({
       remark: this.data.paymentForm.remark
     }).then(res => {
       this.setData({ paymentDialogVisible: false });
-      Toast({ context: this, selector: '#t-toast', message: '收款记录已保存。收款不会自动结算工单。', icon: 'check-circle' });
+      Toast({ context: this, selector: '#t-toast', message: '收款记录已保存。', icon: 'check-circle' });
       this.refreshWorkOrder();
     }).catch(err => {
       console.error('Record payment failed:', err);

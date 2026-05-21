@@ -1,5 +1,5 @@
 <template>
-  <PageContainer title="用户与权限" description="账号生命周期与预设角色查看">
+  <PageContainer title="员工与权限" description="账号生命周期与预设角色查看">
     <template #action>
       <el-button type="primary" :icon="Plus" @click="openCreate">新增用户</el-button>
     </template>

@@ -89,7 +89,7 @@
               <span class="item-label">官方结算收入</span>
               <MoneyText :amount="summaryData?.officialIncome || 0" />
             </div>
-            <div class="group-desc text-info">状态为 SETTLED 的官方结算</div>
+            <div class="group-desc text-info">状态为"已结算"的官方结算</div>
           </div>
         </div>
       </el-card>
@@ -108,7 +108,7 @@
               <span class="item-label">配件成本</span>
               <MoneyText :amount="summaryData?.partsCost || 0" />
             </div>
-            <div class="group-desc text-info">SETTLED 工单的配件成本 (line_cost_amount)</div>
+            <div class="group-desc text-info">已结算工单的配件成本</div>
           </div>
           <el-divider />
           <div class="split-group">
@@ -116,7 +116,7 @@
               <span class="item-label">已确认报销成本</span>
               <MoneyText :amount="summaryData?.reimbursementCost || 0" />
             </div>
-            <div class="group-desc text-info">状态为 CONFIRMED 的报销</div>
+            <div class="group-desc text-info">状态为"已确认"的报销</div>
           </div>
         </div>
       </el-card>

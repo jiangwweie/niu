@@ -75,7 +75,7 @@ Page({
       const res = await getWorkOrders({ keyword: this.data.keyword });
       const orders = (res.data.records || []).map((item: WorkOrder) => ({
         ...item,
-        statusText: STATUS_TEXT_MAP[item.status] || item.status || '未知',
+        statusText: STATUS_TEXT_MAP[item.status] || '未知',
         createdAtText: formatDateTime(item.createdAt)
       }));
       this.setData({ orders });
