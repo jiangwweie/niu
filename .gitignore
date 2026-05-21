@@ -60,3 +60,6 @@ temp/
 *.tmp
 *.swp
 *.swo
+
+# Local agent planning artifacts
+docs/superpowers/
