@@ -125,7 +125,7 @@ const routes: Array<RouteRecordRaw> = [
         path: 'trial-data',
         name: 'TrialData',
         component: () => import('@/views/trial-data/index.vue'),
-        meta: { title: '正式启用' }
+        meta: { title: '试运行数据清理' }
       }
     ]
   }

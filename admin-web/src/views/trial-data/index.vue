@@ -1,5 +1,5 @@
 <template>
-  <PageContainer title="正式启用" description="清理试运行数据，正式启用系统">
+  <PageContainer title="试运行数据清理" description="清理试运行数据，正式启用系统">
     <!-- 加载中 -->
     <div v-if="loading" class="loading-state">
       <el-icon class="is-loading" :size="24"><Loading /></el-icon>

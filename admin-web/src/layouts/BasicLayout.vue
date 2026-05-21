@@ -124,7 +124,7 @@
               <template #title>数据导出</template>
             </el-menu-item>
             <el-menu-item v-if="hasRole('SUPER_ADMIN')" index="/trial-data">
-              <template #title>正式启用</template>
+              <template #title>试运行数据清理</template>
             </el-menu-item>
           </el-sub-menu>
         </template>
