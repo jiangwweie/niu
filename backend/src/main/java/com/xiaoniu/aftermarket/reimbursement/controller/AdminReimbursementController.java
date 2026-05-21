@@ -86,6 +86,7 @@ public class AdminReimbursementController {
         command.setConfirmedAmount(request.confirmedAmount());
         command.setRemark(request.remark());
         confirmService.execute(command);
+        // 注意：当前版本确认报销后不自动打款，打款/凭证上传为后续版本能力
         return ApiResponse.success(reimbursementService.getById(user.storeId(), id));
     }
 

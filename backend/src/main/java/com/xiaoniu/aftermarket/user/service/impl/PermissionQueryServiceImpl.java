@@ -34,6 +34,8 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
         this.permissionMapper = permissionMapper;
     }
 
+    // 权限查询每次从 DB 实时计算（用户->角色->权限 三级联查），不走缓存
+    // 保证管理员修改角色权限后，已登录用户的权限立即生效
     @Override
     public List<String> listPermissionCodesByUserId(Long userId) {
         List<Long> allRoleIds = userRoleMapper.selectList(

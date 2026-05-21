@@ -48,6 +48,9 @@ public class ExportServiceImpl implements ExportService {
         this.reimbursementMapper = reimbursementMapper;
     }
 
+    /**
+     * Excel 导出与页面查询条件一致，复用 FinanceService 的查询逻辑
+     */
     @Override
     public ExportFile exportFinanceDaily(Long storeId, LocalDate date) {
         FinanceReportResponse report = financeService.queryDaily(storeId, date);
@@ -77,6 +80,7 @@ public class ExportServiceImpl implements ExportService {
         if (dateFrom != null && dateTo != null && dateFrom.isAfter(dateTo)) {
             throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "开始日期不能晚于结束日期");
         }
+        // 报销状态校验：status 必须是有效的 ReimbursementStatus 枚举值
         String normalizedStatus = normalizeStatus(status);
         QueryWrapper<ReimbursementEntity> wrapper = new QueryWrapper<>();
         wrapper.eq("store_id", storeId).eq("deleted", 0);
@@ -107,12 +111,17 @@ public class ExportServiceImpl implements ExportService {
             int rowIndex = 1;
             rowIndex = writeTextMetric(sheet, rowIndex, "期间开始", formatDate(report.getPeriodStart()));
             rowIndex = writeTextMetric(sheet, rowIndex, "期间结束", formatDate(report.getPeriodEnd()));
+            // 客户支付净收入 = 收款 - 退款
             rowIndex = writeMoneyMetric(sheet, rowIndex, "customerIncome", report.getCustomerIncome(), moneyStyle);
+            // 官方结算收入单独列示
             rowIndex = writeMoneyMetric(sheet, rowIndex, "officialIncome", report.getOfficialIncome(), moneyStyle);
+            // 配件成本来自结算消耗时记录的成本口径
             rowIndex = writeMoneyMetric(sheet, rowIndex, "partsCost", report.getPartsCost(), moneyStyle);
+            // 报销成本：仅 CONFIRMED 状态的报销计入成本
             rowIndex = writeMoneyMetric(sheet, rowIndex, "reimbursementCost", report.getReimbursementCost(), moneyStyle);
             rowIndex = writeMoneyMetric(sheet, rowIndex, "totalIncome", report.getTotalIncome(), moneyStyle);
             rowIndex = writeMoneyMetric(sheet, rowIndex, "totalCost", report.getTotalCost(), moneyStyle);
+            // 利润 = 总收入 - 总成本，不允许手动直接改利润
             rowIndex = writeMoneyMetric(sheet, rowIndex, "profit", report.getProfit(), moneyStyle);
             rowIndex = writeNumberMetric(sheet, rowIndex, "settledWorkOrderCount", report.getSettledWorkOrderCount());
             writeNumberMetric(sheet, rowIndex, "confirmedReimbursementCount", report.getConfirmedReimbursementCount());
@@ -148,6 +157,7 @@ public class ExportServiceImpl implements ExportService {
                 writeNumber(row, 11, entity.getRejectedBy());
                 writeText(row, 12, formatDateTime(entity.getRejectedAt()));
                 writeText(row, 13, entity.getRejectReason());
+                // 报销成本口径：只有 CONFIRMED 状态的报销才计入成本
                 writeText(row, 14, ReimbursementStatus.CONFIRMED.getCode().equals(entity.getStatus()) ? "是" : "否");
             }
             autosize(sheet, 15);

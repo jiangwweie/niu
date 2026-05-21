@@ -38,6 +38,7 @@ public class ReimbursementServiceImpl implements ReimbursementService {
     @Override
     @Transactional
     public Long submit(SubmitReimbursementCommand command) {
+        // 员工提交报销仅创建 PENDING 记录，不直接进入财务成本
         validateSubmitCommand(command);
         LocalDateTime now = LocalDateTime.now();
         ReimbursementEntity entity = new ReimbursementEntity();
@@ -101,6 +102,7 @@ public class ReimbursementServiceImpl implements ReimbursementService {
     @Override
     @Transactional
     public void confirm(ConfirmReimbursementCommand command) {
+        // 只有 CONFIRMED 状态的报销才进入财务成本核算
         validateConfirmCommand(command);
         ReimbursementEntity entity = loadInStoreForUpdate(command.getStoreId(), command.getReimbursementId());
         validatePending(entity);
@@ -118,6 +120,7 @@ public class ReimbursementServiceImpl implements ReimbursementService {
     @Override
     @Transactional
     public void reject(RejectReimbursementCommand command) {
+        // 驳回报销不计入财务成本
         validateRejectCommand(command);
         ReimbursementEntity entity = loadInStoreForUpdate(command.getStoreId(), command.getReimbursementId());
         validatePending(entity);
@@ -134,6 +137,7 @@ public class ReimbursementServiceImpl implements ReimbursementService {
     @Override
     @Transactional
     public void cancel(CancelReimbursementCommand command) {
+        // 员工取消报销不计入财务成本
         validateCancelCommand(command);
         ReimbursementEntity entity = loadInStoreForUpdate(command.getStoreId(), command.getReimbursementId());
         validatePending(entity);
@@ -191,6 +195,7 @@ public class ReimbursementServiceImpl implements ReimbursementService {
     }
 
     private void validatePending(ReimbursementEntity entity) {
+        // 仅 PENDING 状态可审批/驳回/取消，防止重复操作
         if (!ReimbursementStatus.PENDING.getCode().equals(entity.getStatus())) {
             throw new BusinessException(ErrorCode.REIMBURSEMENT_STATUS_INVALID);
         }
@@ -209,6 +214,7 @@ public class ReimbursementServiceImpl implements ReimbursementService {
     }
 
     private ReimbursementEntity loadInStoreForUpdate(Long storeId, Long reimbursementId) {
+        // selectByIdForUpdate 加行锁，防止并发审批同一笔报销
         if (storeId == null || reimbursementId == null) {
             throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST);
         }

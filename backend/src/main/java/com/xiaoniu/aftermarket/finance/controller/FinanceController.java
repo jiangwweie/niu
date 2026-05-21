@@ -23,6 +23,10 @@ public class FinanceController {
         this.financeService = financeService;
     }
 
+    /**
+     * 财务报表需按门店隔离，所有查询基于 user.storeId()
+     * 权限控制：FINANCE_VIEW
+     */
     @GetMapping("/daily")
     @PreAuthorize("hasAuthority('FINANCE_VIEW')")
     public ApiResponse<FinanceReportResponse> queryDaily(
@@ -49,6 +53,7 @@ public class FinanceController {
         CurrentUser user = requireCurrentUser();
         LocalDate start = LocalDate.parse(startDate);
         LocalDate end = LocalDate.parse(endDate);
+        // 日期范围校验：开始日期不能晚于结束日期
         if (start.isAfter(end)) {
             return ApiResponse.failure(ErrorCode.COMMON_BAD_REQUEST, "开始日期不能晚于结束日期");
         }

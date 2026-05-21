@@ -38,6 +38,7 @@ public class StaffReimbursementController {
         command.setRemark(request.remark());
 
         Long reimbursementId = reimbursementService.submit(command);
+        // 员工提交报销仅进入待审批队列，不直接入财务成本；需管理员 CONFIRM 后才计入
         return ApiResponse.success(reimbursementService.getById(user.storeId(), reimbursementId));
     }
 

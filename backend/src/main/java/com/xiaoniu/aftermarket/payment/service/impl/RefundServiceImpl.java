@@ -65,12 +65,15 @@ public class RefundServiceImpl implements RefundService {
         WorkOrderEntity workOrder = loadWorkOrderForRefund(command.getStoreId(), command.getWorkOrderId());
         validateRefundableStatus(workOrder);
 
+        // 可退金额 = 实收金额（支付总额 - 退款总额），退款后额度释放可重新收取
         BigDecimal refundableAmount = calculateRefundableAmount(workOrder.getId());
         BigDecimal refundAmount = paymentAmountService.normalizeAmount(command.getAmount());
+        // 退款金额不能超过当前可退金额；可退为0说明没有已收款可退
         if (refundableAmount.compareTo(BigDecimal.ZERO) <= 0 || refundAmount.compareTo(refundableAmount) > 0) {
             throw new BusinessException(ErrorCode.REFUND_EXCEEDS_PAID_AMOUNT);
         }
 
+        // 退款插入独立退款记录，不删除/修改原支付记录，保留完整资金流水
         RefundRecordEntity entity = new RefundRecordEntity();
         entity.setStoreId(workOrder.getStoreId());
         entity.setWorkOrderId(workOrder.getId());
@@ -84,6 +87,7 @@ public class RefundServiceImpl implements RefundService {
         entity.setCreatedBy(command.getOperatorId());
         refundRecordMapper.insert(entity);
 
+        // 退款后同步更新工单的 received_amount，释放的额度可被后续支付重新收取
         paymentAmountService.updateReceivedAmount(workOrder.getId());
         return entity.getId();
     }
@@ -93,6 +97,7 @@ public class RefundServiceImpl implements RefundService {
         return paymentAmountService.sumRefundAmount(workOrderId);
     }
 
+    // 可退金额 = 实收金额（支付总额 - 退款总额），与支付共享同一计算逻辑
     @Override
     public BigDecimal calculateRefundableAmount(Long workOrderId) {
         return paymentAmountService.calculateReceivedAmount(workOrderId);
@@ -170,6 +175,7 @@ public class RefundServiceImpl implements RefundService {
     }
 
     private WorkOrderEntity loadWorkOrderForRefund(Long storeId, Long workOrderId) {
+        // 悲观锁：与支付共用同一把锁，防止退款与支付并发导致金额不一致
         WorkOrderEntity workOrder = workOrderMapper.selectByIdForUpdate(workOrderId);
         if (workOrder == null || workOrder.getStoreId() == null || !storeId.equals(workOrder.getStoreId())) {
             throw new BusinessException(ErrorCode.WORK_ORDER_NOT_FOUND);

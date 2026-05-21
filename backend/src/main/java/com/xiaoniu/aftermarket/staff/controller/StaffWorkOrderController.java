@@ -210,6 +210,8 @@ public class StaffWorkOrderController {
         return ApiResponse.success(null);
     }
 
+    // 状态变更走独立接口，确保每次变更都有完整的业务校验（如库存预占/释放、金额校验）
+
     @PostMapping("/{workOrderId}/submit")
     @PreAuthorize("hasAuthority('WORK_ORDER_SUBMIT')")
     public ApiResponse<StaffWorkOrderDetail> submit(

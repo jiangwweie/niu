@@ -17,6 +17,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Component
 public class PlatformAccessGuard extends OncePerRequestFilter {
 
+    // PLATFORM 账户是全局运营角色，/api/admin/** 和 /api/staff/** 是门店内部管理接口
+    // 禁止 PLATFORM 访问以实现门店数据隔离，防止跨店操作
     private static final List<String> BLOCKED_PREFIXES = List.of("/api/admin/", "/api/staff/");
 
     private final SecurityApiResponseWriter responseWriter;

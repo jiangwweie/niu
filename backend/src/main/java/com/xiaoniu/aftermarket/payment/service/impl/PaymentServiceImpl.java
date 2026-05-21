@@ -66,12 +66,10 @@ public class PaymentServiceImpl implements PaymentService {
         WorkOrderEntity workOrder = loadWorkOrderForPayment(command.getStoreId(), command.getWorkOrderId());
         validatePayableStatus(workOrder);
 
-        // Overpayment guard: check inside @Transactional, after selectByIdForUpdate lock on work_order.
-        // Uses net received (payments - refunds), so after a refund the freed amount can be re-collected.
-        // "Overpayment" means: netReceived + thisPayment > receivable.
-        // Concurrent payment requests are serialized by the pessimistic lock, so two requests cannot
-        // both read a stale receivedAmount and pass this check simultaneously.
+        // 超收校验必须在 selectByIdForUpdate 锁之后执行：
+        // 悲观锁保证并发支付请求串行化，防止两个请求同时读到旧的 receivedAmount 都通过校验
         BigDecimal normalizedAmount = paymentAmountService.normalizeAmount(command.getAmount());
+        // 实收金额 = 支付总额 - 退款总额（退款后释放的额度可以重新收取）
         BigDecimal netReceived = paymentAmountService.calculateReceivedAmount(command.getWorkOrderId());
         BigDecimal newTotal = netReceived.add(normalizedAmount);
         BigDecimal receivable = paymentAmountService.normalizeAmount(workOrder.getReceivableAmount());
@@ -79,6 +77,7 @@ public class PaymentServiceImpl implements PaymentService {
             throw new BusinessException(ErrorCode.PAYMENT_EXCEEDS_RECEIVABLE);
         }
 
+        // 支付必须明细化：每次收款插入独立记录，不能直接改工单总额
         PaymentRecordEntity entity = new PaymentRecordEntity();
         entity.setStoreId(workOrder.getStoreId());
         entity.setWorkOrderId(workOrder.getId());
@@ -92,6 +91,7 @@ public class PaymentServiceImpl implements PaymentService {
         entity.setCreatedBy(command.getOperatorId());
         paymentRecordMapper.insert(entity);
 
+        // 每次支付后同步更新工单的 received_amount，保证结算判断用的是最新值
         paymentAmountService.updateReceivedAmount(workOrder.getId());
         return entity.getId();
     }
@@ -179,6 +179,7 @@ public class PaymentServiceImpl implements PaymentService {
         response.setPaymentTotal(paymentTotal);
         response.setRefundTotal(refundTotal);
         response.setReceivedAmount(receivedAmount);
+        // 可结算条件：工单状态可收款 且 实收 >= 应收
         response.setCanSettle(PAYABLE_STATUSES.contains(workOrder.getStatus())
                 && receivedAmount.compareTo(response.getReceivableAmount()) >= 0);
         return response;
@@ -203,6 +204,7 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     private WorkOrderEntity loadWorkOrderForPayment(Long storeId, Long workOrderId) {
+        // 悲观锁：后续超收校验依赖此锁保证并发安全
         WorkOrderEntity workOrder = workOrderMapper.selectByIdForUpdate(workOrderId);
         if (workOrder == null || workOrder.getStoreId() == null || !storeId.equals(workOrder.getStoreId())) {
             throw new BusinessException(ErrorCode.WORK_ORDER_NOT_FOUND);

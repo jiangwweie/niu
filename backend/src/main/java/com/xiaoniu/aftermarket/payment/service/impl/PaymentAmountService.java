@@ -32,12 +32,15 @@ public class PaymentAmountService {
         return normalizeAmount(refundRecordMapper.sumAmountByWorkOrderId(workOrderId));
     }
 
+    // 实收金额 = 支付总额 - 退款总额，是工单结算判断和可退金额计算的核心口径
     public BigDecimal calculateReceivedAmount(Long workOrderId) {
         return sumPaidAmount(workOrderId)
                 .subtract(sumRefundAmount(workOrderId))
                 .setScale(2, RoundingMode.HALF_UP);
     }
 
+    // 每次支付/退款后将 received_amount 冗余写入工单表，
+    // 避免结算、收银日报等场景每次都实时聚合支付+退款表
     public BigDecimal updateReceivedAmount(Long workOrderId) {
         BigDecimal receivedAmount = calculateReceivedAmount(workOrderId);
         UpdateWrapper<WorkOrderEntity> wrapper = new UpdateWrapper<>();

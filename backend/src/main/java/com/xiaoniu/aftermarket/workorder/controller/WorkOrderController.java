@@ -184,6 +184,9 @@ public class WorkOrderController {
         return ApiResponse.success(null);
     }
 
+    // 工单状态流转必须通过独立动作接口（submit/cancel/settle），不能直接修改 status 字段
+    // 这样确保每次状态变更都有完整的业务校验和副作用（如库存操作）
+
     @PostMapping("/{workOrderId}/submit")
     @PreAuthorize("hasAuthority('WORK_ORDER_SUBMIT')")
     public ApiResponse<Void> submit(@PathVariable Long workOrderId,

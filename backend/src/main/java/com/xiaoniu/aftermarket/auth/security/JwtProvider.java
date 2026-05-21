@@ -16,6 +16,8 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.springframework.stereotype.Component;
 
+// JWT 设计：仅作为身份凭证（userId + storeId），不缓存 accountType/权限等易变数据
+// 每次请求在 JwtAuthenticationFilter 中从 DB 重新加载，确保权限变更即时生效
 @Component
 public class JwtProvider {
 
@@ -83,11 +85,11 @@ public class JwtProvider {
                 asNullableLong(claims.get("storeId")),
                 asString(claims.get("username")),
                 asString(claims.get("realName")),
-                null, // accountType: not stored in JWT, rebuilt from DB
+                null, // accountType 不存入 JWT，每次请求从 DB 重建，避免角色变更后 JWT 仍持有旧值
                 asStringSet(claims.get("roleCodes")),
                 asStringSet(claims.get("permissionCodes")),
-                null, // wechatBound: rebuilt from DB in JwtAuthenticationFilter
-                null  // wechatBoundAt: rebuilt from DB in JwtAuthenticationFilter
+                null, // wechatBound 不存入 JWT，每次请求从 DB 重建
+                null  // wechatBoundAt 不存入 JWT，每次请求从 DB 重建
         );
     }
 

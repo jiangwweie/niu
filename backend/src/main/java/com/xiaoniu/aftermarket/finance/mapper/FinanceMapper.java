@@ -102,7 +102,7 @@ public interface FinanceMapper {
                                                              @Param("startTime") LocalDateTime startTime,
                                                              @Param("endTime") LocalDateTime endTime);
 
-    // ── Cashier report queries ──────────────────────────────────────────────
+    // ── 收银日报查询：统计手动录入的收款/退款记录 ──────────────────────────
 
     @Select("""
             SELECT COALESCE(SUM(amount), 0)
@@ -178,6 +178,7 @@ public interface FinanceMapper {
                                                           @Param("startTime") LocalDateTime startTime,
                                                           @Param("endExclusive") LocalDateTime endExclusive);
 
+    // 未结清工单：实时快照（当前所有未收齐的工单），不按日期筛选
     @Select("""
             SELECT COUNT(*)
             FROM work_order
@@ -188,6 +189,7 @@ public interface FinanceMapper {
             """)
     int countCurrentUnpaidWorkOrders(@Param("storeId") Long storeId);
 
+    // 部分收款工单：实收 > 0 但 < 应收，同样为实时口径
     @Select("""
             SELECT COUNT(*)
             FROM work_order

@@ -82,8 +82,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
             if (authorization != null && authorization.startsWith(BEARER_PREFIX)) {
+                // JWT 只作为身份凭证，权限和角色每次都从 DB 重新加载，确保角色/权限变更即时生效
                 AuthenticatedUser jwtUser = jwtProvider.parseAndValidate(authorization.substring(BEARER_PREFIX.length()));
                 SysUserEntity activeUser = requireActiveUser(jwtUser.userId());
+                // passwordMustChange=true 表示管理员重置了密码，强制用户改密后才能访问业务接口
                 if (Boolean.TRUE.equals(activeUser.getPasswordMustChange()) && !isPasswordChangeAllowedPath(request)) {
                     responseWriter.write(response, HttpServletResponse.SC_FORBIDDEN, ErrorCode.PASSWORD_CHANGE_REQUIRED);
                     return;
@@ -171,6 +173,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
+    // passwordMustChange 白名单：只允许查看个人信息、改密和登出，阻断所有业务操作
     private boolean isPasswordChangeAllowedPath(HttpServletRequest request) {
         String path = request.getRequestURI();
         return "/api/auth/me".equals(path)

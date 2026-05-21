@@ -50,6 +50,7 @@ public class FinanceServiceImpl implements FinanceService {
         return buildReport(storeId, startDate, endDate, startTime, endTime);
     }
 
+    // 收银日报：统计当日手工录入的收款/退款记录，不是支付网关对账
     @Override
     public CashierReportResponse getCashierReport(Long storeId, LocalDate date) {
         LocalDateTime startTime = date.atStartOfDay();
@@ -57,6 +58,7 @@ public class FinanceServiceImpl implements FinanceService {
 
         BigDecimal totalPaymentAmount = nz(financeMapper.sumPaidByStoreAndDate(storeId, startTime, endExclusive));
         BigDecimal totalRefundAmount = nz(financeMapper.sumRefundByStoreAndDate(storeId, startTime, endExclusive));
+        // 净收款 = 当日支付总额 - 当日退款总额
         BigDecimal netAmount = totalPaymentAmount.subtract(totalRefundAmount).setScale(2, RoundingMode.HALF_UP);
 
         int paymentCount = financeMapper.countPaymentsByStoreAndDate(storeId, startTime, endExclusive);
@@ -87,6 +89,7 @@ public class FinanceServiceImpl implements FinanceService {
             byMethod.add(mb);
         }
 
+        // 未结清工单数是实时口径（当前快照），不是当天新增口径
         int currentUnpaidWorkOrderCount = financeMapper.countCurrentUnpaidWorkOrders(storeId);
         int currentPartialPaidWorkOrderCount = financeMapper.countCurrentPartialPaidWorkOrders(storeId);
 
@@ -108,6 +111,7 @@ public class FinanceServiceImpl implements FinanceService {
                                                LocalDateTime startTime, LocalDateTime endTime) {
         BigDecimal totalPaid = financeMapper.sumPaidAmountByStoreAndTimeRange(storeId, startTime, endTime);
         BigDecimal totalRefund = financeMapper.sumRefundAmountByStoreAndTimeRange(storeId, startTime, endTime);
+        // 客户收入 = 支付总额 - 退款总额（手动收款口径，非支付网关）
         BigDecimal customerIncome = totalPaid.subtract(totalRefund).setScale(2, RoundingMode.HALF_UP);
 
         BigDecimal officialIncome = normalize(financeMapper.sumOfficialSettlementByStoreAndTimeRange(storeId, startTime, endTime));

@@ -67,6 +67,7 @@ public class OfficialAfterSalesServiceImpl implements OfficialAfterSalesService 
             return entity.getId();
         }
 
+        // 已结算/无需结算是终态，不允许修改官方售后单号（防止绕过终态回退）
         if (isFinalSettlementStatus(entity.getOfficialSettlementStatus())
                 && !officialOrderNo.equals(entity.getOfficialOrderNo())) {
             throw new BusinessException(ErrorCode.OFFICIAL_SETTLEMENT_STATUS_INVALID);
@@ -82,6 +83,7 @@ public class OfficialAfterSalesServiceImpl implements OfficialAfterSalesService 
         return entity.getId();
     }
 
+    // 官方结算金额：第一版为人工录入，不对接官方系统自动获取
     @Override
     @Transactional
     public void markOfficialSettled(MarkOfficialSettledCommand command) {
@@ -101,6 +103,7 @@ public class OfficialAfterSalesServiceImpl implements OfficialAfterSalesService 
 
         LocalDateTime now = LocalDateTime.now();
         entity.setOfficialSettlementStatus(OfficialSettlementStatus.SETTLED.getCode());
+        // 官方结算金额与客户已收金额互相独立，此处仅记录官方维度的结算，不影响工单的客户已收金额
         entity.setOfficialSettlementAmount(normalizeAmount(command.getSettlementAmount()));
         entity.setOfficialSettlementTime(command.getSettlementTime() != null ? command.getSettlementTime() : now);
         entity.setOfficialSettlementOperatorId(command.getOperatorId());
@@ -109,6 +112,7 @@ public class OfficialAfterSalesServiceImpl implements OfficialAfterSalesService 
         officialAfterSalesMapper.updateById(entity);
     }
 
+    // 标记无需结算：已结算状态不可回退，仅允许从待结算状态流转
     @Override
     @Transactional
     public void markNoSettlementRequired(MarkNoSettlementRequiredCommand command) {
@@ -357,6 +361,7 @@ public class OfficialAfterSalesServiceImpl implements OfficialAfterSalesService 
     }
 
     private OfficialAfterSalesQueryResponse toQueryResponse(OfficialAfterSalesEntity entity, WorkOrderEntity workOrder) {
+        // receivedAmount 是客户已收金额（workOrder维度），settlementAmount 是官方结算金额（official维度），两者独立
         OfficialAfterSalesQueryResponse response = new OfficialAfterSalesQueryResponse();
         response.setId(entity.getId());
         response.setStoreId(entity.getStoreId());

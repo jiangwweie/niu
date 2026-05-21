@@ -89,6 +89,7 @@ public class AuthService {
     }
 
     public AuthenticatedUser buildAuthenticatedUser(SysUserEntity user) {
+        // 每次从 DB 加载角色和权限，不依赖 JWT 中缓存的值，确保角色变更即时生效
         Set<String> roleCodes = listRoleCodes(user.getId());
         Set<String> permissionCodes = new LinkedHashSet<>(permissionQueryService.listPermissionCodesByUserId(user.getId()));
         boolean wechatBound = user.getWechatOpenid() != null && !user.getWechatOpenid().isBlank();
@@ -140,6 +141,7 @@ public class AuthService {
         userMapper.updateById(user);
     }
 
+    // passwordMustChange=true 时前端应弹出强制改密弹窗，用户改密后此标志置为 false
     private Boolean currentPasswordMustChange(Long userId) {
         SysUserEntity user = userMapper.selectById(userId);
         return user != null && Boolean.TRUE.equals(user.getPasswordMustChange());

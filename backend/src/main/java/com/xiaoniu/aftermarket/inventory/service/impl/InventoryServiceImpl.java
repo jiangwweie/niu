@@ -57,6 +57,7 @@ public class InventoryServiceImpl implements InventoryService {
         }
         validatePartInStore(part, command.getStoreId());
 
+        // 行锁 SELECT FOR UPDATE 保证同一门店+配件的并发操作串行化
         InventoryStockEntity stock = inventoryStockMapper.selectByStoreIdAndPartIdForUpdate(
                 command.getStoreId(), command.getPartId());
 
@@ -82,6 +83,8 @@ public class InventoryServiceImpl implements InventoryService {
             beforeReserved = stock.getReservedQty();
         }
 
+        // 入库时 actual 和 available 同步增加，reserved 不变
+        // 规则：actual = available + reserved
         int afterActual = beforeActual + command.getQuantity();
         int afterAvailable = beforeAvailable + command.getQuantity();
 
@@ -89,6 +92,8 @@ public class InventoryServiceImpl implements InventoryService {
         stock.setAvailableQty(afterAvailable);
         inventoryStockMapper.updateById(stock);
 
+        // 每次库存变化必须生成流水记录，用于对账、审计、回溯
+        // 流水记录 before/after 快照，可校验数据一致性
         LocalDateTime now = LocalDateTime.now();
         InventoryFlowEntity flow = new InventoryFlowEntity();
         flow.setStoreId(command.getStoreId());
@@ -111,6 +116,7 @@ public class InventoryServiceImpl implements InventoryService {
         flow.setCreatedBy(command.getOperatorId());
         inventoryFlowMapper.insert(flow);
 
+        // 更新 lastFlowId 关联最近一笔流水，便于快速追溯
         stock.setLastFlowId(flow.getId());
         stock.setLastChangedAt(now);
         inventoryStockMapper.updateById(stock);
@@ -132,6 +138,7 @@ public class InventoryServiceImpl implements InventoryService {
         }
         validatePartInStore(part, command.getStoreId());
 
+        // 行锁 SELECT FOR UPDATE 保证同一门店+配件的并发操作串行化
         InventoryStockEntity stock = inventoryStockMapper.selectByStoreIdAndPartIdForUpdate(
                 command.getStoreId(), command.getPartId());
         if (stock == null) {
@@ -142,9 +149,12 @@ public class InventoryServiceImpl implements InventoryService {
         int beforeAvailable = stock.getAvailableQty();
         int beforeReserved = stock.getReservedQty();
 
+        // 调整时同步增减 actual 和 available，reserved 不变
+        // 负数调整表示盘亏/出库，正数调整表示盘盈/入库
         int afterActual = beforeActual + command.getQuantityDelta();
         int afterAvailable = beforeAvailable + command.getQuantityDelta();
 
+        // 校验调整后数量不能为负，防止数据异常
         if (afterAvailable < 0) {
             throw new BusinessException(ErrorCode.INVENTORY_ADJUST_WOULD_NEGATIVE);
         }
@@ -156,6 +166,7 @@ public class InventoryServiceImpl implements InventoryService {
         stock.setAvailableQty(afterAvailable);
         inventoryStockMapper.updateById(stock);
 
+        // 每次库存变化必须生成流水记录，用于对账、审计、回溯
         LocalDateTime now = LocalDateTime.now();
         InventoryFlowEntity flow = new InventoryFlowEntity();
         flow.setStoreId(command.getStoreId());

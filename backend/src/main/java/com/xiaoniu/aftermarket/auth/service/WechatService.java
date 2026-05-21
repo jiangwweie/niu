@@ -37,6 +37,8 @@ public class WechatService {
         this.jwtProvider = jwtProvider;
     }
 
+    // 微信登录：小程序扫码获取 openid，通过 openid 反查已绑定的 STORE 用户
+    // PLATFORM 账户不允许微信登录（运营角色走密码登录，且微信登录仅面向门店店员场景）
     @Transactional
     public LoginResponse loginWithWechat(String code) {
         String openid = code2Session(code);
@@ -51,6 +53,7 @@ public class WechatService {
         if (user == null) {
             throw new BusinessException(ErrorCode.WECHAT_NOT_BOUND);
         }
+        // 只允许 STORE 类型账户微信登录，PLATFORM 账户强制走密码登录
         if ("PLATFORM".equals(user.getAccountType())) {
             throw new BusinessException(ErrorCode.WECHAT_LOGIN_FAILED, "该微信账号不支持此登录方式");
         }
@@ -72,6 +75,8 @@ public class WechatService {
         );
     }
 
+    // 绑定微信：openid 由服务端调用微信 API 获取，不接受前端传入（防伪造）
+    // 一个 openid 只能绑定一个用户，一个用户也只能绑定一个 openid
     @Transactional
     public void bindWechat(Long userId, String code) {
         SysUserEntity user = userMapper.selectById(userId);
@@ -125,11 +130,14 @@ public class WechatService {
                 .set(SysUserEntity::getUpdatedAt, LocalDateTime.now()));
     }
 
+    // openid 来自微信服务端 code2session 接口，是绑定凭据而非前端可信输入
+    // 日志中禁止打印 appSecret、session_key、openid，防止泄露导致会话劫持
     private String code2Session(String code) {
         WxMaJscode2SessionResult result;
         try {
             result = wxMaService.getUserService().getSessionInfo(code);
         } catch (WxErrorException e) {
+            // 只记录错误码，不记录完整响应（响应中含 session_key）
             log.error("WeChat code2Session failed, error code: {}, error msg: {}",
                     e.getError().getErrorCode(), e.getError().getErrorMsg());
             throw new BusinessException(ErrorCode.WECHAT_LOGIN_FAILED, "微信登录失败");

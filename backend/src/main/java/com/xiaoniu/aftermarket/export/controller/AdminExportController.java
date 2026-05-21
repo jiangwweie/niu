@@ -35,6 +35,10 @@ public class AdminExportController {
         this.exportService = exportService;
     }
 
+    /**
+     * Excel 导出应与页面查询条件一致，复用 FinanceService 的查询逻辑
+     * 权限控制：EXCEL_EXPORT
+     */
     @GetMapping("/finance")
     @PreAuthorize("hasAuthority('EXCEL_EXPORT')")
     public ResponseEntity<byte[]> exportFinance(
@@ -53,6 +57,7 @@ public class AdminExportController {
             case "RANGE" -> {
                 LocalDate start = parseDateRequired(startDate, "startDate");
                 LocalDate end = parseDateRequired(endDate, "endDate");
+                // 日期范围校验：开始日期不能晚于结束日期
                 if (start.isAfter(end)) {
                     throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "开始日期不能晚于结束日期");
                 }

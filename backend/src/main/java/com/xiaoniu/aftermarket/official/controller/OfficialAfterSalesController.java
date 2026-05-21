@@ -94,6 +94,7 @@ public class OfficialAfterSalesController {
         return ApiResponse.success(id);
     }
 
+    // 官方结算为人工录入，settlementAmount 来自前端手动输入，不对接官方系统自动拉取
     @PostMapping("/api/admin/work-orders/{workOrderId}/official-after-sales/settle")
     @PreAuthorize("hasAuthority('OFFICIAL_SETTLEMENT_MANAGE')")
     public ApiResponse<Void> markOfficialSettled(
@@ -105,6 +106,7 @@ public class OfficialAfterSalesController {
         command.setWorkOrderId(workOrderId);
         command.setOperatorId(user.userId());
         command.setSettlementAmount(request.getSettlementAmount());
+        // settlementAmount 仅影响官方结算记录，不影响工单上的客户已收金额
         command.setSettlementTime(request.getSettlementTime());
         command.setRemark(request.getRemark());
         officialAfterSalesService.markOfficialSettled(command);

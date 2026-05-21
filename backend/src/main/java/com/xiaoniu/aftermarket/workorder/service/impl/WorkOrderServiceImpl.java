@@ -101,6 +101,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     @Override
     @Transactional
     public Long createDraft(CreateDraftWorkOrderCommand command) {
+        // 草稿阶段仅创建工单和收费项，不预占库存，避免用户放弃草稿时产生无效库存变动
         WorkOrderEntity entity = new WorkOrderEntity();
         entity.setStoreId(command.getStoreId());
         entity.setWorkOrderNo(sequenceService.next("WORK_ORDER"));
@@ -137,6 +138,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     @Override
     @Transactional
     public WorkOrderEntity updateDraft(Long workOrderId, UpdateWorkOrderDraftCommand command) {
+        // 只有草稿状态的工单允许编辑，已提交后必须走状态动作接口
         if (command.getStoreId() == null) {
             throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "storeId不能为空");
         }
@@ -305,6 +307,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     @Transactional
     public void updateChargeItem(Long workOrderId, Long chargeItemId,
                                  UpdateWorkOrderChargeItemCommand command) {
+        // 收费项编辑仅限草稿状态，已提交工单的收费项不可直接修改
         loadAndValidateDraft(workOrderId, command.getStoreId());
 
         WorkOrderChargeItemEntity entity = chargeItemMapper.selectById(chargeItemId);
@@ -354,6 +357,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     @Override
     @Transactional
     public void removeChargeItem(Long storeId, Long workOrderId, Long chargeItemId) {
+        // 删除收费项仅限草稿状态，防止已预占库存的收费项被误删
         loadAndValidateDraft(workOrderId, storeId);
 
         WorkOrderChargeItemEntity entity = chargeItemMapper.selectById(chargeItemId);
@@ -402,6 +406,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         BigDecimal receivableAmount = calculateReceivableAmount(items);
         Map<Long, Integer> reserveQuantities = summarizeReserveQuantities(items, workOrder.getStoreId());
 
+        // 提交工单时才预占库存：扣减可用库存，增加预占库存
         LocalDateTime now = LocalDateTime.now();
         for (Map.Entry<Long, Integer> entry : reserveQuantities.entrySet()) {
             reservePartStock(workOrder, entry.getKey(), entry.getValue(), command, now);
@@ -450,6 +455,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
 
         LocalDateTime now = LocalDateTime.now();
         if (submittedCancel) {
+            // 取消已提交的工单必须释放预占库存，否则库存会被永久占用
             List<WorkOrderChargeItemEntity> items = chargeItemMapper.selectByWorkOrderId(workOrder.getId());
             Map<Long, Integer> releaseQuantities = summarizeInventoryAffectingQuantities(items);
             for (Map.Entry<Long, Integer> entry : releaseQuantities.entrySet()) {
@@ -495,11 +501,13 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         List<WorkOrderChargeItemEntity> items = chargeItemMapper.selectByWorkOrderId(workOrder.getId());
         BigDecimal receivableAmount = calculateReceivableAmount(items);
         BigDecimal receivedAmount = paymentAmountService.calculateReceivedAmount(workOrder.getId());
+        // 结算前必须校验实收金额 >= 应收金额，防止未收齐款项就完成工单
         if (receivedAmount.compareTo(receivableAmount) < 0) {
             throw new BusinessException(ErrorCode.WORK_ORDER_RECEIVED_AMOUNT_NOT_ENOUGH);
         }
 
         Map<Long, Integer> consumeQuantities = summarizeInventoryAffectingQuantities(items);
+        // 结算工单时扣减实际库存和预占库存
         LocalDateTime now = LocalDateTime.now();
         for (Map.Entry<Long, Integer> entry : consumeQuantities.entrySet()) {
             consumePartStock(workOrder, entry.getKey(), entry.getValue(), command, now);

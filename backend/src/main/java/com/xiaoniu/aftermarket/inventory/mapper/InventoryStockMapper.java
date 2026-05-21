@@ -16,6 +16,7 @@ public interface InventoryStockMapper extends BaseMapper<InventoryStockEntity> {
             """)
     InventoryStockEntity selectByStoreIdAndPartId(@Param("storeId") Long storeId, @Param("partId") Long partId);
 
+    // FOR UPDATE 行锁：防止并发操作导致库存超卖或数据不一致
     @Select("""
             SELECT * FROM inventory_stock
             WHERE store_id = #{storeId} AND part_id = #{partId} AND deleted = 0

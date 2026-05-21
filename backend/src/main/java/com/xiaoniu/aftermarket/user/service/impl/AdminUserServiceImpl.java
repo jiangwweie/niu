@@ -112,6 +112,7 @@ public class AdminUserServiceImpl implements AdminUserService {
         ensureUniquePhone(request.phone(), null);
         String password = hasText(request.initialPassword()) ? request.initialPassword() : generateTemporaryPassword();
         validatePassword(password);
+        // superAdmin 可跨门店创建用户，普通管理员只能在自己门店内创建
         Long targetStoreId = isSuperAdmin(currentUserId) && request.storeId() != null
                 ? request.storeId()
                 : currentStoreId;
@@ -121,7 +122,7 @@ public class AdminUserServiceImpl implements AdminUserService {
         user.setRealName(request.realName().trim());
         user.setPhone(blankToNull(request.phone()));
         user.setPasswordHash(passwordEncoder.encode(password));
-        user.setPasswordMustChange(true);
+        user.setPasswordMustChange(true); // 新建用户强制首次登录改密
         user.setStatus(Boolean.FALSE.equals(request.enabled()) ? CommonStatus.DISABLED.name() : CommonStatus.ENABLED.name());
         user.setCreatedBy(currentUserId);
         user.setCreatedAt(LocalDateTime.now());
@@ -308,9 +309,11 @@ public class AdminUserServiceImpl implements AdminUserService {
                 ? Set.of()
                 : roleCodes.stream().filter(this::hasText).map(String::trim).collect(Collectors.toCollection(LinkedHashSet::new));
 
+        // SUPER_ADMIN 角色变更只允许 superAdmin 操作，防止权限提升
         if ((oldRoleCodes.contains("SUPER_ADMIN") || newRoleCodes.contains("SUPER_ADMIN")) && !isSuperAdmin(operatorId)) {
             throw new BusinessException(ErrorCode.USER_OPERATION_NOT_ALLOWED);
         }
+        // 不能移除自己的 SUPER_ADMIN 角色，防止系统无管理员
         if (oldRoleCodes.contains("SUPER_ADMIN") && !newRoleCodes.contains("SUPER_ADMIN")) {
             if (operatorId.equals(userId)) {
                 throw new BusinessException(ErrorCode.USER_OPERATION_NOT_ALLOWED);
@@ -361,6 +364,7 @@ public class AdminUserServiceImpl implements AdminUserService {
                 .stream().map(SysUserRoleEntity::getUserId).collect(Collectors.toSet());
     }
 
+    // 非 superAdmin 不能操作 superAdmin 用户；最后一个启用的 superAdmin 不能被禁用
     private void validateDisableAllowed(Long currentUserId, SysUserEntity target) {
         if (currentUserId.equals(target.getId())) {
             throw new BusinessException(ErrorCode.USER_DISABLE_NOT_ALLOWED);

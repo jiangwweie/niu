@@ -23,6 +23,7 @@ public final class CurrentUserContext {
         CURRENT_USER.remove();
     }
 
+    // 门店接口必须有 storeId，PLATFORM 账户（无 storeId）调用门店接口时直接拒绝
     public static Long requireStoreId() {
         return get()
                 .filter(u -> u.storeId() != null)
