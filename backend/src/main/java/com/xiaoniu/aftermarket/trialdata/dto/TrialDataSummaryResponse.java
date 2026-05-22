@@ -17,4 +17,5 @@ public class TrialDataSummaryResponse {
     private Integer inventoryStockCount;
     private Integer vehicleCount;
     private Integer customerCount;
+    private Integer legacyWorkOrderStatusCount;
 }

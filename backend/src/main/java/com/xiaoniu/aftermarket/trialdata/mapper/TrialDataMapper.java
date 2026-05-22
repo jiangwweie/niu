@@ -41,6 +41,13 @@ public interface TrialDataMapper {
     @Select("SELECT COUNT(*) FROM customer WHERE store_id = #{storeId}")
     Integer countCustomers(@Param("storeId") Long storeId);
 
+    @Select("""
+            SELECT COUNT(*) FROM work_order
+            WHERE store_id = #{storeId}
+              AND status IN ('PENDING_ACCEPT', 'ACCEPTED', 'PART_ORDERED', 'PART_ARRIVED', 'SETTLED')
+            """)
+    Integer countLegacyWorkOrderStatuses(@Param("storeId") Long storeId);
+
     // --- Delete operations ---
 
     @Update("DELETE FROM work_order_status_log WHERE store_id = #{storeId}")

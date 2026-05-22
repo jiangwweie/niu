@@ -36,10 +36,9 @@ public class RefundServiceImpl implements RefundService {
             .map(PaymentMethod::getCode)
             .collect(Collectors.toUnmodifiableSet());
     private static final Set<String> REFUNDABLE_STATUSES = Set.of(
-            WorkOrderStatus.PENDING_ACCEPT.getCode(),
-            WorkOrderStatus.ACCEPTED.getCode(),
-            WorkOrderStatus.PART_ORDERED.getCode(),
-            WorkOrderStatus.PART_ARRIVED.getCode()
+            WorkOrderStatus.REPAIRING.getCode(),
+            WorkOrderStatus.REPAIR_DONE.getCode(),
+            WorkOrderStatus.CANCELLED.getCode()
     );
 
     private final RefundRecordMapper refundRecordMapper;
@@ -63,7 +62,7 @@ public class RefundServiceImpl implements RefundService {
         validateRefundCommand(command);
 
         WorkOrderEntity workOrder = loadWorkOrderForRefund(command.getStoreId(), command.getWorkOrderId());
-        validateRefundableStatus(workOrder);
+        validateRefundableStatus(workOrder, command.isAllowDeliveredAfterRefund());
 
         // 可退金额 = 实收金额（支付总额 - 退款总额），退款后额度释放可重新收取
         BigDecimal refundableAmount = calculateRefundableAmount(workOrder.getId());
@@ -183,8 +182,10 @@ public class RefundServiceImpl implements RefundService {
         return workOrder;
     }
 
-    private void validateRefundableStatus(WorkOrderEntity workOrder) {
-        if (!REFUNDABLE_STATUSES.contains(workOrder.getStatus())) {
+    private void validateRefundableStatus(WorkOrderEntity workOrder, boolean allowDeliveredAfterRefund) {
+        boolean deliveredAllowed = allowDeliveredAfterRefund
+                && WorkOrderStatus.DELIVERED.getCode().equals(workOrder.getStatus());
+        if (!deliveredAllowed && !REFUNDABLE_STATUSES.contains(workOrder.getStatus())) {
             throw new BusinessException(ErrorCode.PAYMENT_WORK_ORDER_STATUS_INVALID);
         }
     }

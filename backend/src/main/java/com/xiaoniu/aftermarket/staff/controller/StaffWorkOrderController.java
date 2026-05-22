@@ -16,8 +16,11 @@ import com.xiaoniu.aftermarket.payment.service.PaymentService;
 import com.xiaoniu.aftermarket.payment.service.RefundService;
 import com.xiaoniu.aftermarket.staff.dto.StaffAddChargeItemRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffCancelWorkOrderRequest;
+import com.xiaoniu.aftermarket.staff.dto.StaffAddNonInventoryChargeRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffChargeItemIdResponse;
 import com.xiaoniu.aftermarket.staff.dto.StaffCreateDraftWorkOrderRequest;
+import com.xiaoniu.aftermarket.staff.dto.StaffDeliverWorkOrderRequest;
+import com.xiaoniu.aftermarket.staff.dto.StaffMarkRepairDoneRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffRecordPaymentRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffRecordRefundRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffSettleWorkOrderRequest;
@@ -26,8 +29,11 @@ import com.xiaoniu.aftermarket.staff.dto.StaffUpdateChargeItemRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffUpdateDraftWorkOrderRequest;
 import com.xiaoniu.aftermarket.workorder.application.SettleWorkOrderApplicationService;
 import com.xiaoniu.aftermarket.workorder.dto.AddWorkOrderChargeItemCommand;
+import com.xiaoniu.aftermarket.workorder.dto.AddNonInventoryChargeCommand;
 import com.xiaoniu.aftermarket.workorder.dto.CancelWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.CreateDraftWorkOrderCommand;
+import com.xiaoniu.aftermarket.workorder.dto.DeliverWorkOrderCommand;
+import com.xiaoniu.aftermarket.workorder.dto.MarkRepairDoneWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.SettleWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.SubmitWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.UpdateWorkOrderChargeItemCommand;
@@ -248,6 +254,60 @@ public class StaffWorkOrderController {
         return ApiResponse.success(StaffWorkOrderDetail.from(detail));
     }
 
+    @PostMapping("/{workOrderId}/mark-repair-done")
+    @PreAuthorize("hasAuthority('WORK_ORDER_SETTLE')")
+    public ApiResponse<StaffWorkOrderDetail> markRepairDone(
+            @PathVariable Long workOrderId,
+            @Valid @RequestBody StaffMarkRepairDoneRequest request) {
+        CurrentUser user = requireCurrentUser();
+        MarkRepairDoneWorkOrderCommand command = new MarkRepairDoneWorkOrderCommand();
+        command.setStoreId(user.storeId());
+        command.setWorkOrderId(workOrderId);
+        command.setOperatorId(user.userId());
+        command.setNoChargeReason(request.noChargeReason());
+        command.setNoChargeRemark(request.noChargeRemark());
+        command.setRemark(request.remark());
+        workOrderService.markRepairDone(command);
+        return ApiResponse.success(StaffWorkOrderDetail.from(workOrderService.getById(workOrderId)));
+    }
+
+    @PostMapping("/{workOrderId}/deliver")
+    @PreAuthorize("hasAuthority('WORK_ORDER_SETTLE')")
+    public ApiResponse<StaffWorkOrderDetail> deliver(
+            @PathVariable Long workOrderId,
+            @Valid @RequestBody StaffDeliverWorkOrderRequest request) {
+        CurrentUser user = requireCurrentUser();
+        DeliverWorkOrderCommand command = new DeliverWorkOrderCommand();
+        command.setStoreId(user.storeId());
+        command.setWorkOrderId(workOrderId);
+        command.setOperatorId(user.userId());
+        command.setNoChargeReason(request.noChargeReason());
+        command.setNoChargeRemark(request.noChargeRemark());
+        command.setRemark(request.remark());
+        workOrderService.deliver(command);
+        return ApiResponse.success(StaffWorkOrderDetail.from(workOrderService.getById(workOrderId)));
+    }
+
+    @PostMapping("/{workOrderId}/non-inventory-charges")
+    @PreAuthorize("hasAuthority('WORK_ORDER_UPDATE')")
+    public ApiResponse<StaffChargeItemIdResponse> addNonInventoryCharge(
+            @PathVariable Long workOrderId,
+            @Valid @RequestBody StaffAddNonInventoryChargeRequest request) {
+        CurrentUser user = requireCurrentUser();
+        AddNonInventoryChargeCommand command = new AddNonInventoryChargeCommand();
+        command.setStoreId(user.storeId());
+        command.setWorkOrderId(workOrderId);
+        command.setOperatorId(user.userId());
+        command.setChargeType(request.chargeType());
+        command.setItemName(request.itemName());
+        command.setQuantity(request.quantity());
+        command.setUnit(request.unit());
+        command.setUnitPrice(request.unitPrice());
+        command.setReason(request.reason());
+        command.setRemark(request.remark());
+        return ApiResponse.success(new StaffChargeItemIdResponse(workOrderService.addNonInventoryCharge(command)));
+    }
+
     @PostMapping("/{workOrderId}/payments")
     @PreAuthorize("hasAuthority('PAYMENT_RECORD')")
     public ApiResponse<StaffPaymentRecordResponse> recordPayment(
@@ -313,10 +373,7 @@ public class StaffWorkOrderController {
         command.setOperatorId(user.userId());
         command.setRemark(request.remark());
 
-        settleService.execute(command);
-        WorkOrderDetailResponse detail = workOrderService.getById(workOrderId);
-        WorkOrderEntity entity = workOrderMapper.selectById(workOrderId);
-        return ApiResponse.success(StaffSettledWorkOrderResponse.from(detail, entity));
+        throw new BusinessException(ErrorCode.WORK_ORDER_LEGACY_SETTLE_DISABLED);
     }
 
     private CurrentUser requireCurrentUser() {

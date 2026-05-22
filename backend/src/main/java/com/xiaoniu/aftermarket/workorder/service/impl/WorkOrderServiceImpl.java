@@ -4,8 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.common.enums.ChargeType;
+import com.xiaoniu.aftermarket.common.enums.CashierStatus;
 import com.xiaoniu.aftermarket.common.enums.CommonStatus;
 import com.xiaoniu.aftermarket.common.enums.InventoryFlowType;
+import com.xiaoniu.aftermarket.common.enums.InventoryStatus;
 import com.xiaoniu.aftermarket.common.enums.WorkOrderStatus;
 import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
@@ -16,13 +18,18 @@ import com.xiaoniu.aftermarket.inventory.mapper.InventoryFlowMapper;
 import com.xiaoniu.aftermarket.inventory.mapper.InventoryStockMapper;
 import com.xiaoniu.aftermarket.official.entity.OfficialAfterSalesEntity;
 import com.xiaoniu.aftermarket.official.mapper.OfficialAfterSalesMapper;
+import com.xiaoniu.aftermarket.payment.dto.CashierSummary;
+import com.xiaoniu.aftermarket.payment.service.CashierStatusService;
 import com.xiaoniu.aftermarket.payment.service.impl.PaymentAmountService;
 import com.xiaoniu.aftermarket.part.entity.PartEntity;
 import com.xiaoniu.aftermarket.part.mapper.PartMapper;
 import com.xiaoniu.aftermarket.workorder.dto.AddWorkOrderChargeItemCommand;
+import com.xiaoniu.aftermarket.workorder.dto.AddNonInventoryChargeCommand;
 import com.xiaoniu.aftermarket.workorder.dto.AdjustChargeItemsCommand;
 import com.xiaoniu.aftermarket.workorder.dto.CancelWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.CreateDraftWorkOrderCommand;
+import com.xiaoniu.aftermarket.workorder.dto.DeliverWorkOrderCommand;
+import com.xiaoniu.aftermarket.workorder.dto.MarkRepairDoneWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.SettleWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.SubmitWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.UpdateWorkOrderChargeItemCommand;
@@ -63,20 +70,8 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     private final InventoryStockMapper inventoryStockMapper;
     private final InventoryFlowMapper inventoryFlowMapper;
     private final PaymentAmountService paymentAmountService;
+    private final CashierStatusService cashierStatusService;
     private final OfficialAfterSalesMapper officialAfterSalesMapper;
-
-    private static final List<String> SETTLE_ALLOWED_STATUSES = List.of(
-            WorkOrderStatus.PENDING_ACCEPT.getCode(),
-            WorkOrderStatus.ACCEPTED.getCode(),
-            WorkOrderStatus.PART_ORDERED.getCode(),
-            WorkOrderStatus.PART_ARRIVED.getCode()
-    );
-    private static final List<String> CANCEL_SUBMITTED_ALLOWED_STATUSES = List.of(
-            WorkOrderStatus.PENDING_ACCEPT.getCode(),
-            WorkOrderStatus.ACCEPTED.getCode(),
-            WorkOrderStatus.PART_ORDERED.getCode(),
-            WorkOrderStatus.PART_ARRIVED.getCode()
-    );
 
     public WorkOrderServiceImpl(WorkOrderMapper workOrderMapper,
                                 WorkOrderChargeItemMapper chargeItemMapper,
@@ -86,6 +81,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
 	                                InventoryStockMapper inventoryStockMapper,
 	                                InventoryFlowMapper inventoryFlowMapper,
 	                                PaymentAmountService paymentAmountService,
+                                    CashierStatusService cashierStatusService,
 	                                OfficialAfterSalesMapper officialAfterSalesMapper) {
         this.workOrderMapper = workOrderMapper;
         this.chargeItemMapper = chargeItemMapper;
@@ -95,6 +91,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         this.inventoryStockMapper = inventoryStockMapper;
         this.inventoryFlowMapper = inventoryFlowMapper;
         this.paymentAmountService = paymentAmountService;
+        this.cashierStatusService = cashierStatusService;
         this.officialAfterSalesMapper = officialAfterSalesMapper;
     }
 
@@ -200,6 +197,9 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         response.setStatus(entity.getStatus());
         response.setReceivableAmount(entity.getReceivableAmount());
         response.setReceivedAmount(entity.getReceivedAmount());
+        enrichStatusFields(response, entity);
+        response.setNoChargeReason(entity.getNoChargeReason());
+        response.setNoChargeRemark(entity.getNoChargeRemark());
         response.setRemark(entity.getRemark());
         response.setCreatedAt(entity.getCreatedAt());
         response.setChargeItems(items.stream().map(this::toChargeItemResponse).toList());
@@ -412,7 +412,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
             reservePartStock(workOrder, entry.getKey(), entry.getValue(), command, now);
         }
 
-        workOrder.setStatus(WorkOrderStatus.PENDING_ACCEPT.getCode());
+        workOrder.setStatus(WorkOrderStatus.REPAIRING.getCode());
         workOrder.setReceivableAmount(receivableAmount);
         workOrder.setSubmittedBy(command.getOperatorId());
         workOrder.setSubmittedAt(now);
@@ -420,7 +420,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         workOrderMapper.updateById(workOrder);
 
         writeStatusLog(workOrder.getStoreId(), workOrder.getId(),
-                WorkOrderStatus.DRAFT.getCode(), WorkOrderStatus.PENDING_ACCEPT.getCode(),
+                WorkOrderStatus.DRAFT.getCode(), WorkOrderStatus.REPAIRING.getCode(),
                 "SUBMIT", command.getOperatorId(), now, "提交工单", command.getRemark());
     }
 
@@ -448,7 +448,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
 
         String fromStatus = workOrder.getStatus();
         boolean draftCancel = WorkOrderStatus.DRAFT.getCode().equals(fromStatus);
-        boolean submittedCancel = CANCEL_SUBMITTED_ALLOWED_STATUSES.contains(fromStatus);
+        boolean submittedCancel = WorkOrderStatus.REPAIRING.getCode().equals(fromStatus);
         if (!draftCancel && !submittedCancel) {
             throw new BusinessException(ErrorCode.WORK_ORDER_CANCEL_NOT_ALLOWED);
         }
@@ -478,52 +478,120 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     @Override
     @Transactional
     public void settle(SettleWorkOrderCommand command) {
-        if (command.getStoreId() == null) {
-            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "storeId不能为空");
-        }
-        if (command.getWorkOrderId() == null) {
-            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "workOrderId不能为空");
-        }
-        if (command.getOperatorId() == null) {
-            throw new BusinessException(ErrorCode.OPERATOR_REQUIRED);
-        }
+        throw new BusinessException(ErrorCode.WORK_ORDER_LEGACY_SETTLE_DISABLED);
+    }
 
-        WorkOrderEntity workOrder = workOrderMapper.selectByIdForUpdate(command.getWorkOrderId());
-        if (workOrder == null || workOrder.getStoreId() == null
-                || !command.getStoreId().equals(workOrder.getStoreId())) {
-            throw new BusinessException(ErrorCode.WORK_ORDER_NOT_FOUND);
-        }
-        String fromStatus = workOrder.getStatus();
-        if (!SETTLE_ALLOWED_STATUSES.contains(fromStatus)) {
-            throw new BusinessException(ErrorCode.WORK_ORDER_SETTLE_NOT_ALLOWED);
+    @Override
+    @Transactional
+    public void markRepairDone(MarkRepairDoneWorkOrderCommand command) {
+        validateActionCommand(command.getStoreId(), command.getWorkOrderId(), command.getOperatorId());
+        WorkOrderEntity workOrder = loadForAction(command.getStoreId(), command.getWorkOrderId());
+        if (!WorkOrderStatus.REPAIRING.getCode().equals(workOrder.getStatus())) {
+            throw new BusinessException(ErrorCode.WORK_ORDER_REPAIR_DONE_NOT_ALLOWED);
         }
 
         List<WorkOrderChargeItemEntity> items = chargeItemMapper.selectByWorkOrderId(workOrder.getId());
         BigDecimal receivableAmount = calculateReceivableAmount(items);
-        BigDecimal receivedAmount = paymentAmountService.calculateReceivedAmount(workOrder.getId());
-        // 结算前必须校验实收金额 >= 应收金额，防止未收齐款项就完成工单
-        if (receivedAmount.compareTo(receivableAmount) < 0) {
-            throw new BusinessException(ErrorCode.WORK_ORDER_RECEIVED_AMOUNT_NOT_ENOUGH);
+        if (receivableAmount.compareTo(BigDecimal.ZERO) == 0) {
+            applyNoChargeReason(workOrder, command.getNoChargeReason(), command.getNoChargeRemark());
         }
 
         Map<Long, Integer> consumeQuantities = summarizeInventoryAffectingQuantities(items);
-        // 结算工单时扣减实际库存和预占库存
         LocalDateTime now = LocalDateTime.now();
         for (Map.Entry<Long, Integer> entry : consumeQuantities.entrySet()) {
-            consumePartStock(workOrder, entry.getKey(), entry.getValue(), command, now);
+            consumePartStock(workOrder, entry.getKey(), entry.getValue(), command.getOperatorId(),
+                    "标记维修完成扣减库存", command.getRemark(), now);
         }
 
-        workOrder.setStatus(WorkOrderStatus.SETTLED.getCode());
+        workOrder.setStatus(WorkOrderStatus.REPAIR_DONE.getCode());
         workOrder.setReceivableAmount(receivableAmount);
-        workOrder.setReceivedAmount(receivedAmount);
-        workOrder.setSettledBy(command.getOperatorId());
-        workOrder.setSettledAt(now);
+        workOrder.setReceivedAmount(paymentAmountService.calculateReceivedAmount(workOrder.getId()));
+        workOrder.setRepairDoneBy(command.getOperatorId());
+        workOrder.setRepairDoneAt(now);
         workOrder.setUpdatedBy(command.getOperatorId());
         workOrderMapper.updateById(workOrder);
 
-        writeStatusLog(workOrder.getStoreId(), workOrder.getId(), fromStatus,
-                WorkOrderStatus.SETTLED.getCode(), "SETTLE", command.getOperatorId(),
-                now, "完成结算", command.getRemark());
+        writeStatusLog(workOrder.getStoreId(), workOrder.getId(), WorkOrderStatus.REPAIRING.getCode(),
+                WorkOrderStatus.REPAIR_DONE.getCode(), "MARK_REPAIR_DONE", command.getOperatorId(),
+                now, "标记维修完成", command.getRemark());
+    }
+
+    @Override
+    @Transactional
+    public void deliver(DeliverWorkOrderCommand command) {
+        validateActionCommand(command.getStoreId(), command.getWorkOrderId(), command.getOperatorId());
+        WorkOrderEntity workOrder = loadForAction(command.getStoreId(), command.getWorkOrderId());
+        if (!WorkOrderStatus.REPAIR_DONE.getCode().equals(workOrder.getStatus())) {
+            throw new BusinessException(ErrorCode.WORK_ORDER_DELIVER_NOT_ALLOWED);
+        }
+        if (paymentAmountService.normalizeAmount(workOrder.getReceivableAmount()).compareTo(BigDecimal.ZERO) == 0) {
+            applyNoChargeReason(workOrder, command.getNoChargeReason(), command.getNoChargeRemark());
+        }
+        CashierSummary summary = cashierStatusService.summarize(workOrder);
+        boolean payable = CashierStatus.PAID.getCode().equals(summary.getCashierStatus())
+                || CashierStatus.NO_CHARGE.getCode().equals(summary.getCashierStatus());
+        if (!payable) {
+            throw new BusinessException(ErrorCode.WORK_ORDER_RECEIVED_AMOUNT_NOT_ENOUGH);
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        workOrder.setStatus(WorkOrderStatus.DELIVERED.getCode());
+        workOrder.setDeliveredBy(command.getOperatorId());
+        workOrder.setDeliveredAt(now);
+        workOrder.setUpdatedBy(command.getOperatorId());
+        workOrderMapper.updateById(workOrder);
+
+        writeStatusLog(workOrder.getStoreId(), workOrder.getId(), WorkOrderStatus.REPAIR_DONE.getCode(),
+                WorkOrderStatus.DELIVERED.getCode(), "DELIVER", command.getOperatorId(),
+                now, "交付关闭", command.getRemark());
+    }
+
+    @Override
+    @Transactional
+    public Long addNonInventoryCharge(AddNonInventoryChargeCommand command) {
+        validateActionCommand(command.getStoreId(), command.getWorkOrderId(), command.getOperatorId());
+        if (!StringUtils.hasText(command.getReason())) {
+            throw new BusinessException(ErrorCode.WORK_ORDER_NON_INVENTORY_CHARGE_REASON_REQUIRED);
+        }
+        WorkOrderEntity workOrder = loadForAction(command.getStoreId(), command.getWorkOrderId());
+        if (!WorkOrderStatus.REPAIR_DONE.getCode().equals(workOrder.getStatus())) {
+            throw new BusinessException(ErrorCode.WORK_ORDER_NON_INVENTORY_CHARGE_NOT_ALLOWED);
+        }
+        if (!ChargeType.LABOR.getCode().equals(command.getChargeType())
+                && !ChargeType.OTHER.getCode().equals(command.getChargeType())) {
+            throw new BusinessException(ErrorCode.CHARGE_TYPE_INVALID);
+        }
+
+        AddWorkOrderChargeItemCommand addCommand = new AddWorkOrderChargeItemCommand();
+        addCommand.setStoreId(command.getStoreId());
+        addCommand.setChargeType(command.getChargeType());
+        addCommand.setItemName(command.getItemName());
+        addCommand.setQuantity(command.getQuantity());
+        addCommand.setUnit(command.getUnit());
+        addCommand.setUnitPrice(command.getUnitPrice());
+        addCommand.setRemark(command.getReason() + (StringUtils.hasText(command.getRemark())
+                ? "；" + command.getRemark() : ""));
+        validateChargeItemFields(addCommand, workOrder.getStoreId());
+
+        WorkOrderChargeItemEntity entity = new WorkOrderChargeItemEntity();
+        entity.setStoreId(workOrder.getStoreId());
+        entity.setWorkOrderId(workOrder.getId());
+        entity.setChargeType(command.getChargeType());
+        entity.setItemName(command.getItemName());
+        entity.setQuantity(command.getQuantity());
+        entity.setUnit(command.getUnit());
+        entity.setUnitPrice(command.getUnitPrice());
+        entity.setRemark(addCommand.getRemark());
+        populateChargeItemByType(entity, addCommand);
+        BigDecimal lineAmount = new BigDecimal(command.getQuantity()).multiply(command.getUnitPrice())
+                .setScale(2, RoundingMode.HALF_UP);
+        entity.setLineAmount(lineAmount);
+        entity.setStatus("ACTIVE");
+        entity.setTempPart(false);
+        chargeItemMapper.insert(entity);
+        recalculateReceivableAmount(workOrder.getId());
+        paymentAmountService.updateReceivedAmount(workOrder.getId());
+        return entity.getId();
     }
 
     @Override
@@ -661,6 +729,13 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     private void consumePartStock(WorkOrderEntity workOrder, Long partId, Integer quantity,
                                   SettleWorkOrderCommand command,
                                   LocalDateTime operatedAt) {
+        consumePartStock(workOrder, partId, quantity, command.getOperatorId(),
+                "工单结算扣减库存", command.getRemark(), operatedAt);
+    }
+
+    private void consumePartStock(WorkOrderEntity workOrder, Long partId, Integer quantity,
+                                  Long operatorId, String reason, String remark,
+                                  LocalDateTime operatedAt) {
         InventoryStockEntity stock = inventoryStockMapper.selectByStoreIdAndPartIdForUpdate(
                 workOrder.getStoreId(), partId);
         if (stock == null) {
@@ -682,7 +757,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
 
         stock.setActualQty(afterActual);
         stock.setReservedQty(afterReserved);
-        stock.setUpdatedBy(command.getOperatorId());
+        stock.setUpdatedBy(operatorId);
         inventoryStockMapper.updateById(stock);
 
         InventoryFlowEntity flow = new InventoryFlowEntity();
@@ -700,11 +775,11 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         flow.setBusinessType("WORK_ORDER");
         flow.setBusinessId(workOrder.getId());
         flow.setWorkOrderId(workOrder.getId());
-        flow.setOperatorId(command.getOperatorId());
+        flow.setOperatorId(operatorId);
         flow.setOperatedAt(operatedAt);
-        flow.setReason("工单结算扣减库存");
-        flow.setRemark(command.getRemark());
-        flow.setCreatedBy(command.getOperatorId());
+        flow.setReason(reason);
+        flow.setRemark(remark);
+        flow.setCreatedBy(operatorId);
         inventoryFlowMapper.insert(flow);
 
         stock.setLastFlowId(flow.getId());
@@ -775,6 +850,36 @@ public class WorkOrderServiceImpl implements WorkOrderService {
             throw new BusinessException(ErrorCode.WORK_ORDER_NOT_DRAFT);
         }
         return entity;
+    }
+
+    private void validateActionCommand(Long storeId, Long workOrderId, Long operatorId) {
+        if (storeId == null) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "storeId不能为空");
+        }
+        if (workOrderId == null) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "workOrderId不能为空");
+        }
+        if (operatorId == null) {
+            throw new BusinessException(ErrorCode.OPERATOR_REQUIRED);
+        }
+    }
+
+    private WorkOrderEntity loadForAction(Long storeId, Long workOrderId) {
+        WorkOrderEntity entity = workOrderMapper.selectByIdForUpdate(workOrderId);
+        if (entity == null || entity.getStoreId() == null || !storeId.equals(entity.getStoreId())) {
+            throw new BusinessException(ErrorCode.WORK_ORDER_NOT_FOUND);
+        }
+        return entity;
+    }
+
+    private void applyNoChargeReason(WorkOrderEntity workOrder, String reason, String remark) {
+        if (StringUtils.hasText(reason)) {
+            workOrder.setNoChargeReason(reason);
+            workOrder.setNoChargeRemark(remark);
+        }
+        if (!StringUtils.hasText(workOrder.getNoChargeReason())) {
+            throw new BusinessException(ErrorCode.WORK_ORDER_NO_CHARGE_REASON_REQUIRED);
+        }
     }
 
     private void validateChargeItemFields(AddWorkOrderChargeItemCommand command,
@@ -965,7 +1070,92 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         response.setStatus(entity.getStatus());
         response.setReceivableAmount(entity.getReceivableAmount());
         response.setReceivedAmount(entity.getReceivedAmount());
+        enrichStatusFields(response, entity);
         response.setCreatedAt(entity.getCreatedAt());
         return response;
+    }
+
+    private void enrichStatusFields(WorkOrderDetailResponse response, WorkOrderEntity entity) {
+        CashierSummary cashier = cashierStatusService.summarize(entity);
+        InventoryStatus inventoryStatus = deriveInventoryStatus(entity);
+        response.setProgressStatus(entity.getStatus());
+        response.setProgressStatusText(progressStatusText(entity.getStatus()));
+        response.setCashierStatus(cashier.getCashierStatus());
+        response.setCashierStatusText(cashier.getCashierStatusText());
+        response.setInventoryStatus(inventoryStatus.getCode());
+        response.setInventoryStatusText(inventoryStatus.getText());
+        response.setPaymentTotal(cashier.getPaymentTotal());
+        response.setRefundTotal(cashier.getRefundTotal());
+        response.setNetReceived(cashier.getNetReceived());
+        response.setOutstandingAmount(cashier.getOutstandingAmount());
+        response.setRefundableAmount(cashier.getRefundableAmount());
+        response.setCanMarkRepairDone(WorkOrderStatus.REPAIRING.getCode().equals(entity.getStatus()));
+        response.setCanDeliver(WorkOrderStatus.REPAIR_DONE.getCode().equals(entity.getStatus())
+                && (CashierStatus.PAID.getCode().equals(cashier.getCashierStatus())
+                || CashierStatus.NO_CHARGE.getCode().equals(cashier.getCashierStatus())));
+        response.setCanCancel(WorkOrderStatus.DRAFT.getCode().equals(entity.getStatus())
+                || WorkOrderStatus.REPAIRING.getCode().equals(entity.getStatus()));
+        response.setCanRecordPayment(WorkOrderStatus.REPAIRING.getCode().equals(entity.getStatus())
+                || WorkOrderStatus.REPAIR_DONE.getCode().equals(entity.getStatus()));
+        response.setCanRecordRefund((WorkOrderStatus.REPAIRING.getCode().equals(entity.getStatus())
+                || WorkOrderStatus.REPAIR_DONE.getCode().equals(entity.getStatus())
+                || WorkOrderStatus.CANCELLED.getCode().equals(entity.getStatus()))
+                && cashier.getRefundableAmount().compareTo(BigDecimal.ZERO) > 0);
+        response.setCanRefundAfterDelivery(WorkOrderStatus.DELIVERED.getCode().equals(entity.getStatus())
+                && cashier.getRefundableAmount().compareTo(BigDecimal.ZERO) > 0);
+    }
+
+    private void enrichStatusFields(WorkOrderQueryResponse response, WorkOrderEntity entity) {
+        CashierSummary cashier = cashierStatusService.summarize(entity);
+        InventoryStatus inventoryStatus = deriveInventoryStatus(entity);
+        response.setProgressStatus(entity.getStatus());
+        response.setProgressStatusText(progressStatusText(entity.getStatus()));
+        response.setCashierStatus(cashier.getCashierStatus());
+        response.setCashierStatusText(cashier.getCashierStatusText());
+        response.setInventoryStatus(inventoryStatus.getCode());
+        response.setInventoryStatusText(inventoryStatus.getText());
+        response.setPaymentTotal(cashier.getPaymentTotal());
+        response.setRefundTotal(cashier.getRefundTotal());
+        response.setNetReceived(cashier.getNetReceived());
+        response.setOutstandingAmount(cashier.getOutstandingAmount());
+        response.setRefundableAmount(cashier.getRefundableAmount());
+    }
+
+    private InventoryStatus deriveInventoryStatus(WorkOrderEntity entity) {
+        String status = entity.getStatus();
+        if (WorkOrderStatus.REPAIRING.getCode().equals(status)) {
+            return InventoryStatus.RESERVED;
+        }
+        if (WorkOrderStatus.REPAIR_DONE.getCode().equals(status)
+                || WorkOrderStatus.DELIVERED.getCode().equals(status)) {
+            return InventoryStatus.CONSUMED;
+        }
+        if (WorkOrderStatus.CANCELLED.getCode().equals(status)) {
+            QueryWrapper<InventoryFlowEntity> wrapper = new QueryWrapper<>();
+            wrapper.eq("work_order_id", entity.getId())
+                    .eq("flow_type", InventoryFlowType.RELEASE.getCode());
+            return inventoryFlowMapper.selectCount(wrapper) > 0
+                    ? InventoryStatus.RELEASED : InventoryStatus.NOT_RESERVED;
+        }
+        return InventoryStatus.NOT_RESERVED;
+    }
+
+    private String progressStatusText(String status) {
+        if (WorkOrderStatus.DRAFT.getCode().equals(status)) {
+            return "新建中";
+        }
+        if (WorkOrderStatus.REPAIRING.getCode().equals(status)) {
+            return "维修中";
+        }
+        if (WorkOrderStatus.REPAIR_DONE.getCode().equals(status)) {
+            return "维修完成";
+        }
+        if (WorkOrderStatus.DELIVERED.getCode().equals(status)) {
+            return "已交付";
+        }
+        if (WorkOrderStatus.CANCELLED.getCode().equals(status)) {
+            return "已取消";
+        }
+        return status;
     }
 }

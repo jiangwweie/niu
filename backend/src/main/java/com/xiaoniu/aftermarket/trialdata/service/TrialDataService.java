@@ -8,4 +8,6 @@ public interface TrialDataService {
     TrialDataSummaryResponse getSummary(Long storeId);
 
     ClearTrialDataResponse clearTrialData(Long storeId);
+
+    void assertCleanStartReady(Long storeId);
 }

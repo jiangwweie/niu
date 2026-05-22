@@ -12,8 +12,15 @@ public record StaffWorkOrderListItem(
         String vehicleModelSnapshot,
         String frameNoSnapshot,
         String status,
+        String progressStatus,
+        String progressStatusText,
+        String cashierStatus,
+        String cashierStatusText,
+        String inventoryStatus,
+        String inventoryStatusText,
         BigDecimal receivableAmount,
         BigDecimal receivedAmount,
+        BigDecimal outstandingAmount,
         LocalDateTime createdAt
 ) {
 
@@ -26,8 +33,15 @@ public record StaffWorkOrderListItem(
                 r.getVehicleModelSnapshot(),
                 r.getFrameNoSnapshot(),
                 r.getStatus(),
+                r.getProgressStatus(),
+                r.getProgressStatusText(),
+                r.getCashierStatus(),
+                r.getCashierStatusText(),
+                r.getInventoryStatus(),
+                r.getInventoryStatusText(),
                 r.getReceivableAmount(),
                 r.getReceivedAmount(),
+                r.getOutstandingAmount(),
                 r.getCreatedAt()
         );
     }

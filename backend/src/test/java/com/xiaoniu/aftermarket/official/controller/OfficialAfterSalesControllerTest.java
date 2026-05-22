@@ -56,43 +56,43 @@ class OfficialAfterSalesControllerTest {
             KEY (seq_type, seq_date) VALUES ('REFUND', CURRENT_DATE, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             """);
 
-        // Work order (id=8001) in PENDING_ACCEPT — for save order info
+        // Work order (id=8001) in REPAIRING — for save order info
         jdbcTemplate.execute("""
             INSERT INTO work_order (id, store_id, work_order_no, customer_name_snapshot, customer_phone_snapshot,
                                     vehicle_model_snapshot, frame_no_snapshot, repair_item, status,
                                     receivable_amount, received_amount, submitted_by, submitted_at)
             VALUES (8001, 1, 'WOA-0001', '张三', '13800001111', 'NQi', 'FRAME001', '更换刹车片',
-                    'PENDING_ACCEPT', 200.00, 0.00, 1, CURRENT_TIMESTAMP)
+                    'REPAIRING', 200.00, 0.00, 1, CURRENT_TIMESTAMP)
             """);
 
-        // Work order (id=8002) in SETTLED — for settle test
+        // Work order (id=8002) in DELIVERED — for settle test
         jdbcTemplate.execute("""
             INSERT INTO work_order (id, store_id, work_order_no, customer_name_snapshot, customer_phone_snapshot,
                                     vehicle_model_snapshot, frame_no_snapshot, repair_item, status,
                                     receivable_amount, received_amount, submitted_by, submitted_at)
             VALUES (8002, 1, 'WOA-0002', '李四', '13800002222', 'MQi', 'FRAME002', '更换电池',
-                    'SETTLED', 150.00, 150.00, 1, CURRENT_TIMESTAMP)
+                    'DELIVERED', 150.00, 150.00, 1, CURRENT_TIMESTAMP)
             """);
 
-        // Work order (id=8003) in ACCEPTED — for no-settlement test
+        // Work order (id=8003) in REPAIRING — for no-settlement test
         jdbcTemplate.execute("""
             INSERT INTO work_order (id, store_id, work_order_no, customer_name_snapshot, customer_phone_snapshot,
                                     vehicle_model_snapshot, frame_no_snapshot, repair_item, status,
                                     receivable_amount, received_amount, submitted_by, submitted_at)
             VALUES (8003, 1, 'WOA-0003', '王五', '13800003333', 'UQi', 'FRAME003', '更换控制器',
-                    'ACCEPTED', 100.00, 80.00, 1, CURRENT_TIMESTAMP)
+                    'REPAIRING', 100.00, 80.00, 1, CURRENT_TIMESTAMP)
             """);
 
-        // Work order (id=8004) in SETTLED with existing official after-sales (for global list)
+        // Work order (id=8004) in DELIVERED with existing official after-sales (for global list)
         jdbcTemplate.execute("""
             INSERT INTO work_order (id, store_id, work_order_no, customer_name_snapshot, customer_phone_snapshot,
                                     vehicle_model_snapshot, frame_no_snapshot, repair_item, status,
                                     receivable_amount, received_amount, submitted_by, submitted_at)
             VALUES (8004, 1, 'WOA-0004', '赵六', '13800004444', 'FQi', 'FRAME004', '更换控制器',
-                    'SETTLED', 100.00, 100.00, 1, CURRENT_TIMESTAMP)
+                    'DELIVERED', 100.00, 100.00, 1, CURRENT_TIMESTAMP)
             """);
 
-        // Official after-sales for 8004 (SETTLED)
+        // Official after-sales for 8004 (DELIVERED)
         jdbcTemplate.execute("""
             INSERT INTO official_after_sales (id, store_id, work_order_id, is_official_after_sales,
                                               official_order_no, official_settlement_amount,
@@ -125,7 +125,7 @@ class OfficialAfterSalesControllerTest {
                                     vehicle_model_snapshot, frame_no_snapshot, repair_item, status,
                                     receivable_amount, received_amount, submitted_by, submitted_at)
             VALUES (8099, 2, 'WOA-0099', '其他门店', '13900009999', 'NQi', 'FRAME099', '其他维修',
-                    'PENDING_ACCEPT', 50.00, 0.00, 2, CURRENT_TIMESTAMP)
+                    'REPAIRING', 50.00, 0.00, 2, CURRENT_TIMESTAMP)
             """);
 
         // Official after-sales for 8099 (store 2)

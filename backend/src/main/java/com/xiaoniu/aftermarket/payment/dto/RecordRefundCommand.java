@@ -13,6 +13,7 @@ public class RecordRefundCommand {
     private String refundMethod;
     private LocalDateTime refundedAt;
     private Long operatorId;
+    private boolean allowDeliveredAfterRefund;
     private String reason;
     private String remark;
 }

@@ -115,7 +115,7 @@ class CustomerVehicleControllerTest {
                                     vehicle_model_snapshot, frame_no_snapshot, repair_item,
                                     status, receivable_amount, received_amount)
             VALUES (5001, 1, 'WO-0001', 9001, 8001, '张三', '13800001111',
-                    'NQi', 'VIN-ZHANG-001', '更换刹车片', 'SETTLED', 100.00, 100.00)
+                    'NQi', 'VIN-ZHANG-001', '更换刹车片', 'DELIVERED', 100.00, 100.00)
             """);
 
         // Seed customer/vehicle for store 2 (cross-store test)

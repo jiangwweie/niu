@@ -53,7 +53,11 @@ public class RefundController {
             @PathVariable Long workOrderId,
             @Valid @RequestBody RecordRefundRequest request) {
         CurrentUser user = requireCurrentUser();
-        requireWorkOrderInStore(workOrderId, user.storeId());
+        WorkOrderEntity workOrder = requireWorkOrderInStore(workOrderId, user.storeId());
+        boolean delivered = "DELIVERED".equals(workOrder.getStatus());
+        if (delivered && !user.permissions().contains("REFUND_AFTER_DELIVERY")) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "缺少交付后退款权限");
+        }
         RecordRefundCommand command = new RecordRefundCommand();
         command.setStoreId(user.storeId());
         command.setWorkOrderId(workOrderId);
@@ -61,6 +65,7 @@ public class RefundController {
         command.setAmount(request.getAmount());
         command.setRefundMethod(request.getRefundMethod());
         command.setRefundedAt(request.getRefundedAt());
+        command.setAllowDeliveredAfterRefund(delivered);
         command.setReason(request.getReason());
         command.setRemark(request.getRemark());
         Long refundId = recordRefundService.execute(command);
@@ -105,10 +110,11 @@ public class RefundController {
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "缺少用户上下文"));
     }
 
-    private void requireWorkOrderInStore(Long workOrderId, Long storeId) {
+    private WorkOrderEntity requireWorkOrderInStore(Long workOrderId, Long storeId) {
         WorkOrderEntity workOrder = workOrderMapper.selectById(workOrderId);
         if (workOrder == null || !storeId.equals(workOrder.getStoreId())) {
             throw new BusinessException(ErrorCode.WORK_ORDER_NOT_FOUND, "工单不存在");
         }
+        return workOrder;
     }
 }

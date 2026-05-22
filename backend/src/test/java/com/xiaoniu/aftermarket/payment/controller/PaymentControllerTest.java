@@ -54,31 +54,31 @@ class PaymentControllerTest {
             KEY (seq_type, seq_date) VALUES ('REFUND', CURRENT_DATE, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             """);
 
-        // Work order (id=6001) in PENDING_ACCEPT — payable status
+        // Work order (id=6001) in REPAIRING — payable status
         jdbcTemplate.execute("""
             INSERT INTO work_order (id, store_id, work_order_no, customer_name_snapshot, customer_phone_snapshot,
                                     vehicle_model_snapshot, frame_no_snapshot, repair_item, status,
                                     receivable_amount, received_amount, submitted_by, submitted_at)
             VALUES (6001, 1, 'WP-0001', '张三', '13800001111', 'NQi', 'FRAME001', '更换刹车片',
-                    'PENDING_ACCEPT', 200.00, 0.00, 1, CURRENT_TIMESTAMP)
+                    'REPAIRING', 200.00, 0.00, 1, CURRENT_TIMESTAMP)
             """);
 
-        // Work order (id=6002) in PENDING_ACCEPT — for refund test
+        // Work order (id=6002) in REPAIRING — for refund test
         jdbcTemplate.execute("""
             INSERT INTO work_order (id, store_id, work_order_no, customer_name_snapshot, customer_phone_snapshot,
                                     vehicle_model_snapshot, frame_no_snapshot, repair_item, status,
                                     receivable_amount, received_amount, submitted_by, submitted_at)
             VALUES (6002, 1, 'WP-0002', '李四', '13800002222', 'MQi', 'FRAME002', '更换电池',
-                    'PENDING_ACCEPT', 150.00, 100.00, 1, CURRENT_TIMESTAMP)
+                    'REPAIRING', 150.00, 100.00, 1, CURRENT_TIMESTAMP)
             """);
 
-        // Work order (id=6003) in ACCEPTED — for settle/payment test
+        // Work order (id=6003) in REPAIRING — for settle/payment test
         jdbcTemplate.execute("""
             INSERT INTO work_order (id, store_id, work_order_no, customer_name_snapshot, customer_phone_snapshot,
                                     vehicle_model_snapshot, frame_no_snapshot, repair_item, status,
                                     receivable_amount, received_amount, submitted_by, submitted_at)
             VALUES (6003, 1, 'WP-0003', '王五', '13800003333', 'UQi', 'FRAME003', '更换控制器',
-                    'ACCEPTED', 100.00, 100.00, 1, CURRENT_TIMESTAMP)
+                    'REPAIRING', 100.00, 100.00, 1, CURRENT_TIMESTAMP)
             """);
 
         // Work order (id=6099) in store 2 — for cross-store test
@@ -87,7 +87,7 @@ class PaymentControllerTest {
                                     vehicle_model_snapshot, frame_no_snapshot, repair_item, status,
                                     receivable_amount, received_amount, submitted_by, submitted_at)
             VALUES (6099, 2, 'WP-0099', '其他门店', '13900009999', 'NQi', 'FRAME099', '其他维修',
-                    'PENDING_ACCEPT', 50.00, 0.00, 2, CURRENT_TIMESTAMP)
+                    'REPAIRING', 50.00, 0.00, 2, CURRENT_TIMESTAMP)
             """);
 
         // Payment record (id=8101) for work order 6002
@@ -232,7 +232,7 @@ class PaymentControllerTest {
                 .andExpect(status().isOk());
         String status = jdbcTemplate.queryForObject(
                 "SELECT status FROM work_order WHERE id = 6001", String.class);
-        assertTrue("PENDING_ACCEPT".equals(status));
+        assertTrue("REPAIRING".equals(status));
     }
 
     // ========== 4. POST payment does not generate CONSUME flow ==========

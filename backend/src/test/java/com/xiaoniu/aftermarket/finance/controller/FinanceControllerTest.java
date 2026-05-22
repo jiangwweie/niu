@@ -45,7 +45,7 @@ class FinanceControllerTest {
         jdbcTemplate.execute("""
             INSERT INTO work_order (id, store_id, work_order_no, customer_name_snapshot, repair_item, status,
                                     receivable_amount, received_amount, submitted_by, submitted_at, settled_by, settled_at)
-            VALUES (7001, 1, 'FIN-WO-001', '财务客户', '财务测试', 'SETTLED', 200.00, 200.00, 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP)
+            VALUES (7001, 1, 'FIN-WO-001', '财务客户', '财务测试', 'DELIVERED', 200.00, 200.00, 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP)
             """);
         jdbcTemplate.execute("""
             INSERT INTO payment_record (id, store_id, work_order_id, payment_no, amount, payment_method, paid_at, operator_id)

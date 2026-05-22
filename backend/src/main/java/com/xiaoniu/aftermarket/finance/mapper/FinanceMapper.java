@@ -54,9 +54,9 @@ public interface FinanceMapper {
             FROM work_order_charge_item woci
             INNER JOIN work_order wo ON wo.id = woci.work_order_id AND wo.deleted = 0
             WHERE woci.store_id = #{storeId}
-              AND wo.status = 'SETTLED'
-              AND wo.settled_at >= #{startTime}
-              AND wo.settled_at <= #{endTime}
+              AND wo.status IN ('REPAIR_DONE', 'DELIVERED')
+              AND COALESCE(wo.repair_done_at, wo.delivered_at, wo.settled_at) >= #{startTime}
+              AND COALESCE(wo.repair_done_at, wo.delivered_at, wo.settled_at) <= #{endTime}
               AND woci.deleted = 0
             """)
     BigDecimal sumPartsCostByStoreAndTimeRange(@Param("storeId") Long storeId,
@@ -80,9 +80,9 @@ public interface FinanceMapper {
             SELECT COUNT(*)
             FROM work_order
             WHERE store_id = #{storeId}
-              AND status = 'SETTLED'
-              AND settled_at >= #{startTime}
-              AND settled_at <= #{endTime}
+              AND status = 'DELIVERED'
+              AND COALESCE(delivered_at, settled_at) >= #{startTime}
+              AND COALESCE(delivered_at, settled_at) <= #{endTime}
               AND deleted = 0
             """)
     Integer countSettledWorkOrdersByStoreAndTimeRange(@Param("storeId") Long storeId,
@@ -183,7 +183,7 @@ public interface FinanceMapper {
             SELECT COUNT(*)
             FROM work_order
             WHERE store_id = #{storeId}
-              AND status IN ('PENDING_ACCEPT', 'ACCEPTED', 'PART_ORDERED', 'PART_ARRIVED')
+              AND status IN ('REPAIRING', 'REPAIR_DONE')
               AND received_amount < receivable_amount
               AND deleted = 0
             """)
@@ -194,7 +194,7 @@ public interface FinanceMapper {
             SELECT COUNT(*)
             FROM work_order
             WHERE store_id = #{storeId}
-              AND status IN ('PENDING_ACCEPT', 'ACCEPTED', 'PART_ORDERED', 'PART_ARRIVED')
+              AND status IN ('REPAIRING', 'REPAIR_DONE')
               AND received_amount > 0
               AND received_amount < receivable_amount
               AND deleted = 0

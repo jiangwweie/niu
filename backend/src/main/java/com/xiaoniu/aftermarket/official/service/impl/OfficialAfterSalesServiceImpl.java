@@ -90,7 +90,7 @@ public class OfficialAfterSalesServiceImpl implements OfficialAfterSalesService 
         validateSettlementCommand(command);
 
         WorkOrderEntity workOrder = loadWorkOrderForUpdate(command.getStoreId(), command.getWorkOrderId());
-        if (!WorkOrderStatus.SETTLED.getCode().equals(workOrder.getStatus())) {
+        if (!WorkOrderStatus.DELIVERED.getCode().equals(workOrder.getStatus())) {
             throw new BusinessException(ErrorCode.OFFICIAL_SETTLEMENT_NOT_ALLOWED);
         }
 

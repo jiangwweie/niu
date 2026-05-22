@@ -4,20 +4,14 @@ import java.math.BigDecimal;
 import lombok.Data;
 
 @Data
-public class PaymentSummaryResponse {
+public class CashierSummary {
 
-    private Long workOrderId;
     private BigDecimal receivableAmount;
     private BigDecimal paymentTotal;
     private BigDecimal refundTotal;
-    private BigDecimal receivedAmount;
     private BigDecimal netReceived;
     private BigDecimal outstandingAmount;
     private BigDecimal refundableAmount;
     private String cashierStatus;
     private String cashierStatusText;
-    private String inventoryStatus;
-    private String inventoryStatusText;
-    private Boolean canSettle;
-    private Boolean canDeliver;
 }

@@ -4,6 +4,8 @@ import com.xiaoniu.aftermarket.trialdata.dto.ClearTrialDataResponse;
 import com.xiaoniu.aftermarket.trialdata.dto.TrialDataSummaryResponse;
 import com.xiaoniu.aftermarket.trialdata.mapper.TrialDataMapper;
 import com.xiaoniu.aftermarket.trialdata.service.TrialDataService;
+import com.xiaoniu.aftermarket.common.api.ErrorCode;
+import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +33,7 @@ public class TrialDataServiceImpl implements TrialDataService {
         response.setInventoryStockCount(trialDataMapper.countInventoryStocks(storeId));
         response.setVehicleCount(trialDataMapper.countVehicles(storeId));
         response.setCustomerCount(trialDataMapper.countCustomers(storeId));
+        response.setLegacyWorkOrderStatusCount(trialDataMapper.countLegacyWorkOrderStatuses(storeId));
         return response;
     }
 
@@ -38,6 +41,7 @@ public class TrialDataServiceImpl implements TrialDataService {
     @Transactional
     public ClearTrialDataResponse clearTrialData(Long storeId) {
         ClearTrialDataResponse response = new ClearTrialDataResponse();
+        response.setBeforeSummary(getSummary(storeId));
 
         // Delete in dependency order: status logs first, then charge items, then work orders
         response.setStatusLogsDeleted(trialDataMapper.deleteWorkOrderStatusLogs(storeId));
@@ -55,7 +59,15 @@ public class TrialDataServiceImpl implements TrialDataService {
         // Customer/vehicle data can contain trial personal information.
         response.setVehiclesDeleted(trialDataMapper.deleteVehicles(storeId));
         response.setCustomersDeleted(trialDataMapper.deleteCustomers(storeId));
+        response.setAfterSummary(getSummary(storeId));
 
         return response;
+    }
+
+    @Override
+    public void assertCleanStartReady(Long storeId) {
+        if (trialDataMapper.countLegacyWorkOrderStatuses(storeId) > 0) {
+            throw new BusinessException(ErrorCode.WORK_ORDER_LEGACY_STATUS_EXISTS);
+        }
     }
 }

@@ -61,7 +61,7 @@ class AdminExportControllerTest {
         jdbcTemplate.execute("""
             INSERT INTO work_order (id, store_id, work_order_no, customer_name_snapshot, repair_item, status,
                                     receivable_amount, received_amount, submitted_by, submitted_at, settled_by, settled_at)
-            VALUES (9701, 1, 'EXP-WO-001', '导出客户', '导出测试', 'SETTLED',
+            VALUES (9701, 1, 'EXP-WO-001', '导出客户', '导出测试', 'DELIVERED',
                     200.00, 170.00, 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP)
             """);
         jdbcTemplate.execute("""

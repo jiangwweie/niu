@@ -27,7 +27,8 @@ import com.xiaoniu.aftermarket.payment.service.PaymentService;
 import com.xiaoniu.aftermarket.workorder.dto.AddWorkOrderChargeItemCommand;
 import com.xiaoniu.aftermarket.workorder.dto.CancelWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.CreateDraftWorkOrderCommand;
-import com.xiaoniu.aftermarket.workorder.dto.SettleWorkOrderCommand;
+import com.xiaoniu.aftermarket.workorder.dto.DeliverWorkOrderCommand;
+import com.xiaoniu.aftermarket.workorder.dto.MarkRepairDoneWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.SubmitWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.entity.WorkOrderEntity;
 import com.xiaoniu.aftermarket.workorder.mapper.WorkOrderMapper;
@@ -185,7 +186,7 @@ class OfficialAfterSalesServiceTest {
     @Test
     void markOfficialSettledSuccessfully() {
         Long workOrderId = createSettledWorkOrder(new BigDecimal("300.00"));
-        officialAfterSalesService.saveOfficialOrderInfo(buildSaveCommand(STORE_ID, workOrderId, "OFF-SETTLED"));
+        officialAfterSalesService.saveOfficialOrderInfo(buildSaveCommand(STORE_ID, workOrderId, "OFF-DELIVERED"));
 
         officialAfterSalesService.markOfficialSettled(
                 buildSettledCommand(workOrderId, new BigDecimal("88.88"), "官方已结算"));
@@ -359,13 +360,13 @@ class OfficialAfterSalesServiceTest {
         Long pendingWorkOrderId = createDraftWorkOrder(STORE_ID, new BigDecimal("100.00"));
         Long settledWorkOrderId = createSettledWorkOrder(new BigDecimal("100.00"));
         officialAfterSalesService.saveOfficialOrderInfo(buildSaveCommand(STORE_ID, pendingWorkOrderId, "OFF-PAGE-PENDING"));
-        officialAfterSalesService.saveOfficialOrderInfo(buildSaveCommand(STORE_ID, settledWorkOrderId, "OFF-PAGE-SETTLED"));
+        officialAfterSalesService.saveOfficialOrderInfo(buildSaveCommand(STORE_ID, settledWorkOrderId, "OFF-PAGE-DELIVERED"));
         officialAfterSalesService.markOfficialSettled(
                 buildSettledCommand(settledWorkOrderId, new BigDecimal("30.00"), "settled"));
 
         OfficialAfterSalesQueryRequest request = new OfficialAfterSalesQueryRequest();
         request.setStoreId(STORE_ID);
-        request.setOfficialOrderNo("SETTLED");
+        request.setOfficialOrderNo("DELIVERED");
         request.setSettlementStatus(OfficialSettlementStatus.SETTLED.getCode());
 
         PageResponse<OfficialAfterSalesQueryResponse> page = officialAfterSalesService.pageQuery(request);
@@ -374,13 +375,13 @@ class OfficialAfterSalesServiceTest {
         assertEquals(1, page.records().size());
         OfficialAfterSalesQueryResponse response = page.records().get(0);
         assertEquals(settledWorkOrderId, response.getWorkOrderId());
-        assertEquals("OFF-PAGE-SETTLED", response.getOfficialOrderNo());
+        assertEquals("OFF-PAGE-DELIVERED", response.getOfficialOrderNo());
         assertEquals("官方售后客户", response.getCustomerNameSnapshot());
         assertEquals("13800000000", response.getCustomerPhoneSnapshot());
         assertEquals("小牛N1", response.getVehicleModelSnapshot());
         assertEquals("OFFICIAL-FRAME-001", response.getFrameNoSnapshot());
         assertEquals(0, new BigDecimal("100.00").compareTo(response.getReceivedAmount()));
-        assertEquals(WorkOrderStatus.SETTLED.getCode(), response.getWorkOrderStatus());
+        assertEquals(WorkOrderStatus.DELIVERED.getCode(), response.getWorkOrderStatus());
     }
 
     private Long createDraftWorkOrder(Long storeId, BigDecimal amount) {
@@ -411,14 +412,20 @@ class OfficialAfterSalesServiceTest {
     private Long createSettledWorkOrder(BigDecimal amount) {
         Long workOrderId = createSubmittedWorkOrder(amount);
         paymentService.recordPayment(buildPaymentCommand(workOrderId, amount));
-        SettleWorkOrderCommand settle = new SettleWorkOrderCommand();
-        settle.setStoreId(STORE_ID);
-        settle.setWorkOrderId(workOrderId);
-        settle.setOperatorId(OPERATOR_ID);
-        settle.setRemark("结算");
-        workOrderService.settle(settle);
+        MarkRepairDoneWorkOrderCommand repairDone = new MarkRepairDoneWorkOrderCommand();
+        repairDone.setStoreId(STORE_ID);
+        repairDone.setWorkOrderId(workOrderId);
+        repairDone.setOperatorId(OPERATOR_ID);
+        repairDone.setRemark("维修完成");
+        workOrderService.markRepairDone(repairDone);
+        DeliverWorkOrderCommand deliver = new DeliverWorkOrderCommand();
+        deliver.setStoreId(STORE_ID);
+        deliver.setWorkOrderId(workOrderId);
+        deliver.setOperatorId(OPERATOR_ID);
+        deliver.setRemark("交付关闭");
+        workOrderService.deliver(deliver);
         WorkOrderEntity workOrder = workOrderMapper.selectById(workOrderId);
-        assertEquals(WorkOrderStatus.SETTLED.getCode(), workOrder.getStatus());
+        assertEquals(WorkOrderStatus.DELIVERED.getCode(), workOrder.getStatus());
         return workOrderId;
     }
 

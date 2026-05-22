@@ -45,7 +45,7 @@ class CashierReportTest {
         jdbcTemplate.execute("""
             INSERT INTO work_order (id, store_id, work_order_no, customer_name_snapshot, repair_item, status,
                                     receivable_amount, received_amount, submitted_by, submitted_at)
-            VALUES (8001, 1, 'CR-WO-001', '日报客户A', '维修', 'PENDING_ACCEPT', 500.00, 500.00, 1, CURRENT_TIMESTAMP)
+            VALUES (8001, 1, 'CR-WO-001', '日报客户A', '维修', 'REPAIRING', 500.00, 500.00, 1, CURRENT_TIMESTAMP)
             """);
         jdbcTemplate.execute("""
             INSERT INTO payment_record (id, store_id, work_order_id, payment_no, amount, payment_method, paid_at, operator_id)
@@ -58,7 +58,7 @@ class CashierReportTest {
         jdbcTemplate.execute("""
             INSERT INTO work_order (id, store_id, work_order_no, customer_name_snapshot, repair_item, status,
                                     receivable_amount, received_amount, submitted_by, submitted_at)
-            VALUES (8002, 1, 'CR-WO-002', '日报客户B', '保养', 'PENDING_ACCEPT', 800.00, 200.00, 1, CURRENT_TIMESTAMP)
+            VALUES (8002, 1, 'CR-WO-002', '日报客户B', '保养', 'REPAIRING', 800.00, 200.00, 1, CURRENT_TIMESTAMP)
             """);
         jdbcTemplate.execute("""
             INSERT INTO payment_record (id, store_id, work_order_id, payment_no, amount, payment_method, paid_at, operator_id)
@@ -73,7 +73,7 @@ class CashierReportTest {
         jdbcTemplate.execute("""
             INSERT INTO work_order (id, store_id, work_order_no, customer_name_snapshot, repair_item, status,
                                     receivable_amount, received_amount, submitted_by, submitted_at)
-            VALUES (8003, 1, 'CR-WO-003', '日报客户C', '检测', 'ACCEPTED', 300.00, 0.00, 1, CURRENT_TIMESTAMP)
+            VALUES (8003, 1, 'CR-WO-003', '日报客户C', '检测', 'REPAIRING', 300.00, 0.00, 1, CURRENT_TIMESTAMP)
             """);
     }
 

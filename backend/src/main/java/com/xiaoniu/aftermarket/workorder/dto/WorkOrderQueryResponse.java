@@ -16,7 +16,18 @@ public class WorkOrderQueryResponse {
     private Boolean officialAfterSales;
     private String officialOrderNo;
     private String status;
+    private String progressStatus;
+    private String progressStatusText;
+    private String cashierStatus;
+    private String cashierStatusText;
+    private String inventoryStatus;
+    private String inventoryStatusText;
     private BigDecimal receivableAmount;
     private BigDecimal receivedAmount;
+    private BigDecimal paymentTotal;
+    private BigDecimal refundTotal;
+    private BigDecimal netReceived;
+    private BigDecimal outstandingAmount;
+    private BigDecimal refundableAmount;
     private LocalDateTime createdAt;
 }

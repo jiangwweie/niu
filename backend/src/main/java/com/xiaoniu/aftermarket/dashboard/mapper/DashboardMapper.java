@@ -23,7 +23,7 @@ public interface DashboardMapper {
     @Select("""
             SELECT COUNT(*) FROM work_order
             WHERE store_id = #{storeId}
-              AND status IN ('PENDING_ACCEPT', 'ACCEPTED', 'PART_ORDERED', 'PART_ARRIVED')
+              AND status IN ('REPAIRING', 'REPAIR_DONE')
               AND deleted = 0
             """)
     Integer countPendingSettleWorkOrders(@Param("storeId") Long storeId);

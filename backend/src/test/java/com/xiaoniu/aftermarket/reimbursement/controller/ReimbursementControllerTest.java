@@ -43,7 +43,7 @@ class ReimbursementControllerTest {
         jdbcTemplate.execute("""
             INSERT INTO work_order (id, store_id, work_order_no, customer_name_snapshot, repair_item, status,
                                     receivable_amount, received_amount)
-            VALUES (9101, 1, 'RB-WO-001', '报销边界客户', '边界检查', 'PENDING_ACCEPT', 100.00, 80.00)
+            VALUES (9101, 1, 'RB-WO-001', '报销边界客户', '边界检查', 'REPAIRING', 100.00, 80.00)
             """);
         jdbcTemplate.execute("""
             INSERT INTO official_after_sales (id, store_id, work_order_id, is_official_after_sales,

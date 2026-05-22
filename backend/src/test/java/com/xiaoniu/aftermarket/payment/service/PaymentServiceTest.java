@@ -104,7 +104,7 @@ class PaymentServiceTest {
 
         WorkOrderEntity workOrder = workOrderMapper.selectById(workOrderId);
         assertEquals(0, new BigDecimal("120.00").compareTo(workOrder.getReceivedAmount()));
-        assertEquals(WorkOrderStatus.PENDING_ACCEPT.getCode(), workOrder.getStatus());
+        assertEquals(WorkOrderStatus.REPAIRING.getCode(), workOrder.getStatus());
     }
 
     @Test
@@ -216,7 +216,7 @@ class PaymentServiceTest {
     void settledWorkOrderCannotRecordPayment() {
         Long workOrderId = createSubmittedWorkOrder(new BigDecimal("100.00"));
         WorkOrderEntity workOrder = workOrderMapper.selectById(workOrderId);
-        workOrder.setStatus(WorkOrderStatus.SETTLED.getCode());
+        workOrder.setStatus(WorkOrderStatus.DELIVERED.getCode());
         workOrderMapper.updateById(workOrder);
 
         BusinessException ex = assertThrows(BusinessException.class,
@@ -234,7 +234,7 @@ class PaymentServiceTest {
 
         WorkOrderEntity workOrder = workOrderMapper.selectById(workOrderId);
         assertEquals(0, new BigDecimal("150.00").compareTo(workOrder.getReceivedAmount()));
-        assertEquals(WorkOrderStatus.PENDING_ACCEPT.getCode(), workOrder.getStatus());
+        assertEquals(WorkOrderStatus.REPAIRING.getCode(), workOrder.getStatus());
         assertEquals(0, countConsumeFlows());
     }
 
@@ -384,7 +384,7 @@ class PaymentServiceTest {
         Long workOrderId = createSubmittedWorkOrder(new BigDecimal("300.00"));
         paymentService.recordPayment(buildPaymentCommand(workOrderId, new BigDecimal("100.00"), "WECHAT"));
         WorkOrderEntity workOrder = workOrderMapper.selectById(workOrderId);
-        workOrder.setStatus(WorkOrderStatus.SETTLED.getCode());
+        workOrder.setStatus(WorkOrderStatus.DELIVERED.getCode());
         workOrderMapper.updateById(workOrder);
 
         BusinessException ex = assertThrows(BusinessException.class,

@@ -15,6 +15,7 @@ import com.xiaoniu.aftermarket.payment.dto.RecordPaymentCommand;
 import com.xiaoniu.aftermarket.payment.entity.PaymentRecordEntity;
 import com.xiaoniu.aftermarket.payment.mapper.PaymentRecordMapper;
 import com.xiaoniu.aftermarket.payment.service.PaymentService;
+import com.xiaoniu.aftermarket.payment.service.CashierStatusService;
 import com.xiaoniu.aftermarket.workorder.entity.WorkOrderEntity;
 import com.xiaoniu.aftermarket.workorder.mapper.WorkOrderMapper;
 import java.math.BigDecimal;
@@ -37,25 +38,26 @@ public class PaymentServiceImpl implements PaymentService {
             .map(PaymentMethod::getCode)
             .collect(Collectors.toUnmodifiableSet());
     private static final Set<String> PAYABLE_STATUSES = Set.of(
-            WorkOrderStatus.PENDING_ACCEPT.getCode(),
-            WorkOrderStatus.ACCEPTED.getCode(),
-            WorkOrderStatus.PART_ORDERED.getCode(),
-            WorkOrderStatus.PART_ARRIVED.getCode()
+            WorkOrderStatus.REPAIRING.getCode(),
+            WorkOrderStatus.REPAIR_DONE.getCode()
     );
 
     private final PaymentRecordMapper paymentRecordMapper;
     private final WorkOrderMapper workOrderMapper;
     private final SequenceService sequenceService;
     private final PaymentAmountService paymentAmountService;
+    private final CashierStatusService cashierStatusService;
 
     public PaymentServiceImpl(PaymentRecordMapper paymentRecordMapper,
                               WorkOrderMapper workOrderMapper,
                               SequenceService sequenceService,
-                              PaymentAmountService paymentAmountService) {
+                              PaymentAmountService paymentAmountService,
+                              CashierStatusService cashierStatusService) {
         this.paymentRecordMapper = paymentRecordMapper;
         this.workOrderMapper = workOrderMapper;
         this.sequenceService = sequenceService;
         this.paymentAmountService = paymentAmountService;
+        this.cashierStatusService = cashierStatusService;
     }
 
     @Override
@@ -179,9 +181,18 @@ public class PaymentServiceImpl implements PaymentService {
         response.setPaymentTotal(paymentTotal);
         response.setRefundTotal(refundTotal);
         response.setReceivedAmount(receivedAmount);
-        // 可结算条件：工单状态可收款 且 实收 >= 应收
-        response.setCanSettle(PAYABLE_STATUSES.contains(workOrder.getStatus())
-                && receivedAmount.compareTo(response.getReceivableAmount()) >= 0);
+        response.setNetReceived(receivedAmount);
+        response.setOutstandingAmount(response.getReceivableAmount().subtract(receivedAmount).max(BigDecimal.ZERO));
+        response.setRefundableAmount(receivedAmount.max(BigDecimal.ZERO));
+        com.xiaoniu.aftermarket.payment.dto.CashierSummary cashier =
+                cashierStatusService.summarize(workOrder);
+        response.setCashierStatus(cashier.getCashierStatus());
+        response.setCashierStatusText(cashier.getCashierStatusText());
+        response.setInventoryStatus(deriveInventoryStatus(workOrder.getStatus()));
+        response.setInventoryStatusText(deriveInventoryStatusText(response.getInventoryStatus()));
+        response.setCanSettle(false);
+        response.setCanDeliver(WorkOrderStatus.REPAIR_DONE.getCode().equals(workOrder.getStatus())
+                && ("PAID".equals(cashier.getCashierStatus()) || "NO_CHARGE".equals(cashier.getCashierStatus())));
         return response;
     }
 
@@ -216,6 +227,28 @@ public class PaymentServiceImpl implements PaymentService {
         if (!PAYABLE_STATUSES.contains(workOrder.getStatus())) {
             throw new BusinessException(ErrorCode.PAYMENT_WORK_ORDER_STATUS_INVALID);
         }
+    }
+
+    private String deriveInventoryStatus(String status) {
+        if (WorkOrderStatus.REPAIRING.getCode().equals(status)) {
+            return "RESERVED";
+        }
+        if (WorkOrderStatus.REPAIR_DONE.getCode().equals(status) || WorkOrderStatus.DELIVERED.getCode().equals(status)) {
+            return "CONSUMED";
+        }
+        if (WorkOrderStatus.CANCELLED.getCode().equals(status)) {
+            return "RELEASED";
+        }
+        return "NOT_RESERVED";
+    }
+
+    private String deriveInventoryStatusText(String status) {
+        return switch (status) {
+            case "RESERVED" -> "已预占";
+            case "CONSUMED" -> "已扣减";
+            case "RELEASED" -> "已释放";
+            default -> "未预占";
+        };
     }
 
     private PaymentRecordResponse toPaymentRecordResponse(PaymentRecordEntity entity) {

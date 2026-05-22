@@ -84,14 +84,14 @@ class DashboardControllerTest {
         jdbcTemplate.execute("""
             INSERT INTO work_order (id, store_id, work_order_no, customer_name_snapshot, repair_item, status,
                                     receivable_amount, received_amount, submitted_by, submitted_at, created_by, created_at)
-            VALUES (7002, 1, 'DASH-WO-002', '李客户', '保养', 'ACCEPTED',
+            VALUES (7002, 1, 'DASH-WO-002', '李客户', '保养', 'REPAIRING',
                     200.00, 100.00, 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP)
             """);
         jdbcTemplate.execute("""
             INSERT INTO work_order (id, store_id, work_order_no, customer_name_snapshot, repair_item, status,
                                     receivable_amount, received_amount, submitted_by, submitted_at,
                                     settled_by, settled_at, created_by, created_at)
-            VALUES (7003, 1, 'DASH-WO-003', '王客户', '检修', 'SETTLED',
+            VALUES (7003, 1, 'DASH-WO-003', '王客户', '检修', 'DELIVERED',
                     300.00, 300.00, 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP)
             """);
 
@@ -170,7 +170,7 @@ class DashboardControllerTest {
 
     @Test
     void summaryCountsPendingSettleWorkOrders() throws Exception {
-        // ACCEPTED = 1. DRAFT is not eligible for settlement.
+        // REPAIRING = 1. DRAFT is not eligible for settlement.
         mockMvc.perform(get("/api/admin/dashboard/summary")
                         .header(USER_HEADER, "1")
                         .header(STORE_HEADER, "1"))
@@ -210,7 +210,7 @@ class DashboardControllerTest {
 
     @Test
     void summaryCalculatesMonthOfficialIncome() throws Exception {
-        // Only SETTLED official: 50.00
+        // Only DELIVERED official: 50.00
         mockMvc.perform(get("/api/admin/dashboard/summary")
                         .header(USER_HEADER, "1")
                         .header(STORE_HEADER, "1"))

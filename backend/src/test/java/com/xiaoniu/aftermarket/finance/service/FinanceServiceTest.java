@@ -220,7 +220,7 @@ class FinanceServiceTest {
             INSERT INTO work_order (id, store_id, work_order_no, customer_name_snapshot, customer_phone_snapshot,
                                     vehicle_model_snapshot, repair_item, status, receivable_amount, received_amount,
                                     submitted_by, submitted_at, settled_by, settled_at)
-            VALUES (%d, %d, '%s', '财务测试客户', '13900050000', '小牛N1', '财务测试维修', 'SETTLED',
+            VALUES (%d, %d, '%s', '财务测试客户', '13900050000', '小牛N1', '财务测试维修', 'DELIVERED',
                     %.2f, %.2f, 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP)
             """.formatted(id, storeId, workOrderNo, receivableAmount, receivableAmount));
     }

@@ -8,11 +8,16 @@ import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
 import com.xiaoniu.aftermarket.common.util.DateParamParser;
 import com.xiaoniu.aftermarket.workorder.application.CancelWorkOrderApplicationService;
+import com.xiaoniu.aftermarket.workorder.application.DeliverWorkOrderApplicationService;
+import com.xiaoniu.aftermarket.workorder.application.MarkRepairDoneWorkOrderApplicationService;
 import com.xiaoniu.aftermarket.workorder.application.SettleWorkOrderApplicationService;
 import com.xiaoniu.aftermarket.workorder.application.SubmitWorkOrderApplicationService;
 import com.xiaoniu.aftermarket.workorder.dto.AddWorkOrderChargeItemCommand;
+import com.xiaoniu.aftermarket.workorder.dto.AddNonInventoryChargeCommand;
 import com.xiaoniu.aftermarket.workorder.dto.CancelWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.CreateDraftWorkOrderCommand;
+import com.xiaoniu.aftermarket.workorder.dto.DeliverWorkOrderCommand;
+import com.xiaoniu.aftermarket.workorder.dto.MarkRepairDoneWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.SettleWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.SubmitWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.UpdateWorkOrderChargeItemCommand;
@@ -36,17 +41,23 @@ public class WorkOrderController {
     private final SubmitWorkOrderApplicationService submitService;
     private final CancelWorkOrderApplicationService cancelService;
     private final SettleWorkOrderApplicationService settleService;
+    private final MarkRepairDoneWorkOrderApplicationService markRepairDoneService;
+    private final DeliverWorkOrderApplicationService deliverService;
 
     public WorkOrderController(WorkOrderService workOrderService,
                                WorkOrderDraftReferenceResolver draftReferenceResolver,
                                SubmitWorkOrderApplicationService submitService,
                                CancelWorkOrderApplicationService cancelService,
-                               SettleWorkOrderApplicationService settleService) {
+                               SettleWorkOrderApplicationService settleService,
+                               MarkRepairDoneWorkOrderApplicationService markRepairDoneService,
+                               DeliverWorkOrderApplicationService deliverService) {
         this.workOrderService = workOrderService;
         this.draftReferenceResolver = draftReferenceResolver;
         this.submitService = submitService;
         this.cancelService = cancelService;
         this.settleService = settleService;
+        this.markRepairDoneService = markRepairDoneService;
+        this.deliverService = deliverService;
     }
 
     @GetMapping
@@ -215,6 +226,58 @@ public class WorkOrderController {
         return ApiResponse.success(null);
     }
 
+    @PostMapping("/{workOrderId}/mark-repair-done")
+    @PreAuthorize("hasAuthority('WORK_ORDER_SETTLE')")
+    public ApiResponse<Void> markRepairDone(@PathVariable Long workOrderId,
+                                            @Valid @RequestBody MarkRepairDoneRequest request) {
+        CurrentUser user = requireCurrentUser();
+        MarkRepairDoneWorkOrderCommand command = new MarkRepairDoneWorkOrderCommand();
+        command.setStoreId(user.storeId());
+        command.setWorkOrderId(workOrderId);
+        command.setOperatorId(user.userId());
+        command.setNoChargeReason(request.noChargeReason());
+        command.setNoChargeRemark(request.noChargeRemark());
+        command.setRemark(request.remark());
+        markRepairDoneService.execute(command);
+        return ApiResponse.success(null);
+    }
+
+    @PostMapping("/{workOrderId}/deliver")
+    @PreAuthorize("hasAuthority('WORK_ORDER_SETTLE')")
+    public ApiResponse<Void> deliver(@PathVariable Long workOrderId,
+                                     @Valid @RequestBody DeliverRequest request) {
+        CurrentUser user = requireCurrentUser();
+        DeliverWorkOrderCommand command = new DeliverWorkOrderCommand();
+        command.setStoreId(user.storeId());
+        command.setWorkOrderId(workOrderId);
+        command.setOperatorId(user.userId());
+        command.setNoChargeReason(request.noChargeReason());
+        command.setNoChargeRemark(request.noChargeRemark());
+        command.setRemark(request.remark());
+        deliverService.execute(command);
+        return ApiResponse.success(null);
+    }
+
+    @PostMapping("/{workOrderId}/non-inventory-charges")
+    @PreAuthorize("hasAuthority('WORK_ORDER_UPDATE')")
+    public ApiResponse<ChargeItemIdResponse> addNonInventoryCharge(
+            @PathVariable Long workOrderId,
+            @Valid @RequestBody AddNonInventoryChargeRequest request) {
+        CurrentUser user = requireCurrentUser();
+        AddNonInventoryChargeCommand command = new AddNonInventoryChargeCommand();
+        command.setStoreId(user.storeId());
+        command.setWorkOrderId(workOrderId);
+        command.setOperatorId(user.userId());
+        command.setChargeType(request.chargeType());
+        command.setItemName(request.itemName());
+        command.setQuantity(request.quantity());
+        command.setUnit(request.unit());
+        command.setUnitPrice(request.unitPrice());
+        command.setReason(request.reason());
+        command.setRemark(request.remark());
+        return ApiResponse.success(new ChargeItemIdResponse(workOrderService.addNonInventoryCharge(command)));
+    }
+
     @PostMapping("/{workOrderId}/settle")
     @PreAuthorize("hasAuthority('WORK_ORDER_SETTLE')")
     public ApiResponse<Void> settle(@PathVariable Long workOrderId,
@@ -225,8 +288,7 @@ public class WorkOrderController {
         command.setWorkOrderId(workOrderId);
         command.setOperatorId(user.userId());
         command.setRemark(request.remark());
-        settleService.execute(command);
-        return ApiResponse.success(null);
+        throw new BusinessException(ErrorCode.WORK_ORDER_LEGACY_SETTLE_DISABLED);
     }
 
     private CurrentUser requireCurrentUser() {

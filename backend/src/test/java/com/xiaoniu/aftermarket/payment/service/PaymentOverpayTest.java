@@ -155,7 +155,7 @@ class PaymentOverpayTest {
     void settledWorkOrderPaymentStillRejected() {
         Long woId = createSubmittedWorkOrder(new BigDecimal("100.00"));
         WorkOrderEntity wo = workOrderMapper.selectById(woId);
-        wo.setStatus(WorkOrderStatus.SETTLED.getCode());
+        wo.setStatus(WorkOrderStatus.DELIVERED.getCode());
         workOrderMapper.updateById(wo);
 
         BusinessException ex = assertThrows(BusinessException.class,

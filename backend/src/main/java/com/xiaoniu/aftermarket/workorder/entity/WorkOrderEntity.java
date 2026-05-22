@@ -29,6 +29,12 @@ public class WorkOrderEntity extends SoftDeleteEntity {
     private LocalDateTime submittedAt;
     private Long settledBy;
     private LocalDateTime settledAt;
+    private Long repairDoneBy;
+    private LocalDateTime repairDoneAt;
+    private Long deliveredBy;
+    private LocalDateTime deliveredAt;
+    private String noChargeReason;
+    private String noChargeRemark;
     private Long cancelledBy;
     private LocalDateTime cancelledAt;
     private String cancelReason;

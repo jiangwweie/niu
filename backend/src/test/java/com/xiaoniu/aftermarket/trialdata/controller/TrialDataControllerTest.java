@@ -94,7 +94,7 @@ class TrialDataControllerTest {
             INSERT INTO work_order (id, store_id, work_order_no, customer_name_snapshot, repair_item, status,
                                     receivable_amount, received_amount, submitted_by, submitted_at,
                                     settled_by, settled_at, created_by, created_at)
-            VALUES (7002, 1, 'TRIAL-WO-002', '测试客户2', '保养', 'SETTLED',
+            VALUES (7002, 1, 'TRIAL-WO-002', '测试客户2', '保养', 'DELIVERED',
                     200.00, 200.00, 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP)
             """);
         jdbcTemplate.execute("""
@@ -104,7 +104,7 @@ class TrialDataControllerTest {
             """);
         jdbcTemplate.execute("""
             INSERT INTO work_order_status_log (id, store_id, work_order_id, to_status, action_type, operator_id, operated_at)
-            VALUES (7001, 1, 7002, 'SETTLED', 'SETTLE', 1, CURRENT_TIMESTAMP)
+            VALUES (7001, 1, 7002, 'DELIVERED', 'SETTLE', 1, CURRENT_TIMESTAMP)
             """);
         jdbcTemplate.execute("""
             INSERT INTO payment_record (id, store_id, work_order_id, payment_no, amount, payment_method, paid_at, operator_id)
@@ -173,7 +173,8 @@ class TrialDataControllerTest {
                 .andExpect(jsonPath("$.data.inventoryFlowCount").value(1))
                 .andExpect(jsonPath("$.data.inventoryStockCount").value(1))
                 .andExpect(jsonPath("$.data.vehicleCount").value(1))
-                .andExpect(jsonPath("$.data.customerCount").value(1));
+                .andExpect(jsonPath("$.data.customerCount").value(1))
+                .andExpect(jsonPath("$.data.legacyWorkOrderStatusCount").value(0));
     }
 
     @Test
@@ -247,6 +248,8 @@ class TrialDataControllerTest {
                         .content("{\"confirmText\":\"CONFIRM_CLEAR_TRIAL_DATA\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.beforeSummary.workOrderCount").value(2))
+                .andExpect(jsonPath("$.data.afterSummary.workOrderCount").value(0))
                 .andExpect(jsonPath("$.data.workOrdersDeleted").value(2))
                 .andExpect(jsonPath("$.data.chargeItemsDeleted").value(1))
                 .andExpect(jsonPath("$.data.paymentsDeleted").value(1))
@@ -257,6 +260,30 @@ class TrialDataControllerTest {
                 .andExpect(jsonPath("$.data.inventoryStocksReset").value(1))
                 .andExpect(jsonPath("$.data.vehiclesDeleted").value(1))
                 .andExpect(jsonPath("$.data.customersDeleted").value(1));
+    }
+
+    @Test
+    void cleanStartPreflightSucceedsWhenNoLegacyStatusExists() throws Exception {
+        mockMvc.perform(get("/api/admin/trial-data/clean-start-preflight")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + superAdminToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.legacyWorkOrderStatusCount").value(0));
+    }
+
+    @Test
+    void cleanStartPreflightBlocksLegacyStatus() throws Exception {
+        jdbcTemplate.execute("""
+            INSERT INTO work_order (id, store_id, work_order_no, customer_name_snapshot, repair_item, status,
+                                    receivable_amount, received_amount, created_by, created_at)
+            VALUES (7099, 1, 'TRIAL-WO-LEGACY', '旧状态客户', '旧状态', 'SETTLED',
+                    100.00, 100.00, 1, CURRENT_TIMESTAMP)
+            """);
+
+        mockMvc.perform(get("/api/admin/trial-data/clean-start-preflight")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + superAdminToken()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("WORK_ORDER_LEGACY_STATUS_EXISTS"));
     }
 
     @Test

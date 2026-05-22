@@ -59,6 +59,7 @@ MERGE INTO sys_permission (id, permission_code, permission_name, module_code, st
 MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1028, 'WORK_ORDER_UPDATE', '工单编辑', 'WORK_ORDER', 'ENABLED');
 MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1029, 'USER_MANAGE', '用户管理', 'USER', 'ENABLED');
 MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1031, 'PLATFORM_MANAGE', '平台管理', 'PLATFORM', 'ENABLED');
+MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1032, 'REFUND_AFTER_DELIVERY', '交付后退款', 'PAYMENT', 'ENABLED');
 
 -- user-role relations
 MERGE INTO sys_user_role (id, user_id, role_id) KEY (user_id, role_id) VALUES (1, 1, 1);
@@ -103,6 +104,8 @@ MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permis
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1026, 4, 1023);
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1027, 4, 1024);
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1044, 4, 1031);
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1045, 4, 1032);
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1046, 100, 1032);
 
 -- M19: platform admin role assignment
 MERGE INTO sys_user_role (id, user_id, role_id) KEY (user_id, role_id) VALUES (301, 20, 4);

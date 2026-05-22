@@ -53,13 +53,13 @@ class RefundControllerTest {
             KEY (seq_type, seq_date) VALUES ('REFUND', CURRENT_DATE, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             """);
 
-        // Work order (id=7001) in PENDING_ACCEPT with payment
+        // Work order (id=7001) in REPAIRING with payment
         jdbcTemplate.execute("""
             INSERT INTO work_order (id, store_id, work_order_no, customer_name_snapshot, customer_phone_snapshot,
                                     vehicle_model_snapshot, frame_no_snapshot, repair_item, status,
                                     receivable_amount, received_amount, submitted_by, submitted_at)
             VALUES (7001, 1, 'WR-0001', '张三', '13800001111', 'NQi', 'FRAME001', '更换刹车片',
-                    'PENDING_ACCEPT', 200.00, 150.00, 1, CURRENT_TIMESTAMP)
+                    'REPAIRING', 200.00, 150.00, 1, CURRENT_TIMESTAMP)
             """);
 
         // Payment for 7001
@@ -69,13 +69,13 @@ class RefundControllerTest {
             VALUES (8201, 1, 7001, 'PAY-RF-001', 150.00, 'CASH', CURRENT_TIMESTAMP, 1, 1)
             """);
 
-        // Work order (id=7002) in PENDING_ACCEPT — for refund record test
+        // Work order (id=7002) in REPAIRING — for refund record test
         jdbcTemplate.execute("""
             INSERT INTO work_order (id, store_id, work_order_no, customer_name_snapshot, customer_phone_snapshot,
                                     vehicle_model_snapshot, frame_no_snapshot, repair_item, status,
                                     receivable_amount, received_amount, submitted_by, submitted_at)
             VALUES (7002, 1, 'WR-0002', '李四', '13800002222', 'MQi', 'FRAME002', '更换电池',
-                    'PENDING_ACCEPT', 150.00, 100.00, 1, CURRENT_TIMESTAMP)
+                    'REPAIRING', 150.00, 100.00, 1, CURRENT_TIMESTAMP)
             """);
 
         // Payment for 7002
@@ -98,7 +98,7 @@ class RefundControllerTest {
                                     vehicle_model_snapshot, frame_no_snapshot, repair_item, status,
                                     receivable_amount, received_amount, submitted_by, submitted_at)
             VALUES (7099, 2, 'WR-0099', '其他门店', '13900009999', 'NQi', 'FRAME099', '其他维修',
-                    'PENDING_ACCEPT', 50.00, 0.00, 2, CURRENT_TIMESTAMP)
+                    'REPAIRING', 50.00, 0.00, 2, CURRENT_TIMESTAMP)
             """);
 
         // Refund record for store 2 work order 7099
@@ -255,9 +255,9 @@ class RefundControllerTest {
     // ========== 4. POST refund does not auto-reverse settle ==========
 
     @Test
-    void recordRefundDoesNotAutoReverseSettle() throws Exception {
-        // Seed 7001 with SETTLED status
-        jdbcTemplate.execute("UPDATE work_order SET status = 'SETTLED' WHERE id = 7001");
+    void deliveredRefundWithPermissionDoesNotReopenOrRollbackInventory() throws Exception {
+        // Seed 7001 with DELIVERED status
+        jdbcTemplate.execute("UPDATE work_order SET status = 'DELIVERED' WHERE id = 7001");
         // Seed payment so refund is valid
         jdbcTemplate.execute("""
             INSERT INTO payment_record (id, store_id, work_order_id, payment_no, amount, payment_method,
@@ -271,16 +271,44 @@ class RefundControllerTest {
                     "reason": "反结算测试"
                 }
                 """;
-        // Refund on SETTLED work order — service may reject this (status not payable)
-        // If it goes through, verify status unchanged
         mockMvc.perform(post("/api/admin/work-orders/7001/refunds")
                         .header("X-User-Id", "1")
                         .header("X-Store-Id", "1")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(body));
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"));
         String status = jdbcTemplate.queryForObject(
                 "SELECT status FROM work_order WHERE id = 7001", String.class);
-        assertTrue("SETTLED".equals(status));
+        assertTrue("DELIVERED".equals(status));
+        Long refundCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM refund_record WHERE store_id = 1 AND work_order_id = 7001", Long.class);
+        assertTrue(refundCount != null && refundCount == 1);
+        Long flowCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM inventory_flow WHERE store_id = 1 AND work_order_id = 7001", Long.class);
+        assertTrue(flowCount != null && flowCount == 0);
+    }
+
+    @Test
+    void deliveredRefundWithoutAfterDeliveryPermissionFails() throws Exception {
+        jdbcTemplate.execute("UPDATE work_order SET status = 'DELIVERED' WHERE id = 7001");
+        String body = """
+                {
+                    "amount": 10.00,
+                    "refundMethod": "CASH",
+                    "reason": "缺少权限"
+                }
+                """;
+        mockMvc.perform(post("/api/admin/work-orders/7001/refunds")
+                        .header("X-User-Id", "7")
+                        .header("X-Store-Id", "1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+        Long refundCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM refund_record WHERE store_id = 1 AND work_order_id = 7001", Long.class);
+        assertTrue(refundCount != null && refundCount == 0);
     }
 
     // ========== 5. POST refund does not generate RELEASE/CONSUME flow ==========

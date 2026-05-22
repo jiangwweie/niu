@@ -83,13 +83,13 @@ class WorkOrderControllerTest {
                     'DRAFT', 0.00, 0.00)
             """);
 
-        // PENDING_ACCEPT work order (id=5003) - for cancel test (with reserved inventory)
+        // REPAIRING work order (id=5003) - for cancel test (with reserved inventory)
         jdbcTemplate.execute("""
             INSERT INTO work_order (id, store_id, work_order_no, customer_name_snapshot, customer_phone_snapshot,
                                     vehicle_model_snapshot, frame_no_snapshot, repair_item, status,
                                     receivable_amount, received_amount, submitted_by, submitted_at)
             VALUES (5003, 1, 'WO-0003', '王五', '13800003333', 'UQi', 'FRAME003', '更换控制器',
-                    'PENDING_ACCEPT', 60.00, 0.00, 1, CURRENT_TIMESTAMP)
+                    'REPAIRING', 60.00, 0.00, 1, CURRENT_TIMESTAMP)
             """);
         jdbcTemplate.execute("""
             INSERT INTO work_order_charge_item (id, store_id, work_order_id, charge_type, item_name, part_id,
@@ -107,13 +107,13 @@ class WorkOrderControllerTest {
             VALUES (7001, 1, 9001, 10, 8, 2, CURRENT_TIMESTAMP)
             """);
 
-        // ACCEPTED work order (id=5004) - for settle test
+        // REPAIRING work order (id=5004) - for settle test
         jdbcTemplate.execute("""
             INSERT INTO work_order (id, store_id, work_order_no, customer_name_snapshot, customer_phone_snapshot,
                                     vehicle_model_snapshot, frame_no_snapshot, repair_item, status,
                                     receivable_amount, received_amount, submitted_by, submitted_at)
             VALUES (5004, 1, 'WO-0004', '赵六', '13800004444', 'FQi', 'FRAME004', '更换控制器',
-                    'ACCEPTED', 60.00, 60.00, 1, CURRENT_TIMESTAMP)
+                    'REPAIRING', 60.00, 60.00, 1, CURRENT_TIMESTAMP)
             """);
         jdbcTemplate.execute("""
             INSERT INTO work_order_charge_item (id, store_id, work_order_id, charge_type, item_name, part_id,
@@ -388,7 +388,7 @@ class WorkOrderControllerTest {
                 .andExpect(jsonPath("$.code").value("SUCCESS"));
         String status = jdbcTemplate.queryForObject(
                 "SELECT status FROM work_order WHERE id = 5002", String.class);
-        assertTrue("PENDING_ACCEPT".equals(status));
+        assertTrue("REPAIRING".equals(status));
     }
 
     // ========== 12. Cancel ==========
@@ -433,10 +433,10 @@ class WorkOrderControllerTest {
                 .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"));
     }
 
-    // ========== 14. Settle ==========
+    // ========== 14. Deprecated settle ==========
 
     @Test
-    void settleSucceeds() throws Exception {
+    void settleEndpointIsDeprecatedAndDoesNotConsumeInventory() throws Exception {
         String body = """
                 {
                     "remark": "结算测试"
@@ -447,11 +447,15 @@ class WorkOrderControllerTest {
                         .header("X-Store-Id", "1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value("SUCCESS"));
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("WORK_ORDER_LEGACY_SETTLE_DISABLED"));
         String status = jdbcTemplate.queryForObject(
                 "SELECT status FROM work_order WHERE id = 5004", String.class);
-        assertTrue("SETTLED".equals(status));
+        assertTrue("REPAIRING".equals(status));
+        Integer consumeCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM inventory_flow WHERE work_order_id = 5004 AND flow_type = 'CONSUME'",
+                Integer.class);
+        assertTrue(consumeCount != null && consumeCount == 0);
     }
 
     // ========== 15. Submit/Cancel/Settle without header fails ==========

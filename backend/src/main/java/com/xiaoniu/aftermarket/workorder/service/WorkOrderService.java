@@ -3,8 +3,11 @@ package com.xiaoniu.aftermarket.workorder.service;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
 import com.xiaoniu.aftermarket.workorder.dto.AdjustChargeItemsCommand;
 import com.xiaoniu.aftermarket.workorder.dto.AddWorkOrderChargeItemCommand;
+import com.xiaoniu.aftermarket.workorder.dto.AddNonInventoryChargeCommand;
 import com.xiaoniu.aftermarket.workorder.dto.CancelWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.CreateDraftWorkOrderCommand;
+import com.xiaoniu.aftermarket.workorder.dto.DeliverWorkOrderCommand;
+import com.xiaoniu.aftermarket.workorder.dto.MarkRepairDoneWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.SettleWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.SubmitWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.UpdateWorkOrderChargeItemCommand;
@@ -38,6 +41,12 @@ public interface WorkOrderService {
     void cancel(CancelWorkOrderCommand command);
 
     void settle(SettleWorkOrderCommand command);
+
+    void markRepairDone(MarkRepairDoneWorkOrderCommand command);
+
+    void deliver(DeliverWorkOrderCommand command);
+
+    Long addNonInventoryCharge(AddNonInventoryChargeCommand command);
 
     void adjustChargeItems(AdjustChargeItemsCommand command);
 

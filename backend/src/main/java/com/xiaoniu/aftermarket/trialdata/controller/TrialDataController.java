@@ -49,6 +49,14 @@ public class TrialDataController {
         return ApiResponse.success(response);
     }
 
+    @GetMapping("/clean-start-preflight")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ApiResponse<TrialDataSummaryResponse> cleanStartPreflight() {
+        CurrentUser user = requireCurrentUser();
+        trialDataService.assertCleanStartReady(user.storeId());
+        return ApiResponse.success(trialDataService.getSummary(user.storeId()));
+    }
+
     private CurrentUser requireCurrentUser() {
         return CurrentUserContext.get()
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "缺少用户上下文"));

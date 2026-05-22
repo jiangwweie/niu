@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
+import com.xiaoniu.aftermarket.common.enums.CashierStatus;
 import com.xiaoniu.aftermarket.common.enums.CommonStatus;
 import com.xiaoniu.aftermarket.common.enums.InventoryFlowType;
 import com.xiaoniu.aftermarket.common.enums.WorkOrderStatus;
@@ -30,8 +31,11 @@ import com.xiaoniu.aftermarket.part.dto.CreatePartCommand;
 import com.xiaoniu.aftermarket.part.entity.PartEntity;
 import com.xiaoniu.aftermarket.part.service.PartService;
 import com.xiaoniu.aftermarket.workorder.dto.AddWorkOrderChargeItemCommand;
+import com.xiaoniu.aftermarket.workorder.dto.AddNonInventoryChargeCommand;
 import com.xiaoniu.aftermarket.workorder.dto.CancelWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.CreateDraftWorkOrderCommand;
+import com.xiaoniu.aftermarket.workorder.dto.DeliverWorkOrderCommand;
+import com.xiaoniu.aftermarket.workorder.dto.MarkRepairDoneWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.SettleWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.SubmitWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.UpdateWorkOrderChargeItemCommand;
@@ -204,7 +208,7 @@ class WorkOrderServiceTest {
 
         // Manually set status to non-DRAFT
         WorkOrderEntity entity = workOrderMapper.selectById(id);
-        entity.setStatus(WorkOrderStatus.PENDING_ACCEPT.getCode());
+        entity.setStatus(WorkOrderStatus.REPAIRING.getCode());
         workOrderMapper.updateById(entity);
 
         UpdateWorkOrderDraftCommand updateCmd = new UpdateWorkOrderDraftCommand();
@@ -431,7 +435,7 @@ class WorkOrderServiceTest {
                 buildCreateCommand("客户L", "13900012222", "小牛N1"));
 
         WorkOrderEntity entity = workOrderMapper.selectById(woId);
-        entity.setStatus(WorkOrderStatus.PENDING_ACCEPT.getCode());
+        entity.setStatus(WorkOrderStatus.REPAIRING.getCode());
         workOrderMapper.updateById(entity);
 
         AddWorkOrderChargeItemCommand cmd = buildLaborItem("工时费", 1, new BigDecimal("100.00"));
@@ -774,14 +778,14 @@ class WorkOrderServiceTest {
         workOrderService.submit(buildSubmitCommand(woId));
 
         WorkOrderEntity workOrder = workOrderMapper.selectById(woId);
-        assertEquals(WorkOrderStatus.PENDING_ACCEPT.getCode(), workOrder.getStatus());
+        assertEquals(WorkOrderStatus.REPAIRING.getCode(), workOrder.getStatus());
         assertEquals(OPERATOR_ID, workOrder.getSubmittedBy());
         assertNotNull(workOrder.getSubmittedAt());
 
         List<WorkOrderStatusLogEntity> logs = statusLogMapper.selectByWorkOrderId(woId);
         WorkOrderStatusLogEntity submitLog = logs.get(logs.size() - 1);
         assertEquals(WorkOrderStatus.DRAFT.getCode(), submitLog.getFromStatus());
-        assertEquals(WorkOrderStatus.PENDING_ACCEPT.getCode(), submitLog.getToStatus());
+        assertEquals(WorkOrderStatus.REPAIRING.getCode(), submitLog.getToStatus());
         assertEquals("SUBMIT", submitLog.getActionType());
         assertEquals("提交工单", submitLog.getReason());
     }
@@ -830,7 +834,7 @@ class WorkOrderServiceTest {
 
         workOrderService.submit(buildSubmitCommand(woId));
 
-        assertEquals(WorkOrderStatus.PENDING_ACCEPT.getCode(), workOrderMapper.selectById(woId).getStatus());
+        assertEquals(WorkOrderStatus.REPAIRING.getCode(), workOrderMapper.selectById(woId).getStatus());
         assertEquals(0, countReserveFlows());
     }
 
@@ -916,7 +920,7 @@ class WorkOrderServiceTest {
                 buildPartItem(part.getId(), "更换刹车盘", 2, new BigDecimal("100.00")));
 
         WorkOrderEntity entity = workOrderMapper.selectById(woId);
-        entity.setStatus(WorkOrderStatus.PENDING_ACCEPT.getCode());
+        entity.setStatus(WorkOrderStatus.REPAIRING.getCode());
         workOrderMapper.updateById(entity);
 
         BusinessException ex = assertThrows(BusinessException.class,
@@ -1118,37 +1122,20 @@ class WorkOrderServiceTest {
                 () -> workOrderService.removeChargeItem(STORE_ID, woId, itemId)).getErrorCode());
     }
 
-    // --- settle ---
+    // --- repair done / deliver / legacy settle ---
 
     @Test
-    void settleSubmittedWorkOrderSuccessfully() {
-        Long woId = createSubmittedLaborWorkOrder(new BigDecimal("100.00"));
-        recordPayment(woId, new BigDecimal("100.00"));
-        int statusLogCountBefore = statusLogMapper.selectByWorkOrderId(woId).size();
-
-        workOrderService.settle(buildSettleCommand(woId));
-
-        WorkOrderEntity workOrder = workOrderMapper.selectById(woId);
-        assertEquals(WorkOrderStatus.SETTLED.getCode(), workOrder.getStatus());
-        assertEquals(OPERATOR_ID, workOrder.getSettledBy());
-        assertNotNull(workOrder.getSettledAt());
-        List<WorkOrderStatusLogEntity> logs = statusLogMapper.selectByWorkOrderId(woId);
-        assertEquals(statusLogCountBefore + 1, logs.size());
-        WorkOrderStatusLogEntity settleLog = logs.get(logs.size() - 1);
-        assertEquals(WorkOrderStatus.PENDING_ACCEPT.getCode(), settleLog.getFromStatus());
-        assertEquals(WorkOrderStatus.SETTLED.getCode(), settleLog.getToStatus());
-        assertEquals("SETTLE", settleLog.getActionType());
-    }
-
-    @Test
-    void settleWithPartChargeItemConsumesReservedInventory() {
-        PartEntity part = createPart("结算轮胎", "SET-001", new BigDecimal("30.00"));
+    void markRepairDoneConsumesReservedInventory() {
+        PartEntity part = createPart("维修完成轮胎", "DONE-001", new BigDecimal("30.00"));
         inbound(part.getId(), 10);
         Long woId = createSubmittedPartWorkOrder(part.getId(), 3, new BigDecimal("80.00"));
-        recordPayment(woId, new BigDecimal("240.00"));
 
-        workOrderService.settle(buildSettleCommand(woId));
+        workOrderService.markRepairDone(buildMarkRepairDoneCommand(woId));
 
+        WorkOrderEntity workOrder = workOrderMapper.selectById(woId);
+        assertEquals(WorkOrderStatus.REPAIR_DONE.getCode(), workOrder.getStatus());
+        assertEquals(OPERATOR_ID, workOrder.getRepairDoneBy());
+        assertNotNull(workOrder.getRepairDoneAt());
         InventoryStockEntity stock = inventoryStockMapper.selectByStoreIdAndPartId(STORE_ID, part.getId());
         assertEquals(7, stock.getActualQty());
         assertEquals(7, stock.getAvailableQty());
@@ -1158,279 +1145,145 @@ class WorkOrderServiceTest {
                 .findFirst()
                 .orElseThrow();
         assertEquals(3, consumeFlow.getQuantityDelta());
-        assertEquals(10, consumeFlow.getActualBefore());
-        assertEquals(7, consumeFlow.getActualAfter());
-        assertEquals(7, consumeFlow.getAvailableBefore());
-        assertEquals(7, consumeFlow.getAvailableAfter());
-        assertEquals(3, consumeFlow.getReservedBefore());
-        assertEquals(0, consumeFlow.getReservedAfter());
-        assertEquals("WORK_ORDER", consumeFlow.getBusinessType());
         assertEquals(woId, consumeFlow.getWorkOrderId());
     }
 
     @Test
-    void settleLaborOnlyWorkOrderDoesNotWriteInventoryFlow() {
-        Long woId = createSubmittedLaborWorkOrder(new BigDecimal("100.00"));
-        recordPayment(woId, new BigDecimal("100.00"));
-
-        workOrderService.settle(buildSettleCommand(woId));
-
-        assertEquals(WorkOrderStatus.SETTLED.getCode(), workOrderMapper.selectById(woId).getStatus());
-        assertEquals(0, inventoryFlowMapper.selectCount(null));
-    }
-
-    @Test
-    void draftWorkOrderCannotSettle() {
-        Long woId = workOrderService.createDraft(
-                buildCreateCommand("结算草稿", "13900060001", "小牛N1"));
-        int statusLogCountBefore = statusLogMapper.selectByWorkOrderId(woId).size();
-
-        BusinessException ex = assertThrows(BusinessException.class,
-                () -> workOrderService.settle(buildSettleCommand(woId)));
-
-        assertEquals(ErrorCode.WORK_ORDER_SETTLE_NOT_ALLOWED, ex.getErrorCode());
-        assertEquals(WorkOrderStatus.DRAFT.getCode(), workOrderMapper.selectById(woId).getStatus());
-        assertEquals(0, countConsumeFlows());
-        assertEquals(statusLogCountBefore, statusLogMapper.selectByWorkOrderId(woId).size());
-    }
-
-    @Test
-    void cancelledWorkOrderCannotSettle() {
-        Long woId = createSubmittedLaborWorkOrder(new BigDecimal("100.00"));
-        recordPayment(woId, new BigDecimal("100.00"));
-        WorkOrderEntity workOrder = workOrderMapper.selectById(woId);
-        workOrder.setStatus(WorkOrderStatus.CANCELLED.getCode());
-        workOrderMapper.updateById(workOrder);
-        int statusLogCountBefore = statusLogMapper.selectByWorkOrderId(woId).size();
-
-        BusinessException ex = assertThrows(BusinessException.class,
-                () -> workOrderService.settle(buildSettleCommand(woId)));
-
-        assertEquals(ErrorCode.WORK_ORDER_SETTLE_NOT_ALLOWED, ex.getErrorCode());
-        assertEquals(WorkOrderStatus.CANCELLED.getCode(), workOrderMapper.selectById(woId).getStatus());
-        assertEquals(0, countConsumeFlows());
-        assertEquals(statusLogCountBefore, statusLogMapper.selectByWorkOrderId(woId).size());
-    }
-
-    @Test
-    void repeatedSettleFailsWithoutDuplicateConsumeOrLog() {
-        PartEntity part = createPart("重复结算件", "SET-002", new BigDecimal("20.00"));
+    void repeatedMarkRepairDoneFailsWithoutDuplicateConsume() {
+        PartEntity part = createPart("重复完成件", "DONE-002", new BigDecimal("20.00"));
         inbound(part.getId(), 5);
         Long woId = createSubmittedPartWorkOrder(part.getId(), 2, new BigDecimal("50.00"));
-        recordPayment(woId, new BigDecimal("100.00"));
-        workOrderService.settle(buildSettleCommand(woId));
+        workOrderService.markRepairDone(buildMarkRepairDoneCommand(woId));
         int statusLogCountBefore = statusLogMapper.selectByWorkOrderId(woId).size();
 
         BusinessException ex = assertThrows(BusinessException.class,
-                () -> workOrderService.settle(buildSettleCommand(woId)));
+                () -> workOrderService.markRepairDone(buildMarkRepairDoneCommand(woId)));
 
-        assertEquals(ErrorCode.WORK_ORDER_SETTLE_NOT_ALLOWED, ex.getErrorCode());
-        InventoryStockEntity stock = inventoryStockMapper.selectByStoreIdAndPartId(STORE_ID, part.getId());
-        assertEquals(3, stock.getActualQty());
-        assertEquals(0, stock.getReservedQty());
+        assertEquals(ErrorCode.WORK_ORDER_REPAIR_DONE_NOT_ALLOWED, ex.getErrorCode());
         assertEquals(1, countConsumeFlows());
         assertEquals(statusLogCountBefore, statusLogMapper.selectByWorkOrderId(woId).size());
     }
 
     @Test
-    void settleFailsWhenReceivedAmountNotEnough() {
-        PartEntity part = createPart("金额不足件", "SET-003", new BigDecimal("20.00"));
+    void repairDonePartialPaidCannotDeliver() {
+        Long woId = createSubmittedLaborWorkOrder(new BigDecimal("100.00"));
+        recordPayment(woId, new BigDecimal("50.00"));
+        workOrderService.markRepairDone(buildMarkRepairDoneCommand(woId));
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> workOrderService.deliver(buildDeliverCommand(woId)));
+
+        assertEquals(ErrorCode.WORK_ORDER_RECEIVED_AMOUNT_NOT_ENOUGH, ex.getErrorCode());
+        assertEquals(WorkOrderStatus.REPAIR_DONE.getCode(), workOrderMapper.selectById(woId).getStatus());
+    }
+
+    @Test
+    void repairDonePaidCanDeliverWithoutInventoryAction() {
+        PartEntity part = createPart("交付件", "DONE-003", new BigDecimal("20.00"));
         inbound(part.getId(), 5);
         Long woId = createSubmittedPartWorkOrder(part.getId(), 2, new BigDecimal("50.00"));
-        recordPayment(woId, new BigDecimal("99.00"));
-        InventoryStockEntity before = inventoryStockMapper.selectByStoreIdAndPartId(STORE_ID, part.getId());
-
-        BusinessException ex = assertThrows(BusinessException.class,
-                () -> workOrderService.settle(buildSettleCommand(woId)));
-
-        assertEquals(ErrorCode.WORK_ORDER_RECEIVED_AMOUNT_NOT_ENOUGH, ex.getErrorCode());
-        assertUnchangedDraftLikeSettleFailure(woId, WorkOrderStatus.PENDING_ACCEPT.getCode());
-        assertStockUnchanged(part.getId(), before);
-    }
-
-    @Test
-    void settleFailsWhenRefundMakesReceivedAmountNotEnough() {
-        Long woId = createSubmittedLaborWorkOrder(new BigDecimal("100.00"));
         recordPayment(woId, new BigDecimal("100.00"));
-        recordRefund(woId, new BigDecimal("1.00"));
+        workOrderService.markRepairDone(buildMarkRepairDoneCommand(woId));
+        long flowCountBefore = inventoryFlowMapper.selectCount(null);
 
-        BusinessException ex = assertThrows(BusinessException.class,
-                () -> workOrderService.settle(buildSettleCommand(woId)));
-
-        assertEquals(ErrorCode.WORK_ORDER_RECEIVED_AMOUNT_NOT_ENOUGH, ex.getErrorCode());
-        assertUnchangedDraftLikeSettleFailure(woId, WorkOrderStatus.PENDING_ACCEPT.getCode());
-    }
-
-    @Test
-    void settleWithExactPaymentSucceeds() {
-        Long woId = createSubmittedLaborWorkOrder(new BigDecimal("100.00"));
-        recordPayment(woId, new BigDecimal("100.00"));
-
-        workOrderService.settle(buildSettleCommand(woId));
+        workOrderService.deliver(buildDeliverCommand(woId));
 
         WorkOrderEntity workOrder = workOrderMapper.selectById(woId);
-        assertEquals(WorkOrderStatus.SETTLED.getCode(), workOrder.getStatus());
-        assertEquals(0, new BigDecimal("100.00").compareTo(workOrder.getReceivedAmount()));
+        assertEquals(WorkOrderStatus.DELIVERED.getCode(), workOrder.getStatus());
+        assertEquals(OPERATOR_ID, workOrder.getDeliveredBy());
+        assertNotNull(workOrder.getDeliveredAt());
+        assertEquals(flowCountBefore, inventoryFlowMapper.selectCount(null));
     }
 
     @Test
-    void settleAggregatesSamePartBeforeConsume() {
-        PartEntity part = createPart("汇总结算件", "SET-004", new BigDecimal("20.00"));
-        inbound(part.getId(), 5);
-        Long woId = workOrderService.createDraft(
-                buildCreateCommand("结算汇总", "13900060004", "小牛N1"));
-        workOrderService.addChargeItem(woId, buildPartItem(part.getId(), "件1", 2, new BigDecimal("30.00")));
-        workOrderService.addChargeItem(woId, buildPartItem(part.getId(), "件2", 3, new BigDecimal("30.00")));
-        workOrderService.submit(buildSubmitCommand(woId));
-        recordPayment(woId, new BigDecimal("150.00"));
+    void noChargeWorkOrderRequiresReasonAndCanDeliver() {
+        Long woId = createSubmittedLaborWorkOrder(BigDecimal.ZERO);
 
-        workOrderService.settle(buildSettleCommand(woId));
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> workOrderService.markRepairDone(buildMarkRepairDoneCommand(woId)));
+        assertEquals(ErrorCode.WORK_ORDER_NO_CHARGE_REASON_REQUIRED, ex.getErrorCode());
 
-        InventoryStockEntity stock = inventoryStockMapper.selectByStoreIdAndPartId(STORE_ID, part.getId());
-        assertEquals(0, stock.getActualQty());
-        assertEquals(0, stock.getAvailableQty());
-        assertEquals(0, stock.getReservedQty());
-        assertEquals(1, countConsumeFlows());
-        InventoryFlowEntity flow = inventoryFlowMapper.selectList(null).stream()
-                .filter(f -> InventoryFlowType.CONSUME.getCode().equals(f.getFlowType()))
-                .findFirst()
-                .orElseThrow();
-        assertEquals(5, flow.getQuantityDelta());
+        MarkRepairDoneWorkOrderCommand repairDone = buildMarkRepairDoneCommand(woId);
+        repairDone.setNoChargeReason("FREE_CHECK");
+        repairDone.setNoChargeRemark("免费检测");
+        workOrderService.markRepairDone(repairDone);
+
+        PaymentSummaryResponse summary = paymentService.getPaymentSummary(STORE_ID, woId);
+        assertEquals(CashierStatus.NO_CHARGE.getCode(), summary.getCashierStatus());
+        assertTrue(summary.getCanDeliver());
+
+        DeliverWorkOrderCommand deliver = buildDeliverCommand(woId);
+        deliver.setNoChargeReason("FREE_CHECK");
+        deliver.setNoChargeRemark("免费检测");
+        workOrderService.deliver(deliver);
+        assertEquals(WorkOrderStatus.DELIVERED.getCode(), workOrderMapper.selectById(woId).getStatus());
     }
 
     @Test
-    void settleFailsWhenAggregatedReservedQtyNotEnough() {
-        PartEntity part = createPart("预占不足件", "SET-005", new BigDecimal("20.00"));
+    void addLaborAndOtherAfterRepairDoneRecalculatesCashierStatus() {
+        Long woId = createSubmittedLaborWorkOrder(new BigDecimal("100.00"));
+        recordPayment(woId, new BigDecimal("100.00"));
+        workOrderService.markRepairDone(buildMarkRepairDoneCommand(woId));
+        assertEquals(CashierStatus.PAID.getCode(),
+                paymentService.getPaymentSummary(STORE_ID, woId).getCashierStatus());
+
+        workOrderService.addNonInventoryCharge(buildNonInventoryChargeCommand(woId, "LABOR",
+                "追加人工", new BigDecimal("20.00")));
+        assertEquals(CashierStatus.PARTIAL_PAID.getCode(),
+                paymentService.getPaymentSummary(STORE_ID, woId).getCashierStatus());
+
+        recordPayment(woId, new BigDecimal("20.00"));
+        workOrderService.addNonInventoryCharge(buildNonInventoryChargeCommand(woId, "OTHER",
+                "追加其他", new BigDecimal("10.00")));
+        PaymentSummaryResponse summary = paymentService.getPaymentSummary(STORE_ID, woId);
+        assertEquals(CashierStatus.PARTIAL_PAID.getCode(), summary.getCashierStatus());
+        assertEquals(0, new BigDecimal("10.00").compareTo(summary.getOutstandingAmount()));
+    }
+
+    @Test
+    void repairDoneCannotAddPartChargeOrBlankReason() {
+        Long woId = createSubmittedLaborWorkOrder(new BigDecimal("100.00"));
+        workOrderService.markRepairDone(buildMarkRepairDoneCommand(woId));
+
+        AddNonInventoryChargeCommand blankReason = buildNonInventoryChargeCommand(woId, "LABOR",
+                "追加人工", new BigDecimal("20.00"));
+        blankReason.setReason(" ");
+        assertEquals(ErrorCode.WORK_ORDER_NON_INVENTORY_CHARGE_REASON_REQUIRED, assertThrows(BusinessException.class,
+                () -> workOrderService.addNonInventoryCharge(blankReason)).getErrorCode());
+
+        AddNonInventoryChargeCommand partCharge = buildNonInventoryChargeCommand(woId, "PART",
+                "追加配件", new BigDecimal("20.00"));
+        assertEquals(ErrorCode.CHARGE_TYPE_INVALID, assertThrows(BusinessException.class,
+                () -> workOrderService.addNonInventoryCharge(partCharge)).getErrorCode());
+    }
+
+    @Test
+    void legacySettleIsDisabledAndDoesNotConsumeInventory() {
+        PartEntity part = createPart("废弃结算件", "SET-LEGACY", new BigDecimal("20.00"));
         inbound(part.getId(), 5);
-        Long woId = createSubmittedPartWorkOrder(part.getId(), 5, new BigDecimal("30.00"));
-        recordPayment(woId, new BigDecimal("150.00"));
-        InventoryStockEntity stock = inventoryStockMapper.selectByStoreIdAndPartId(STORE_ID, part.getId());
-        stock.setReservedQty(4);
-        inventoryStockMapper.updateById(stock);
-        InventoryStockEntity before = inventoryStockMapper.selectByStoreIdAndPartId(STORE_ID, part.getId());
+        Long woId = createSubmittedPartWorkOrder(part.getId(), 2, new BigDecimal("50.00"));
+        recordPayment(woId, new BigDecimal("100.00"));
 
         BusinessException ex = assertThrows(BusinessException.class,
                 () -> workOrderService.settle(buildSettleCommand(woId)));
 
-        assertEquals(ErrorCode.INVENTORY_RESERVED_NOT_ENOUGH, ex.getErrorCode());
-        assertStockUnchanged(part.getId(), before);
-        assertUnchangedDraftLikeSettleFailure(woId, WorkOrderStatus.PENDING_ACCEPT.getCode());
-    }
-
-    @Test
-    void settleRollbackWhenOneOfMultiplePartsReservedQtyNotEnough() {
-        PartEntity enoughPart = createPart("足够件", "SET-006", new BigDecimal("20.00"));
-        PartEntity shortPart = createPart("不足件", "SET-007", new BigDecimal("20.00"));
-        inbound(enoughPart.getId(), 5);
-        inbound(shortPart.getId(), 5);
-        Long woId = workOrderService.createDraft(
-                buildCreateCommand("结算回滚", "13900060007", "小牛N1"));
-        workOrderService.addChargeItem(woId, buildPartItem(enoughPart.getId(), "足够件", 2, new BigDecimal("30.00")));
-        workOrderService.addChargeItem(woId, buildPartItem(shortPart.getId(), "不足件", 3, new BigDecimal("30.00")));
-        workOrderService.submit(buildSubmitCommand(woId));
-        recordPayment(woId, new BigDecimal("150.00"));
-        InventoryStockEntity shortStock = inventoryStockMapper.selectByStoreIdAndPartId(STORE_ID, shortPart.getId());
-        shortStock.setReservedQty(2);
-        inventoryStockMapper.updateById(shortStock);
-        InventoryStockEntity enoughBefore = inventoryStockMapper.selectByStoreIdAndPartId(STORE_ID, enoughPart.getId());
-        InventoryStockEntity shortBefore = inventoryStockMapper.selectByStoreIdAndPartId(STORE_ID, shortPart.getId());
-
-        BusinessException ex = assertThrows(BusinessException.class,
-                () -> workOrderService.settle(buildSettleCommand(woId)));
-
-        assertEquals(ErrorCode.INVENTORY_RESERVED_NOT_ENOUGH, ex.getErrorCode());
-        assertStockUnchanged(enoughPart.getId(), enoughBefore);
-        assertStockUnchanged(shortPart.getId(), shortBefore);
+        assertEquals(ErrorCode.WORK_ORDER_LEGACY_SETTLE_DISABLED, ex.getErrorCode());
+        assertEquals(WorkOrderStatus.REPAIRING.getCode(), workOrderMapper.selectById(woId).getStatus());
         assertEquals(0, countConsumeFlows());
-        assertEquals(WorkOrderStatus.PENDING_ACCEPT.getCode(), workOrderMapper.selectById(woId).getStatus());
     }
 
     @Test
-    void settleWithNullStoreIdFails() {
+    void paymentSummaryCannotDeliverAfterDelivered() {
         Long woId = createSubmittedLaborWorkOrder(new BigDecimal("100.00"));
         recordPayment(woId, new BigDecimal("100.00"));
-        int statusLogCountBefore = statusLogMapper.selectByWorkOrderId(woId).size();
-        SettleWorkOrderCommand command = buildSettleCommand(woId);
-        command.setStoreId(null);
-
-        BusinessException ex = assertThrows(BusinessException.class,
-                () -> workOrderService.settle(command));
-
-        assertEquals(ErrorCode.COMMON_BAD_REQUEST, ex.getErrorCode());
-        assertUnchangedDraftLikeSettleFailure(woId, WorkOrderStatus.PENDING_ACCEPT.getCode());
-        assertEquals(statusLogCountBefore, statusLogMapper.selectByWorkOrderId(woId).size());
-    }
-
-    @Test
-    void settleWithWrongStoreIdFails() {
-        Long woId = createSubmittedLaborWorkOrder(new BigDecimal("100.00"));
-        recordPayment(woId, new BigDecimal("100.00"));
-        int statusLogCountBefore = statusLogMapper.selectByWorkOrderId(woId).size();
-        SettleWorkOrderCommand command = buildSettleCommand(woId);
-        command.setStoreId(OTHER_STORE_ID);
-
-        BusinessException ex = assertThrows(BusinessException.class,
-                () -> workOrderService.settle(command));
-
-        assertEquals(ErrorCode.WORK_ORDER_NOT_FOUND, ex.getErrorCode());
-        assertUnchangedDraftLikeSettleFailure(woId, WorkOrderStatus.PENDING_ACCEPT.getCode());
-        assertEquals(statusLogCountBefore, statusLogMapper.selectByWorkOrderId(woId).size());
-    }
-
-    @Test
-    void settleWithNullOperatorIdFails() {
-        Long woId = createSubmittedLaborWorkOrder(new BigDecimal("100.00"));
-        recordPayment(woId, new BigDecimal("100.00"));
-        int statusLogCountBefore = statusLogMapper.selectByWorkOrderId(woId).size();
-        SettleWorkOrderCommand command = buildSettleCommand(woId);
-        command.setOperatorId(null);
-
-        BusinessException ex = assertThrows(BusinessException.class,
-                () -> workOrderService.settle(command));
-
-        assertEquals(ErrorCode.OPERATOR_REQUIRED, ex.getErrorCode());
-        assertUnchangedDraftLikeSettleFailure(woId, WorkOrderStatus.PENDING_ACCEPT.getCode());
-        assertEquals(statusLogCountBefore, statusLogMapper.selectByWorkOrderId(woId).size());
-    }
-
-    @Test
-    void settleRecalculatesReceivableAmount() {
-        Long woId = createSubmittedLaborWorkOrder(new BigDecimal("100.00"));
-        recordPayment(woId, new BigDecimal("100.00"));
-        WorkOrderEntity workOrder = workOrderMapper.selectById(woId);
-        workOrder.setReceivableAmount(new BigDecimal("999.00"));
-        workOrderMapper.updateById(workOrder);
-
-        workOrderService.settle(buildSettleCommand(woId));
-
-        assertEquals(0, new BigDecimal("100.00")
-                .compareTo(workOrderMapper.selectById(woId).getReceivableAmount()));
-    }
-
-    @Test
-    void settleRecalculatesReceivedAmount() {
-        Long woId = createSubmittedLaborWorkOrder(new BigDecimal("100.00"));
-        recordPayment(woId, new BigDecimal("100.00"));
-        WorkOrderEntity workOrder = workOrderMapper.selectById(woId);
-        workOrder.setReceivedAmount(new BigDecimal("999.00"));
-        workOrderMapper.updateById(workOrder);
-
-        workOrderService.settle(buildSettleCommand(woId));
-
-        assertEquals(0, new BigDecimal("100.00")
-                .compareTo(workOrderMapper.selectById(woId).getReceivedAmount()));
-    }
-
-    @Test
-    void paymentSummaryCannotSettleAfterWorkOrderSettled() {
-        Long woId = createSubmittedLaborWorkOrder(new BigDecimal("100.00"));
-        recordPayment(woId, new BigDecimal("100.00"));
-        workOrderService.settle(buildSettleCommand(woId));
+        workOrderService.markRepairDone(buildMarkRepairDoneCommand(woId));
+        workOrderService.deliver(buildDeliverCommand(woId));
 
         PaymentSummaryResponse summary = paymentService.getPaymentSummary(STORE_ID, woId);
 
         assertFalse(summary.getCanSettle());
-        assertEquals(WorkOrderStatus.SETTLED.getCode(), workOrderMapper.selectById(woId).getStatus());
+        assertFalse(summary.getCanDeliver());
+        assertEquals(WorkOrderStatus.DELIVERED.getCode(), workOrderMapper.selectById(woId).getStatus());
     }
 
     // --- cancel ---
@@ -1513,7 +1366,8 @@ class WorkOrderServiceTest {
         inbound(part.getId(), 5);
         Long woId = createSubmittedPartWorkOrder(part.getId(), 2, new BigDecimal("50.00"));
         recordPayment(woId, new BigDecimal("100.00"));
-        workOrderService.settle(buildSettleCommand(woId));
+        workOrderService.markRepairDone(buildMarkRepairDoneCommand(woId));
+        workOrderService.deliver(buildDeliverCommand(woId));
         InventoryStockEntity before = inventoryStockMapper.selectByStoreIdAndPartId(STORE_ID, part.getId());
         int statusLogCountBefore = statusLogMapper.selectByWorkOrderId(woId).size();
 
@@ -1521,7 +1375,7 @@ class WorkOrderServiceTest {
                 () -> workOrderService.cancel(buildCancelCommand(woId)));
 
         assertEquals(ErrorCode.WORK_ORDER_CANCEL_NOT_ALLOWED, ex.getErrorCode());
-        assertEquals(WorkOrderStatus.SETTLED.getCode(), workOrderMapper.selectById(woId).getStatus());
+        assertEquals(WorkOrderStatus.DELIVERED.getCode(), workOrderMapper.selectById(woId).getStatus());
         assertStockUnchanged(part.getId(), before);
         assertEquals(0, countReleaseFlows());
         assertEquals(statusLogCountBefore, statusLogMapper.selectByWorkOrderId(woId).size());
@@ -1585,7 +1439,7 @@ class WorkOrderServiceTest {
 
         assertEquals(ErrorCode.INVENTORY_RESERVED_NOT_ENOUGH, ex.getErrorCode());
         assertStockUnchanged(part.getId(), before);
-        assertCancelFailureNoChange(woId, WorkOrderStatus.PENDING_ACCEPT.getCode(), statusLogCountBefore);
+        assertCancelFailureNoChange(woId, WorkOrderStatus.REPAIRING.getCode(), statusLogCountBefore);
     }
 
     @Test
@@ -1612,7 +1466,7 @@ class WorkOrderServiceTest {
         assertEquals(ErrorCode.INVENTORY_RESERVED_NOT_ENOUGH, ex.getErrorCode());
         assertStockUnchanged(enoughPart.getId(), enoughBefore);
         assertStockUnchanged(shortPart.getId(), shortBefore);
-        assertCancelFailureNoChange(woId, WorkOrderStatus.PENDING_ACCEPT.getCode(), statusLogCountBefore);
+        assertCancelFailureNoChange(woId, WorkOrderStatus.REPAIRING.getCode(), statusLogCountBefore);
     }
 
     @Test
@@ -1626,7 +1480,7 @@ class WorkOrderServiceTest {
                 () -> workOrderService.cancel(command));
 
         assertEquals(ErrorCode.COMMON_BAD_REQUEST, ex.getErrorCode());
-        assertCancelFailureNoChange(woId, WorkOrderStatus.PENDING_ACCEPT.getCode(), statusLogCountBefore);
+        assertCancelFailureNoChange(woId, WorkOrderStatus.REPAIRING.getCode(), statusLogCountBefore);
     }
 
     @Test
@@ -1640,7 +1494,7 @@ class WorkOrderServiceTest {
                 () -> workOrderService.cancel(command));
 
         assertEquals(ErrorCode.WORK_ORDER_NOT_FOUND, ex.getErrorCode());
-        assertCancelFailureNoChange(woId, WorkOrderStatus.PENDING_ACCEPT.getCode(), statusLogCountBefore);
+        assertCancelFailureNoChange(woId, WorkOrderStatus.REPAIRING.getCode(), statusLogCountBefore);
     }
 
     @Test
@@ -1654,7 +1508,7 @@ class WorkOrderServiceTest {
                 () -> workOrderService.cancel(command));
 
         assertEquals(ErrorCode.OPERATOR_REQUIRED, ex.getErrorCode());
-        assertCancelFailureNoChange(woId, WorkOrderStatus.PENDING_ACCEPT.getCode(), statusLogCountBefore);
+        assertCancelFailureNoChange(woId, WorkOrderStatus.REPAIRING.getCode(), statusLogCountBefore);
     }
 
     @Test
@@ -1668,7 +1522,7 @@ class WorkOrderServiceTest {
                 () -> workOrderService.cancel(command));
 
         assertEquals(ErrorCode.WORK_ORDER_CANCEL_REASON_REQUIRED, ex.getErrorCode());
-        assertCancelFailureNoChange(woId, WorkOrderStatus.PENDING_ACCEPT.getCode(), statusLogCountBefore);
+        assertCancelFailureNoChange(woId, WorkOrderStatus.REPAIRING.getCode(), statusLogCountBefore);
     }
 
     @Test
@@ -1726,6 +1580,38 @@ class WorkOrderServiceTest {
         command.setWorkOrderId(workOrderId);
         command.setOperatorId(OPERATOR_ID);
         command.setRemark("测试结算");
+        return command;
+    }
+
+    private MarkRepairDoneWorkOrderCommand buildMarkRepairDoneCommand(Long workOrderId) {
+        MarkRepairDoneWorkOrderCommand command = new MarkRepairDoneWorkOrderCommand();
+        command.setStoreId(STORE_ID);
+        command.setWorkOrderId(workOrderId);
+        command.setOperatorId(OPERATOR_ID);
+        command.setRemark("测试维修完成");
+        return command;
+    }
+
+    private DeliverWorkOrderCommand buildDeliverCommand(Long workOrderId) {
+        DeliverWorkOrderCommand command = new DeliverWorkOrderCommand();
+        command.setStoreId(STORE_ID);
+        command.setWorkOrderId(workOrderId);
+        command.setOperatorId(OPERATOR_ID);
+        command.setRemark("测试交付关闭");
+        return command;
+    }
+
+    private AddNonInventoryChargeCommand buildNonInventoryChargeCommand(Long workOrderId, String chargeType,
+                                                                         String itemName, BigDecimal unitPrice) {
+        AddNonInventoryChargeCommand command = new AddNonInventoryChargeCommand();
+        command.setStoreId(STORE_ID);
+        command.setWorkOrderId(workOrderId);
+        command.setOperatorId(OPERATOR_ID);
+        command.setChargeType(chargeType);
+        command.setItemName(itemName);
+        command.setQuantity(1);
+        command.setUnitPrice(unitPrice);
+        command.setReason("追加原因");
         return command;
     }
 
