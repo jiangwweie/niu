@@ -249,12 +249,28 @@
             @click="openMarkRepairDoneDialog"
           >标记维修完成</el-button>
 
-          <el-button
-            v-if="currentOrder.canDeliver"
-            type="primary"
-            size="small"
-            @click="openDeliverDialog"
-          >交付关闭工单</el-button>
+          <!-- 交付关闭按钮：当已完工但未结清/不可交付时，显示置灰按钮与“请先收齐尾款后再交付关闭”的友好提示 -->
+          <template v-if="currentOrder.progressStatus === 'REPAIR_DONE'">
+            <el-tooltip
+              v-if="!currentOrder.canDeliver || !['PAID', 'NO_CHARGE'].includes(currentOrder.cashierStatus || '')"
+              content="请先收齐尾款后再交付关闭"
+              placement="top"
+            >
+              <span style="display: inline-block;">
+                <el-button
+                  type="primary"
+                  size="small"
+                  disabled
+                >交付关闭工单</el-button>
+              </span>
+            </el-tooltip>
+            <el-button
+              v-else
+              type="primary"
+              size="small"
+              @click="openDeliverDialog"
+            >交付关闭工单</el-button>
+          </template>
 
           <el-button
             v-if="currentOrder.canRecordPayment"
@@ -363,11 +379,11 @@
     </el-dialog>
 
     <!-- 记录退款弹窗 -->
-    <el-dialog v-model="refundDialogVisible" title="记录退款" width="440px" :close-on-click-modal="false">
+    <el-dialog v-model="refundDialogVisible" :title="isRefundAfterDelivery ? '交付后退款' : '记录退款'" width="440px" :close-on-click-modal="false">
       <el-form :model="refundForm" label-width="80px" size="default">
         <el-alert
           v-if="isRefundAfterDelivery"
-          title="重要提示：此退款在工单交付关闭后进行。该退款仅影响财务资金流水，不会对库存产生任何回滚，也不会重新开启工单！"
+          title="重要提示：交付后退款只影响资金流水，不回滚库存，不重开工单。"
           type="warning"
           show-icon
           :closable="false"
@@ -454,14 +470,14 @@
         <el-descriptions :column="1" border size="small" style="margin-bottom: 12px;">
           <el-descriptions-item label="应收金额"><MoneyText :amount="currentOrder.receivableAmount" bold /></el-descriptions-item>
           <el-descriptions-item label="实收净额"><MoneyText :amount="currentOrder.netReceived ?? currentOrder.actualAmount" bold type="success" /></el-descriptions-item>
-          <el-descriptions-item label="待收金额">
-            <MoneyText :amount="currentOrder.outstandingAmount ?? pendingAmount" bold :type="(currentOrder.outstandingAmount ?? pendingAmount) > 0 ? 'danger' : 'info'" />
+          <el-descriptions-item v-if="currentOrder.cashierStatus === 'NO_CHARGE'" label="无需收款原因">
+            <span style="font-weight: 600; color: #e6a23c;">{{ currentOrder.noChargeReason || '未填写' }}</span>
           </el-descriptions-item>
         </el-descriptions>
         
         <el-alert
-          v-if="(currentOrder.outstandingAmount ?? pendingAmount) > 0"
-          title="注意：该工单尚未结清，交付将产生未结清账款。请确认已在线下沟通好付款安排。"
+          v-if="currentOrder.cashierStatus === 'NO_CHARGE'"
+          :title="`无需收款工单（原因：${currentOrder.noChargeReason || '未填写'}）。交付关闭后，库存将正式扣减。`"
           type="warning"
           show-icon
           :closable="false"
@@ -982,18 +998,25 @@ const submitRepairDone = async () => {
     submitting.value = false;
   }
 };
-
 // ── 交付关闭工单弹窗 ──
 const deliverDialogVisible = ref(false);
 const deliverRemark = ref('');
 
 const openDeliverDialog = () => {
+  if (!currentOrder.value || !currentOrder.value.canDeliver || !['PAID', 'NO_CHARGE'].includes(currentOrder.value.cashierStatus || '') || currentOrder.value.progressStatus !== 'REPAIR_DONE') {
+    ElMessage.error('请先收齐尾款后再交付关闭');
+    return;
+  }
   deliverRemark.value = '';
   deliverDialogVisible.value = true;
 };
 
 const submitDeliver = async () => {
   if (!currentOrder.value) return;
+  if (!currentOrder.value.canDeliver || !['PAID', 'NO_CHARGE'].includes(currentOrder.value.cashierStatus || '') || currentOrder.value.progressStatus !== 'REPAIR_DONE') {
+    ElMessage.error('请先收齐尾款后再交付关闭');
+    return;
+  }
   try {
     await ElMessageBox.confirm('确认交付此工单并关闭？交付后库存将正式扣除。', '确认交付', {
       confirmButtonText: '确认交付',
