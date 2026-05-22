@@ -46,6 +46,11 @@ page { background-color: #f5f5f5; }
   align-items: center;
   margin-bottom: 8px;
 }
+.status-pills {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
 .wo-no { font-weight: bold; font-size: 16px; }
 .summary-info {
   display: block;

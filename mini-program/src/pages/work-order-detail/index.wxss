@@ -10,12 +10,41 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24rpx;
+  margin-bottom: 16rpx;
 }
 .title {
   font-size: 36rpx;
   font-weight: bold;
 }
+.status-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-bottom: 16rpx;
+}
+.status-pill {
+  font-size: 22rpx;
+  padding: 4rpx 16rpx;
+  border-radius: 20rpx;
+  font-weight: 500;
+}
+.progress-DRAFT       { background: #e8f0fe; color: #0052d9; }
+.progress-REPAIRING   { background: #fff3cd; color: #e37318; }
+.progress-REPAIR_DONE { background: #e6f4ed; color: #2ba471; }
+.progress-DELIVERED   { background: #e6f4ed; color: #2ba471; }
+.progress-CANCELLED   { background: #f5f5f5; color: #999; }
+.progress-LEGACY      { background: #fde2e2; color: #c4473a; }
+.cashier-NO_CHARGE       { background: #e8f0fe; color: #0052d9; }
+.cashier-UNPAID          { background: #fff3cd; color: #e37318; }
+.cashier-PARTIAL_PAID    { background: #fff3cd; color: #e37318; }
+.cashier-PAID            { background: #e6f4ed; color: #2ba471; }
+.cashier-REFUND_PENDING  { background: #fde2e2; color: #c4473a; }
+.cashier-PARTIAL_REFUNDED { background: #fde2e2; color: #c4473a; }
+.cashier-REFUNDED        { background: #f5f5f5; color: #999; }
+.inventory-NOT_RESERVED { background: #f5f5f5; color: #999; }
+.inventory-RESERVED     { background: #fff3cd; color: #e37318; }
+.inventory-CONSUMED     { background: #e6f4ed; color: #2ba471; }
+.inventory-RELEASED     { background: #f5f5f5; color: #999; }
 .customer-info {
   display: flex;
   align-items: center;
@@ -28,6 +57,21 @@
 .phone {
   font-size: 28rpx;
   color: #666;
+}
+.hint-card {
+  display: flex;
+  align-items: flex-start;
+  background: #e6f0ff;
+  padding: 20rpx 28rpx;
+  border-radius: 12rpx;
+  margin: 0 24rpx 24rpx;
+}
+.hint-text {
+  font-size: 26rpx;
+  color: #0052d9;
+  margin-left: 12rpx;
+  line-height: 1.5;
+  flex: 1;
 }
 .section {
   background: #fff;
@@ -90,10 +134,6 @@
   align-items: center;
   height: 60vh;
 }
-.summary-section t-cell-group t-cell .t-cell__note {
-  color: #e33e33;
-  font-weight: bold;
-}
 .cashier-card {
   padding: 32rpx;
 }
@@ -122,14 +162,26 @@
   font-weight: bold;
   color: #333;
 }
+.cashier-green { color: #2ba471; }
 .highlight-amber {
   color: #fa8c16;
 }
-.cashier-tip {
+.action-section {
+  padding: 32rpx;
+}
+.action-body {
+  margin-top: 24rpx;
+}
+.action-tip {
   font-size: 22rpx;
   color: #999;
-  margin-top: 20rpx;
+  margin-top: 16rpx;
+  display: block;
   text-align: center;
+  line-height: 1.5;
+}
+.cashier-actions-section {
+  padding: 32rpx;
 }
 .cashier-actions {
   display: flex;

@@ -73,20 +73,36 @@ page {
   color: #222;
 }
 
-/* 状态标签（自定义色彩，不依赖 t-tag） */
+/* 进度状态标签 */
 .status-tag {
   font-size: 22rpx;
   padding: 4rpx 16rpx;
   border-radius: 20rpx;
   font-weight: 500;
 }
-.status-DRAFT       { background: #e8f0fe; color: #0052d9; }
-.status-PENDING_ACCEPT { background: #fff3cd; color: #e37318; }
-.status-ACCEPTED    { background: #e8f0fe; color: #0052d9; }
-.status-PART_ORDERED { background: #fff3cd; color: #e37318; }
-.status-PART_ARRIVED { background: #e6f4ed; color: #2ba471; }
-.status-SETTLED     { background: #e6f4ed; color: #2ba471; }
-.status-CANCELLED   { background: #f5f5f5; color: #999; }
+.progress-DRAFT       { background: #e8f0fe; color: #0052d9; }
+.progress-REPAIRING   { background: #fff3cd; color: #e37318; }
+.progress-REPAIR_DONE { background: #e6f4ed; color: #2ba471; }
+.progress-DELIVERED   { background: #e6f4ed; color: #2ba471; }
+.progress-CANCELLED   { background: #f5f5f5; color: #999; }
+.progress-LEGACY      { background: #fde2e2; color: #c4473a; }
+.progress-UNKNOWN     { background: #f5f5f5; color: #999; }
+
+/* 收银状态标签 */
+.cashier-tag {
+  font-size: 20rpx;
+  padding: 2rpx 12rpx;
+  border-radius: 16rpx;
+  font-weight: 500;
+}
+.cashier-NO_CHARGE       { background: #e8f0fe; color: #0052d9; }
+.cashier-UNPAID          { background: #fff3cd; color: #e37318; }
+.cashier-PARTIAL_PAID    { background: #fff3cd; color: #e37318; }
+.cashier-PAID            { background: #e6f4ed; color: #2ba471; }
+.cashier-REFUND_PENDING  { background: #fde2e2; color: #c4473a; }
+.cashier-PARTIAL_REFUNDED { background: #fde2e2; color: #c4473a; }
+.cashier-REFUNDED        { background: #f5f5f5; color: #999; }
+.cashier-UNKNOWN         { background: #f5f5f5; color: #999; }
 
 .info-label {
   font-size: 24rpx;
@@ -111,6 +127,7 @@ page {
   margin-right: 4rpx;
 }
 .money-green { color: #2ba471; }
+.money-amber { color: #fa8c16; }
 
 .card-time {
   font-size: 22rpx;

@@ -10,38 +10,44 @@ import {
   cancelWorkOrder,
   recordPayment,
   recordRefund,
-  settleWorkOrder
+  markRepairDone,
+  deliverWorkOrder
 } from '../../api/workOrder';
 import { Part } from '../../types/parts';
-import { 
-  WorkOrder, 
-  WorkOrderItem, 
-  CreateDraftWorkOrderRequest, 
-  AddChargeItemRequest, 
+import {
+  WorkOrder,
+  WorkOrderItem,
+  CreateDraftWorkOrderRequest,
+  AddChargeItemRequest,
   UpdateChargeItemRequest,
-  PaymentMethod 
+  PaymentMethod
 } from '../../types/workOrder';
-
-const STATUS_TEXT_MAP: Record<string, string> = {
-  DRAFT: '草稿',
-  PENDING_ACCEPT: '待接单',
-  ACCEPTED: '已接单',
-  PART_ORDERED: '已定件',
-  PART_ARRIVED: '已到件',
-  SETTLED: '已结算',
-  CANCELLED: '已取消'
-};
 
 import Toast from 'tdesign-miniprogram/toast/index';
 import Dialog from 'tdesign-miniprogram/dialog/index';
 
+const NO_CHARGE_REASONS = ['官方售后', '免费检测', '老板免单', '质保处理', '其他'];
+
+function resolveStatusText(d: WorkOrder | null): string {
+  if (!d) return '';
+  if (d.progressStatusText) return d.progressStatusText;
+  if (d.progressStatus) {
+    const map: Record<string, string> = {
+      DRAFT: '新建中', REPAIRING: '维修中', REPAIR_DONE: '维修完成',
+      DELIVERED: '已交付', CANCELLED: '已取消'
+    };
+    return map[d.progressStatus] || '未知';
+  }
+  return '未知';
+}
+
 Page({
   data: {
     step: 1,
-    statusText: '草稿',
+    statusText: '新建中',
     workOrderId: null as string | number | null,
     workOrder: null as WorkOrder | null,
-    
+
     draft: {
       customerNameSnapshot: '',
       customerPhoneSnapshot: '',
@@ -75,14 +81,14 @@ Page({
       unitPrice: '',
       remark: ''
     },
-    
+
     // Part Selector
     partSelectorVisible: false,
     selectedPart: null as Part | null,
     partList: [] as Part[],
     allParts: [] as Part[],
     deletingItem: false,
-    
+
     // Submit
     submitDialogVisible: false,
     submitRemark: '',
@@ -113,10 +119,17 @@ Page({
     },
     refundLoading: false,
 
-    // Settle
-    settleDialogVisible: false,
-    settleRemark: '',
-    settleLoading: false
+    // Mark Repair Done
+    markRepairDoneDialogVisible: false,
+    markRepairDoneLoading: false,
+    noChargeReason: '',
+    noChargeRemark: '',
+    noChargeReasons: NO_CHARGE_REASONS,
+
+    // Deliver
+    deliverDialogVisible: false,
+    deliverRemark: '',
+    deliverLoading: false,
   },
 
   onLoad() {
@@ -180,7 +193,10 @@ Page({
     if (!this.data.workOrderId) return;
     getWorkOrderDetail(this.data.workOrderId).then(res => {
       const d = res.data;
-      this.setData({ workOrder: d, statusText: STATUS_TEXT_MAP[d?.status || ''] || '未知' });
+      this.setData({
+        workOrder: d,
+        statusText: resolveStatusText(d)
+      });
     }).catch(console.error);
   },
 
@@ -206,7 +222,7 @@ Page({
     this.setData({
       itemPopupVisible: true,
       editingItemId: item.id,
-      selectedPart: null, // Edit doesn't need to reselect part in this MVP usually
+      selectedPart: null,
       currentItemForm: {
         chargeType: item.chargeType,
         itemName: item.itemName,
@@ -237,12 +253,12 @@ Page({
     if (this.data.savingItem || !this.data.workOrderId) return;
 
     const { chargeType, itemName, quantity, unit, unitPrice, remark } = this.data.currentItemForm;
-    
+
     if (!itemName) {
       Toast({ context: this, selector: '#t-toast', message: '项目名称必填', icon: 'close-circle' });
       return;
     }
-    
+
     if (chargeType === 'PART' && !this.data.editingItemId && !this.data.selectedPart) {
       Toast({ context: this, selector: '#t-toast', message: '配件必须选择', icon: 'close-circle' });
       return;
@@ -263,7 +279,6 @@ Page({
     this.setData({ savingItem: true });
 
     if (this.data.editingItemId) {
-      // Update
       const req: UpdateChargeItemRequest = {
         itemName,
         quantity: qty,
@@ -279,7 +294,6 @@ Page({
         this.setData({ savingItem: false });
       });
     } else {
-      // Add
       const req: AddChargeItemRequest = {
         chargeType,
         itemName,
@@ -291,7 +305,7 @@ Page({
       if (chargeType === 'PART' && this.data.selectedPart) {
         req.partId = this.data.selectedPart.id;
       }
-      
+
       addChargeItem(this.data.workOrderId, req).then(() => {
         this.setData({ savingItem: false, itemPopupVisible: false });
         Toast({ context: this, selector: '#t-toast', message: '费用明细已添加。', icon: 'check-circle' });
@@ -334,8 +348,8 @@ Page({
 
   onSearchPart(e: any) {
     const keyword = e.detail.value.toLowerCase();
-    const filtered = this.data.allParts.filter(p => 
-      p.partName.toLowerCase().includes(keyword) || 
+    const filtered = this.data.allParts.filter(p =>
+      p.partName.toLowerCase().includes(keyword) ||
       p.partCode.toLowerCase().includes(keyword)
     );
     this.setData({ partList: filtered });
@@ -456,7 +470,7 @@ Page({
   // --- Submit Work Order ---
   confirmSubmitWorkOrder() {
     if (!this.data.workOrderId || !this.data.workOrder) return;
-    
+
     if (!this.data.workOrder.chargeItems || this.data.workOrder.chargeItems.length === 0) {
       Dialog.confirm({
         title: '缺少费用明细',
@@ -481,14 +495,13 @@ Page({
 
   onConfirmSubmit() {
     if (this.data.submitLoading || !this.data.workOrderId) return;
-    
+
     this.setData({ submitLoading: true, submitDialogVisible: false });
 
-    submitWorkOrder(this.data.workOrderId!, { remark: this.data.submitRemark }).then(res => {
-      Toast({ context: this, selector: '#t-toast', message: '工单已提交。', icon: 'check-circle' });
+    submitWorkOrder(this.data.workOrderId!, { remark: this.data.submitRemark }).then(() => {
+      Toast({ context: this, selector: '#t-toast', message: '工单已提交，进入维修中。', icon: 'check-circle' });
       this.refreshWorkOrder();
     }).catch(err => {
-      // Backend error messages will be shown by request wrapper (Toast)
       console.error('Submit work order failed:', err);
     }).finally(() => {
       this.setData({ submitLoading: false });
@@ -518,7 +531,7 @@ Page({
 
   onConfirmCancel() {
     if (this.data.cancelLoading || !this.data.workOrderId) return;
-    
+
     if (!this.data.cancelReason || this.data.cancelReason.trim() === '') {
       Toast({ context: this, selector: '#t-toast', message: '请输入取消原因', icon: 'close-circle' });
       return;
@@ -526,10 +539,10 @@ Page({
 
     this.setData({ cancelLoading: true, cancelDialogVisible: false });
 
-    cancelWorkOrder(this.data.workOrderId!, { 
-      reason: this.data.cancelReason, 
-      remark: this.data.cancelRemark 
-    }).then(res => {
+    cancelWorkOrder(this.data.workOrderId!, {
+      reason: this.data.cancelReason,
+      remark: this.data.cancelRemark
+    }).then(() => {
       Toast({ context: this, selector: '#t-toast', message: '工单已取消。', icon: 'check-circle' });
       this.refreshWorkOrder();
     }).catch(err => {
@@ -541,6 +554,12 @@ Page({
 
   // --- Record Payment ---
   openPaymentDialog() {
+    const order = this.data.workOrder;
+    if (!order?.canRecordPayment) {
+      Toast({ context: this, selector: '#t-toast', message: '当前状态不允许记录收款', icon: 'close-circle' });
+      return;
+    }
+
     this.setData({
       paymentDialogVisible: true,
       paymentForm: {
@@ -570,7 +589,7 @@ Page({
 
   confirmRecordPayment() {
     if (this.data.paymentLoading || !this.data.workOrderId) return;
-    
+
     const amount = parseFloat(this.data.paymentForm.amount);
     if (isNaN(amount) || amount <= 0) {
       Toast({ context: this, selector: '#t-toast', message: '请输入大于0的收款金额', icon: 'close-circle' });
@@ -588,7 +607,7 @@ Page({
       amount: amount,
       paymentMethod: this.data.paymentForm.paymentMethod,
       remark: this.data.paymentForm.remark
-    }).then(res => {
+    }).then(() => {
       this.setData({ paymentDialogVisible: false });
       Toast({ context: this, selector: '#t-toast', message: '收款记录已保存。', icon: 'check-circle' });
       this.refreshWorkOrder();
@@ -601,6 +620,12 @@ Page({
 
   // --- Record Refund ---
   openRefundDialog() {
+    const order = this.data.workOrder;
+    if (!order?.canRecordRefund) {
+      Toast({ context: this, selector: '#t-toast', message: '当前状态不允许记录退款', icon: 'close-circle' });
+      return;
+    }
+
     this.setData({
       refundDialogVisible: true,
       refundForm: {
@@ -631,7 +656,7 @@ Page({
 
   confirmRecordRefund() {
     if (this.data.refundLoading || !this.data.workOrderId) return;
-    
+
     const amount = parseFloat(this.data.refundForm.amount);
     if (isNaN(amount) || amount <= 0) {
       Toast({ context: this, selector: '#t-toast', message: '请输入大于0的退款金额', icon: 'close-circle' });
@@ -655,7 +680,7 @@ Page({
       refundMethod: this.data.refundForm.refundMethod,
       reason: this.data.refundForm.reason,
       remark: this.data.refundForm.remark
-    }).then(res => {
+    }).then(() => {
       this.setData({ refundDialogVisible: false });
       Toast({ context: this, selector: '#t-toast', message: '退款记录已保存。', icon: 'check-circle' });
       this.refreshWorkOrder();
@@ -666,34 +691,112 @@ Page({
     });
   },
 
-  // --- Settle Work Order ---
-  openSettleDialog() {
+  // --- Mark Repair Done ---
+  openMarkRepairDoneDialog() {
+    const order = this.data.workOrder;
+    if (!order?.canMarkRepairDone) {
+      Toast({ context: this, selector: '#t-toast', message: '当前状态不允许标记维修完成', icon: 'close-circle' });
+      return;
+    }
+
     this.setData({
-      settleDialogVisible: true,
-      settleRemark: ''
+      markRepairDoneDialogVisible: true,
+      noChargeReason: '',
+      noChargeRemark: ''
     });
   },
 
-  onCancelSettleDialog() {
-    this.setData({ settleDialogVisible: false });
+  onCancelMarkRepairDone() {
+    this.setData({ markRepairDoneDialogVisible: false });
   },
 
-  onSettleRemarkChange(e: any) {
-    this.setData({ settleRemark: e.detail.value });
+  onNoChargeReasonChange(e: any) {
+    this.setData({ noChargeReason: e.detail.value });
   },
 
-  onConfirmSettle() {
-    if (this.data.settleLoading || !this.data.workOrderId) return;
-    
-    this.setData({ settleLoading: true, settleDialogVisible: false });
+  onNoChargeRemarkChange(e: any) {
+    this.setData({ noChargeRemark: e.detail.value });
+  },
 
-    settleWorkOrder(this.data.workOrderId!, { remark: this.data.settleRemark }).then(res => {
-      Toast({ context: this, selector: '#t-toast', message: '结算成功。', icon: 'check-circle' });
+  onSelectNoChargeReason(e: any) {
+    this.setData({ noChargeReason: e.currentTarget.dataset.val });
+  },
+
+  onConfirmMarkRepairDone() {
+    if (this.data.markRepairDoneLoading || !this.data.workOrderId) return;
+
+    const order = this.data.workOrder;
+    const isZeroReceivable = (order?.receivableAmount ?? 0) <= 0;
+
+    if (isZeroReceivable && !this.data.noChargeReason) {
+      Toast({ context: this, selector: '#t-toast', message: '应收为0时必须选择无需收款原因', icon: 'close-circle' });
+      return;
+    }
+
+    this.setData({ markRepairDoneLoading: true, markRepairDoneDialogVisible: false });
+
+    const payload: any = {};
+    if (isZeroReceivable) {
+      payload.noChargeReason = this.data.noChargeReason;
+      if (this.data.noChargeRemark) payload.noChargeRemark = this.data.noChargeRemark;
+    }
+
+    markRepairDone(this.data.workOrderId!, Object.keys(payload).length > 0 ? payload : undefined).then(() => {
+      Toast({ context: this, selector: '#t-toast', message: '已标记维修完成，库存已扣减。', icon: 'check-circle' });
       this.refreshWorkOrder();
     }).catch(err => {
-      console.error('Settle work order failed:', err);
+      console.error('Mark repair done failed:', err);
     }).finally(() => {
-      this.setData({ settleLoading: false });
+      this.setData({ markRepairDoneLoading: false });
+    });
+  },
+
+  // --- Deliver ---
+  openDeliverDialog() {
+    const order = this.data.workOrder;
+    if (!order?.canDeliver) {
+      Toast({ context: this, selector: '#t-toast', message: '请先收齐尾款后再交付关闭', icon: 'close-circle' });
+      return;
+    }
+
+    this.setData({
+      deliverDialogVisible: true,
+      deliverRemark: ''
+    });
+  },
+
+  onCancelDeliver() {
+    this.setData({ deliverDialogVisible: false });
+  },
+
+  onDeliverRemarkChange(e: any) {
+    this.setData({ deliverRemark: e.detail.value });
+  },
+
+  getDeliverConfirmText(): string {
+    const order = this.data.workOrder;
+    if (!order) return '';
+    const cs = order.cashierStatus;
+    if (cs === 'PAID') return '工单已结清。确认交付关闭后，工单将进入已交付状态；库存已在标记维修完成时扣减，本操作不再改变库存。';
+    if (cs === 'NO_CHARGE') {
+      const reason = order.noChargeReason ? '（原因：' + order.noChargeReason + '）' : '';
+      return '无需收款工单' + reason + '。确认交付关闭后，工单将进入已交付状态；库存已在标记维修完成时扣减，本操作不再改变库存。';
+    }
+    return '确认交付关闭后，工单将进入已交付状态。';
+  },
+
+  onConfirmDeliver() {
+    if (this.data.deliverLoading || !this.data.workOrderId) return;
+
+    this.setData({ deliverLoading: true, deliverDialogVisible: false });
+
+    deliverWorkOrder(this.data.workOrderId!, this.data.deliverRemark ? { remark: this.data.deliverRemark } : undefined).then(() => {
+      Toast({ context: this, selector: '#t-toast', message: '工单已交付关闭。', icon: 'check-circle' });
+      this.refreshWorkOrder();
+    }).catch(err => {
+      console.error('Deliver work order failed:', err);
+    }).finally(() => {
+      this.setData({ deliverLoading: false });
     });
   }
 });

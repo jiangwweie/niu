@@ -17,30 +17,12 @@
   <!-- 状态筛选 tabs -->
   <scroll-view scroll-x class="status-tabs">
     <view
-      class="tab-item {{activeStatus === '' ? 'tab-active' : ''}}"
+      wx:for="{{progressTabs}}"
+      wx:key="value"
+      class="tab-item {{activeStatus === item.value ? 'tab-active' : ''}}"
       bindtap="onTabChange"
-      data-status=""
-    >全部</view>
-    <view
-      class="tab-item {{activeStatus === 'PENDING_ACCEPT' ? 'tab-active' : ''}}"
-      bindtap="onTabChange"
-      data-status="PENDING_ACCEPT"
-    >待接单</view>
-    <view
-      class="tab-item {{activeStatus === 'PART_ARRIVED' ? 'tab-active' : ''}}"
-      bindtap="onTabChange"
-      data-status="PART_ARRIVED"
-    >已到件</view>
-    <view
-      class="tab-item {{activeStatus === 'SETTLED' ? 'tab-active' : ''}}"
-      bindtap="onTabChange"
-      data-status="SETTLED"
-    >已结算</view>
-    <view
-      class="tab-item {{activeStatus === 'CANCELLED' ? 'tab-active' : ''}}"
-      bindtap="onTabChange"
-      data-status="CANCELLED"
-    >已取消</view>
+      data-status="{{item.value}}"
+    >{{item.label}}</view>
   </scroll-view>
 
   <!-- 工单列表 -->
@@ -55,7 +37,11 @@
       >
         <view class="card-row card-row-top">
           <text class="order-no">{{item.workOrderNo}}</text>
-          <view class="status-tag status-{{item.status}}">{{item.statusText}}</view>
+          <view class="status-tag progress-{{item.progressKey}}">{{item.progressText}}</view>
+        </view>
+        <view class="card-row" wx:if="{{item.cashierText}}">
+          <text class="info-label">收银</text>
+          <view class="cashier-tag cashier-{{item.cashierStatus || 'UNKNOWN'}}">{{item.cashierText}}</view>
         </view>
         <view class="card-row">
           <text class="info-label">客户</text>
@@ -66,8 +52,10 @@
         <view class="card-row">
           <text class="info-label">应收</text>
           <text class="money">¥{{item.receivableAmount != null ? item.receivableAmount : '-'}}</text>
-          <text class="info-label ml">实收</text>
-          <text class="money money-green">¥{{item.receivedAmount != null ? item.receivedAmount : '-'}}</text>
+          <text class="info-label ml">净实收</text>
+          <text class="money money-green">¥{{item.netReceived != null ? item.netReceived : item.receivedAmount != null ? item.receivedAmount : '-'}}</text>
+          <text class="info-label ml" wx:if="{{item.outstandingAmount > 0}}">待收</text>
+          <text class="money money-amber" wx:if="{{item.outstandingAmount > 0}}">¥{{item.outstandingDisplay}}</text>
         </view>
         <view class="card-time">{{item.createdAtText}}</view>
       </view>

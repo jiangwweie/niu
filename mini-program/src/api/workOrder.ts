@@ -1,10 +1,10 @@
 import { request } from '../utils/request';
 import { PageResponse, ApiResponse } from '../types/common';
-import { 
-  WorkOrder, 
-  CreateDraftWorkOrderRequest, 
-  UpdateDraftWorkOrderRequest, 
-  AddChargeItemRequest, 
+import {
+  WorkOrder,
+  CreateDraftWorkOrderRequest,
+  UpdateDraftWorkOrderRequest,
+  AddChargeItemRequest,
   UpdateChargeItemRequest,
   SubmitWorkOrderRequest,
   CancelWorkOrderRequest,
@@ -12,6 +12,9 @@ import {
   StaffPaymentRecordResponse,
   RecordRefundRequest,
   StaffRefundRecordResponse,
+  MarkRepairDoneRequest,
+  DeliverWorkOrderRequest,
+  AddNonInventoryChargeRequest,
   SettleWorkOrderRequest,
   StaffSettledWorkOrderResponse
 } from '../types/workOrder';
@@ -90,7 +93,7 @@ export const submitWorkOrder = (workOrderId: string | number, data?: SubmitWorkO
     url: `/api/staff/work-orders/${workOrderId}/submit`,
     method: 'POST',
     data,
-    mockData: { id: workOrderId, status: 'PENDING_ACCEPT' } as WorkOrder,
+    mockData: { id: workOrderId, progressStatus: 'REPAIRING', progressStatusText: '维修中' } as WorkOrder,
     showLoading: true
   });
 };
@@ -98,13 +101,14 @@ export const submitWorkOrder = (workOrderId: string | number, data?: SubmitWorkO
 export const cancelWorkOrder = (workOrderId: string | number, data: CancelWorkOrderRequest) => {
   const record = mockWorkOrders.records.find(w => w.id == workOrderId);
   if (record) {
-    record.status = 'CANCELLED';
+    record.progressStatus = 'CANCELLED';
+    record.progressStatusText = '已取消';
   }
   return request<WorkOrder>({
     url: `/api/staff/work-orders/${workOrderId}/cancel`,
     method: 'POST',
     data,
-    mockData: { id: workOrderId, status: 'CANCELLED' } as WorkOrder,
+    mockData: { id: workOrderId, progressStatus: 'CANCELLED', progressStatusText: '已取消' } as WorkOrder,
     showLoading: true
   });
 };
@@ -137,16 +141,58 @@ export const recordRefund = (workOrderId: string | number, data: RecordRefundReq
   });
 };
 
+export const markRepairDone = (workOrderId: string | number, data?: MarkRepairDoneRequest) => {
+  const record = mockWorkOrders.records.find(w => w.id == workOrderId);
+  if (record) {
+    record.progressStatus = 'REPAIR_DONE';
+    record.progressStatusText = '维修完成';
+  }
+  return request<WorkOrder>({
+    url: `/api/staff/work-orders/${workOrderId}/mark-repair-done`,
+    method: 'POST',
+    data,
+    mockData: { id: workOrderId, progressStatus: 'REPAIR_DONE', progressStatusText: '维修完成' } as WorkOrder,
+    showLoading: true
+  });
+};
+
+export const deliverWorkOrder = (workOrderId: string | number, data?: DeliverWorkOrderRequest) => {
+  const record = mockWorkOrders.records.find(w => w.id == workOrderId);
+  if (record) {
+    record.progressStatus = 'DELIVERED';
+    record.progressStatusText = '已交付';
+  }
+  return request<WorkOrder>({
+    url: `/api/staff/work-orders/${workOrderId}/deliver`,
+    method: 'POST',
+    data,
+    mockData: { id: workOrderId, progressStatus: 'DELIVERED', progressStatusText: '已交付' } as WorkOrder,
+    showLoading: true
+  });
+};
+
+export const addNonInventoryCharge = (workOrderId: string | number, data: AddNonInventoryChargeRequest) => {
+  return request<WorkOrder>({
+    url: `/api/staff/work-orders/${workOrderId}/non-inventory-charges`,
+    method: 'POST',
+    data,
+    mockData: undefined,
+    showLoading: true
+  });
+};
+
+/** @deprecated 已由 markRepairDone + deliver 替代 */
 export const settleWorkOrder = (workOrderId: string | number, data?: SettleWorkOrderRequest) => {
   const record = mockWorkOrders.records.find(w => w.id == workOrderId);
   if (record) {
-    record.status = 'SETTLED';
+    record.progressStatus = 'DELIVERED';
+    record.progressStatusText = '已交付';
   }
   return request<StaffSettledWorkOrderResponse>({
     url: `/api/staff/work-orders/${workOrderId}/settle`,
     method: 'POST',
     data,
-    mockData: { workOrderId, status: 'SETTLED', receivableAmount: 0, receivedAmount: 0, settledAt: new Date().toISOString(), settlerId: 1 } as StaffSettledWorkOrderResponse,
+    mockData: { workOrderId, status: 'DELIVERED', receivableAmount: 0, receivedAmount: 0, settledAt: new Date().toISOString(), settlerId: 1 } as StaffSettledWorkOrderResponse,
     showLoading: true
   });
 };

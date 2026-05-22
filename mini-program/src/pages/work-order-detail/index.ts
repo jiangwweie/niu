@@ -1,36 +1,53 @@
-import { getWorkOrderDetail, cancelWorkOrder, recordPayment, recordRefund, settleWorkOrder } from '../../api/workOrder';
+import { getWorkOrderDetail, cancelWorkOrder, recordPayment, recordRefund, markRepairDone, deliverWorkOrder } from '../../api/workOrder';
 import { WorkOrder, PaymentMethod } from '../../types/workOrder';
 import { hasPermission } from '../../utils/permission';
 import Toast from 'tdesign-miniprogram/toast/index';
 
+const LEGACY_STATUSES = ['PENDING_ACCEPT', 'ACCEPTED', 'PART_ORDERED', 'PART_ARRIVED', 'SETTLED'];
 
-const STATUS_TEXT_MAP: Record<string, string> = {
-  DRAFT: '草稿',
-  PENDING_ACCEPT: '待接单',
-  ACCEPTED: '已接单',
-  PART_ORDERED: '已定件',
-  PART_ARRIVED: '已到件',
-  SETTLED: '已结算',
-  CANCELLED: '已取消'
-};
+const NO_CHARGE_REASONS = ['官方售后', '免费检测', '老板免单', '质保处理', '其他'];
 
-const PAYABLE_STATUSES = ['PENDING_ACCEPT', 'ACCEPTED', 'PART_ORDERED', 'PART_ARRIVED'];
+function isLegacyStatus(status?: string) {
+  return !!status && LEGACY_STATUSES.indexOf(status) >= 0;
+}
 
-function isPayableStatus(status?: string) {
-  return !!status && PAYABLE_STATUSES.indexOf(status) >= 0;
+function getHintText(order: WorkOrder | null): string {
+  if (!order) return '';
+  const ps = order.progressStatus;
+  const cs = order.cashierStatus;
+
+  if (ps === 'DRAFT') return '请完善信息后提交工单。';
+  if (ps === 'REPAIRING' && cs === 'UNPAID') return '维修中，库存已预占，可记录定金或继续维修。';
+  if (ps === 'REPAIRING' && cs === 'PARTIAL_PAID') return '维修中，已收到部分款项，可继续维修。';
+  if (ps === 'REPAIRING') return '维修中，库存已预占。';
+  if (ps === 'REPAIR_DONE' && (cs === 'PARTIAL_PAID' || cs === 'UNPAID')) return '车辆已维修完成，请先收齐尾款后再交付关闭。';
+  if (ps === 'REPAIR_DONE' && cs === 'PAID') return '维修完成且款项已收齐，可以交付关闭。';
+  if (ps === 'REPAIR_DONE' && cs === 'NO_CHARGE') return '无需收款，可以交付关闭。';
+  if (ps === 'REPAIR_DONE') return '维修完成。';
+  if (ps === 'DELIVERED') return '工单已交付关闭。';
+  if (ps === 'CANCELLED' && cs === 'REFUND_PENDING') return '工单已取消，请处理客户退款。';
+  if (ps === 'CANCELLED') return '工单已取消。';
+  if (isLegacyStatus(order.status)) return '旧状态，请先清理试运行数据。';
+  return '';
 }
 
 Page({
   data: {
     orderId: '',
     order: null as WorkOrder | null,
-    outstandingAmount: 0,
+    hintText: '',
     hasCancelPermission: false,
-    hasSettlePermission: false,
     hasPaymentPermission: false,
     hasRefundPermission: false,
-    isPayableStatus: false,
-    
+
+    // Computed display values
+    outstandingAmount: 0,
+    outstandingAmountStr: '0.00',
+    receivableAmountStr: '0.00',
+    receivedAmountStr: '0.00',
+    netReceivedStr: '0.00',
+    refundableAmountStr: '0.00',
+
     // Cancel
     cancelDialogVisible: false,
     cancelReason: '',
@@ -56,16 +73,21 @@ Page({
     },
     refundLoading: false,
 
-    // Settle
-    settleDialogVisible: false,
-    settleRemark: '',
-    settleLoading: false,
-    statusText: ''
+    // Mark Repair Done
+    markRepairDoneDialogVisible: false,
+    markRepairDoneLoading: false,
+    noChargeReason: '',
+    noChargeRemark: '',
+    noChargeReasons: NO_CHARGE_REASONS,
+
+    // Deliver
+    deliverDialogVisible: false,
+    deliverRemark: '',
+    deliverLoading: false,
   },
   onLoad(options: any) {
     this.setData({
       hasCancelPermission: hasPermission('WORK_ORDER_CANCEL'),
-      hasSettlePermission: hasPermission('WORK_ORDER_SETTLE'),
       hasPaymentPermission: hasPermission('PAYMENT_RECORD'),
       hasRefundPermission: hasPermission('REFUND_RECORD')
     });
@@ -74,26 +96,36 @@ Page({
       this.fetchData();
     }
   },
+  onShow() {
+    if (this.data.orderId) {
+      this.fetchData();
+    }
+  },
   async fetchData() {
     try {
       const res = await getWorkOrderDetail(this.data.orderId);
       const d = res.data;
-      const outstanding = Math.max(
-        (d?.receivableAmount ?? 0) - (d?.receivedAmount ?? 0), 0
-      );
+      const outstanding = d?.outstandingAmount != null
+        ? d.outstandingAmount
+        : Math.max((d?.receivableAmount ?? 0) - (d?.receivedAmount ?? 0), 0);
+      const refundable = d?.refundableAmount != null ? d.refundableAmount : 0;
+      const netReceived = d?.netReceived != null ? d.netReceived : (d?.receivedAmount ?? 0);
+
       this.setData({
         order: d,
-        isPayableStatus: isPayableStatus(d?.status),
-        statusText: STATUS_TEXT_MAP[d?.status || ''] || '未知',
+        hintText: getHintText(d),
         outstandingAmount: outstanding,
         outstandingAmountStr: outstanding.toFixed(2),
         receivableAmountStr: (d?.receivableAmount ?? 0).toFixed(2),
-        receivedAmountStr: (d?.receivedAmount ?? 0).toFixed(2)
+        receivedAmountStr: (d?.receivedAmount ?? 0).toFixed(2),
+        netReceivedStr: netReceived.toFixed(2),
+        refundableAmountStr: refundable.toFixed(2),
       });
     } catch (e) {
       wx.showToast({ title: '加载失败', icon: 'none' });
     }
   },
+
   // --- Cancel Work Order ---
   onCancel() {
     this.setData({
@@ -117,7 +149,7 @@ Page({
 
   onConfirmCancel() {
     if (this.data.cancelLoading || !this.data.orderId) return;
-    
+
     if (!this.data.cancelReason || this.data.cancelReason.trim() === '') {
       Toast({ context: this, selector: '#t-toast', message: '请输入取消原因', icon: 'close-circle' });
       return;
@@ -125,10 +157,10 @@ Page({
 
     this.setData({ cancelLoading: true, cancelDialogVisible: false });
 
-    cancelWorkOrder(this.data.orderId as string, { 
-      reason: this.data.cancelReason, 
-      remark: this.data.cancelRemark 
-    }).then(res => {
+    cancelWorkOrder(this.data.orderId as string, {
+      reason: this.data.cancelReason,
+      remark: this.data.cancelRemark
+    }).then(() => {
       Toast({ context: this, selector: '#t-toast', message: '工单已取消。', icon: 'check-circle' });
       this.fetchData();
     }).catch(err => {
@@ -140,8 +172,9 @@ Page({
 
   // --- Record Payment ---
   openPaymentPopup() {
-    if (!isPayableStatus(this.data.order?.status)) {
-      Toast({ context: this, selector: '#t-toast', message: '当前工单状态不允许记录收款，请先提交工单', icon: 'close-circle' });
+    const order = this.data.order;
+    if (!order?.canRecordPayment) {
+      Toast({ context: this, selector: '#t-toast', message: '当前状态不允许记录收款', icon: 'close-circle' });
       return;
     }
 
@@ -178,7 +211,7 @@ Page({
 
   confirmRecordPayment() {
     if (this.data.paymentLoading || !this.data.orderId) return;
-    
+
     const amount = parseFloat(this.data.paymentForm.amount);
     if (isNaN(amount) || amount <= 0) {
       Toast({ context: this, selector: '#t-toast', message: '请输入大于0的收款金额', icon: 'close-circle' });
@@ -190,13 +223,14 @@ Page({
       return;
     }
 
-    if (this.data.outstandingAmount <= 0) {
+    const max = this.data.outstandingAmount || 0;
+    if (max <= 0) {
       Toast({ context: this, selector: '#t-toast', message: '已无待收金额，无需继续收款', icon: 'close-circle' });
       return;
     }
 
-    if (amount > this.data.outstandingAmount) {
-      Toast({ context: this, selector: '#t-toast', message: '收款金额超过待收金额 ¥' + this.data.outstandingAmount, icon: 'close-circle' });
+    if (amount > max) {
+      Toast({ context: this, selector: '#t-toast', message: '收款金额超过待收金额 ¥' + max.toFixed(2), icon: 'close-circle' });
       return;
     }
 
@@ -206,7 +240,7 @@ Page({
       amount: amount,
       paymentMethod: this.data.paymentForm.paymentMethod,
       remark: this.data.paymentForm.remark
-    }).then(res => {
+    }).then(() => {
       this.setData({ paymentDialogVisible: false });
       Toast({ context: this, selector: '#t-toast', message: '收款记录已保存。', icon: 'check-circle' });
       this.fetchData();
@@ -219,6 +253,12 @@ Page({
 
   // --- Record Refund ---
   openRefundPopup() {
+    const order = this.data.order;
+    if (!order?.canRecordRefund) {
+      Toast({ context: this, selector: '#t-toast', message: '当前状态不允许记录退款', icon: 'close-circle' });
+      return;
+    }
+
     this.setData({
       refundDialogVisible: true,
       refundForm: {
@@ -253,7 +293,7 @@ Page({
 
   confirmRecordRefund() {
     if (this.data.refundLoading || !this.data.orderId) return;
-    
+
     const amount = parseFloat(this.data.refundForm.amount);
     if (isNaN(amount) || amount <= 0) {
       Toast({ context: this, selector: '#t-toast', message: '请输入大于0的退款金额', icon: 'close-circle' });
@@ -270,14 +310,14 @@ Page({
       return;
     }
 
-    const maxRefundable = this.data.order?.receivedAmount ?? 0;
+    const maxRefundable = this.data.order?.refundableAmount ?? this.data.order?.receivedAmount ?? 0;
     if (maxRefundable <= 0) {
-      Toast({ context: this, selector: '#t-toast', message: '当前无已收金额，无法退款', icon: 'close-circle' });
+      Toast({ context: this, selector: '#t-toast', message: '当前无可退金额', icon: 'close-circle' });
       return;
     }
 
     if (amount > maxRefundable) {
-      Toast({ context: this, selector: '#t-toast', message: '退款金额超过最多可退金额', icon: 'close-circle' });
+      Toast({ context: this, selector: '#t-toast', message: '退款金额超过可退金额 ¥' + maxRefundable.toFixed(2), icon: 'close-circle' });
       return;
     }
 
@@ -288,7 +328,7 @@ Page({
       refundMethod: this.data.refundForm.refundMethod,
       reason: this.data.refundForm.reason,
       remark: this.data.refundForm.remark
-    }).then(res => {
+    }).then(() => {
       this.setData({ refundDialogVisible: false });
       Toast({ context: this, selector: '#t-toast', message: '退款记录已保存。', icon: 'check-circle' });
       this.fetchData();
@@ -299,49 +339,112 @@ Page({
     });
   },
 
-  // --- Settle Work Order ---
-  openSettleDialog() {
-    if (!isPayableStatus(this.data.order?.status)) {
-      Toast({ context: this, selector: '#t-toast', message: '当前工单状态不允许结算', icon: 'close-circle' });
-      return;
-    }
-
-    if (this.data.outstandingAmount > 0) {
-      Toast({ context: this, selector: '#t-toast', message: '请先完成收款，当前待收 ¥' + this.data.outstandingAmount, icon: 'close-circle' });
+  // --- Mark Repair Done ---
+  openMarkRepairDoneDialog() {
+    const order = this.data.order;
+    if (!order?.canMarkRepairDone) {
+      Toast({ context: this, selector: '#t-toast', message: '当前状态不允许标记维修完成', icon: 'close-circle' });
       return;
     }
 
     this.setData({
-      settleDialogVisible: true,
-      settleRemark: ''
+      markRepairDoneDialogVisible: true,
+      noChargeReason: '',
+      noChargeRemark: ''
     });
   },
 
-  onSettle() {
-    this.openSettleDialog();
+  onCancelMarkRepairDone() {
+    this.setData({ markRepairDoneDialogVisible: false });
   },
 
-  onCancelSettleDialog() {
-    this.setData({ settleDialogVisible: false });
+  onNoChargeReasonChange(e: any) {
+    this.setData({ noChargeReason: e.detail.value });
   },
 
-  onSettleRemarkChange(e: any) {
-    this.setData({ settleRemark: e.detail.value });
+  onNoChargeRemarkChange(e: any) {
+    this.setData({ noChargeRemark: e.detail.value });
   },
 
-  onConfirmSettle() {
-    if (this.data.settleLoading || !this.data.orderId) return;
-    
-    this.setData({ settleLoading: true });
+  onSelectNoChargeReason(e: any) {
+    this.setData({ noChargeReason: e.currentTarget.dataset.val });
+  },
 
-    settleWorkOrder(this.data.orderId as string, { remark: this.data.settleRemark }).then(res => {
-      this.setData({ settleDialogVisible: false });
-      Toast({ context: this, selector: '#t-toast', message: '结算成功。', icon: 'check-circle' });
+  onConfirmMarkRepairDone() {
+    if (this.data.markRepairDoneLoading || !this.data.orderId) return;
+
+    const order = this.data.order;
+    const isZeroReceivable = (order?.receivableAmount ?? 0) <= 0;
+
+    if (isZeroReceivable && !this.data.noChargeReason) {
+      Toast({ context: this, selector: '#t-toast', message: '应收为0时必须选择无需收款原因', icon: 'close-circle' });
+      return;
+    }
+
+    this.setData({ markRepairDoneLoading: true, markRepairDoneDialogVisible: false });
+
+    const payload: any = {};
+    if (isZeroReceivable) {
+      payload.noChargeReason = this.data.noChargeReason;
+      if (this.data.noChargeRemark) payload.noChargeRemark = this.data.noChargeRemark;
+    }
+
+    markRepairDone(this.data.orderId as string, Object.keys(payload).length > 0 ? payload : undefined).then(() => {
+      Toast({ context: this, selector: '#t-toast', message: '已标记维修完成，库存已扣减。', icon: 'check-circle' });
       this.fetchData();
     }).catch(err => {
-      console.error('Settle work order failed:', err);
+      console.error('Mark repair done failed:', err);
     }).finally(() => {
-      this.setData({ settleLoading: false });
+      this.setData({ markRepairDoneLoading: false });
+    });
+  },
+
+  // --- Deliver ---
+  openDeliverDialog() {
+    const order = this.data.order;
+    if (!order?.canDeliver) {
+      Toast({ context: this, selector: '#t-toast', message: '请先收齐尾款后再交付关闭', icon: 'close-circle' });
+      return;
+    }
+
+    this.setData({
+      deliverDialogVisible: true,
+      deliverRemark: ''
+    });
+  },
+
+  onCancelDeliver() {
+    this.setData({ deliverDialogVisible: false });
+  },
+
+  onDeliverRemarkChange(e: any) {
+    this.setData({ deliverRemark: e.detail.value });
+  },
+
+  getDeliverConfirmText(): string {
+    const order = this.data.order;
+    if (!order) return '';
+    const cs = order.cashierStatus;
+    if (cs === 'PAID') return '工单已结清。确认交付关闭后，工单将进入已交付状态；库存已在标记维修完成时扣减，本操作不再改变库存。';
+    if (cs === 'NO_CHARGE') {
+      const reason = order.noChargeReason ? '（原因：' + order.noChargeReason + '）' : '';
+      return '无需收款工单' + reason + '。确认交付关闭后，工单将进入已交付状态；库存已在标记维修完成时扣减，本操作不再改变库存。';
+    }
+    return '确认交付关闭后，工单将进入已交付状态。';
+  },
+
+  onConfirmDeliver() {
+    if (this.data.deliverLoading || !this.data.orderId) return;
+
+    this.setData({ deliverLoading: true, deliverDialogVisible: false });
+
+    deliverWorkOrder(this.data.orderId as string, this.data.deliverRemark ? { remark: this.data.deliverRemark } : undefined).then(() => {
+      Toast({ context: this, selector: '#t-toast', message: '工单已交付关闭。', icon: 'check-circle' });
+      this.fetchData();
+    }).catch(err => {
+      console.error('Deliver work order failed:', err);
+    }).finally(() => {
+      this.setData({ deliverLoading: false });
     });
   }
 });

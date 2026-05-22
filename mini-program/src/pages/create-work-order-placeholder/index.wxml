@@ -1,7 +1,7 @@
 <view class="container pb-safe">
   <view class="warning-banner">
     <t-icon name="info-circle" size="16" color="#0052d9" />
-    <text>当前为草稿阶段，可维护费用明细。提交工单后将预占库存。</text>
+    <text>当前为草稿阶段，可维护费用明细。提交工单后进入维修中，并预占相关库存。</text>
   </view>
 
   <!-- Step 1: 基础信息 -->
@@ -55,12 +55,16 @@
     </view>
   </view>
 
-  <!-- Step 2: 费用明细 -->
+  <!-- Step 2: 费用明细 & 操作 -->
   <view class="section" wx:if="{{step === 2}}">
     <view class="draft-summary">
       <view class="summary-header">
         <text class="wo-no">{{workOrder.workOrderNo || '草稿'}}</text>
-        <t-tag theme="{{workOrder.status === 'DRAFT' ? 'primary' : 'success'}}" variant="light">{{statusText}}</t-tag>
+        <t-tag theme="{{workOrder.progressStatus === 'DRAFT' ? 'primary' : 'success'}}" variant="light">{{statusText}}</t-tag>
+      </view>
+      <view class="status-pills" wx:if="{{workOrder.cashierStatusText || workOrder.inventoryStatusText}}">
+        <t-tag wx:if="{{workOrder.cashierStatusText}}" theme="default" variant="outline" size="small">{{workOrder.cashierStatusText}}</t-tag>
+        <t-tag wx:if="{{workOrder.inventoryStatusText}}" theme="default" variant="outline" size="small">{{workOrder.inventoryStatusText}}</t-tag>
       </view>
       <text class="summary-info">客户: {{workOrder.customerNameSnapshot}}</text>
       <text class="summary-info">项目: {{workOrder.repairItem}}</text>
@@ -74,7 +78,7 @@
             <t-tag theme="default" variant="outline">{{item.chargeType === 'PART' ? '配件' : (item.chargeType === 'LABOR' ? '工时' : '其他')}}</t-tag>
             <text class="item-name">{{item.itemName}}</text>
           </view>
-          <view class="item-actions" wx:if="{{workOrder.status === 'DRAFT'}}">
+          <view class="item-actions" wx:if="{{workOrder.progressStatus === 'DRAFT'}}">
             <t-icon name="edit" size="20" color="#0052d9" bind:tap="editItem" data-item="{{item}}" />
             <t-icon name="delete" size="20" color="#e34d59" style="margin-left: 16px;" bind:tap="confirmDeleteItem" data-id="{{item.id}}" />
           </view>
@@ -96,49 +100,60 @@
       </view>
       <view style="display: flex; justify-content: space-between; width: 100%; font-size: 14px;">
         <text>已收金额：</text>
-        <text style="color: #00a870;">¥{{workOrder.receivedAmount != null ? workOrder.receivedAmount : '0'}}</text>
+        <text style="color: #00a870;">¥{{workOrder.netReceived != null ? workOrder.netReceived : workOrder.receivedAmount != null ? workOrder.receivedAmount : '0'}}</text>
       </view>
     </view>
 
-    <view class="add-actions" wx:if="{{workOrder.status === 'DRAFT'}}">
+    <!-- 添加费用明细 (DRAFT only) -->
+    <view class="add-actions" wx:if="{{workOrder.progressStatus === 'DRAFT'}}">
       <t-button block theme="primary" variant="outline" icon="add" bind:tap="openAddItem" data-type="PART">添加配件费</t-button>
       <t-button block theme="default" variant="outline" icon="add" bind:tap="openAddItem" data-type="LABOR" style="margin-top: 12px;">添加工时费</t-button>
       <t-button block theme="default" variant="outline" icon="add" bind:tap="openAddItem" data-type="OTHER" style="margin-top: 12px;">添加其他费用</t-button>
     </view>
 
-    <view class="submit-action" wx:if="{{workOrder.status === 'DRAFT'}}" style="margin-top: 24px; padding: 0 16px;">
+    <!-- 提交工单 (DRAFT only) -->
+    <view class="submit-action" wx:if="{{workOrder.progressStatus === 'DRAFT'}}" style="margin-top: 24px; padding: 0 16px;">
       <view style="font-size: 12px; color: #666; margin-bottom: 12px; text-align: center;">
-        提交后将预占库存，不会自动收款或结算。
+        提交后进入维修中，并预占相关库存。
       </view>
       <t-button block theme="danger" size="large" bind:tap="confirmSubmitWorkOrder" loading="{{submitLoading}}">提交工单</t-button>
     </view>
 
-    <view class="cancel-action" wx:if="{{workOrder && workOrder.status !== 'SETTLED' && workOrder.status !== 'CANCELLED'}}" style="margin-top: {{workOrder.status === 'DRAFT' ? '12px' : '24px'}}; padding: 0 16px;">
+    <!-- 标记维修完成 -->
+    <view wx:if="{{workOrder.canMarkRepairDone}}" style="margin-top: 24px; padding: 0 16px;">
       <view style="font-size: 12px; color: #666; margin-bottom: 12px; text-align: center;">
-        取消后将释放预占库存。
+        标记维修完成后，工单配件库存将正式扣减，不能再普通取消工单。
+      </view>
+      <t-button block theme="primary" size="large" bind:tap="openMarkRepairDoneDialog" loading="{{markRepairDoneLoading}}">标记维修完成</t-button>
+    </view>
+
+    <!-- 交付关闭 -->
+    <view wx:if="{{workOrder.canDeliver}}" style="margin-top: 24px; padding: 0 16px;">
+      <t-button block theme="primary" size="large" bind:tap="openDeliverDialog" loading="{{deliverLoading}}">交付关闭</t-button>
+    </view>
+
+    <!-- 取消工单 -->
+    <view class="cancel-action" wx:if="{{workOrder.canCancel}}" style="margin-top: 24px; padding: 0 16px;">
+      <view style="font-size: 12px; color: #666; margin-bottom: 12px; text-align: center;">
+        取消工单将关闭此工单；如已预占库存，系统将自动释放。若已有收款，请后续处理退款。
       </view>
       <t-button block theme="default" variant="outline" size="large" bind:tap="openCancelDialog" loading="{{cancelLoading}}">取消工单</t-button>
     </view>
 
-    <view class="payment-action" wx:if="{{workOrder && workOrder.status !== 'DRAFT' && workOrder.status !== 'CANCELLED' && workOrder.status !== 'SETTLED'}}" style="margin-top: 16px; padding: 0 16px;">
+    <!-- 记录收款 -->
+    <view class="payment-action" wx:if="{{workOrder.canRecordPayment}}" style="margin-top: 16px; padding: 0 16px;">
       <view style="font-size: 12px; color: #666; margin-bottom: 12px; text-align: center;">
-        操作结果以系统校验为准。
+        操作结果以系统校验为准。收款不改变工单进度状态。
       </view>
       <t-button block theme="primary" size="large" bind:tap="openPaymentDialog" loading="{{paymentLoading}}">记录收款</t-button>
     </view>
 
-    <view class="refund-action" wx:if="{{workOrder && workOrder.status !== 'DRAFT' && workOrder.status !== 'CANCELLED' && workOrder.status !== 'SETTLED'}}" style="margin-top: 16px; padding: 0 16px;">
+    <!-- 记录退款 -->
+    <view class="refund-action" wx:if="{{workOrder.canRecordRefund}}" style="margin-top: 16px; padding: 0 16px;">
       <view style="font-size: 12px; color: #666; margin-bottom: 12px; text-align: center;">
         退款上限以系统校验为准。
       </view>
       <t-button block theme="danger" variant="outline" size="large" bind:tap="openRefundDialog" loading="{{refundLoading}}">记录退款</t-button>
-    </view>
-
-    <view class="settle-action" wx:if="{{workOrder && workOrder.status !== 'DRAFT' && workOrder.status !== 'CANCELLED' && workOrder.status !== 'SETTLED'}}" style="margin-top: 16px; margin-bottom: 24px; padding: 0 16px;">
-      <view style="font-size: 12px; color: #666; margin-bottom: 12px; text-align: center;">
-        结算后将正式扣减库存。
-      </view>
-      <t-button block theme="primary" variant="base" size="large" bind:tap="openSettleDialog" loading="{{settleLoading}}">结算工单</t-button>
     </view>
   </view>
 
@@ -153,14 +168,14 @@
         <block wx:if="{{currentItemForm.chargeType === 'PART' && !editingItemId}}">
           <t-cell title="选择配件" arrow bind:tap="openPartSelector" note="{{selectedPart ? selectedPart.partName : '请选择(必填)'}}" />
         </block>
-        
+
         <t-input label="项目名称" placeholder="必填" value="{{currentItemForm.itemName}}" bind:change="onItemFormChange" data-field="itemName" align="right" />
         <t-input label="数量" type="number" placeholder="必填(>0)" value="{{currentItemForm.quantity}}" bind:change="onItemFormChange" data-field="quantity" align="right" />
         <t-input label="单位" placeholder="选填" value="{{currentItemForm.unit}}" bind:change="onItemFormChange" data-field="unit" align="right" />
         <t-input label="单价(元)" type="digit" placeholder="必填(>=0)" value="{{currentItemForm.unitPrice}}" bind:change="onItemFormChange" data-field="unitPrice" align="right" />
         <t-input label="备注" placeholder="选填" value="{{currentItemForm.remark}}" bind:change="onItemFormChange" data-field="remark" align="right" />
       </t-cell-group>
-      
+
       <view class="popup-footer">
         <t-button theme="primary" block size="large" bind:tap="saveChargeItem" loading="{{savingItem}}">保存明细</t-button>
       </view>
@@ -186,7 +201,8 @@
   </t-popup>
 
   <t-dialog id="t-dialog" />
-  
+
+  <!-- 提交工单对话框 -->
   <t-dialog
     visible="{{submitDialogVisible}}"
     title="提交工单"
@@ -196,11 +212,12 @@
     bind:cancel="onCancelSubmit"
   >
     <view slot="content" style="font-size: 14px; color: #666;">
-      <text style="display: block; margin-bottom: 12px;">提交工单后将预占库存，提交不会收款、不会结算。是否确认提交？</text>
+      <text style="display: block; margin-bottom: 12px;">提交后进入维修中，并预占相关库存。是否确认提交？</text>
       <t-input placeholder="可输入提交备注(选填)" value="{{submitRemark}}" bind:change="onSubmitRemarkChange" borderless style="background: #f5f5f5; border-radius: 4px;" />
     </view>
   </t-dialog>
 
+  <!-- 取消工单对话框 -->
   <t-dialog
     visible="{{cancelDialogVisible}}"
     title="取消工单"
@@ -210,12 +227,13 @@
     bind:cancel="onCancelCancelDialog"
   >
     <view slot="content" style="font-size: 14px; color: #666;">
-      <text style="display: block; margin-bottom: 12px;">确认取消工单吗？取消后将释放预占库存，但不会自动退款。</text>
+      <text style="display: block; margin-bottom: 12px;">取消工单将关闭此工单；如已预占库存，系统将自动释放。若已有收款，请后续处理退款。</text>
       <t-input placeholder="请输入取消原因(必填)" value="{{cancelReason}}" bind:change="onCancelReasonChange" borderless style="background: #f5f5f5; border-radius: 4px; margin-bottom: 8px;" />
       <t-input placeholder="可输入备注(选填)" value="{{cancelRemark}}" bind:change="onCancelRemarkChange" borderless style="background: #f5f5f5; border-radius: 4px;" />
     </view>
   </t-dialog>
 
+  <!-- 记录收款弹窗 -->
   <t-popup visible="{{paymentDialogVisible}}" bind:visible-change="onPaymentPopupVisibleChange" placement="bottom">
     <view class="popup-header">
       <text class="popup-title">记录线下收款</text>
@@ -223,14 +241,14 @@
     </view>
     <scroll-view scroll-y class="popup-body">
       <view style="padding: 16px; background: #fff4e5; color: #d97100; font-size: 12px; margin-bottom: 16px;">
-        注意：此处仅记录线下收款结果。
+        注意：此处仅记录线下收款结果。收款不改变工单进度状态。
       </view>
       <t-cell-group>
         <t-input label="工单编号" value="{{workOrder.workOrderNo || '草稿'}}" align="right" readonly />
         <t-input label="应收总计" value="¥{{workOrder.receivableAmount != null ? workOrder.receivableAmount : '0'}}" align="right" readonly />
-        <t-input label="已收金额" value="¥{{workOrder.receivedAmount != null ? workOrder.receivedAmount : '0'}}" align="right" readonly />
+        <t-input label="已收金额" value="¥{{workOrder.netReceived != null ? workOrder.netReceived : workOrder.receivedAmount != null ? workOrder.receivedAmount : '0'}}" align="right" readonly />
         <t-input label="收款金额" type="digit" placeholder="必填(>0)" value="{{paymentForm.amount}}" bind:change="onPaymentFormChange" data-field="amount" align="right" />
-        
+
         <view style="padding: 16px; display: flex; align-items: center; justify-content: space-between;">
           <text style="font-size: 16px; color: #333;">收款方式</text>
         </view>
@@ -243,16 +261,17 @@
             <t-tag theme="{{paymentForm.paymentMethod === 'OTHER' ? 'primary' : 'default'}}" variant="{{paymentForm.paymentMethod === 'OTHER' ? 'light' : 'outline'}}" bind:tap="onSelectPaymentMethod" data-val="OTHER">其他</t-tag>
           </view>
         </view>
-        
+
         <t-input label="备注" placeholder="选填" value="{{paymentForm.remark}}" bind:change="onPaymentFormChange" data-field="remark" align="right" />
       </t-cell-group>
-      
+
       <view class="popup-footer">
         <t-button theme="primary" block size="large" bind:tap="confirmRecordPayment" loading="{{paymentLoading}}">确认收款</t-button>
       </view>
     </scroll-view>
   </t-popup>
 
+  <!-- 记录退款弹窗 -->
   <t-popup visible="{{refundDialogVisible}}" bind:visible-change="onRefundPopupVisibleChange" placement="bottom">
     <view class="popup-header">
       <text class="popup-title">记录线下退款</text>
@@ -263,9 +282,9 @@
         注意：此处仅记录线下退款结果。
       </view>
       <t-cell-group>
-        <t-input label="已收金额" value="¥{{workOrder.receivedAmount != null ? workOrder.receivedAmount : '0'}}" align="right" readonly />
+        <t-input label="可退金额" value="¥{{workOrder.refundableAmount != null ? workOrder.refundableAmount : workOrder.receivedAmount != null ? workOrder.receivedAmount : '0'}}" align="right" readonly />
         <t-input label="退款金额" type="digit" placeholder="必填(>0)" value="{{refundForm.amount}}" bind:change="onRefundFormChange" data-field="amount" align="right" />
-        
+
         <view style="padding: 16px; display: flex; align-items: center; justify-content: space-between;">
           <text style="font-size: 16px; color: #333;">退款方式</text>
         </view>
@@ -278,28 +297,57 @@
             <t-tag theme="{{refundForm.refundMethod === 'OTHER' ? 'danger' : 'default'}}" variant="{{refundForm.refundMethod === 'OTHER' ? 'light' : 'outline'}}" bind:tap="onSelectRefundMethod" data-val="OTHER">其他</t-tag>
           </view>
         </view>
-        
+
         <t-input label="退款原因" placeholder="必填" value="{{refundForm.reason}}" bind:change="onRefundFormChange" data-field="reason" align="right" />
         <t-input label="备注" placeholder="选填" value="{{refundForm.remark}}" bind:change="onRefundFormChange" data-field="remark" align="right" />
       </t-cell-group>
-      
+
       <view class="popup-footer">
         <t-button theme="danger" block size="large" bind:tap="confirmRecordRefund" loading="{{refundLoading}}">确认退款</t-button>
       </view>
     </scroll-view>
   </t-popup>
 
+  <!-- 标记维修完成对话框 -->
   <t-dialog
-    visible="{{settleDialogVisible}}"
-    title="结算工单"
-    confirm-btn="确认结算"
+    visible="{{markRepairDoneDialogVisible}}"
+    title="标记维修完成"
+    confirm-btn="确认"
     cancel-btn="返回"
-    bind:confirm="onConfirmSettle"
-    bind:cancel="onCancelSettleDialog"
+    bind:confirm="onConfirmMarkRepairDone"
+    bind:cancel="onCancelMarkRepairDone"
   >
     <view slot="content" style="font-size: 14px; color: #666;">
-      <text style="display: block; margin-bottom: 12px;">确认结算工单吗？结算后将正式扣减预占库存。</text>
-      <t-input placeholder="可输入结算备注(选填)" value="{{settleRemark}}" bind:change="onSettleRemarkChange" borderless style="background: #f5f5f5; border-radius: 4px;" />
+      <text style="display: block; margin-bottom: 12px;">标记维修完成后，工单配件库存将正式扣减，不能再普通取消工单。</text>
+      <block wx:if="{{workOrder.receivableAmount <= 0}}">
+        <text style="display: block; margin-bottom: 8px; font-weight: 500; color: #333;">应收为 0，请选择无需收款原因：</text>
+        <view style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">
+          <t-tag
+            wx:for="{{noChargeReasons}}"
+            wx:key="*this"
+            theme="{{noChargeReason === item ? 'primary' : 'default'}}"
+            variant="{{noChargeReason === item ? 'light' : 'outline'}}"
+            bind:tap="onSelectNoChargeReason"
+            data-val="{{item}}"
+          >{{item}}</t-tag>
+        </view>
+        <t-input placeholder="无需收款原因(必填)" value="{{noChargeReason}}" bind:change="onNoChargeReasonChange" borderless style="background: #f5f5f5; border-radius: 4px; margin-bottom: 8px;" />
+        <t-input placeholder="无需收款备注(选填)" value="{{noChargeRemark}}" bind:change="onNoChargeRemarkChange" borderless style="background: #f5f5f5; border-radius: 4px;" />
+      </block>
+    </view>
+  </t-dialog>
+
+  <!-- 交付关闭对话框 -->
+  <t-dialog
+    visible="{{deliverDialogVisible}}"
+    title="确认交付关闭"
+    confirm-btn="确认交付"
+    cancel-btn="返回"
+    bind:confirm="onConfirmDeliver"
+    bind:cancel="onCancelDeliver"
+  >
+    <view slot="content" style="font-size: 14px; color: #666;">
+      <text style="display: block; margin-bottom: 12px;">{{deliverConfirmText}}</text>
     </view>
   </t-dialog>
 
