@@ -141,21 +141,20 @@ echo ""
 echo "=== Step 12: Check payment summary ==="
 r=$(curl -s -H "$AUTH" "$BASE/api/admin/work-orders/$WORK_ORDER_ID/payment-summary")
 check "Payment summary: received=350" '"receivedAmount":350' "$r"
-check "Payment summary: canSettle=true" '"canSettle":true' "$r"
 
 echo ""
-echo "=== Step 13: Settle work order (triggers CONSUME) ==="
+echo "=== Step 13: Mark repair done (REPAIRING -> REPAIR_DONE, triggers CONSUME) ==="
 r=$(curl -s -X POST -H "$AUTH" -H "$CT" \
-  -d '{"remark":"完成结算"}' \
-  "$BASE/api/admin/work-orders/$WORK_ORDER_ID/settle")
-check "Settle work order" "SUCCESS" "$r"
+  -d '{"remark":"维修完成"}' \
+  "$BASE/api/admin/work-orders/$WORK_ORDER_ID/mark-repair-done")
+check "Mark repair done" "SUCCESS" "$r"
 
 echo ""
 echo "=== Step 14: Verify inventory after CONSUME ==="
 r=$(curl -s -H "$AUTH" "$BASE/api/admin/inventory/stocks/$PART_ID")
 check "After consume: actual_qty=98 (100-2)" '"actualQty":98' "$r"
 check "After consume: reserved_qty=0 (2-2)" '"reservedQty":0' "$r"
-check "After consume: available_qty=98 (unchanged)" '"availableQty":98' "$r"
+check "After consume: available_qty=98" '"availableQty":98' "$r"
 
 echo ""
 echo "=== Step 15: Verify CONSUME flow record ==="
@@ -163,9 +162,28 @@ r=$(curl -s -H "$AUTH" "$BASE/api/admin/inventory/flows?partId=$PART_ID&flowType
 check "CONSUME flow exists" '"flowType":"CONSUME"' "$r"
 
 echo ""
-echo "=== Step 16: Verify work order final status ==="
+echo "=== Step 16: Verify work order status=REPAIR_DONE ==="
 r=$(curl -s -H "$AUTH" "$BASE/api/admin/work-orders/$WORK_ORDER_ID")
-check "Final status=SETTLED" '"status":"SETTLED"' "$r"
+check "Status after repair done" '"status":"REPAIR_DONE"' "$r"
+
+echo ""
+echo "=== Step 16b: Deliver work order (REPAIR_DONE -> DELIVERED) ==="
+r=$(curl -s -X POST -H "$AUTH" -H "$CT" \
+  -d '{"remark":"客户取车"}' \
+  "$BASE/api/admin/work-orders/$WORK_ORDER_ID/deliver")
+check "Deliver work order" "SUCCESS" "$r"
+
+echo ""
+echo "=== Step 16c: Verify work order final status=DELIVERED ==="
+r=$(curl -s -H "$AUTH" "$BASE/api/admin/work-orders/$WORK_ORDER_ID")
+check "Final status=DELIVERED" '"status":"DELIVERED"' "$r"
+
+echo ""
+echo "=== Step 16d: Verify legacy /settle is disabled ==="
+r=$(curl -s -X POST -H "$AUTH" -H "$CT" \
+  -d '{"remark":"test"}' \
+  "$BASE/api/admin/work-orders/$WORK_ORDER_ID/settle")
+check "Legacy settle returns disabled error" "WORK_ORDER_LEGACY_SETTLE_DISABLED" "$r"
 
 echo ""
 echo "=== Step 17: Cancel + RELEASE (new work order) ==="
@@ -227,7 +245,7 @@ echo "=== Step 20: Dict items for existing typeCode (P0 fix) ==="
 r=$(curl -s -H "$AUTH" "$BASE/api/admin/dict/types/WORK_ORDER_STATUS/items")
 check "Dict items WORK_ORDER_STATUS returns SUCCESS" "SUCCESS" "$r"
 check "Dict items contains DRAFT" '"itemCode":"DRAFT"' "$r"
-check "Dict items contains SETTLED" '"itemCode":"SETTLED"' "$r"
+check "Dict items contains DELIVERED" '"itemCode":"DELIVERED"' "$r"
 
 echo ""
 echo "=== Step 21: Dict items for non-existent typeCode ==="
