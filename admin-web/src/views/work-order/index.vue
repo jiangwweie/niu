@@ -477,7 +477,7 @@
         
         <el-alert
           v-if="currentOrder.cashierStatus === 'NO_CHARGE'"
-          :title="`无需收款工单（原因：${currentOrder.noChargeReason || '未填写'}）。交付关闭后，库存将正式扣减。`"
+          :title="`无需收款工单（原因：${currentOrder.noChargeReason || '未填写'}）。确认交付关闭后，工单将进入已交付状态；库存已在标记维修完成时扣减，本操作不再改变库存。`"
           type="warning"
           show-icon
           :closable="false"
@@ -485,7 +485,7 @@
         />
         <el-alert
           v-else
-          title="工单已结清。交付关闭后，库存将正式扣减，且不可再记录常规收款。"
+          title="工单已结清。确认交付关闭后，工单将进入已交付状态；库存已在标记维修完成时扣减，本操作不再改变库存。"
           type="success"
           show-icon
           :closable="false"
@@ -754,7 +754,7 @@ const nextStepTip = computed(() => {
       return '工单维修已完成。客户已部分付款，待结清后即可交付关闭';
     }
     if (cashier === 'PAID' || cashier === 'NO_CHARGE') {
-      return '工单维修已完成且款项已结清，请执行“交付关闭工单”操作以正式扣减库存';
+      return '工单维修已完成且款项已结清，请执行“交付关闭工单”操作。库存已在标记维修完成时扣减，交付关闭不再改变库存';
     }
     return '工单维修已完成。支持执行交付关闭';
   }
@@ -1018,7 +1018,7 @@ const submitDeliver = async () => {
     return;
   }
   try {
-    await ElMessageBox.confirm('确认交付此工单并关闭？交付后库存将正式扣除。', '确认交付', {
+    await ElMessageBox.confirm('确认交付此工单并关闭？库存已在标记维修完成时扣减，交付关闭不再改变库存。', '确认交付', {
       confirmButtonText: '确认交付',
       cancelButtonText: '取消',
       type: 'warning',
