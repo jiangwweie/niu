@@ -82,6 +82,7 @@ Page({
 
     // Deliver
     deliverDialogVisible: false,
+    deliverConfirmText: '',
     deliverRemark: '',
     deliverLoading: false,
   },
@@ -310,7 +311,7 @@ Page({
       return;
     }
 
-    const maxRefundable = this.data.order?.refundableAmount ?? this.data.order?.receivedAmount ?? 0;
+    const maxRefundable = this.data.order?.refundableAmount ?? this.data.order?.receivedAmount ?? 0; // 后端应返回 refundableAmount，fallback receivedAmount 仅为兼容旧 mock
     if (maxRefundable <= 0) {
       Toast({ context: this, selector: '#t-toast', message: '当前无可退金额', icon: 'close-circle' });
       return;
@@ -409,6 +410,7 @@ Page({
 
     this.setData({
       deliverDialogVisible: true,
+      deliverConfirmText: this.getDeliverConfirmText(),
       deliverRemark: ''
     });
   },

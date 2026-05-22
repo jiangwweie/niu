@@ -128,6 +128,7 @@ Page({
 
     // Deliver
     deliverDialogVisible: false,
+    deliverConfirmText: '',
     deliverRemark: '',
     deliverLoading: false,
   },
@@ -761,6 +762,7 @@ Page({
 
     this.setData({
       deliverDialogVisible: true,
+      deliverConfirmText: this.getDeliverConfirmText(),
       deliverRemark: ''
     });
   },
