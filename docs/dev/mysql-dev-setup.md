@@ -1,5 +1,7 @@
 # MySQL Dev 环境搭建指南
 
+> 最后更新：2026-05-22
+
 本文档说明如何在本地使用 MySQL dev profile 运行后端服务。
 
 ## 1. 创建数据库
@@ -16,12 +18,7 @@ docker run -d --name xiaoniu-mysql-dev \
   --collation-server=utf8mb4_0900_ai_ci
 ```
 
-首次启动后需要修复 JDBC 兼容性（`caching_sha2_password` -> `mysql_native_password`）：
-
-```bash
-docker exec xiaoniu-mysql-dev mysql -uroot -proot -e \
-  "ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'root'; FLUSH PRIVILEGES;"
-```
+首次启动后无需手动修改认证方式。`application-dev.yml` 已配置 `allowPublicKeyRetrieval=true`，兼容 MySQL 8 默认的 `caching_sha2_password`。
 
 ## 2. 环境变量配置
 
@@ -59,7 +56,7 @@ java -jar target/xiaoniu-aftermarket-backend-0.0.1-SNAPSHOT.jar --spring.profile
 
 ## 4. Flyway Migration
 
-Flyway 在 dev profile 下自动启用。启动应用时会自动执行所有迁移脚本（V1-V4）。
+Flyway 在 dev profile 下自动启用。启动应用时会自动执行所有迁移脚本（V1-V13）。
 
 手动执行 Flyway migration（如果需要）：
 
@@ -68,12 +65,10 @@ cd backend
 mvn flyway:migrate -Dspring.profiles.active=dev
 ```
 
-迁移脚本位于 `src/main/resources/db/migration/`：
+迁移脚本位于 `src/main/resources/db/migration/`，当前 V1-V13，涵盖：
 
-- `V1__init_schema.sql` - 全部 22 张表建表
-- `V2__init_seed_data.sql` - 门店、角色、权限、字典等基础数据
-- `V3__add_inventory_flow_unit_cost.sql` - 库存流水平均成本字段
-- `V4__add_work_order_received_amount.sql` - 工单实收金额字段
+- V1-V4：基础表结构、种子数据、库存/工单字段补充
+- V5-V13：权限模型、字典、客户车辆、仪表盘等后续迭代
 
 ## 5. 最小 Smoke 测试
 
@@ -87,30 +82,49 @@ bash scripts/smoke-mysql-dev.sh
 Smoke 覆盖的链路：
 
 1. 健康检查
-2. 创建第三方配件
-3. 普通入库（INBOUND 流水）
-4. 创建 DRAFT 工单（含 PART / LABOR / OTHER 费用项）
-5. 提交工单（RESERVE 流水，available 减少，reserved 增加）
-6. 记录支付
-7. 结算工单（CONSUME 流水，actual 减少，reserved 减少）
-8. 取消未结算工单（RELEASE 流水，reserved 释放，available 恢复）
+2. JWT 登录获取 Token
+3. 创建第三方配件
+4. 普通入库（INBOUND 流水）
+5. 创建 DRAFT 工单（含 PART / LABOR / OTHER 费用项）
+6. 提交工单（RESERVE 流水，available 减少，reserved 增加）
+7. 记录支付
+8. 结算工单（CONSUME 流水，actual 减少，reserved 减少）
+9. 取消未结算工单（RELEASE 流水，reserved 释放，available 恢复）
 
-## 6. Dev-only Header 使用方式
+## 6. JWT 认证方式
 
-所有 `/api/admin/**` 接口需要以下 HTTP Header：
+所有 `/api/admin/**` 接口需要 JWT Bearer Token。
 
-| Header | 类型 | 说明 |
-|--------|------|------|
-| `X-User-Id` | Long | 当前操作用户 ID |
-| `X-Store-Id` | Long | 当前门店 ID |
-
-示例：
+### 获取 Token
 
 ```bash
-curl -H "X-User-Id: 1" -H "Store-Id: 1" http://localhost:8080/api/admin/work-orders
+curl -s -X POST -H "Content-Type: application/json" \
+  -d '{"username":"admin01","password":"dev123"}' \
+  http://localhost:8080/api/auth/login/password
 ```
 
-> **重要说明**：`X-User-Id` / `X-Store-Id` 是 dev-only 的临时方案，**不是正式认证系统**。后续会接入真实 Auth 中间件替代。
+返回 `data.accessToken`，后续请求使用 `Authorization: Bearer <token>`。
+
+### 示例
+
+```bash
+curl -H "Authorization: Bearer <token>" http://localhost:8080/api/admin/work-orders
+```
+
+### Smoke 脚本
+
+smoke 脚本已内置 JWT 登录流程，无需手动传 Header：
+
+```bash
+cd backend
+bash scripts/smoke-mysql-dev.sh
+```
+
+可通过环境变量自定义登录账号：
+
+```bash
+DEV_LOGIN_USERNAME=admin01 DEV_LOGIN_PASSWORD=dev123 bash scripts/smoke-mysql-dev.sh
+```
 
 ## 7. 常见问题
 

@@ -1,6 +1,6 @@
 # 本地启动与登录指南
 
-> 最后更新：2026-05-15
+> 最后更新：2026-05-22
 
 ## 一、环境要求
 
@@ -34,7 +34,7 @@ mvn spring-boot:run
 
 - 激活 profile：`dev`（application.yml 默认）
 - 端口：8080
-- Flyway 自动执行迁移（当前 V1-V8 + dev V5）
+- Flyway 自动执行迁移（当前 V1-V13）
 - 健康检查：`curl http://localhost:8080/api/health`
 
 ### 3. 启动 admin-web
@@ -98,7 +98,26 @@ npm run dev
 - mini-program：token 存 wx storage，401 清 token 跳登录页，403 toast 提示无权限（不清 token）
 - 认证方式：`Authorization: Bearer <token>`，不再发送 X-User-Id / X-Store-Id
 
-## 五、已知问题
+## 五、Smoke 测试
+
+后端启动后，运行 smoke 脚本验证核心业务链路（JWT 登录 → 配件 → 入库 → 工单 → 预占 → 支付 → 结算 → 取消释放）：
+
+```bash
+cd backend
+bash scripts/smoke-mysql-dev.sh
+```
+
+默认使用 dev seed 账号 `admin01` / `dev123`，可通过环境变量覆盖：
+
+```bash
+DEV_LOGIN_USERNAME=admin01 DEV_LOGIN_PASSWORD=dev123 bash scripts/smoke-mysql-dev.sh
+```
+
+## 六、MySQL 8 认证说明
+
+`application-dev.yml` 已配置 `allowPublicKeyRetrieval=true`，兼容 MySQL 8 默认的 `caching_sha2_password` 认证，无需手动切换为 `mysql_native_password`。
+
+## 七、已知问题
 
 以下问题待后续迭代处理：
 
