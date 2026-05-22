@@ -18,10 +18,10 @@ const props = withDefaults(defineProps<{
 
 const tagType = computed(() => {
   const s = String(props.status).toLowerCase();
-  if (['success', 'completed', 'paid', '1', 'part_arrived', 'parts_arrived', 'settled'].includes(s)) return 'success';
-  if (['warning', 'pending', 'unpaid', '2'].includes(s)) return 'warning';
-  if (['danger', 'error', 'failed', 'refunded', '3'].includes(s)) return 'danger';
-  if (['info', 'closed', 'canceled', '4'].includes(s)) return 'info';
+  if (['success', 'completed', 'paid', '1', 'part_arrived', 'parts_arrived', 'settled', 'repair_done', 'delivered', 'consumed'].includes(s)) return 'success';
+  if (['warning', 'pending', 'unpaid', '2', 'repairing', 'partial_paid', 'refund_pending', 'reserved'].includes(s)) return 'warning';
+  if (['danger', 'error', 'failed', 'refunded', '3', 'partial_refunded'].includes(s)) return 'danger';
+  if (['info', 'closed', 'canceled', '4', 'draft', 'cancelled', 'no_charge', 'not_reserved', 'released'].includes(s)) return 'info';
   return ''; // primary default
 });
 </script>

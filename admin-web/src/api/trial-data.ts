@@ -8,3 +8,7 @@ export async function getTrialDataSummary(): Promise<TrialDataSummaryResponse> {
 export async function clearTrialData(confirmText: string): Promise<ClearTrialDataResponse> {
   return await request.post('/api/admin/trial-data/clear', { confirmText });
 }
+
+export async function cleanStartPreflight(): Promise<TrialDataSummaryResponse> {
+  return await request.get('/api/admin/trial-data/clean-start-preflight');
+}

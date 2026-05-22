@@ -11,6 +11,7 @@ export interface TrialDataSummaryResponse {
   inventoryStockCount: number;
   vehicleCount: number;
   customerCount: number;
+  legacyWorkOrderStatusCount: number;
 }
 
 export interface ClearTrialDataResponse {

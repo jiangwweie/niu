@@ -23,15 +23,24 @@
         <el-form-item label="车架号">
           <el-input v-model="queryParams.vin" placeholder="请输入车架号" clearable style="width: 220px;" />
         </el-form-item>
-        <el-form-item label="工单状态">
+        <el-form-item label="进度状态">
           <el-select v-model="queryParams.status" placeholder="请选择" clearable style="width: 220px;">
-            <el-option label="草稿" value="DRAFT" />
-            <el-option label="待接单" value="PENDING_ACCEPT" />
-            <el-option label="已接单" value="ACCEPTED" />
-            <el-option label="已定件" value="PART_ORDERED" />
-            <el-option label="已到件" value="PART_ARRIVED" />
-            <el-option label="已结算" value="SETTLED" />
+            <el-option label="新建中" value="DRAFT" />
+            <el-option label="维修中" value="REPAIRING" />
+            <el-option label="维修完成" value="REPAIR_DONE" />
+            <el-option label="已交付" value="DELIVERED" />
             <el-option label="已取消" value="CANCELLED" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="收银状态">
+          <el-select v-model="queryParams.cashierStatus" placeholder="请选择" clearable style="width: 220px;">
+            <el-option label="无需收款" value="NO_CHARGE" />
+            <el-option label="未收款" value="UNPAID" />
+            <el-option label="部分收款" value="PARTIAL_PAID" />
+            <el-option label="已收齐" value="PAID" />
+            <el-option label="待退款" value="REFUND_PENDING" />
+            <el-option label="部分退款" value="PARTIAL_REFUNDED" />
+            <el-option label="已退清" value="REFUNDED" />
           </el-select>
         </el-form-item>
         <el-form-item label="官方售后">
@@ -73,9 +82,19 @@
         <el-table-column prop="phone" label="手机号" width="120" />
         <el-table-column prop="scooterModel" label="车型" width="100" />
         <el-table-column prop="vin" label="车架号" width="160" show-overflow-tooltip />
-        <el-table-column label="状态" width="100" align="center">
+        <el-table-column label="工单进度" width="110" align="center">
           <template #default="{ row }">
-            <StatusTag :status="row.status" :label="getStatusLabel(row.status)" />
+            <StatusTag :status="row.progressStatus || row.status" :label="row.progressStatusText || getProgressStatusLabel(row.progressStatus || row.status)" />
+          </template>
+        </el-table-column>
+        <el-table-column label="收银状态" width="110" align="center">
+          <template #default="{ row }">
+            <StatusTag :status="row.cashierStatus || 'UNPAID'" :label="row.cashierStatusText || getCashierStatusLabel(row.cashierStatus)" />
+          </template>
+        </el-table-column>
+        <el-table-column label="库存状态" width="110" align="center">
+          <template #default="{ row }">
+            <StatusTag :status="row.inventoryStatus || 'NOT_RESERVED'" :label="row.inventoryStatusText || getInventoryStatusLabel(row.inventoryStatus)" />
           </template>
         </el-table-column>
         <el-table-column label="应收金额" width="100" align="right">
@@ -83,9 +102,14 @@
             <MoneyText :amount="row.receivableAmount" />
           </template>
         </el-table-column>
-        <el-table-column label="实收金额" width="100" align="right">
+        <el-table-column label="净实收" width="100" align="right">
           <template #default="{ row }">
-            <MoneyText :amount="row.actualAmount" type="success" />
+            <MoneyText :amount="row.netReceived ?? row.actualAmount" type="success" />
+          </template>
+        </el-table-column>
+        <el-table-column label="待收金额" width="100" align="right">
+          <template #default="{ row }">
+            <MoneyText :amount="row.outstandingAmount ?? Math.max(0, row.receivableAmount - row.actualAmount)" :type="(row.outstandingAmount ?? 0) > 0 ? 'warning' : 'info'" />
           </template>
         </el-table-column>
         <el-table-column label="是否官方售后" width="110" align="center">
@@ -128,14 +152,20 @@
         <el-divider content-position="left">基础信息</el-divider>
         <el-descriptions :column="2" border size="small">
           <el-descriptions-item label="工单编号">{{ currentOrder.orderNo }}</el-descriptions-item>
-          <el-descriptions-item label="工单状态"><StatusTag :status="currentOrder.status" :label="getStatusLabel(currentOrder.status)" /></el-descriptions-item>
+          <el-descriptions-item label="工单进度"><StatusTag :status="currentOrder.progressStatus || currentOrder.status" :label="currentOrder.progressStatusText || getProgressStatusLabel(currentOrder.progressStatus || currentOrder.status)" /></el-descriptions-item>
+          <el-descriptions-item label="收银状态"><StatusTag :status="currentOrder.cashierStatus || 'UNPAID'" :label="currentOrder.cashierStatusText || getCashierStatusLabel(currentOrder.cashierStatus)" /></el-descriptions-item>
+          <el-descriptions-item label="库存状态"><StatusTag :status="currentOrder.inventoryStatus || 'NOT_RESERVED'" :label="currentOrder.inventoryStatusText || getInventoryStatusLabel(currentOrder.inventoryStatus)" /></el-descriptions-item>
           <el-descriptions-item label="客户姓名">{{ currentOrder.customerName }}</el-descriptions-item>
           <el-descriptions-item label="手机号">{{ currentOrder.phone }}</el-descriptions-item>
           <el-descriptions-item label="车型">{{ currentOrder.scooterModel }}</el-descriptions-item>
           <el-descriptions-item label="车架号">{{ currentOrder.vin }}</el-descriptions-item>
           <el-descriptions-item label="电池号">{{ currentOrder.batteryNo || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="维修项目" :span="2">{{ currentOrder.repairItem || '-' }}</el-descriptions-item>
           <el-descriptions-item label="创建时间">{{ currentOrder.createdAt }}</el-descriptions-item>
+          <el-descriptions-item label="无需收款原因" v-if="currentOrder.noChargeReason" :span="2">
+            <el-tag type="info">{{ currentOrder.noChargeReason }}</el-tag>
+            <span v-if="currentOrder.noChargeRemark" style="margin-left: 8px; color: #606266;">{{ currentOrder.noChargeRemark }}</span>
+          </el-descriptions-item>
+          <el-descriptions-item label="维修项目" :span="2">{{ currentOrder.repairItem || '-' }}</el-descriptions-item>
           <el-descriptions-item label="备注" :span="2">{{ currentOrder.remark || '-' }}</el-descriptions-item>
         </el-descriptions>
 
@@ -169,99 +199,131 @@
           </el-table-column>
         </el-table>
 
-        <el-divider content-position="left">支付摘要</el-divider>
+        <el-divider content-position="left">支付与售后摘要</el-divider>
         <el-descriptions :column="4" class="payment-summary" direction="vertical" border size="small">
           <el-descriptions-item label="应收金额" align="center"><MoneyText :amount="currentOrder.receivableAmount" bold /></el-descriptions-item>
           <el-descriptions-item label="支付总额" align="center"><MoneyText :amount="currentOrder.paidAmount" /></el-descriptions-item>
           <el-descriptions-item label="退款总额" align="center"><MoneyText :amount="currentOrder.refundedAmount" type="danger" /></el-descriptions-item>
-          <el-descriptions-item label="实收金额" align="center"><MoneyText :amount="currentOrder.actualAmount" bold type="success" /></el-descriptions-item>
+          <el-descriptions-item label="实收净额" align="center"><MoneyText :amount="currentOrder.netReceived ?? currentOrder.actualAmount" bold type="success" /></el-descriptions-item>
         </el-descriptions>
 
-        <el-divider content-position="left">官方售后信息</el-divider>
-        <el-alert
-          title="官方结算金额不是客户支付金额，二者必须分开统计。"
-          type="info"
-          show-icon
-          :closable="false"
-          style="margin-bottom: 12px;"
-        />
-        <el-descriptions :column="2" border size="small">
+        <el-descriptions :column="2" border size="small" style="margin-bottom: 20px;">
           <el-descriptions-item label="是否官方售后">{{ currentOrder.isOfficial ? '是' : '否' }}</el-descriptions-item>
           <el-descriptions-item label="官方订单号">{{ currentOrder.officialOrderNo || '-' }}</el-descriptions-item>
           <el-descriptions-item label="官方结算状态">{{ getOfficialSettlementLabel(currentOrder.officialSettlementStatus) }}</el-descriptions-item>
           <el-descriptions-item label="官方结算金额"><MoneyText :amount="currentOrder.officialSettlementAmount || 0" /></el-descriptions-item>
         </el-descriptions>
 
-        <!-- 收银区域 -->
-        <template v-if="canShowCashierSection">
-          <el-divider content-position="left">收银</el-divider>
+        <!-- 工单控制台与收银区域 -->
+        <el-divider content-position="left">工单控制台 & 财务收银</el-divider>
 
-          <el-descriptions :column="4" direction="vertical" border size="small" style="margin-bottom: 16px;">
-            <el-descriptions-item label="应收金额" align="center">
-              <MoneyText :amount="currentOrder.receivableAmount" bold />
-            </el-descriptions-item>
-            <el-descriptions-item label="实收金额" align="center">
-              <MoneyText :amount="currentOrder.actualAmount" bold type="success" />
-            </el-descriptions-item>
-            <el-descriptions-item label="待收金额" align="center">
-              <MoneyText :amount="pendingAmount" bold :type="pendingAmount > 0 ? 'warning' : 'info'" />
-            </el-descriptions-item>
-            <el-descriptions-item label="已退金额" align="center">
-              <MoneyText :amount="currentOrder.refundedAmount" type="danger" />
-            </el-descriptions-item>
-          </el-descriptions>
+        <el-alert
+          v-if="nextStepTip"
+          :title="'指引：' + nextStepTip"
+          type="warning"
+          show-icon
+          :closable="false"
+          style="margin-bottom: 16px;"
+        />
 
-          <div style="display: flex; gap: 8px; margin-bottom: 16px;">
-            <el-button
-              v-if="canRecordPayment"
-              type="primary"
-              size="small"
-              @click="openPaymentDialog"
-            >记录收款</el-button>
-            <el-button
-              v-if="canRecordRefund"
-              type="warning"
-              size="small"
-              @click="openRefundDialog"
-            >记录退款</el-button>
-            <el-button
-              v-if="canSettle"
-              type="success"
-              size="small"
-              @click="openSettleDialog"
-            >结算工单</el-button>
-          </div>
+        <el-descriptions :column="4" direction="vertical" border size="small" style="margin-bottom: 16px;">
+          <el-descriptions-item label="应收金额" align="center">
+            <MoneyText :amount="currentOrder.receivableAmount" bold />
+          </el-descriptions-item>
+          <el-descriptions-item label="实收净额" align="center">
+            <MoneyText :amount="currentOrder.netReceived ?? currentOrder.actualAmount" bold type="success" />
+          </el-descriptions-item>
+          <el-descriptions-item label="待收金额" align="center">
+            <MoneyText :amount="currentOrder.outstandingAmount ?? pendingAmount" bold :type="(currentOrder.outstandingAmount ?? pendingAmount) > 0 ? 'warning' : 'info'" />
+          </el-descriptions-item>
+          <el-descriptions-item label="可退金额" align="center">
+            <MoneyText :amount="currentOrder.refundableAmount ?? 0" :type="(currentOrder.refundableAmount ?? 0) > 0 ? 'danger' : 'info'" />
+          </el-descriptions-item>
+        </el-descriptions>
 
-          <div v-if="workOrderPayments.length > 0" style="margin-bottom: 12px;">
-            <div style="font-weight: 600; margin-bottom: 6px; font-size: 14px;">支付记录</div>
-            <el-table :data="workOrderPayments" border size="small">
-              <el-table-column label="支付单号" prop="paymentNo" width="180" />
-              <el-table-column label="金额" width="100" align="right">
-                <template #default="{ row }"><MoneyText :amount="row.amount" /></template>
-              </el-table-column>
-              <el-table-column label="支付方式" width="100">
-                <template #default="{ row }">{{ getPaymentMethodLabel(row.paymentMethod) }}</template>
-              </el-table-column>
-              <el-table-column label="支付时间" prop="paidAt" width="160" />
-              <el-table-column label="备注" prop="remark" min-width="120" show-overflow-tooltip />
-            </el-table>
-          </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
+          <el-button
+            v-if="currentOrder.canMarkRepairDone"
+            type="success"
+            size="small"
+            @click="openMarkRepairDoneDialog"
+          >标记维修完成</el-button>
 
-          <div v-if="workOrderRefunds.length > 0" style="margin-bottom: 12px;">
-            <div style="font-weight: 600; margin-bottom: 6px; font-size: 14px;">退款记录</div>
-            <el-table :data="workOrderRefunds" border size="small">
-              <el-table-column label="退款单号" prop="refundNo" width="180" />
-              <el-table-column label="金额" width="100" align="right">
-                <template #default="{ row }"><MoneyText :amount="row.amount" type="danger" /></template>
-              </el-table-column>
-              <el-table-column label="退款方式" width="100">
-                <template #default="{ row }">{{ getPaymentMethodLabel(row.refundMethod) }}</template>
-              </el-table-column>
-              <el-table-column label="退款原因" prop="reason" min-width="120" show-overflow-tooltip />
-              <el-table-column label="退款时间" prop="refundedAt" width="160" />
-            </el-table>
-          </div>
-        </template>
+          <el-button
+            v-if="currentOrder.canDeliver"
+            type="primary"
+            size="small"
+            @click="openDeliverDialog"
+          >交付关闭工单</el-button>
+
+          <el-button
+            v-if="currentOrder.canRecordPayment"
+            type="primary"
+            size="small"
+            plain
+            @click="openPaymentDialog"
+          >记录收款</el-button>
+
+          <el-button
+            v-if="currentOrder.canRecordRefund"
+            type="warning"
+            size="small"
+            plain
+            @click="openRefundDialog(false)"
+          >记录退款</el-button>
+
+          <el-button
+            v-if="currentOrder.canRefundAfterDelivery"
+            type="danger"
+            size="small"
+            plain
+            @click="openRefundDialog(true)"
+          >交付后退款</el-button>
+
+          <el-button
+            v-if="['DRAFT', 'REPAIRING', 'REPAIR_DONE'].includes(currentOrder.progressStatus || '')"
+            type="warning"
+            size="small"
+            @click="openAddChargeDialog"
+          >追加非库存费用</el-button>
+
+          <el-button
+            v-if="currentOrder.canCancel"
+            type="danger"
+            size="small"
+            @click="openCancelDialog"
+          >取消工单</el-button>
+        </div>
+
+        <div v-if="workOrderPayments.length > 0" style="margin-bottom: 12px;">
+          <div style="font-weight: 600; margin-bottom: 6px; font-size: 14px;">支付记录</div>
+          <el-table :data="workOrderPayments" border size="small">
+            <el-table-column label="支付单号" prop="paymentNo" width="180" />
+            <el-table-column label="金额" width="100" align="right">
+              <template #default="{ row }"><MoneyText :amount="row.amount" /></template>
+            </el-table-column>
+            <el-table-column label="支付方式" width="100">
+              <template #default="{ row }">{{ getPaymentMethodLabel(row.paymentMethod) }}</template>
+            </el-table-column>
+            <el-table-column label="支付时间" prop="paidAt" width="160" />
+            <el-table-column label="备注" prop="remark" min-width="120" show-overflow-tooltip />
+          </el-table>
+        </div>
+
+        <div v-if="workOrderRefunds.length > 0" style="margin-bottom: 12px;">
+          <div style="font-weight: 600; margin-bottom: 6px; font-size: 14px;">退款记录</div>
+          <el-table :data="workOrderRefunds" border size="small">
+            <el-table-column label="退款单号" prop="refundNo" width="180" />
+            <el-table-column label="金额" width="100" align="right">
+              <template #default="{ row }"><MoneyText :amount="row.amount" type="danger" /></template>
+            </el-table-column>
+            <el-table-column label="退款方式" width="100">
+              <template #default="{ row }">{{ getPaymentMethodLabel(row.refundMethod) }}</template>
+            </el-table-column>
+            <el-table-column label="退款原因" prop="reason" min-width="120" show-overflow-tooltip />
+            <el-table-column label="退款时间" prop="refundedAt" width="160" />
+          </el-table>
+        </div>
       </template>
     </el-drawer>
 
@@ -272,13 +334,13 @@
           <el-input-number
             v-model="paymentForm.amount"
             :min="0.01"
-            :max="pendingAmount"
+            :max="currentOrder?.outstandingAmount ?? 0"
             :precision="2"
             :step="10"
             style="width: 100%"
           />
-          <div v-if="pendingAmount > 0" style="font-size: 12px; color: #909399; margin-top: 4px;">
-            待收金额：<MoneyText :amount="pendingAmount" />
+          <div style="font-size: 12px; color: #909399; margin-top: 4px;">
+            待收金额：<MoneyText :amount="currentOrder?.outstandingAmount ?? 0" />
           </div>
         </el-form-item>
         <el-form-item label="支付方式">
@@ -301,19 +363,27 @@
     </el-dialog>
 
     <!-- 记录退款弹窗 -->
-    <el-dialog v-model="refundDialogVisible" title="记录退款" width="420px" :close-on-click-modal="false">
+    <el-dialog v-model="refundDialogVisible" title="记录退款" width="440px" :close-on-click-modal="false">
       <el-form :model="refundForm" label-width="80px" size="default">
+        <el-alert
+          v-if="isRefundAfterDelivery"
+          title="重要提示：此退款在工单交付关闭后进行。该退款仅影响财务资金流水，不会对库存产生任何回滚，也不会重新开启工单！"
+          type="warning"
+          show-icon
+          :closable="false"
+          style="margin-bottom: 16px;"
+        />
         <el-form-item label="退款金额">
           <el-input-number
             v-model="refundForm.amount"
             :min="0.01"
-            :max="currentOrder?.actualAmount ?? 0"
+            :max="currentOrder?.refundableAmount ?? 0"
             :precision="2"
             :step="10"
             style="width: 100%"
           />
           <div style="font-size: 12px; color: #909399; margin-top: 4px;">
-            最大可退：<MoneyText :amount="currentOrder?.actualAmount ?? 0" />
+            最大可退金额：<MoneyText :amount="currentOrder?.refundableAmount ?? 0" />
           </div>
         </el-form-item>
         <el-form-item label="退款方式">
@@ -325,7 +395,7 @@
             <el-option label="其他" value="OTHER" />
           </el-select>
         </el-form-item>
-        <el-form-item label="退款原因">
+        <el-form-item label="退款原因" required>
           <el-input v-model="refundForm.reason" placeholder="必填" />
         </el-form-item>
         <el-form-item label="备注">
@@ -338,29 +408,144 @@
       </template>
     </el-dialog>
 
-    <!-- 结算确认弹窗 -->
-    <el-dialog v-model="settleDialogVisible" title="结算工单" width="420px" :close-on-click-modal="false">
-      <el-descriptions :column="1" border size="small" style="margin-bottom: 12px;">
-        <el-descriptions-item label="应收金额"><MoneyText :amount="currentOrder?.receivableAmount ?? 0" bold /></el-descriptions-item>
-        <el-descriptions-item label="实收金额"><MoneyText :amount="currentOrder?.actualAmount ?? 0" bold type="success" /></el-descriptions-item>
-        <el-descriptions-item label="待收金额">
-          <MoneyText :amount="pendingAmount" bold :type="pendingAmount > 0 ? 'danger' : 'info'" />
-          <el-tag v-if="pendingAmount > 0" type="danger" size="small" style="margin-left: 8px;">未收齐</el-tag>
-        </el-descriptions-item>
-      </el-descriptions>
-      <el-form label-width="80px" size="default">
-        <el-form-item label="备注">
-          <el-input v-model="settleRemark" type="textarea" :rows="2" placeholder="选填" />
+    <!-- 标记维修完成弹窗 -->
+    <el-dialog v-model="repairDoneDialogVisible" title="标记维修完成" width="460px" :close-on-click-modal="false">
+      <div style="margin-bottom: 16px; font-size: 14px;">
+        确认标记此工单为维修完成状态？此操作会推进工单进度。
+      </div>
+      <el-form v-if="currentOrder && currentOrder.receivableAmount === 0" :model="repairDoneForm" label-width="110px" size="default">
+        <el-alert
+          title="当前应收金额为 ￥0，必须填报无需收款原因。"
+          type="warning"
+          show-icon
+          :closable="false"
+          style="margin-bottom: 16px;"
+        />
+        <el-form-item label="无需收款原因" required>
+          <el-select v-model="repairDoneForm.noChargeReason" placeholder="请选择原因" style="width: 100%">
+            <el-option label="保修内免费" value="WARRANTY_FREE" />
+            <el-option label="首保赠送" value="FIRST_MAINTENANCE_FREE" />
+            <el-option label="客户自备配件" value="CUSTOMER_OWN_PARTS" />
+            <el-option label="无收费项目" value="NO_CHARGE_ITEM" />
+            <el-option label="其他" value="OTHER" />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="repairDoneForm.noChargeReason === 'OTHER'" label="其他原因说明" required>
+          <el-input v-model="repairDoneForm.otherReason" placeholder="请输入具体原因" />
+        </el-form-item>
+        <el-form-item label="无需收款备注">
+          <el-input v-model="repairDoneForm.noChargeRemark" type="textarea" :rows="2" placeholder="可选备注信息" />
+        </el-form-item>
+      </el-form>
+      <el-form v-else :model="repairDoneForm" label-width="80px" size="default">
+        <el-form-item label="处理备注">
+          <el-input v-model="repairDoneForm.remark" type="textarea" :rows="2" placeholder="选填" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="settleDialogVisible = false">取消</el-button>
-        <el-button
+        <el-button @click="repairDoneDialogVisible = false">取消</el-button>
+        <el-button type="success" :loading="submitting" @click="submitRepairDone">确认完成</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 交付关闭确认弹窗 -->
+    <el-dialog v-model="deliverDialogVisible" title="交付关闭工单" width="460px" :close-on-click-modal="false">
+      <div v-if="currentOrder" style="margin-bottom: 16px;">
+        <el-descriptions :column="1" border size="small" style="margin-bottom: 12px;">
+          <el-descriptions-item label="应收金额"><MoneyText :amount="currentOrder.receivableAmount" bold /></el-descriptions-item>
+          <el-descriptions-item label="实收净额"><MoneyText :amount="currentOrder.netReceived ?? currentOrder.actualAmount" bold type="success" /></el-descriptions-item>
+          <el-descriptions-item label="待收金额">
+            <MoneyText :amount="currentOrder.outstandingAmount ?? pendingAmount" bold :type="(currentOrder.outstandingAmount ?? pendingAmount) > 0 ? 'danger' : 'info'" />
+          </el-descriptions-item>
+        </el-descriptions>
+        
+        <el-alert
+          v-if="(currentOrder.outstandingAmount ?? pendingAmount) > 0"
+          title="注意：该工单尚未结清，交付将产生未结清账款。请确认已在线下沟通好付款安排。"
+          type="warning"
+          show-icon
+          :closable="false"
+          style="margin-bottom: 12px;"
+        />
+        <el-alert
+          v-else
+          title="工单已结清。交付关闭后，库存将正式扣减，且不可再记录常规收款。"
           type="success"
+          show-icon
+          :closable="false"
+          style="margin-bottom: 12px;"
+        />
+      </div>
+      <el-form label-width="80px" size="default">
+        <el-form-item label="交付备注">
+          <el-input v-model="deliverRemark" type="textarea" :rows="2" placeholder="选填" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="deliverDialogVisible = false">取消</el-button>
+        <el-button
+          type="primary"
           :loading="submitting"
-          :disabled="pendingAmount > 0"
-          @click="submitSettle"
-        >确认结算</el-button>
+          @click="submitDeliver"
+        >确认交付并关闭</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 追加非库存费用弹窗 -->
+    <el-dialog v-model="addChargeDialogVisible" title="追加非库存费用" width="460px" :close-on-click-modal="false">
+      <el-form :model="chargeForm" label-width="90px" size="default">
+        <el-alert
+          title="仅支持追加工时费或其它杂费，不影响配件库存。"
+          type="info"
+          show-icon
+          :closable="false"
+          style="margin-bottom: 16px;"
+        />
+        <el-form-item label="费用类型" required>
+          <el-select v-model="chargeForm.chargeType" placeholder="请选择" style="width: 100%">
+            <el-option label="工时费" value="LABOR" />
+            <el-option label="其他费用" value="OTHER" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="项目名称" required>
+          <el-input v-model="chargeForm.itemName" placeholder="如：电路检修、超时保管费" />
+        </el-form-item>
+        <el-form-item label="单价" required>
+          <el-input-number v-model="chargeForm.unitPrice" :min="0" :precision="2" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="数量" required>
+          <el-input-number v-model="chargeForm.quantity" :min="1" :precision="0" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="追加原因" required>
+          <el-input v-model="chargeForm.reason" placeholder="必填，说明追加费用的原委" />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="chargeForm.remark" type="textarea" :rows="2" placeholder="选填" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="addChargeDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="submitting" @click="submitAddCharge">确认追加</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 取消工单弹窗 -->
+    <el-dialog v-model="cancelDialogVisible" title="取消工单" width="460px" :close-on-click-modal="false">
+      <el-form :model="cancelForm" label-width="80px" size="default">
+        <el-alert
+          title="警告：取消工单是不可逆操作！工单取消后将自动释放预占库存。若有已收款项，需要手动在工单详情中记录退款以保持财务账目平衡。"
+          type="error"
+          show-icon
+          :closable="false"
+          style="margin-bottom: 16px;"
+        />
+        <el-form-item label="取消原因" required>
+          <el-input v-model="cancelForm.reason" type="textarea" :rows="3" placeholder="请输入取消原因（必填）" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="cancelDialogVisible = false">取消</el-button>
+        <el-button type="danger" :loading="submitting" @click="submitCancel">确认取消工单</el-button>
       </template>
     </el-dialog>
 
@@ -380,14 +565,15 @@ import {
   getWorkOrderRefunds,
   recordPayment,
   recordRefund,
-  settleWorkOrder,
+  markRepairDone,
+  deliverWorkOrder,
+  addNonInventoryCharge,
+  cancelWorkOrder,
 } from '@/api/workOrder';
 import { useAuthStore } from '@/stores/auth';
 import type { WorkOrderRecord, WorkOrderQuery } from '@/types/workOrder';
 
 const authStore = useAuthStore();
-
-const PAYABLE_STATUSES = ['PENDING_ACCEPT', 'ACCEPTED', 'PART_ORDERED', 'PART_ARRIVED'];
 
 // 查询参数
 const queryParams = reactive<WorkOrderQuery>({
@@ -398,6 +584,8 @@ const queryParams = reactive<WorkOrderQuery>({
   phone: '',
   vin: '',
   status: '',
+  progressStatus: '',
+  cashierStatus: '',
   isOfficial: '',
   dateRange: undefined,
 });
@@ -407,17 +595,39 @@ const tableData = ref<WorkOrderRecord[]>([]);
 const total = ref(0);
 
 // 枚举映射
-const getStatusLabel = (status: string) => {
+const getProgressStatusLabel = (status?: string) => {
+  if (!status) return '-';
   const map: Record<string, string> = {
-    DRAFT: '草稿',
-    PENDING_ACCEPT: '待接单',
-    PENDING: '待接单',
-    ACCEPTED: '已接单',
-    PART_ORDERED: '已定件',
-    PARTS_ORDERED: '已定件',
-    PART_ARRIVED: '已到件',
-    SETTLED: '已结算',
+    DRAFT: '新建中',
+    REPAIRING: '维修中',
+    REPAIR_DONE: '维修完成',
+    DELIVERED: '已交付',
     CANCELLED: '已取消',
+  };
+  return map[status] || '旧状态，请先清理试运行数据';
+};
+
+const getCashierStatusLabel = (status?: string) => {
+  if (!status) return '-';
+  const map: Record<string, string> = {
+    NO_CHARGE: '无需收款',
+    UNPAID: '未收款',
+    PARTIAL_PAID: '部分收款',
+    PAID: '已收齐',
+    REFUND_PENDING: '待退款',
+    PARTIAL_REFUNDED: '部分退款',
+    REFUNDED: '已退清',
+  };
+  return map[status] || status;
+};
+
+const getInventoryStatusLabel = (status?: string) => {
+  if (!status) return '-';
+  const map: Record<string, string> = {
+    NOT_RESERVED: '未预占',
+    RESERVED: '已预占',
+    CONSUMED: '已扣减',
+    RELEASED: '已释放',
   };
   return map[status] || status;
 };
@@ -477,6 +687,8 @@ const handleReset = () => {
   queryParams.phone = '';
   queryParams.vin = '';
   queryParams.status = '';
+  queryParams.progressStatus = '';
+  queryParams.cashierStatus = '';
   queryParams.isOfficial = '';
   queryParams.dateRange = undefined;
   handleSearch();
@@ -493,36 +705,53 @@ const pendingAmount = computed(() => {
   return Math.max(0, currentOrder.value.receivableAmount - currentOrder.value.actualAmount);
 });
 
-const canShowCashierSection = computed(() => {
-  if (!currentOrder.value) return false;
-  return PAYABLE_STATUSES.includes(currentOrder.value.status) || currentOrder.value.status === 'SETTLED';
-});
+// 下一步动作指引
+const nextStepTip = computed(() => {
+  if (!currentOrder.value) return '';
+  const progress = currentOrder.value.progressStatus || currentOrder.value.status;
+  const cashier = currentOrder.value.cashierStatus;
+  const inventory = currentOrder.value.inventoryStatus;
 
-const canRecordPayment = computed(() => {
-  if (!currentOrder.value) return false;
-  return (
-    authStore.user?.permissionCodes?.includes('PAYMENT_RECORD') &&
-    PAYABLE_STATUSES.includes(currentOrder.value.status) &&
-    pendingAmount.value > 0
-  );
-});
-
-const canRecordRefund = computed(() => {
-  if (!currentOrder.value) return false;
-  return (
-    authStore.user?.permissionCodes?.includes('REFUND_RECORD') &&
-    PAYABLE_STATUSES.includes(currentOrder.value.status) &&
-    currentOrder.value.actualAmount > 0
-  );
-});
-
-const canSettle = computed(() => {
-  if (!currentOrder.value) return false;
-  return (
-    authStore.user?.permissionCodes?.includes('WORK_ORDER_SETTLE') &&
-    PAYABLE_STATUSES.includes(currentOrder.value.status) &&
-    currentOrder.value.actualAmount >= currentOrder.value.receivableAmount
-  );
+  if (progress === 'DRAFT') {
+    return '待员工小程序端提交并预占库存以推进工单';
+  }
+  if (progress === 'REPAIRING') {
+    if (inventory === 'NOT_RESERVED') {
+      return '维修中，待员工端发起库存预占以正式锁定配件';
+    }
+    if (cashier === 'UNPAID') {
+      return '维修进行中，客户尚未付款。支持线下提前收款及财务登记';
+    }
+    if (cashier === 'PARTIAL_PAID') {
+      return '维修进行中，客户已部分付款。支持继续登记收款';
+    }
+    if (cashier === 'PAID') {
+      return '维修进行中，客户已全额结清。等待维修完成后标记完成';
+    }
+    return '维修进行中。待完成后标记维修完成';
+  }
+  if (progress === 'REPAIR_DONE') {
+    if (cashier === 'UNPAID') {
+      return '工单维修已完成。客户尚未付款，请先催款/记录收款，结清后即可交付关闭';
+    }
+    if (cashier === 'PARTIAL_PAID') {
+      return '工单维修已完成。客户已部分付款，待结清后即可交付关闭';
+    }
+    if (cashier === 'PAID' || cashier === 'NO_CHARGE') {
+      return '工单维修已完成且款项已结清，请执行“交付关闭工单”操作以正式扣减库存';
+    }
+    return '工单维修已完成。支持执行交付关闭';
+  }
+  if (progress === 'DELIVERED') {
+    if (cashier === 'REFUND_PENDING' || cashier === 'PARTIAL_REFUNDED') {
+      return '工单已交付结清，目前存在待售后退款款项，请尽快处理退款';
+    }
+    return '工单已顺利交付并关闭，业务流程已完结';
+  }
+  if (progress === 'CANCELLED') {
+    return '工单已取消，库存已自动释放';
+  }
+  return '此工单属于旧试运行状态数据，建议清理数据以适配新业务流程';
 });
 
 const submitting = ref(false);
@@ -575,7 +804,8 @@ const paymentDialogVisible = ref(false);
 const paymentForm = reactive({ amount: 0.01, paymentMethod: '', remark: '' });
 
 const openPaymentDialog = () => {
-  paymentForm.amount = Math.max(0.01, pendingAmount.value);
+  if (!currentOrder.value) return;
+  paymentForm.amount = Math.max(0.01, currentOrder.value.outstandingAmount ?? 0);
   paymentForm.paymentMethod = '';
   paymentForm.remark = '';
   paymentDialogVisible.value = true;
@@ -591,7 +821,8 @@ const submitPayment = async () => {
     ElMessage.warning('收款金额必须大于0');
     return;
   }
-  if (paymentForm.amount > pendingAmount.value) {
+  const maxAmount = currentOrder.value.outstandingAmount ?? 0;
+  if (paymentForm.amount > maxAmount) {
     ElMessage.warning('收款金额不能超过待收金额');
     return;
   }
@@ -615,8 +846,9 @@ const submitPayment = async () => {
     ElMessage.success('收款成功');
     paymentDialogVisible.value = false;
     await refreshDetail();
+    fetchData();
   } catch {
-    // interceptor shows error; handle overpayment specifically
+    // handled by request interceptor
   } finally {
     submitting.value = false;
   }
@@ -624,10 +856,13 @@ const submitPayment = async () => {
 
 // ── 退款弹窗 ──
 const refundDialogVisible = ref(false);
+const isRefundAfterDelivery = ref(false);
 const refundForm = reactive({ amount: 0.01, refundMethod: '', reason: '', remark: '' });
 
-const openRefundDialog = () => {
-  refundForm.amount = Math.max(0.01, currentOrder.value?.actualAmount ?? 0);
+const openRefundDialog = (afterDelivery: boolean = false) => {
+  if (!currentOrder.value) return;
+  isRefundAfterDelivery.value = afterDelivery;
+  refundForm.amount = Math.max(0.01, currentOrder.value.refundableAmount ?? 0);
   refundForm.refundMethod = '';
   refundForm.reason = '';
   refundForm.remark = '';
@@ -648,8 +883,9 @@ const submitRefund = async () => {
     ElMessage.warning('退款金额必须大于0');
     return;
   }
-  if (refundForm.amount > currentOrder.value.actualAmount) {
-    ElMessage.warning('退款金额不能超过实收金额');
+  const maxRefund = currentOrder.value.refundableAmount ?? 0;
+  if (refundForm.amount > maxRefund) {
+    ElMessage.warning(`退款金额不能超过最大可退金额：￥${maxRefund.toFixed(2)}`);
     return;
   }
   try {
@@ -672,31 +908,95 @@ const submitRefund = async () => {
     ElMessage.success('退款成功');
     refundDialogVisible.value = false;
     await refreshDetail();
+    fetchData();
   } catch {
-    // interceptor shows error
+    // handled by request interceptor
   } finally {
     submitting.value = false;
   }
 };
 
-// ── 结算弹窗 ──
-const settleDialogVisible = ref(false);
-const settleRemark = ref('');
+// ── 标记维修完成弹窗 ──
+const repairDoneDialogVisible = ref(false);
+const repairDoneForm = reactive({
+  noChargeReason: '',
+  otherReason: '',
+  noChargeRemark: '',
+  remark: ''
+});
 
-const openSettleDialog = () => {
-  settleRemark.value = '';
-  settleDialogVisible.value = true;
+const openMarkRepairDoneDialog = () => {
+  repairDoneForm.noChargeReason = '';
+  repairDoneForm.otherReason = '';
+  repairDoneForm.noChargeRemark = '';
+  repairDoneForm.remark = '';
+  repairDoneDialogVisible.value = true;
 };
 
-const submitSettle = async () => {
+const submitRepairDone = async () => {
   if (!currentOrder.value) return;
-  if (pendingAmount.value > 0) {
-    ElMessage.warning('待收金额大于0，不允许结算');
+  const isNoCharge = currentOrder.value.receivableAmount === 0;
+  let finalNoChargeReason = '';
+  let finalNoChargeRemark = '';
+  let finalRemark = '';
+
+  if (isNoCharge) {
+    if (!repairDoneForm.noChargeReason) {
+      ElMessage.warning('请选择无需收款原因');
+      return;
+    }
+    if (repairDoneForm.noChargeReason === 'OTHER') {
+      if (!repairDoneForm.otherReason.trim()) {
+        ElMessage.warning('请输入其他原因具体说明');
+        return;
+      }
+      finalNoChargeReason = repairDoneForm.otherReason.trim();
+    } else {
+      finalNoChargeReason = repairDoneForm.noChargeReason;
+    }
+    finalNoChargeRemark = repairDoneForm.noChargeRemark.trim();
+  } else {
+    finalRemark = repairDoneForm.remark.trim();
+  }
+
+  try {
+    await ElMessageBox.confirm('确认将工单标记为维修完成？', '确认操作');
+  } catch {
     return;
   }
+
+  submitting.value = true;
   try {
-    await ElMessageBox.confirm('确认结算此工单？结算后不可再进行收银操作。', '确认结算', {
-      confirmButtonText: '确认结算',
+    await markRepairDone(currentOrder.value.id, {
+      noChargeReason: isNoCharge ? finalNoChargeReason : undefined,
+      noChargeRemark: isNoCharge ? finalNoChargeRemark : undefined,
+      remark: !isNoCharge ? finalRemark : undefined,
+    });
+    ElMessage.success('工单已成功标记为维修完成');
+    repairDoneDialogVisible.value = false;
+    await refreshDetail();
+    fetchData();
+  } catch {
+    // handled by request interceptor
+  } finally {
+    submitting.value = false;
+  }
+};
+
+// ── 交付关闭工单弹窗 ──
+const deliverDialogVisible = ref(false);
+const deliverRemark = ref('');
+
+const openDeliverDialog = () => {
+  deliverRemark.value = '';
+  deliverDialogVisible.value = true;
+};
+
+const submitDeliver = async () => {
+  if (!currentOrder.value) return;
+  try {
+    await ElMessageBox.confirm('确认交付此工单并关闭？交付后库存将正式扣除。', '确认交付', {
+      confirmButtonText: '确认交付',
       cancelButtonText: '取消',
       type: 'warning',
     });
@@ -705,13 +1005,126 @@ const submitSettle = async () => {
   }
   submitting.value = true;
   try {
-    await settleWorkOrder(currentOrder.value.id, { remark: settleRemark.value || undefined });
-    ElMessage.success('工单已结算');
-    settleDialogVisible.value = false;
+    await deliverWorkOrder(currentOrder.value.id, {
+      remark: deliverRemark.value ? deliverRemark.value.trim() : undefined,
+    });
+    ElMessage.success('工单交付成功并关闭');
+    deliverDialogVisible.value = false;
     await refreshDetail();
-    fetchData(); // refresh list to update status
+    fetchData();
   } catch {
-    // interceptor shows error
+    // handled by request interceptor
+  } finally {
+    submitting.value = false;
+  }
+};
+
+// ── 追加非库存费用弹窗 ──
+const addChargeDialogVisible = ref(false);
+const chargeForm = reactive({
+  chargeType: 'LABOR' as 'LABOR' | 'OTHER',
+  itemName: '',
+  unitPrice: 0.00,
+  quantity: 1,
+  reason: '',
+  remark: ''
+});
+
+const openAddChargeDialog = () => {
+  chargeForm.chargeType = 'LABOR';
+  chargeForm.itemName = '';
+  chargeForm.unitPrice = 0.00;
+  chargeForm.quantity = 1;
+  chargeForm.reason = '';
+  chargeForm.remark = '';
+  addChargeDialogVisible.value = true;
+};
+
+const submitAddCharge = async () => {
+  if (!currentOrder.value) return;
+  if (!chargeForm.itemName.trim()) {
+    ElMessage.warning('请输入项目名称');
+    return;
+  }
+  if (chargeForm.unitPrice < 0) {
+    ElMessage.warning('单价不能小于0');
+    return;
+  }
+  if (chargeForm.quantity <= 0) {
+    ElMessage.warning('数量必须大于0');
+    return;
+  }
+  if (!chargeForm.reason.trim()) {
+    ElMessage.warning('请输入追加费用原因');
+    return;
+  }
+
+  try {
+    await ElMessageBox.confirm('确认追加该项非库存费用？', '确认追加');
+  } catch {
+    return;
+  }
+
+  submitting.value = true;
+  try {
+    await addNonInventoryCharge(currentOrder.value.id, {
+      chargeType: chargeForm.chargeType,
+      itemName: chargeForm.itemName.trim(),
+      unitPrice: chargeForm.unitPrice,
+      quantity: chargeForm.quantity,
+      reason: chargeForm.reason.trim(),
+      remark: chargeForm.remark ? chargeForm.remark.trim() : undefined,
+    });
+    ElMessage.success('非库存费用追加成功');
+    addChargeDialogVisible.value = false;
+    await refreshDetail();
+    fetchData();
+  } catch {
+    // handled by request interceptor
+  } finally {
+    submitting.value = false;
+  }
+};
+
+// ── 取消工单弹窗 ──
+const cancelDialogVisible = ref(false);
+const cancelForm = reactive({
+  reason: ''
+});
+
+const openCancelDialog = () => {
+  cancelForm.reason = '';
+  cancelDialogVisible.value = true;
+};
+
+const submitCancel = async () => {
+  if (!currentOrder.value) return;
+  if (!cancelForm.reason.trim()) {
+    ElMessage.warning('请填写取消工单原因');
+    return;
+  }
+
+  try {
+    await ElMessageBox.confirm('工单取消后将自动释放预占库存，是否确认取消工单？', '警示确认', {
+      type: 'warning',
+      confirmButtonText: '确认取消',
+      cancelButtonText: '放弃'
+    });
+  } catch {
+    return;
+  }
+
+  submitting.value = true;
+  try {
+    await cancelWorkOrder(currentOrder.value.id, {
+      reason: cancelForm.reason.trim(),
+    });
+    ElMessage.success('工单取消成功');
+    cancelDialogVisible.value = false;
+    await refreshDetail();
+    fetchData();
+  } catch {
+    // handled by request interceptor
   } finally {
     submitting.value = false;
   }

@@ -21,10 +21,27 @@ export interface WorkOrderRecord {
   vin: string;
   batteryNo?: string;
   status: string;
+  progressStatus?: string;
+  progressStatusText?: string;
+  cashierStatus?: string;
+  cashierStatusText?: string;
+  inventoryStatus?: string;
+  inventoryStatusText?: string;
   receivableAmount: number;
-  actualAmount: number;
+  actualAmount: number; // Keep for backward compatibility, same as receivedAmount/netReceived
   paidAmount: number;
   refundedAmount: number;
+  netReceived?: number;
+  outstandingAmount?: number;
+  refundableAmount?: number;
+  noChargeReason?: string | null;
+  noChargeRemark?: string | null;
+  canMarkRepairDone?: boolean;
+  canDeliver?: boolean;
+  canCancel?: boolean;
+  canRecordPayment?: boolean;
+  canRecordRefund?: boolean;
+  canRefundAfterDelivery?: boolean;
   isOfficial: boolean;
   officialOrderNo?: string;
   officialSettlementStatus?: string;
@@ -41,6 +58,8 @@ export interface WorkOrderQuery {
   phone?: string;
   vin?: string;
   status?: string;
+  progressStatus?: string;
+  cashierStatus?: string;
   isOfficial?: boolean | '';
   dateRange?: [string, string];
   pageNo: number;
@@ -55,8 +74,19 @@ export interface WorkOrderListResp {
   customerNameSnapshot: string;
   vehicleModelSnapshot: string;
   status: string;
+  progressStatus: string;
+  progressStatusText: string;
+  cashierStatus: string;
+  cashierStatusText: string;
+  inventoryStatus: string;
+  inventoryStatusText: string;
   receivableAmount: number;
   receivedAmount: number;
+  paymentTotal: number;
+  refundTotal: number;
+  netReceived: number;
+  outstandingAmount: number;
+  refundableAmount: number;
   createdAt: string;
   customerPhoneSnapshot: string;
   frameNoSnapshot: string;
@@ -83,15 +113,6 @@ export interface WorkOrderChargeItemResp {
   tempPart: boolean;
   status: string;
   remark: string;
-}
-
-export interface PaymentSummaryResp {
-  workOrderId: number;
-  receivableAmount: number;
-  paymentTotal: number;
-  refundTotal: number;
-  receivedAmount: number;
-  canSettle: boolean;
 }
 
 export interface OfficialAfterSalesResp {
@@ -123,11 +144,29 @@ export interface WorkOrderDetailResp {
   batteryNoSnapshot: string | null;
   repairItem: string | null;
   status: string;
+  progressStatus: string;
+  progressStatusText: string;
+  cashierStatus: string;
+  cashierStatusText: string;
+  inventoryStatus: string;
+  inventoryStatusText: string;
   receivableAmount: number;
   receivedAmount: number;
+  paymentTotal: number;
+  refundTotal: number;
+  netReceived: number;
+  outstandingAmount: number;
+  refundableAmount: number;
+  noChargeReason: string | null;
+  noChargeRemark: string | null;
+  canMarkRepairDone: boolean;
+  canDeliver: boolean;
+  canCancel: boolean;
+  canRecordPayment: boolean;
+  canRecordRefund: boolean;
+  canRefundAfterDelivery: boolean;
   remark: string | null;
   createdAt: string;
   chargeItems: WorkOrderChargeItemResp[];
-  paymentSummary: PaymentSummaryResp | null;
   officialAfterSales: OfficialAfterSalesResp | null;
 }

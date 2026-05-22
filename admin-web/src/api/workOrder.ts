@@ -33,10 +33,19 @@ function adaptWorkOrderList(resp: WorkOrderListResp): WorkOrderRecord {
     scooterModel: resp.vehicleModelSnapshot,
     vin: resp.frameNoSnapshot || '',
     status: resp.status,
+    progressStatus: resp.progressStatus,
+    progressStatusText: resp.progressStatusText,
+    cashierStatus: resp.cashierStatus,
+    cashierStatusText: resp.cashierStatusText,
+    inventoryStatus: resp.inventoryStatus,
+    inventoryStatusText: resp.inventoryStatusText,
     receivableAmount: resp.receivableAmount,
-    actualAmount: resp.receivedAmount,
-    paidAmount: 0,
-    refundedAmount: 0,
+    actualAmount: resp.receivedAmount, // Keep actualAmount as receivedAmount for backward compatibility
+    paidAmount: resp.paymentTotal ?? 0,
+    refundedAmount: resp.refundTotal ?? 0,
+    netReceived: resp.netReceived ?? 0,
+    outstandingAmount: resp.outstandingAmount ?? 0,
+    refundableAmount: resp.refundableAmount ?? 0,
     isOfficial: resp.officialAfterSales,
     officialOrderNo: resp.officialOrderNo || undefined,
     createdAt: resp.createdAt,
@@ -45,7 +54,6 @@ function adaptWorkOrderList(resp: WorkOrderListResp): WorkOrderRecord {
 }
 
 function adaptWorkOrderDetail(resp: WorkOrderDetailResp): WorkOrderRecord {
-  const ps = resp.paymentSummary;
   return {
     id: String(resp.id),
     orderNo: resp.workOrderNo,
@@ -55,10 +63,27 @@ function adaptWorkOrderDetail(resp: WorkOrderDetailResp): WorkOrderRecord {
     vin: resp.frameNoSnapshot || '',
     batteryNo: resp.batteryNoSnapshot || undefined,
     status: resp.status,
+    progressStatus: resp.progressStatus,
+    progressStatusText: resp.progressStatusText,
+    cashierStatus: resp.cashierStatus,
+    cashierStatusText: resp.cashierStatusText,
+    inventoryStatus: resp.inventoryStatus,
+    inventoryStatusText: resp.inventoryStatusText,
     receivableAmount: resp.receivableAmount,
     actualAmount: resp.receivedAmount,
-    paidAmount: ps?.paymentTotal ?? 0,
-    refundedAmount: ps?.refundTotal ?? 0,
+    paidAmount: resp.paymentTotal ?? 0,
+    refundedAmount: resp.refundTotal ?? 0,
+    netReceived: resp.netReceived ?? 0,
+    outstandingAmount: resp.outstandingAmount ?? 0,
+    refundableAmount: resp.refundableAmount ?? 0,
+    noChargeReason: resp.noChargeReason,
+    noChargeRemark: resp.noChargeRemark,
+    canMarkRepairDone: resp.canMarkRepairDone,
+    canDeliver: resp.canDeliver,
+    canCancel: resp.canCancel,
+    canRecordPayment: resp.canRecordPayment,
+    canRecordRefund: resp.canRecordRefund,
+    canRefundAfterDelivery: resp.canRefundAfterDelivery,
     isOfficial: resp.officialAfterSales !== null,
     officialOrderNo: resp.officialAfterSales?.officialOrderNo || undefined,
     officialSettlementStatus: resp.officialAfterSales?.settlementStatus || undefined,
@@ -85,6 +110,7 @@ export async function getWorkOrderList(
   if (params.phone) backendParams.customerPhone = params.phone;
   if (params.vin) backendParams.vehicleFrameNo = params.vin;
   if (params.status) backendParams.status = params.status;
+  if (params.progressStatus) backendParams.status = params.progressStatus;
   if (params.isOfficial === true) backendParams.officialOnly = true;
   if (params.dateRange?.[0]) backendParams.startTime = params.dateRange[0];
   if (params.dateRange?.[1]) backendParams.endTime = params.dateRange[1];
@@ -141,10 +167,45 @@ export async function recordRefund(
   return await request.post(`/api/admin/work-orders/${workOrderId}/refunds`, data);
 }
 
-/** POST /api/admin/work-orders/{id}/settle */
+/** 
+ * POST /api/admin/work-orders/{id}/settle
+ * @deprecated Use deliverWorkOrder instead. Old settle endpoint is disabled on backend.
+ */
 export async function settleWorkOrder(
   workOrderId: string | number,
   data: { remark?: string },
 ) {
   return await request.post(`/api/admin/work-orders/${workOrderId}/settle`, data);
+}
+
+/** POST /api/admin/work-orders/{id}/mark-repair-done */
+export async function markRepairDone(
+  workOrderId: string | number,
+  data?: { noChargeReason?: string; noChargeRemark?: string; remark?: string },
+) {
+  return await request.post(`/api/admin/work-orders/${workOrderId}/mark-repair-done`, data);
+}
+
+/** POST /api/admin/work-orders/{id}/deliver */
+export async function deliverWorkOrder(
+  workOrderId: string | number,
+  data?: { noChargeReason?: string; noChargeRemark?: string; remark?: string },
+) {
+  return await request.post(`/api/admin/work-orders/${workOrderId}/deliver`, data);
+}
+
+/** POST /api/admin/work-orders/{id}/non-inventory-charges */
+export async function addNonInventoryCharge(
+  workOrderId: string | number,
+  data: { chargeType: 'LABOR' | 'OTHER'; itemName: string; unitPrice: number; quantity: number; reason: string; remark?: string },
+) {
+  return await request.post(`/api/admin/work-orders/${workOrderId}/non-inventory-charges`, data);
+}
+
+/** POST /api/admin/work-orders/{id}/cancel */
+export async function cancelWorkOrder(
+  workOrderId: string | number,
+  data: { reason: string },
+) {
+  return await request.post(`/api/admin/work-orders/${workOrderId}/cancel`, data);
 }
