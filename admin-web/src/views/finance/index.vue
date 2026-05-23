@@ -1,5 +1,5 @@
 <template>
-  <PageContainer title="财务报表" description="查看客户支付收入、官方结算收入、成本与利润报表">
+  <PageContainer title="财务报表" description="查看客户实收收入、官方结算收入、成本与利润报表">
     <template #action>
       <el-button v-if="hasPermission('EXCEL_EXPORT')" type="success" @click="handleExport" :loading="exportLoading">数据导出</el-button>
     </template>
@@ -112,7 +112,7 @@
               <span class="item-label">配件成本</span>
               <MoneyText :amount="summaryData?.partsCost || 0" />
             </div>
-            <div class="group-desc text-info">已结算工单的配件成本</div>
+            <div class="group-desc text-info">已扣减库存配件成本</div>
           </div>
           <el-divider />
           <div class="split-group">
@@ -135,7 +135,7 @@
         </template>
         <div class="split-section profit-section">
           <div class="profit-row">
-            <span class="item-label">已结算工单数</span>
+            <span class="item-label">已交付工单数</span>
             <span class="font-bold">{{ summaryData?.settledWorkOrderCount || 0 }}</span>
           </div>
           <el-divider style="margin: 12px 0;" />

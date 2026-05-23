@@ -151,7 +151,7 @@ const fetchData = async () => {
     tableData.value = res.records;
     total.value = res.total;
   } catch {
-    ElMessage.error('加载支付记录失败');
+    ElMessage.error('加载收款记录失败');
   } finally {
     loading.value = false;
   }
@@ -177,7 +177,7 @@ const getMethodLabel = (method: string) => {
     UNIONPAY: '银联',
     CASH: '现金',
   };
-  return map[method] || method;
+  return map[method] || '其他';
 };
 
 const getMethodTag = (method: string) => {

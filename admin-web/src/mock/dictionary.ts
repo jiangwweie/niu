@@ -1,6 +1,6 @@
 export const mockDictionaryTypes = [
   { code: 'WORK_ORDER_STATUS', label: '工单状态' },
-  { code: 'PAYMENT_METHOD', label: '支付方式' },
+  { code: 'PAYMENT_METHOD', label: '收款方式' },
   { code: 'PART_SOURCE', label: '配件来源' },
   { code: 'PART_CATEGORY', label: '配件分类' },
   { code: 'REIMBURSEMENT_STATUS', label: '报销状态' },
@@ -22,16 +22,17 @@ interface MockDictItem {
 
 export const mockDictionaryData: MockDictItem[] = [
   // 工单状态
-  { id: '1', typeCode: 'WORK_ORDER_STATUS', typeLabel: '工单状态', dictCode: 'PENDING', dictLabel: '待处理', sort: 1, enabled: true, isSystem: true, remark: '新建工单默认状态' },
-  { id: '2', typeCode: 'WORK_ORDER_STATUS', typeLabel: '工单状态', dictCode: 'IN_PROGRESS', dictLabel: '维修中', sort: 2, enabled: true, isSystem: true },
-  { id: '3', typeCode: 'WORK_ORDER_STATUS', typeLabel: '工单状态', dictCode: 'COMPLETED', dictLabel: '已完成', sort: 3, enabled: true, isSystem: true },
-  { id: '4', typeCode: 'WORK_ORDER_STATUS', typeLabel: '工单状态', dictCode: 'CANCELLED', dictLabel: '已取消', sort: 4, enabled: true, isSystem: true },
+  { id: '1', typeCode: 'WORK_ORDER_STATUS', typeLabel: '工单状态', dictCode: 'DRAFT', dictLabel: '新建中', sort: 1, enabled: true, isSystem: true, remark: '工单录入中' },
+  { id: '2', typeCode: 'WORK_ORDER_STATUS', typeLabel: '工单状态', dictCode: 'REPAIRING', dictLabel: '维修中', sort: 2, enabled: true, isSystem: true },
+  { id: '3', typeCode: 'WORK_ORDER_STATUS', typeLabel: '工单状态', dictCode: 'REPAIR_DONE', dictLabel: '维修完成', sort: 3, enabled: true, isSystem: true },
+  { id: '4', typeCode: 'WORK_ORDER_STATUS', typeLabel: '工单状态', dictCode: 'DELIVERED', dictLabel: '已交付', sort: 4, enabled: true, isSystem: true },
+  { id: '25', typeCode: 'WORK_ORDER_STATUS', typeLabel: '工单状态', dictCode: 'CANCELLED', dictLabel: '已取消', sort: 5, enabled: true, isSystem: true },
   
-  // 支付方式
-  { id: '5', typeCode: 'PAYMENT_METHOD', typeLabel: '支付方式', dictCode: 'WEIXIN', dictLabel: '微信支付', sort: 1, enabled: true, isSystem: true },
-  { id: '6', typeCode: 'PAYMENT_METHOD', typeLabel: '支付方式', dictCode: 'ALIPAY', dictLabel: '支付宝', sort: 2, enabled: true, isSystem: true },
-  { id: '7', typeCode: 'PAYMENT_METHOD', typeLabel: '支付方式', dictCode: 'CASH', dictLabel: '现金', sort: 3, enabled: true, isSystem: false },
-  { id: '8', typeCode: 'PAYMENT_METHOD', typeLabel: '支付方式', dictCode: 'POS', dictLabel: 'POS机刷卡', sort: 4, enabled: false, isSystem: false, remark: '使用较少，已停用' },
+  // 收款方式
+  { id: '5', typeCode: 'PAYMENT_METHOD', typeLabel: '收款方式', dictCode: 'WEIXIN', dictLabel: '微信', sort: 1, enabled: true, isSystem: true },
+  { id: '6', typeCode: 'PAYMENT_METHOD', typeLabel: '收款方式', dictCode: 'ALIPAY', dictLabel: '支付宝', sort: 2, enabled: true, isSystem: true },
+  { id: '7', typeCode: 'PAYMENT_METHOD', typeLabel: '收款方式', dictCode: 'CASH', dictLabel: '现金', sort: 3, enabled: true, isSystem: false },
+  { id: '8', typeCode: 'PAYMENT_METHOD', typeLabel: '收款方式', dictCode: 'POS', dictLabel: 'POS机刷卡', sort: 4, enabled: false, isSystem: false, remark: '使用较少，已停用' },
 
   // 配件来源
   { id: '9', typeCode: 'PART_SOURCE', typeLabel: '配件来源', dictCode: 'OFFICIAL', dictLabel: '官方商城供货', sort: 1, enabled: true, isSystem: true },

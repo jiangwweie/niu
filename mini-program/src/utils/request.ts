@@ -1,6 +1,7 @@
 import { API_MODE, BASE_URL } from './config';
 import { ApiResponse } from '../types/common';
 import { authStore } from '../stores/auth';
+import { getFriendlyErrorMessage } from './statusText';
 
 interface RequestOptions extends WechatMiniprogram.RequestOption {
   mockData?: any;
@@ -60,30 +61,33 @@ export const request = <T = any>(options: RequestOptions): Promise<ApiResponse<T
         complete();
         if (res.statusCode === 401) {
           authStore.clearAuth();
-          wx.showToast({ title: '未登录或登录已过期', icon: 'none' });
+          const message = getFriendlyErrorMessage('UNAUTHORIZED');
+          wx.showToast({ title: message, icon: 'none' });
           const currentPages = getCurrentPages();
           const route = currentPages.length ? currentPages[currentPages.length - 1].route : '';
           wx.redirectTo({ url: `/pages/login/index?redirect=${encodeURIComponent('/' + route)}` });
-          reject(new Error('未登录或登录已过期'));
+          reject(new Error(message));
           return;
         }
         if (res.statusCode === 403) {
-          wx.showToast({ title: '无权限访问该资源', icon: 'none' });
-          reject(new Error('无权限访问该资源'));
+          const message = getFriendlyErrorMessage('FORBIDDEN');
+          wx.showToast({ title: message, icon: 'none' });
+          reject(new Error(message));
           return;
         }
 
         if (res.statusCode >= 200 && res.statusCode < 300) {
           const apiRes = res.data as ApiResponse<T>;
           if (apiRes.code !== 'SUCCESS' && apiRes.code !== 200) {
-            wx.showToast({ title: apiRes.message || '请求失败', icon: 'none' });
-            reject(new Error(apiRes.message || 'API Error'));
+            const message = getFriendlyErrorMessage(apiRes.code, apiRes.message);
+            wx.showToast({ title: message, icon: 'none' });
+            reject(new Error(message));
           } else {
             resolve(apiRes);
           }
         } else {
           const apiRes = res.data as Partial<ApiResponse<any>> | undefined;
-          const message = apiRes?.message || '请求失败，请稍后重试';
+          const message = getFriendlyErrorMessage(apiRes?.code, apiRes?.message || '请求失败，请稍后重试');
           const error = new Error(message) as ApiError;
           error.code = apiRes?.code;
           error.statusCode = res.statusCode;

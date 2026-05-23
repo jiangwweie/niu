@@ -79,7 +79,7 @@
         <el-row :gutter="16">
           <el-col :span="8" v-if="summary.pendingActions.pendingSettleCount > 0">
             <el-alert
-              :title="`${summary.pendingActions.pendingSettleCount} 个工单待结算`"
+              :title="`${summary.pendingActions.pendingSettleCount} 个工单待交付关闭`"
               type="warning"
               :closable="false"
               show-icon
@@ -119,7 +119,7 @@
           </el-table-column>
           <el-table-column prop="status" label="状态" width="120">
             <template #default="{ row }">
-              <StatusTag :status="row.status" :label="statusLabel(row.status)" />
+              <StatusTag :status="row.status" :label="getProgressStatusText(row.status)" />
             </template>
           </el-table-column>
           <el-table-column prop="receivableAmount" label="应收" width="120" align="right">
@@ -166,6 +166,7 @@ import { ElMessage } from 'element-plus';
 import PageContainer from '@/components/PageContainer.vue';
 import MoneyText from '@/components/MoneyText.vue';
 import StatusTag from '@/components/StatusTag.vue';
+import { getProgressStatusText } from '@/utils/statusText';
 import type { DashboardSummaryResponse } from '@/types/dashboard';
 
 const router = useRouter();
@@ -174,20 +175,6 @@ const authStore = useAuthStore();
 const loading = ref(true);
 const loadError = ref(false);
 const summary = ref<DashboardSummaryResponse | null>(null);
-
-const STATUS_LABEL_MAP: Record<string, string> = {
-  DRAFT: '草稿',
-  PENDING_ACCEPT: '待接单',
-  ACCEPTED: '已接单',
-  PART_ORDERED: '已定件',
-  PART_ARRIVED: '已到件',
-  SETTLED: '已结算',
-  CANCELLED: '已取消',
-};
-
-function statusLabel(status: string): string {
-  return STATUS_LABEL_MAP[status] || status;
-}
 
 const ROLE_LABEL_MAP: Record<string, string> = {
   SUPER_ADMIN: '系统超管',
@@ -219,7 +206,7 @@ const statCards = computed(() => {
   if (!summary.value) return [];
   return [
     { label: '今日工单', value: summary.value.todayWorkOrderCount, colorClass: 'text-primary' },
-    { label: '待结算工单', value: summary.value.pendingSettleWorkOrderCount, colorClass: 'text-warning' },
+    { label: '待交付关闭工单', value: summary.value.pendingSettleWorkOrderCount, colorClass: 'text-warning' },
     { label: '待确认报销', value: summary.value.pendingReimbursementCount, colorClass: 'text-info' },
     { label: '低库存配件', value: summary.value.lowStockPartCount, colorClass: summary.value.lowStockPartCount > 0 ? 'text-danger' : 'text-success' },
   ];

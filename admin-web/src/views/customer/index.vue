@@ -135,6 +135,7 @@ import {
   getCustomerList, getCustomerDetail, createCustomer, updateCustomer,
   type CustomerListItem, type CustomerDetail,
 } from '@/api/customer';
+import { getProgressStatusText } from '@/utils/statusText';
 
 const router = useRouter();
 
@@ -157,16 +158,11 @@ const formRules: FormRules = {
 const detailVisible = ref(false);
 const detail = ref<CustomerDetail | null>(null);
 
-const STATUS_MAP: Record<string, string> = {
-  DRAFT: '草稿', PENDING_ACCEPT: '待接单', ACCEPTED: '已接单',
-  PART_ORDERED: '已定件', PART_ARRIVED: '已到件', SETTLED: '已结算', CANCELLED: '已取消',
-};
-
-function statusLabel(s: string) { return STATUS_MAP[s] || s; }
+function statusLabel(s: string) { return getProgressStatusText(s); }
 function statusTagType(s: string) {
-  if (s === 'SETTLED') return 'success';
+  if (s === 'DELIVERED' || s === 'REPAIR_DONE') return 'success';
   if (s === 'CANCELLED') return 'info';
-  return '';
+  return 'warning';
 }
 
 function formatDateTime(dt: string | null) {

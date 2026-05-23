@@ -2,6 +2,12 @@ import { authStore } from '../../stores/auth';
 import { getWorkOrders } from '../../api/workOrder';
 import { WorkOrder } from '../../types/workOrder';
 import { hasPermission } from '../../utils/permission';
+import {
+  getCashierStatusText,
+  getInventoryStatusText,
+  getProgressStatusText,
+  isLegacyWorkOrderStatus,
+} from '../../utils/statusText';
 
 const PROGRESS_TABS = [
   { value: '', label: '全部' },
@@ -11,47 +17,21 @@ const PROGRESS_TABS = [
   { value: 'CANCELLED', label: '已取消' },
 ];
 
-const LEGACY_STATUSES = ['PENDING_ACCEPT', 'ACCEPTED', 'PART_ORDERED', 'PART_ARRIVED', 'SETTLED'];
-
 function resolveProgressText(item: WorkOrder) {
-  if (item.progressStatusText) return item.progressStatusText;
-  if (item.progressStatus) {
-    const map: Record<string, string> = {
-      DRAFT: '新建中', REPAIRING: '维修中', REPAIR_DONE: '维修完成',
-      DELIVERED: '已交付', CANCELLED: '已取消'
-    };
-    return map[item.progressStatus] || '未知';
-  }
-  if (item.status && LEGACY_STATUSES.indexOf(item.status) >= 0) return '旧状态，请先清理试运行数据';
-  return '未知';
+  return getProgressStatusText(item.progressStatus || item.status, item.progressStatusText);
 }
 
 function resolveCashierText(item: WorkOrder) {
-  if (item.cashierStatusText) return item.cashierStatusText;
-  if (item.cashierStatus) {
-    const map: Record<string, string> = {
-      NO_CHARGE: '无需收款', UNPAID: '未收款', PARTIAL_PAID: '部分收款',
-      PAID: '已收齐', REFUND_PENDING: '待退款', PARTIAL_REFUNDED: '部分退款', REFUNDED: '已退清'
-    };
-    return map[item.cashierStatus] || '';
-  }
-  return '';
+  return getCashierStatusText(item.cashierStatus, item.cashierStatusText);
 }
 
 function resolveInventoryText(item: WorkOrder) {
-  if (item.inventoryStatusText) return item.inventoryStatusText;
-  if (item.inventoryStatus) {
-    const map: Record<string, string> = {
-      NOT_RESERVED: '未预占', RESERVED: '已预占', CONSUMED: '已扣减', RELEASED: '已释放'
-    };
-    return map[item.inventoryStatus] || '';
-  }
-  return '';
+  return getInventoryStatusText(item.inventoryStatus, item.inventoryStatusText);
 }
 
 function resolveProgressKey(item: WorkOrder) {
   if (item.progressStatus) return item.progressStatus;
-  if (item.status && LEGACY_STATUSES.indexOf(item.status) >= 0) return 'LEGACY';
+  if (isLegacyWorkOrderStatus(item.status)) return 'LEGACY';
   return 'UNKNOWN';
 }
 

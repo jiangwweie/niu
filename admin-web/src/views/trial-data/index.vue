@@ -57,7 +57,7 @@
           <el-descriptions-item label="工单">{{ summary.workOrderCount }}</el-descriptions-item>
           <el-descriptions-item label="收费项目">{{ summary.workOrderChargeItemCount }}</el-descriptions-item>
           <el-descriptions-item label="工单状态日志">{{ summary.workOrderStatusLogCount }}</el-descriptions-item>
-          <el-descriptions-item label="支付记录">{{ summary.paymentRecordCount }}</el-descriptions-item>
+          <el-descriptions-item label="收款记录">{{ summary.paymentRecordCount }}</el-descriptions-item>
           <el-descriptions-item label="退款记录">{{ summary.refundRecordCount }}</el-descriptions-item>
           <el-descriptions-item label="官方售后记录">{{ summary.officialAfterSalesCount }}</el-descriptions-item>
           <el-descriptions-item label="报销记录">{{ summary.reimbursementCount }}</el-descriptions-item>
@@ -135,7 +135,7 @@
           <el-descriptions-item label="工单已删除">{{ clearResult.workOrdersDeleted }}</el-descriptions-item>
           <el-descriptions-item label="收费项目已删除">{{ clearResult.chargeItemsDeleted }}</el-descriptions-item>
           <el-descriptions-item label="状态日志已删除">{{ clearResult.statusLogsDeleted }}</el-descriptions-item>
-          <el-descriptions-item label="支付记录已删除">{{ clearResult.paymentsDeleted }}</el-descriptions-item>
+          <el-descriptions-item label="收款记录已删除">{{ clearResult.paymentsDeleted }}</el-descriptions-item>
           <el-descriptions-item label="退款记录已删除">{{ clearResult.refundsDeleted }}</el-descriptions-item>
           <el-descriptions-item label="官方售后已删除">{{ clearResult.officialAfterSalesDeleted }}</el-descriptions-item>
           <el-descriptions-item label="报销记录已删除">{{ clearResult.reimbursementsDeleted }}</el-descriptions-item>

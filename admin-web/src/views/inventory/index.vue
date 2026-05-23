@@ -522,7 +522,7 @@ const getLogTypeLabel = (type: string) => {
     CONSUME: '消耗',
     ADJUST: '调整',
   };
-  return map[type] || type;
+  return map[type] || '其他';
 };
 
 const getLogTypeTag = (type: string) => {

@@ -1,5 +1,5 @@
 <template>
-  <PageContainer title="退款记录" description="查看客户退款明细，退款不得删除原支付记录">
+  <PageContainer title="退款记录" description="查看客户退款明细，退款不得删除原收款记录">
     <el-alert
       title="退款操作在员工小程序端完成，此处仅查看记录。"
       type="success"
@@ -180,7 +180,7 @@ const getMethodLabel = (method: string) => {
     UNIONPAY: '银联',
     CASH: '现金',
   };
-  return map[method] || method;
+  return map[method] || '其他';
 };
 
 const getMethodTag = (method: string) => {

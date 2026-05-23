@@ -1,5 +1,6 @@
 import axios, { AxiosError, AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios';
 import { ElMessage } from 'element-plus';
+import { getFriendlyErrorMessage } from './statusText';
 
 const request = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '',
@@ -40,7 +41,7 @@ request.interceptors.response.use(
       return body.data;
     }
     // Backend returned a business error inside 200
-    const msg = body?.message || '请求失败';
+    const msg = getFriendlyErrorMessage(body?.code, body?.message);
     ElMessage.error(msg);
     return Promise.reject(new Error(msg));
   },
@@ -50,19 +51,20 @@ request.interceptors.response.use(
       if (window.location.pathname !== '/login') {
         window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
       }
-      return Promise.reject(new Error('未登录或登录已过期'));
+      return Promise.reject(new Error(getFriendlyErrorMessage('UNAUTHORIZED')));
     }
     if (error.response?.status === 403) {
-      ElMessage.error('无权限访问该资源');
-      return Promise.reject(new Error('无权限访问该资源'));
+      const msg = getFriendlyErrorMessage('FORBIDDEN');
+      ElMessage.error(msg);
+      return Promise.reject(new Error(msg));
     }
 
     const data = error.response?.data as any;
-    let msg = data?.message || error.message || '网络请求错误';
+    let msg = getFriendlyErrorMessage(data?.code, data?.message || error.message || '网络请求错误');
     if (data instanceof Blob && data.type.includes('application/json')) {
       try {
         const json = JSON.parse(await data.text());
-        msg = json.message || msg;
+        msg = getFriendlyErrorMessage(json.code, json.message || msg);
       } catch {
         msg = '请求失败';
       }

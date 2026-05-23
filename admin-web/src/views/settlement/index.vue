@@ -1,7 +1,7 @@
 <template>
-  <PageContainer title="官方结算" description="查看官方售后订单结算信息，官方结算金额与客户支付金额分开统计">
+  <PageContainer title="官方结算" description="查看官方售后订单结算信息，官方结算金额与客户实收金额分开统计">
     <el-alert
-      title="官方结算金额不是客户支付金额。客户支付记录与官方售后结算必须分开统计。"
+      title="官方结算金额不是客户实收金额。客户收款记录与官方售后结算必须分开统计。"
       type="warning"
       show-icon
       :closable="false"
@@ -62,7 +62,7 @@
           </el-table-column>
           <el-table-column label="工单状态" width="100" align="center">
             <template #default="{ row }">
-              <StatusTag :status="row.orderStatus" :label="getOrderStatusLabel(row.orderStatus)" />
+              <StatusTag :status="row.orderStatus" :label="getProgressStatusText(row.orderStatus)" />
             </template>
           </el-table-column>
           <el-table-column label="客户实收金额" width="120" align="right">
@@ -124,7 +124,7 @@
       <div v-if="viewDrawer.detail">
         <el-descriptions title="工单信息" :column="2" border size="small" style="margin-bottom: 20px;">
           <el-descriptions-item label="工单编号">{{ viewDrawer.detail.workOrderNo }}</el-descriptions-item>
-          <el-descriptions-item label="工单状态">
+          <el-descriptions-item label="官方结算状态">
             <StatusTag :status="viewDrawer.detail.settlementStatus" :label="getSettlementStatusLabel(viewDrawer.detail.settlementStatus)" />
           </el-descriptions-item>
         </el-descriptions>
@@ -145,7 +145,7 @@
         </el-descriptions>
 
         <el-alert
-          title="口径提示：客户支付收入来自 payment_record / refund_record。官方结算收入来自官方售后结算记录。两者可同时存在，但不能互相替代。"
+          title="口径提示：客户实收收入来自收款记录 / 退款记录。官方结算收入来自官方售后结算记录。两者可同时存在，但不能互相替代。"
           type="info"
           :closable="false"
         />
@@ -217,6 +217,7 @@ import {
   markNoSettlementRequired,
 } from '@/api/officialSettlement';
 import { hasPermission } from '@/utils/permission';
+import { getProgressStatusText } from '@/utils/statusText';
 import type { OfficialSettlementQuery, OfficialSettlementRecord } from '@/types/officialSettlement';
 import type { OfficialAfterSalesDetailResp } from '@/api/officialSettlement';
 
@@ -265,27 +266,13 @@ const handleReset = () => {
   handleSearch();
 };
 
-// 标签映射
-const getOrderStatusLabel = (status: string) => {
-  const map: Record<string, string> = {
-    DRAFT: '草稿',
-    PENDING_ACCEPT: '待接单',
-    ACCEPTED: '已接单',
-    PART_ORDERED: '已定件',
-    PART_ARRIVED: '已到件',
-    SETTLED: '已结算',
-    CANCELLED: '已取消',
-  };
-  return map[status] || status;
-};
-
 const getSettlementStatusLabel = (status: string) => {
   const map: Record<string, string> = {
     PENDING: '待结算',
     SETTLED: '已结算',
     NOT_REQUIRED: '无需结算',
   };
-  return map[status] || status;
+  return map[status] || '-';
 };
 
 const getSettlementStatusTag = (status: string) => {

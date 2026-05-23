@@ -289,7 +289,7 @@ const getStatusLabel = (status: string) => {
     REJECTED: '已驳回',
     CANCELLED: '已取消'
   };
-  return map[status] || status;
+  return map[status] || '-';
 };
 
 const getStatusTagType = (status: string) => {

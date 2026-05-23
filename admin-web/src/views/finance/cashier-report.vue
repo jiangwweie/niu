@@ -41,10 +41,10 @@
 
     <el-card v-if="report && report.byMethod.length > 0" shadow="never">
       <template #header>
-        <span style="font-weight: 600;">按支付方式统计</span>
+        <span style="font-weight: 600;">按收款方式统计</span>
       </template>
       <el-table :data="report.byMethod" border size="default">
-        <el-table-column label="支付方式" width="120">
+        <el-table-column label="收款方式" width="120">
           <template #default="{ row }">{{ getMethodLabel(row.method) }}</template>
         </el-table-column>
         <el-table-column label="收款金额" align="right" width="120">
@@ -84,7 +84,7 @@ const getMethodLabel = (method: string) => {
     CASH: '现金',
     OTHER: '其他',
   };
-  return map[method] || method;
+  return map[method] || '其他';
 };
 
 const fetchReport = async () => {

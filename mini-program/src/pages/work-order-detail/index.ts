@@ -1,15 +1,16 @@
 import { getWorkOrderDetail, cancelWorkOrder, recordPayment, recordRefund, markRepairDone, deliverWorkOrder } from '../../api/workOrder';
 import { WorkOrder, PaymentMethod } from '../../types/workOrder';
 import { hasPermission } from '../../utils/permission';
+import {
+  getCashierStatusText,
+  getInventoryStatusText,
+  getNoChargeReasonText,
+  getProgressStatusText,
+  isLegacyWorkOrderStatus,
+} from '../../utils/statusText';
 import Toast from 'tdesign-miniprogram/toast/index';
 
-const LEGACY_STATUSES = ['PENDING_ACCEPT', 'ACCEPTED', 'PART_ORDERED', 'PART_ARRIVED', 'SETTLED'];
-
 const NO_CHARGE_REASONS = ['官方售后', '免费检测', '老板免单', '质保处理', '其他'];
-
-function isLegacyStatus(status?: string) {
-  return !!status && LEGACY_STATUSES.indexOf(status) >= 0;
-}
 
 function getHintText(order: WorkOrder | null): string {
   if (!order) return '';
@@ -27,7 +28,7 @@ function getHintText(order: WorkOrder | null): string {
   if (ps === 'DELIVERED') return '工单已交付关闭。';
   if (ps === 'CANCELLED' && cs === 'REFUND_PENDING') return '工单已取消，请处理客户退款。';
   if (ps === 'CANCELLED') return '工单已取消。';
-  if (isLegacyStatus(order.status)) return '旧状态，请先清理试运行数据。';
+  if (isLegacyWorkOrderStatus(order.status)) return '旧状态，请先清理试运行数据。';
   return '';
 }
 
@@ -106,6 +107,15 @@ Page({
     try {
       const res = await getWorkOrderDetail(this.data.orderId);
       const d = res.data;
+      const order = {
+        ...d,
+        progressStatusText: getProgressStatusText(d?.progressStatus || d?.status, d?.progressStatusText),
+        cashierStatusText: getCashierStatusText(d?.cashierStatus, d?.cashierStatusText),
+        inventoryStatusText: getInventoryStatusText(d?.inventoryStatus, d?.inventoryStatusText),
+        cashierText: getCashierStatusText(d?.cashierStatus, d?.cashierStatusText),
+        inventoryText: getInventoryStatusText(d?.inventoryStatus, d?.inventoryStatusText),
+        noChargeReasonText: getNoChargeReasonText(d?.noChargeReason),
+      };
       const outstanding = d?.outstandingAmount != null
         ? d.outstandingAmount
         : Math.max((d?.receivableAmount ?? 0) - (d?.receivedAmount ?? 0), 0);
@@ -113,8 +123,8 @@ Page({
       const netReceived = d?.netReceived != null ? d.netReceived : (d?.receivedAmount ?? 0);
 
       this.setData({
-        order: d,
-        hintText: getHintText(d),
+        order,
+        hintText: getHintText(order),
         outstandingAmount: outstanding,
         outstandingAmountStr: outstanding.toFixed(2),
         receivableAmountStr: (d?.receivableAmount ?? 0).toFixed(2),
@@ -429,7 +439,7 @@ Page({
     const cs = order.cashierStatus;
     if (cs === 'PAID') return '工单已结清。确认交付关闭后，工单将进入已交付状态；库存已在标记维修完成时扣减，本操作不再改变库存。';
     if (cs === 'NO_CHARGE') {
-      const reason = order.noChargeReason ? '（原因：' + order.noChargeReason + '）' : '';
+      const reason = order.noChargeReason ? '（原因：' + getNoChargeReasonText(order.noChargeReason) + '）' : '';
       return '无需收款工单' + reason + '。确认交付关闭后，工单将进入已交付状态；库存已在标记维修完成时扣减，本操作不再改变库存。';
     }
     return '确认交付关闭后，工单将进入已交付状态。';

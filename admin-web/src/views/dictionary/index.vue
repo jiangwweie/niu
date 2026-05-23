@@ -1,5 +1,5 @@
 <template>
-  <PageContainer title="基础配置" description="维护工单状态、支付方式、配件来源等基础配置项">
+  <PageContainer title="基础配置" description="维护工单状态、收款方式、配件来源等基础配置项">
     <div class="dict-layout">
       <!-- 字典分类列表 -->
       <el-card shadow="never" class="dict-types">

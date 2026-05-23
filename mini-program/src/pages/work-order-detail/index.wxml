@@ -7,8 +7,8 @@
     <!-- 状态标签行 -->
     <view class="status-row">
       <view class="status-pill progress-{{order.progressStatus || 'UNKNOWN'}}" wx:if="{{order.progressStatusText}}">{{order.progressStatusText}}</view>
-      <view class="status-pill cashier-{{order.cashierStatus || 'UNKNOWN'}}" wx:if="{{order.cashierText}}">{{order.cashierStatusText}}</view>
-      <view class="status-pill inventory-{{order.inventoryStatus || 'UNKNOWN'}}" wx:if="{{order.inventoryStatusText}}">{{order.inventoryStatusText}}</view>
+      <view class="status-pill cashier-{{order.cashierStatus || 'UNKNOWN'}}" wx:if="{{order.cashierText}}">{{order.cashierText}}</view>
+      <view class="status-pill inventory-{{order.inventoryStatus || 'UNKNOWN'}}" wx:if="{{order.inventoryText}}">{{order.inventoryText}}</view>
       <!-- 旧状态兼容 -->
       <view class="status-pill progress-LEGACY" wx:if="{{!order.progressStatus && order.status}}">旧状态，请先清理试运行数据</view>
     </view>
@@ -33,7 +33,7 @@
       <t-cell title="电池号" note="{{order.batteryNoSnapshot || '-'}}" />
       <t-cell title="维修项目" note="{{order.repairItem || '-'}}" />
       <t-cell title="备注" note="{{order.remark || '-'}}" />
-      <t-cell wx:if="{{order.noChargeReason}}" title="无需收款原因" note="{{order.noChargeReason}}" />
+      <t-cell wx:if="{{order.noChargeReason}}" title="无需收款原因" note="{{order.noChargeReasonText || '-'}}" />
       <t-cell wx:if="{{order.noChargeRemark}}" title="无需收款备注" note="{{order.noChargeRemark}}" />
     </t-cell-group>
   </view>

@@ -1,5 +1,5 @@
 <template>
-  <PageContainer title="工单管理" description="查看维修工单、客户支付状态与官方售后标记">
+  <PageContainer title="工单管理" description="查看维修工单、收银状态与官方售后标记">
     <el-alert
       title="管理端支持工单查看与收银操作。创建工单、提交/取消等现场操作由员工小程序端承接。"
       type="info"
@@ -84,17 +84,17 @@
         <el-table-column prop="vin" label="车架号" width="160" show-overflow-tooltip />
         <el-table-column label="工单进度" width="110" align="center">
           <template #default="{ row }">
-            <StatusTag :status="row.progressStatus || row.status" :label="row.progressStatusText || getProgressStatusLabel(row.progressStatus || row.status)" />
+            <StatusTag :status="row.progressStatus || row.status" :label="getProgressStatusText(row.progressStatus || row.status, row.progressStatusText)" />
           </template>
         </el-table-column>
         <el-table-column label="收银状态" width="110" align="center">
           <template #default="{ row }">
-            <StatusTag :status="row.cashierStatus || 'UNPAID'" :label="row.cashierStatusText || getCashierStatusLabel(row.cashierStatus)" />
+            <StatusTag :status="row.cashierStatus || 'UNPAID'" :label="getCashierStatusText(row.cashierStatus, row.cashierStatusText)" />
           </template>
         </el-table-column>
         <el-table-column label="库存状态" width="110" align="center">
           <template #default="{ row }">
-            <StatusTag :status="row.inventoryStatus || 'NOT_RESERVED'" :label="row.inventoryStatusText || getInventoryStatusLabel(row.inventoryStatus)" />
+            <StatusTag :status="row.inventoryStatus || 'NOT_RESERVED'" :label="getInventoryStatusText(row.inventoryStatus, row.inventoryStatusText)" />
           </template>
         </el-table-column>
         <el-table-column label="应收金额" width="100" align="right">
@@ -152,9 +152,9 @@
         <el-divider content-position="left">基础信息</el-divider>
         <el-descriptions :column="2" border size="small">
           <el-descriptions-item label="工单编号">{{ currentOrder.orderNo }}</el-descriptions-item>
-          <el-descriptions-item label="工单进度"><StatusTag :status="currentOrder.progressStatus || currentOrder.status" :label="currentOrder.progressStatusText || getProgressStatusLabel(currentOrder.progressStatus || currentOrder.status)" /></el-descriptions-item>
-          <el-descriptions-item label="收银状态"><StatusTag :status="currentOrder.cashierStatus || 'UNPAID'" :label="currentOrder.cashierStatusText || getCashierStatusLabel(currentOrder.cashierStatus)" /></el-descriptions-item>
-          <el-descriptions-item label="库存状态"><StatusTag :status="currentOrder.inventoryStatus || 'NOT_RESERVED'" :label="currentOrder.inventoryStatusText || getInventoryStatusLabel(currentOrder.inventoryStatus)" /></el-descriptions-item>
+          <el-descriptions-item label="工单进度"><StatusTag :status="currentOrder.progressStatus || currentOrder.status" :label="getProgressStatusText(currentOrder.progressStatus || currentOrder.status, currentOrder.progressStatusText)" /></el-descriptions-item>
+          <el-descriptions-item label="收银状态"><StatusTag :status="currentOrder.cashierStatus || 'UNPAID'" :label="getCashierStatusText(currentOrder.cashierStatus, currentOrder.cashierStatusText)" /></el-descriptions-item>
+          <el-descriptions-item label="库存状态"><StatusTag :status="currentOrder.inventoryStatus || 'NOT_RESERVED'" :label="getInventoryStatusText(currentOrder.inventoryStatus, currentOrder.inventoryStatusText)" /></el-descriptions-item>
           <el-descriptions-item label="客户姓名">{{ currentOrder.customerName }}</el-descriptions-item>
           <el-descriptions-item label="手机号">{{ currentOrder.phone }}</el-descriptions-item>
           <el-descriptions-item label="车型">{{ currentOrder.scooterModel }}</el-descriptions-item>
@@ -162,7 +162,7 @@
           <el-descriptions-item label="电池号">{{ currentOrder.batteryNo || '-' }}</el-descriptions-item>
           <el-descriptions-item label="创建时间">{{ currentOrder.createdAt }}</el-descriptions-item>
           <el-descriptions-item label="无需收款原因" v-if="currentOrder.noChargeReason" :span="2">
-            <el-tag type="info">{{ currentOrder.noChargeReason }}</el-tag>
+            <el-tag type="info">{{ getNoChargeReasonText(currentOrder.noChargeReason) }}</el-tag>
             <span v-if="currentOrder.noChargeRemark" style="margin-left: 8px; color: #606266;">{{ currentOrder.noChargeRemark }}</span>
           </el-descriptions-item>
           <el-descriptions-item label="维修项目" :span="2">{{ currentOrder.repairItem || '-' }}</el-descriptions-item>
@@ -199,10 +199,10 @@
           </el-table-column>
         </el-table>
 
-        <el-divider content-position="left">支付与售后摘要</el-divider>
+        <el-divider content-position="left">收银与售后摘要</el-divider>
         <el-descriptions :column="4" class="payment-summary" direction="vertical" border size="small">
           <el-descriptions-item label="应收金额" align="center"><MoneyText :amount="currentOrder.receivableAmount" bold /></el-descriptions-item>
-          <el-descriptions-item label="支付总额" align="center"><MoneyText :amount="currentOrder.paidAmount" /></el-descriptions-item>
+          <el-descriptions-item label="收款总额" align="center"><MoneyText :amount="currentOrder.paidAmount" /></el-descriptions-item>
           <el-descriptions-item label="退款总额" align="center"><MoneyText :amount="currentOrder.refundedAmount" type="danger" /></el-descriptions-item>
           <el-descriptions-item label="实收净额" align="center"><MoneyText :amount="currentOrder.netReceived ?? currentOrder.actualAmount" bold type="success" /></el-descriptions-item>
         </el-descriptions>
@@ -312,16 +312,16 @@
         </div>
 
         <div v-if="workOrderPayments.length > 0" style="margin-bottom: 12px;">
-          <div style="font-weight: 600; margin-bottom: 6px; font-size: 14px;">支付记录</div>
+          <div style="font-weight: 600; margin-bottom: 6px; font-size: 14px;">收款记录</div>
           <el-table :data="workOrderPayments" border size="small">
-            <el-table-column label="支付单号" prop="paymentNo" width="180" />
+            <el-table-column label="收款单号" prop="paymentNo" width="180" />
             <el-table-column label="金额" width="100" align="right">
               <template #default="{ row }"><MoneyText :amount="row.amount" /></template>
             </el-table-column>
-            <el-table-column label="支付方式" width="100">
+            <el-table-column label="收款方式" width="100">
               <template #default="{ row }">{{ getPaymentMethodLabel(row.paymentMethod) }}</template>
             </el-table-column>
-            <el-table-column label="支付时间" prop="paidAt" width="160" />
+            <el-table-column label="收款时间" prop="paidAt" width="160" />
             <el-table-column label="备注" prop="remark" min-width="120" show-overflow-tooltip />
           </el-table>
         </div>
@@ -359,7 +359,7 @@
             待收金额：<MoneyText :amount="currentOrder?.outstandingAmount ?? 0" />
           </div>
         </el-form-item>
-        <el-form-item label="支付方式">
+        <el-form-item label="收款方式">
           <el-select v-model="paymentForm.paymentMethod" placeholder="请选择" style="width: 100%">
             <el-option label="微信" value="WECHAT" />
             <el-option label="支付宝" value="ALIPAY" />
@@ -471,13 +471,13 @@
           <el-descriptions-item label="应收金额"><MoneyText :amount="currentOrder.receivableAmount" bold /></el-descriptions-item>
           <el-descriptions-item label="实收净额"><MoneyText :amount="currentOrder.netReceived ?? currentOrder.actualAmount" bold type="success" /></el-descriptions-item>
           <el-descriptions-item v-if="currentOrder.cashierStatus === 'NO_CHARGE'" label="无需收款原因">
-            <span style="font-weight: 600; color: #e6a23c;">{{ currentOrder.noChargeReason || '未填写' }}</span>
+            <span style="font-weight: 600; color: #e6a23c;">{{ getNoChargeReasonText(currentOrder.noChargeReason) || '未填写' }}</span>
           </el-descriptions-item>
         </el-descriptions>
         
         <el-alert
           v-if="currentOrder.cashierStatus === 'NO_CHARGE'"
-          :title="`无需收款工单（原因：${currentOrder.noChargeReason || '未填写'}）。确认交付关闭后，工单将进入已交付状态；库存已在标记维修完成时扣减，本操作不再改变库存。`"
+          :title="`无需收款工单（原因：${getNoChargeReasonText(currentOrder.noChargeReason) || '未填写'}）。确认交付关闭后，工单将进入已交付状态；库存已在标记维修完成时扣减，本操作不再改变库存。`"
           type="warning"
           show-icon
           :closable="false"
@@ -587,6 +587,12 @@ import {
   cancelWorkOrder,
 } from '@/api/workOrder';
 import { useAuthStore } from '@/stores/auth';
+import {
+  getCashierStatusText,
+  getInventoryStatusText,
+  getNoChargeReasonText,
+  getProgressStatusText,
+} from '@/utils/statusText';
 import type { WorkOrderRecord, WorkOrderQuery } from '@/types/workOrder';
 
 const authStore = useAuthStore();
@@ -610,51 +616,13 @@ const loading = ref(false);
 const tableData = ref<WorkOrderRecord[]>([]);
 const total = ref(0);
 
-// 枚举映射
-const getProgressStatusLabel = (status?: string) => {
-  if (!status) return '-';
-  const map: Record<string, string> = {
-    DRAFT: '新建中',
-    REPAIRING: '维修中',
-    REPAIR_DONE: '维修完成',
-    DELIVERED: '已交付',
-    CANCELLED: '已取消',
-  };
-  return map[status] || '旧状态，请先清理试运行数据';
-};
-
-const getCashierStatusLabel = (status?: string) => {
-  if (!status) return '-';
-  const map: Record<string, string> = {
-    NO_CHARGE: '无需收款',
-    UNPAID: '未收款',
-    PARTIAL_PAID: '部分收款',
-    PAID: '已收齐',
-    REFUND_PENDING: '待退款',
-    PARTIAL_REFUNDED: '部分退款',
-    REFUNDED: '已退清',
-  };
-  return map[status] || status;
-};
-
-const getInventoryStatusLabel = (status?: string) => {
-  if (!status) return '-';
-  const map: Record<string, string> = {
-    NOT_RESERVED: '未预占',
-    RESERVED: '已预占',
-    CONSUMED: '已扣减',
-    RELEASED: '已释放',
-  };
-  return map[status] || status;
-};
-
 const getFeeTypeLabel = (type: string) => {
   const map: Record<string, string> = {
     PART: '配件费',
     LABOR: '工时费',
     OTHER: '其他费用',
   };
-  return map[type] || type;
+  return map[type] || '其他费用';
 };
 
 const getOfficialSettlementLabel = (status?: string) => {
@@ -664,7 +632,7 @@ const getOfficialSettlementLabel = (status?: string) => {
     PENDING: '待结算',
     SETTLED: '已结算',
   };
-  return map[status] || status;
+  return map[status] || '-';
 };
 
 const getPaymentMethodLabel = (method: string) => {
@@ -675,7 +643,7 @@ const getPaymentMethodLabel = (method: string) => {
     CASH: '现金',
     OTHER: '其他',
   };
-  return map[method] || method;
+  return map[method] || '其他';
 };
 
 // 获取列表数据
@@ -793,7 +761,7 @@ const loadCashierRecords = async (workOrderId: string) => {
   if (paymentsResult.status === 'fulfilled') {
     workOrderPayments.value = paymentsResult.value || [];
   } else {
-    ElMessage.error('支付记录加载失败');
+    ElMessage.error('收款记录加载失败');
     workOrderPayments.value = [];
   }
   if (refundsResult.status === 'fulfilled') {
@@ -830,7 +798,7 @@ const openPaymentDialog = () => {
 const submitPayment = async () => {
   if (!currentOrder.value) return;
   if (!paymentForm.paymentMethod) {
-    ElMessage.warning('请选择支付方式');
+    ElMessage.warning('请选择收款方式');
     return;
   }
   if (paymentForm.amount <= 0) {
@@ -844,7 +812,7 @@ const submitPayment = async () => {
   }
   try {
     await ElMessageBox.confirm(
-      `确认收款 <b>￥${paymentForm.amount.toFixed(2)}</b>，支付方式：${getPaymentMethodLabel(paymentForm.paymentMethod)}？`,
+      `确认收款 <b>￥${paymentForm.amount.toFixed(2)}</b>，收款方式：${getPaymentMethodLabel(paymentForm.paymentMethod)}？`,
       '确认收款',
       { confirmButtonText: '确认', cancelButtonText: '取消', dangerouslyUseHTMLString: true },
     );
@@ -1184,4 +1152,3 @@ onMounted(() => {
   overflow-x: auto;
 }
 </style>
-

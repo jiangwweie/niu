@@ -25,20 +25,18 @@ import {
 
 import Toast from 'tdesign-miniprogram/toast/index';
 import Dialog from 'tdesign-miniprogram/dialog/index';
+import {
+  getCashierStatusText,
+  getInventoryStatusText,
+  getNoChargeReasonText,
+  getProgressStatusText,
+} from '../../utils/statusText';
 
 const NO_CHARGE_REASONS = ['官方售后', '免费检测', '老板免单', '质保处理', '其他'];
 
 function resolveStatusText(d: WorkOrder | null): string {
   if (!d) return '';
-  if (d.progressStatusText) return d.progressStatusText;
-  if (d.progressStatus) {
-    const map: Record<string, string> = {
-      DRAFT: '新建中', REPAIRING: '维修中', REPAIR_DONE: '维修完成',
-      DELIVERED: '已交付', CANCELLED: '已取消'
-    };
-    return map[d.progressStatus] || '未知';
-  }
-  return '未知';
+  return getProgressStatusText(d.progressStatus || d.status, d.progressStatusText);
 }
 
 Page({
@@ -194,9 +192,16 @@ Page({
     if (!this.data.workOrderId) return;
     getWorkOrderDetail(this.data.workOrderId).then(res => {
       const d = res.data;
+      const workOrder = {
+        ...d,
+        progressStatusText: getProgressStatusText(d?.progressStatus || d?.status, d?.progressStatusText),
+        cashierStatusText: getCashierStatusText(d?.cashierStatus, d?.cashierStatusText),
+        inventoryStatusText: getInventoryStatusText(d?.inventoryStatus, d?.inventoryStatusText),
+        noChargeReasonText: getNoChargeReasonText(d?.noChargeReason),
+      };
       this.setData({
-        workOrder: d,
-        statusText: resolveStatusText(d)
+        workOrder,
+        statusText: resolveStatusText(workOrder)
       });
     }).catch(console.error);
   },
@@ -781,7 +786,7 @@ Page({
     const cs = order.cashierStatus;
     if (cs === 'PAID') return '工单已结清。确认交付关闭后，工单将进入已交付状态；库存已在标记维修完成时扣减，本操作不再改变库存。';
     if (cs === 'NO_CHARGE') {
-      const reason = order.noChargeReason ? '（原因：' + order.noChargeReason + '）' : '';
+      const reason = order.noChargeReason ? '（原因：' + getNoChargeReasonText(order.noChargeReason) + '）' : '';
       return '无需收款工单' + reason + '。确认交付关闭后，工单将进入已交付状态；库存已在标记维修完成时扣减，本操作不再改变库存。';
     }
     return '确认交付关闭后，工单将进入已交付状态。';
