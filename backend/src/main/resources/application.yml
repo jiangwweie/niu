@@ -22,6 +22,13 @@ security:
     secret: ${JWT_SECRET:xiaoniu-aftermarket-dev-secret-change-me-please-2026}
     access-token-ttl-seconds: ${JWT_ACCESS_TOKEN_TTL_SECONDS:14400}
 
+app:
+  cors:
+    allowed-origins:
+      - http://localhost:5173
+      - http://localhost:3000
+      - http://localhost:8081
+
 wx:
   miniapp:
     app-id: ${WX_MINIAPP_APPID:}
