@@ -92,8 +92,42 @@
     <!-- 入库弹窗 -->
     <el-dialog v-model="inboundDialog.visible" title="入库" width="500px">
       <el-form :model="inboundDialog.form" label-width="100px" size="default">
-        <el-form-item label="配件">
+        <el-alert
+          v-if="inboundDialog.noParts"
+          title="暂无配件，请先新增配件后再入库"
+          type="warning"
+          show-icon
+          :closable="false"
+          class="dialog-alert"
+        >
+          <template #default>
+            <el-button type="primary" link @click="goToPartsPage">去新增配件</el-button>
+          </template>
+        </el-alert>
+        <el-form-item v-if="inboundDialog.lockPart" label="配件" required>
           <el-input :model-value="inboundDialog.partDisplay" readonly disabled />
+        </el-form-item>
+        <el-form-item v-else label="配件" required>
+          <el-select
+            v-model="inboundDialog.partId"
+            filterable
+            remote
+            clearable
+            reserve-keyword
+            :remote-method="searchInboundParts"
+            :loading="inboundDialog.partsLoading"
+            placeholder="按配件名称、编码或官方品号搜索"
+            style="width: 100%"
+            @change="handleInboundPartChange"
+            @visible-change="handlePartSelectorVisibleChange"
+          >
+            <el-option
+              v-for="part in inboundDialog.partOptions"
+              :key="part.id"
+              :label="formatPartOption(part)"
+              :value="Number(part.id)"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="入库数量" required>
           <el-input-number v-model="inboundDialog.form.quantity" :min="1" :step="1" />
@@ -207,6 +241,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
+import { useRouter } from 'vue-router';
 import PageContainer from '@/components/PageContainer.vue';
 import {
   getInventoryList,
@@ -214,8 +249,12 @@ import {
   submitInbound as submitInboundApi,
   submitAdjust as submitAdjustApi,
 } from '@/api/inventory';
+import { getPartsList } from '@/api/parts';
+import type { PartViewRecord } from '@/api/parts';
 import { hasPermission } from '@/utils/permission';
 import type { InventoryQuery, InventoryRecord, InventoryLogRecord } from '@/types/inventory';
+
+const router = useRouter();
 
 /* ── Query ── */
 
@@ -256,8 +295,11 @@ const handleReset = () => {
   handleSearch();
 };
 
-const handleInbound = () => {
-  ElMessage.info('请先在列表中选择配件进行入库');
+const handleInbound = async () => {
+  resetInboundDialog();
+  inboundDialog.lockPart = false;
+  inboundDialog.visible = true;
+  await searchInboundParts('');
 };
 
 /* ── Inbound dialog ── */
@@ -265,8 +307,12 @@ const handleInbound = () => {
 const inboundDialog = reactive({
   visible: false,
   submitting: false,
+  partsLoading: false,
+  lockPart: false,
+  noParts: false,
   partId: 0,
   partDisplay: '',
+  partOptions: [] as PartViewRecord[],
   form: {
     quantity: 1,
     unitCost: 0,
@@ -275,17 +321,89 @@ const inboundDialog = reactive({
   },
 });
 
-const openInboundDialog = (row: InventoryRecord) => {
-  inboundDialog.partId = row.partId;
-  inboundDialog.partDisplay = `${row.partCode} - ${row.partName}`;
+const resetInboundDialog = () => {
+  inboundDialog.partId = 0;
+  inboundDialog.partDisplay = '';
+  inboundDialog.lockPart = false;
+  inboundDialog.noParts = false;
+  inboundDialog.partOptions = [];
   inboundDialog.form.quantity = 1;
   inboundDialog.form.unitCost = 0;
   inboundDialog.form.reason = '';
   inboundDialog.form.remark = '';
+};
+
+const formatPartOption = (part: PartViewRecord) => {
+  const officialCode = part.officialCode ? ` / ${part.officialCode}` : '';
+  return `${part.partCode}${officialCode} - ${part.partName}`;
+};
+
+const mergeParts = (parts: PartViewRecord[]) => {
+  const map = new Map<string, PartViewRecord>();
+  parts.forEach((part) => {
+    if (part.status) {
+      map.set(part.id, part);
+    }
+  });
+  return Array.from(map.values());
+};
+
+const searchInboundParts = async (keyword: string) => {
+  inboundDialog.partsLoading = true;
+  try {
+    const trimmed = keyword.trim();
+    const baseParams = {
+      source: '',
+      status: true,
+      pageNo: 1,
+      pageSize: 20,
+    };
+    const requests = trimmed
+      ? [
+          getPartsList({ ...baseParams, partName: trimmed }),
+          getPartsList({ ...baseParams, partCode: trimmed }),
+          getPartsList({ ...baseParams, officialCode: trimmed }),
+        ]
+      : [getPartsList(baseParams)];
+    const results = await Promise.all(requests);
+    inboundDialog.partOptions = mergeParts(results.flatMap((result) => result.records));
+    inboundDialog.noParts = !trimmed && inboundDialog.partOptions.length === 0 && results.every((result) => result.total === 0);
+  } catch {
+    // request interceptor already shows error
+  } finally {
+    inboundDialog.partsLoading = false;
+  }
+};
+
+const handleInboundPartChange = (partId?: number) => {
+  const selected = inboundDialog.partOptions.find((part) => Number(part.id) === partId);
+  inboundDialog.partDisplay = selected ? formatPartOption(selected) : '';
+};
+
+const handlePartSelectorVisibleChange = (visible: boolean) => {
+  if (visible && inboundDialog.partOptions.length === 0) {
+    searchInboundParts('');
+  }
+};
+
+const goToPartsPage = () => {
+  inboundDialog.visible = false;
+  router.push('/parts');
+};
+
+const openInboundDialog = (row: InventoryRecord) => {
+  resetInboundDialog();
+  inboundDialog.partId = row.partId;
+  inboundDialog.partDisplay = `${row.partCode} - ${row.partName}`;
+  inboundDialog.lockPart = true;
   inboundDialog.visible = true;
 };
 
 const submitInbound = async () => {
+  if (!inboundDialog.partId) {
+    ElMessage.warning('请选择要入库的配件');
+    return;
+  }
   if (inboundDialog.form.quantity <= 0) {
     ElMessage.warning('入库数量必须大于 0');
     return;
@@ -452,6 +570,9 @@ onMounted(() => {
   font-size: 12px;
   line-height: 1.2;
   margin-top: 4px;
+}
+.dialog-alert {
+  margin-bottom: 16px;
 }
 .table-wrapper {
   width: 100%;
