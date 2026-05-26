@@ -236,6 +236,25 @@ class CustomerVehicleControllerTest {
                 .andExpect(jsonPath("$.code").value("CUSTOMER_NOT_FOUND"));
     }
 
+    @Test
+    void deleteCustomer_hidesFromListAndStaffSearch() throws Exception {
+        mockMvc.perform(delete("/api/admin/customers/9001")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithCustomerManage()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"));
+
+        mockMvc.perform(get("/api/admin/customers")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithCustomerView()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.records", hasSize(1)));
+
+        mockMvc.perform(get("/api/staff/customers/search")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithCustomerView())
+                        .param("keyword", "张三"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(0)));
+    }
+
     // ========== Vehicle CRUD ==========
 
     @Test
@@ -315,6 +334,25 @@ class CustomerVehicleControllerTest {
                         .content("{\"frameNo\":\"VIN-ZHANG-001\",\"model\":\"NQi Pro\",\"batteryNo\":\"BAT-001-NEW\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("SUCCESS"));
+    }
+
+    @Test
+    void deleteVehicle_hidesFromListAndStaffSearch() throws Exception {
+        mockMvc.perform(delete("/api/admin/vehicles/8001")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithCustomerManage()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"));
+
+        mockMvc.perform(get("/api/admin/vehicles")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithCustomerView()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.records", hasSize(1)));
+
+        mockMvc.perform(get("/api/staff/vehicles/search")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithCustomerView())
+                        .param("keyword", "VIN-ZHANG"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(0)));
     }
 
     // ========== Staff Search ==========

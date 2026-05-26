@@ -111,7 +111,7 @@ class AdminUserManagementControllerTest {
 
         mockMvc.perform(post("/api/auth/login/password")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"tech01\",\"password\":\"dev123\"}"))
+                        .content(loginBody("tech01", "dev123")))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -149,5 +149,19 @@ class AdminUserManagementControllerTest {
                 new AuthenticatedUser(userId, 1L, "test", "测试用户", null, Set.of("ADMIN"), permissions, false, null),
                 Instant.now(), Instant.now().plusSeconds(3600)
         ).token();
+    }
+
+    private String loginBody(String username, String password) throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/auth/captcha"))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode captcha = objectMapper.readTree(result.getResponse().getContentAsString()).path("data");
+        return "{\"username\":\"%s\",\"password\":\"%s\",\"captchaId\":\"%s\",\"captchaCode\":\"%s\"}"
+                .formatted(username, password, captcha.path("captchaId").asText(), answer(captcha.path("captchaText").asText()));
+    }
+
+    private String answer(String captchaText) {
+        String[] parts = captchaText.replace("= ?", "").split("\\+");
+        return String.valueOf(Integer.parseInt(parts[0].trim()) + Integer.parseInt(parts[1].trim()));
     }
 }

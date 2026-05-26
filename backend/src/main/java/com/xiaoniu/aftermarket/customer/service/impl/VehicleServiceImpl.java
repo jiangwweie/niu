@@ -13,6 +13,7 @@ import com.xiaoniu.aftermarket.customer.service.VehicleService;
 import com.xiaoniu.aftermarket.workorder.dto.WorkOrderQueryResponse;
 import com.xiaoniu.aftermarket.workorder.entity.WorkOrderEntity;
 import com.xiaoniu.aftermarket.workorder.mapper.WorkOrderMapper;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
@@ -42,18 +43,27 @@ public class VehicleServiceImpl implements VehicleService {
         wrapper.eq(VehicleEntity::getStoreId, query.getStoreId());
         wrapper.eq(VehicleEntity::getDeleted, 0);
 
-        // keyword search: frameNo LIKE, model LIKE
+        if (query.getCustomerId() != null) {
+            wrapper.eq(VehicleEntity::getCustomerId, query.getCustomerId());
+        }
+
+        // keyword search: frameNo LIKE, model LIKE, batteryNo LIKE
         if (StringUtils.hasText(query.getKeyword())) {
             wrapper.and(w -> w
                 .like(VehicleEntity::getFrameNo, query.getKeyword())
                 .or()
-                .like(VehicleEntity::getModel, query.getKeyword()));
+                .like(VehicleEntity::getModel, query.getKeyword())
+                .or()
+                .like(VehicleEntity::getBatteryNo, query.getKeyword()));
         }
         if (StringUtils.hasText(query.getVin())) {
             wrapper.like(VehicleEntity::getFrameNo, query.getVin());
         }
         if (StringUtils.hasText(query.getModel())) {
             wrapper.like(VehicleEntity::getModel, query.getModel());
+        }
+        if (StringUtils.hasText(query.getBatteryNo())) {
+            wrapper.like(VehicleEntity::getBatteryNo, query.getBatteryNo());
         }
 
         // customer phone search: find matching customer IDs first
@@ -87,10 +97,13 @@ public class VehicleServiceImpl implements VehicleService {
                 .collect(Collectors.toSet());
         if (!customerIds.isEmpty()) {
             customerMapper.selectBatchIds(customerIds)
+                    .stream()
+                    .filter(c -> c.getDeleted() != null && c.getDeleted() == 0)
                     .forEach(c -> customerMap.put(c.getId(), c));
         }
 
         List<VehicleResponse> responseList = entities.stream()
+                .filter(entity -> entity.getCustomerId() == null || customerMap.containsKey(entity.getCustomerId()))
                 .map(entity -> toResponse(entity, customerMap))
                 .toList();
 
@@ -201,6 +214,22 @@ public class VehicleServiceImpl implements VehicleService {
         entity.setBatteryNo(request.batteryNo());
         entity.setRemark(request.remark());
         entity.setUpdatedBy(operatorId);
+        vehicleMapper.updateById(entity);
+    }
+
+    @Override
+    public void delete(Long vehicleId, Long storeId, Long operatorId) {
+        VehicleEntity entity = vehicleMapper.selectOne(
+                new LambdaQueryWrapper<VehicleEntity>()
+                        .eq(VehicleEntity::getId, vehicleId)
+                        .eq(VehicleEntity::getStoreId, storeId)
+                        .eq(VehicleEntity::getDeleted, 0));
+        if (entity == null) {
+            throw new BusinessException(ErrorCode.VEHICLE_NOT_FOUND);
+        }
+        entity.setDeleted(1);
+        entity.setUpdatedBy(operatorId);
+        entity.setUpdatedAt(LocalDateTime.now());
         vehicleMapper.updateById(entity);
     }
 

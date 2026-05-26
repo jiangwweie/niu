@@ -27,6 +27,7 @@ export interface InventoryLogRecord {
   partCode: string;
   partName: string;
   operatorId: number;
+  operatorName?: string;
   remark: string;
   createdAt: string;
   /* inventory before/after */
@@ -65,10 +66,13 @@ export interface InventoryFlowResp {
   partCode: string;
   partName: string;
   flowType: string;
+  quantityDelta?: number;
   quantityChange: number;
   relatedOrderId: number | null;
   operatorId: number;
+  operatorName?: string;
   remark: string;
+  operatedAt?: string;
   createdAt: string;
   /* inventory before/after */
   actualBefore: number;

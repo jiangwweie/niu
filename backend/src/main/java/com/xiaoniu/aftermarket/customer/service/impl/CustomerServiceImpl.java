@@ -13,6 +13,7 @@ import com.xiaoniu.aftermarket.customer.service.CustomerService;
 import com.xiaoniu.aftermarket.workorder.dto.WorkOrderQueryResponse;
 import com.xiaoniu.aftermarket.workorder.entity.WorkOrderEntity;
 import com.xiaoniu.aftermarket.workorder.mapper.WorkOrderMapper;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -179,6 +180,22 @@ public class CustomerServiceImpl implements CustomerService {
         entity.setPhone(request.phone());
         entity.setRemark(request.remark());
         entity.setUpdatedBy(operatorId);
+        customerMapper.updateById(entity);
+    }
+
+    @Override
+    public void delete(Long customerId, Long storeId, Long operatorId) {
+        CustomerEntity entity = customerMapper.selectOne(
+                new LambdaQueryWrapper<CustomerEntity>()
+                        .eq(CustomerEntity::getId, customerId)
+                        .eq(CustomerEntity::getStoreId, storeId)
+                        .eq(CustomerEntity::getDeleted, 0));
+        if (entity == null) {
+            throw new BusinessException(ErrorCode.CUSTOMER_NOT_FOUND);
+        }
+        entity.setDeleted(1);
+        entity.setUpdatedBy(operatorId);
+        entity.setUpdatedAt(LocalDateTime.now());
         customerMapper.updateById(entity);
     }
 

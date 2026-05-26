@@ -112,7 +112,13 @@ public class AdminUserController {
     @GetMapping("/roles")
     public ApiResponse<List<RoleResponse>> listRoles() {
         AuthenticatedUser user = requireCurrentUser();
-        return ApiResponse.success(adminUserService.listRoles(user.storeId()));
+        List<RoleResponse> roles = adminUserService.listRoles(user.storeId());
+        if (!user.roleCodes().contains("SUPER_ADMIN")) {
+            roles = roles.stream()
+                    .filter(role -> !"SUPER_ADMIN".equals(role.roleCode()))
+                    .toList();
+        }
+        return ApiResponse.success(roles);
     }
 
     @PreAuthorize("hasAnyAuthority('USER_MANAGE', 'ROLE_MANAGE')")

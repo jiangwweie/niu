@@ -36,6 +36,8 @@ public interface WorkOrderService {
 
     void removeChargeItem(Long storeId, Long workOrderId, Long chargeItemId);
 
+    void deleteDraft(Long storeId, Long workOrderId, Long operatorId);
+
     void submit(SubmitWorkOrderCommand command);
 
     void cancel(CancelWorkOrderCommand command);

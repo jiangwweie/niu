@@ -69,6 +69,14 @@ public class CustomerController {
     }
 
     @PreAuthorize("hasAuthority('CUSTOMER_MANAGE')")
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> delete(@PathVariable Long id) {
+        CurrentUser user = requireCurrentUser();
+        customerService.delete(id, user.storeId(), user.userId());
+        return ApiResponse.success(null);
+    }
+
+    @PreAuthorize("hasAuthority('CUSTOMER_MANAGE')")
     @PostMapping("/{customerId}/vehicles")
     public ApiResponse<Long> createVehicle(@PathVariable Long customerId,
                                             @Valid @RequestBody CreateVehicleRequest request) {

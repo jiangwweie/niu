@@ -37,10 +37,11 @@
               {{ row.lastRepairAt ? formatDateTime(row.lastRepairAt) : '-' }}
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="160" fixed="right">
+          <el-table-column label="操作" width="200" fixed="right">
             <template #default="{ row }">
               <el-button link type="primary" @click="viewDetail(row.id)">查看详情</el-button>
               <el-button v-if="hasPermission('CUSTOMER_MANAGE')" link type="primary" @click="openEditDialog(row)">编辑</el-button>
+              <el-button v-if="hasPermission('CUSTOMER_MANAGE')" link type="danger" @click="handleDelete(row)">删除</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -123,11 +124,11 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { ElMessage, type FormInstance, type FormRules } from 'element-plus';
+import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
 import PageContainer from '@/components/PageContainer.vue';
 import { hasPermission } from '@/utils/permission';
 import {
-  getVehicleList, getVehicleDetail, updateVehicle,
+  getVehicleList, getVehicleDetail, updateVehicle, deleteVehicle,
   type VehicleListItem, type VehicleDetail,
 } from '@/api/customer';
 import { getProgressStatusText } from '@/utils/statusText';
@@ -214,6 +215,17 @@ async function handleSave() {
   } finally {
     saving.value = false;
   }
+}
+
+async function handleDelete(row: VehicleListItem) {
+  await ElMessageBox.confirm(
+    '删除后该车辆将不再出现在车辆列表和新建工单选择中，历史工单记录仍会保留。',
+    `删除车辆「${row.frameNo}」`,
+    { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' },
+  );
+  await deleteVehicle(row.id);
+  ElMessage.success('车辆已删除');
+  fetchData();
 }
 
 async function viewDetail(id: number) {

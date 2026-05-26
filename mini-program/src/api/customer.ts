@@ -11,8 +11,10 @@ export interface VehicleSearchResult {
   id: number;
   frameNo: string;
   model: string;
+  batteryNo?: string;
   customerId: number;
   customerName: string;
+  customerPhone?: string;
 }
 
 export const searchCustomers = (keyword: string) => {
@@ -23,9 +25,10 @@ export const searchCustomers = (keyword: string) => {
   });
 };
 
-export const searchVehicles = (keyword: string) => {
+export const searchVehicles = (keyword: string, customerId?: number | null) => {
+  const customerParam = customerId ? `&customerId=${customerId}` : '';
   return request<VehicleSearchResult[]>({
-    url: `/api/staff/vehicles/search?keyword=${encodeURIComponent(keyword)}`,
+    url: `/api/staff/vehicles/search?keyword=${encodeURIComponent(keyword)}${customerParam}`,
     method: 'GET',
     showLoading: true
   });

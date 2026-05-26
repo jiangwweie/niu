@@ -8,6 +8,7 @@ import com.xiaoniu.aftermarket.customer.entity.VehicleEntity;
 import com.xiaoniu.aftermarket.customer.mapper.CustomerMapper;
 import com.xiaoniu.aftermarket.customer.mapper.VehicleMapper;
 import com.xiaoniu.aftermarket.workorder.dto.CreateDraftWorkOrderCommand;
+import com.xiaoniu.aftermarket.workorder.dto.UpdateWorkOrderDraftCommand;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -22,30 +23,41 @@ public class WorkOrderDraftReferenceResolver {
     }
 
     public void resolve(CreateDraftWorkOrderCommand command) {
+        ResolvedDraftReference resolved = resolve(command.getStoreId(), command.getCustomerId(), command.getVehicleId());
+        apply(command, resolved);
+    }
+
+    public void resolve(UpdateWorkOrderDraftCommand command) {
+        if (command.getCustomerId() == null && command.getVehicleId() == null) {
+            return;
+        }
+        ResolvedDraftReference resolved = resolve(command.getStoreId(), command.getCustomerId(), command.getVehicleId());
+        apply(command, resolved);
+    }
+
+    private ResolvedDraftReference resolve(Long storeId, Long customerId, Long vehicleId) {
         VehicleEntity vehicle = null;
-        if (command.getVehicleId() != null) {
+        if (vehicleId != null) {
             vehicle = vehicleMapper.selectOne(
                     new LambdaQueryWrapper<VehicleEntity>()
-                            .eq(VehicleEntity::getId, command.getVehicleId())
-                            .eq(VehicleEntity::getStoreId, command.getStoreId())
+                            .eq(VehicleEntity::getId, vehicleId)
+                            .eq(VehicleEntity::getStoreId, storeId)
                             .eq(VehicleEntity::getDeleted, 0));
             if (vehicle == null) {
                 throw new BusinessException(ErrorCode.VEHICLE_NOT_FOUND, "车辆不存在");
             }
-            if (command.getCustomerId() != null && !command.getCustomerId().equals(vehicle.getCustomerId())) {
+            if (customerId != null && !customerId.equals(vehicle.getCustomerId())) {
                 throw new BusinessException(ErrorCode.VEHICLE_NOT_IN_CUSTOMER);
             }
-            command.setCustomerId(vehicle.getCustomerId());
-            command.setVehicleModelSnapshot(vehicle.getModel());
-            command.setFrameNoSnapshot(vehicle.getFrameNo());
-            command.setBatteryNoSnapshot(vehicle.getBatteryNo());
+            customerId = vehicle.getCustomerId();
         }
 
-        if (command.getCustomerId() != null) {
-            CustomerEntity customer = customerMapper.selectOne(
+        CustomerEntity customer = null;
+        if (customerId != null) {
+            customer = customerMapper.selectOne(
                     new LambdaQueryWrapper<CustomerEntity>()
-                            .eq(CustomerEntity::getId, command.getCustomerId())
-                            .eq(CustomerEntity::getStoreId, command.getStoreId())
+                            .eq(CustomerEntity::getId, customerId)
+                            .eq(CustomerEntity::getStoreId, storeId)
                             .eq(CustomerEntity::getDeleted, 0));
             if (customer == null) {
                 throw new BusinessException(ErrorCode.CUSTOMER_NOT_FOUND, "客户不存在");
@@ -53,8 +65,36 @@ public class WorkOrderDraftReferenceResolver {
             if (vehicle != null && !customer.getId().equals(vehicle.getCustomerId())) {
                 throw new BusinessException(ErrorCode.VEHICLE_NOT_IN_CUSTOMER);
             }
-            command.setCustomerNameSnapshot(customer.getCustomerName());
-            command.setCustomerPhoneSnapshot(customer.getPhone());
         }
+        return new ResolvedDraftReference(customer, vehicle);
+    }
+
+    private void apply(CreateDraftWorkOrderCommand command, ResolvedDraftReference resolved) {
+        if (resolved.vehicle() != null) {
+            command.setCustomerId(resolved.vehicle().getCustomerId());
+            command.setVehicleModelSnapshot(resolved.vehicle().getModel());
+            command.setFrameNoSnapshot(resolved.vehicle().getFrameNo());
+            command.setBatteryNoSnapshot(resolved.vehicle().getBatteryNo());
+        }
+        if (resolved.customer() != null) {
+            command.setCustomerNameSnapshot(resolved.customer().getCustomerName());
+            command.setCustomerPhoneSnapshot(resolved.customer().getPhone());
+        }
+    }
+
+    private void apply(UpdateWorkOrderDraftCommand command, ResolvedDraftReference resolved) {
+        if (resolved.vehicle() != null) {
+            command.setCustomerId(resolved.vehicle().getCustomerId());
+            command.setVehicleModelSnapshot(resolved.vehicle().getModel());
+            command.setFrameNoSnapshot(resolved.vehicle().getFrameNo());
+            command.setBatteryNoSnapshot(resolved.vehicle().getBatteryNo());
+        }
+        if (resolved.customer() != null) {
+            command.setCustomerNameSnapshot(resolved.customer().getCustomerName());
+            command.setCustomerPhoneSnapshot(resolved.customer().getPhone());
+        }
+    }
+
+    private record ResolvedDraftReference(CustomerEntity customer, VehicleEntity vehicle) {
     }
 }

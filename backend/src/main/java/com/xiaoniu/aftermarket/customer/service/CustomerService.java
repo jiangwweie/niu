@@ -8,4 +8,5 @@ public interface CustomerService {
     CustomerDetailResponse getDetail(Long customerId, Long storeId);
     Long create(Long storeId, Long operatorId, CreateCustomerRequest request);
     void update(Long customerId, Long storeId, Long operatorId, UpdateCustomerRequest request);
+    void delete(Long customerId, Long storeId, Long operatorId);
 }

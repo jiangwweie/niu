@@ -57,7 +57,8 @@ public class PartController {
     public ApiResponse<PartDetailResponse> getPart(@PathVariable Long partId) {
         CurrentUser user = requireCurrentUser();
         PartEntity entity = partService.getById(partId);
-        if (entity == null || !user.storeId().equals(entity.getStoreId())) {
+        if (entity == null || (entity.getDeleted() != null && entity.getDeleted() == 1)
+                || !user.storeId().equals(entity.getStoreId())) {
             throw new BusinessException(ErrorCode.PART_NOT_FOUND, "配件不存在");
         }
         PartQueryResponse qr = new PartQueryResponse();
@@ -133,6 +134,14 @@ public class PartController {
     public ApiResponse<Void> disablePart(@PathVariable Long partId) {
         CurrentUser user = requireCurrentUser();
         partService.disablePart(user.storeId(), partId);
+        return ApiResponse.success(null);
+    }
+
+    @PreAuthorize("hasAuthority('PART_MANAGE')")
+    @DeleteMapping("/{partId}")
+    public ApiResponse<Void> deletePart(@PathVariable Long partId) {
+        CurrentUser user = requireCurrentUser();
+        partService.deletePart(user.storeId(), partId, user.userId());
         return ApiResponse.success(null);
     }
 

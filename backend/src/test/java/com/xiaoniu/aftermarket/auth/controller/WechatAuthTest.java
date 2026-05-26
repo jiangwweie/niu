@@ -50,11 +50,25 @@ class WechatAuthTest {
     private String loginAndGetToken(String username, String password) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/auth/login/password")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"%s\",\"password\":\"%s\"}".formatted(username, password)))
+                        .content(loginBody(username, password)))
                 .andExpect(status().isOk())
                 .andReturn();
         return objectMapper.readTree(result.getResponse().getContentAsString())
                 .path("data").path("accessToken").asText();
+    }
+
+    private String loginBody(String username, String password) throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/auth/captcha"))
+                .andExpect(status().isOk())
+                .andReturn();
+        var captcha = objectMapper.readTree(result.getResponse().getContentAsString()).path("data");
+        return "{\"username\":\"%s\",\"password\":\"%s\",\"captchaId\":\"%s\",\"captchaCode\":\"%s\"}"
+                .formatted(username, password, captcha.path("captchaId").asText(), answer(captcha.path("captchaText").asText()));
+    }
+
+    private String answer(String captchaText) {
+        String[] parts = captchaText.replace("= ?", "").split("\\+");
+        return String.valueOf(Integer.parseInt(parts[0].trim()) + Integer.parseInt(parts[1].trim()));
     }
 
     // --- WeChat Login Tests ---
@@ -263,7 +277,7 @@ class WechatAuthTest {
         // tech01 (id=2) has wechat_openid='test_bound_openid_001' → wechatBound=true
         mockMvc.perform(post("/api/auth/login/password")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"tech01\",\"password\":\"dev123\"}"))
+                        .content(loginBody("tech01", "dev123")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.user.wechatBound").value(true))
                 .andExpect(jsonPath("$.data.user.wechatBoundAt").isNotEmpty());
@@ -271,7 +285,7 @@ class WechatAuthTest {
         // admin01 (id=1) has no wechat binding → wechatBound=false
         mockMvc.perform(post("/api/auth/login/password")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"admin01\",\"password\":\"dev123\"}"))
+                        .content(loginBody("admin01", "dev123")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.user.wechatBound").value(false));
     }

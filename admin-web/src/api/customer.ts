@@ -101,6 +101,10 @@ export async function updateCustomer(id: number, data: { customerName: string; p
   return request.put(`/api/admin/customers/${id}`, data);
 }
 
+export async function deleteCustomer(id: number): Promise<void> {
+  return request.delete(`/api/admin/customers/${id}`);
+}
+
 export async function getVehicleList(params: VehicleQuery): Promise<PaginatedResult<VehicleListItem>> {
   return request.get('/api/admin/vehicles', { params });
 }
@@ -115,4 +119,8 @@ export async function createVehicle(customerId: number, data: { frameNo: string;
 
 export async function updateVehicle(id: number, data: { frameNo: string; model?: string; batteryNo?: string; remark?: string }): Promise<void> {
   return request.put(`/api/admin/vehicles/${id}`, data);
+}
+
+export async function deleteVehicle(id: number): Promise<void> {
+  return request.delete(`/api/admin/vehicles/${id}`);
 }

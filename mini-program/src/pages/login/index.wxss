@@ -29,8 +29,21 @@
 }
 
 .login-btn {
-  margin-top: 80rpx;
+  margin-top: 64rpx;
   border-radius: 12rpx !important;
+}
+
+.captcha-row {
+  display: grid;
+  grid-template-columns: 1fr 220rpx;
+  gap: 20rpx;
+  align-items: center;
+  margin-top: 24rpx;
+}
+
+.captcha-btn {
+  border-radius: 12rpx !important;
+  font-weight: 600;
 }
 
 .divider {

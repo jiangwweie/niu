@@ -38,6 +38,7 @@
             <template #default="{ row }">
               <el-button link type="primary" @click="viewDetail(row.id)">查看详情</el-button>
               <el-button v-if="hasPermission('CUSTOMER_MANAGE')" link type="primary" @click="openEditDialog(row)">编辑</el-button>
+              <el-button v-if="hasPermission('CUSTOMER_MANAGE')" link type="danger" @click="handleDelete(row)">删除</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -128,11 +129,11 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { ElMessage, type FormInstance, type FormRules } from 'element-plus';
+import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
 import PageContainer from '@/components/PageContainer.vue';
 import { hasPermission } from '@/utils/permission';
 import {
-  getCustomerList, getCustomerDetail, createCustomer, updateCustomer,
+  getCustomerList, getCustomerDetail, createCustomer, updateCustomer, deleteCustomer,
   type CustomerListItem, type CustomerDetail,
 } from '@/api/customer';
 import { getProgressStatusText } from '@/utils/statusText';
@@ -227,6 +228,17 @@ async function handleSave() {
   } finally {
     saving.value = false;
   }
+}
+
+async function handleDelete(row: CustomerListItem) {
+  await ElMessageBox.confirm(
+    '删除后该客户将不再出现在客户列表和新建工单选择中，历史工单记录仍会保留。',
+    `删除客户「${row.customerName}」`,
+    { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' },
+  );
+  await deleteCustomer(row.id);
+  ElMessage.success('客户已删除');
+  fetchData();
 }
 
 async function viewDetail(id: number) {

@@ -1,6 +1,8 @@
 package com.xiaoniu.aftermarket.workorder.controller;
 
 public record UpdateDraftRequest(
+        Long customerId,
+        Long vehicleId,
         String customerNameSnapshot,
         String customerPhoneSnapshot,
         String vehicleModelSnapshot,

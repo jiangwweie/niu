@@ -23,6 +23,7 @@ public class InventoryFlowQueryResponse {
     private String businessType;
     private Long businessId;
     private Long operatorId;
+    private String operatorName;
     private LocalDateTime operatedAt;
     private String reason;
     private String remark;

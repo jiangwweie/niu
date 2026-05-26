@@ -21,6 +21,12 @@ export interface LoginResponse {
   user: AuthUser;
 }
 
+export interface CaptchaResponse {
+  captchaId: string;
+  captchaText: string;
+  expiresInSeconds: number;
+}
+
 export const authApi = {
   loginWithPassword: (data: any) => request<LoginResponse>({
     url: '/api/auth/login/password',
@@ -28,6 +34,12 @@ export const authApi = {
     data,
     showLoading: true,
     skipAuth: true  // 登录接口不注入旧 token，避免过期 token 导致 401
+  }),
+
+  getCaptcha: () => request<CaptchaResponse>({
+    url: '/api/auth/captcha',
+    method: 'GET',
+    skipAuth: true
   }),
 
   /**

@@ -86,13 +86,14 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="200" fixed="right">
+          <el-table-column label="操作" width="240" fixed="right">
             <template #default="{ row }">
               <el-button link type="primary" @click="handleView(row)">查看</el-button>
               <el-button link type="primary" @click="openEditDialog(row)">编辑</el-button>
               <el-button link :type="row.status ? 'danger' : 'success'" @click="handleToggleStatus(row)">
                 {{ row.status ? '停用' : '启用' }}
               </el-button>
+              <el-button link type="danger" @click="handleDelete(row)">删除</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -194,6 +195,7 @@ import {
   updatePart,
   enablePart,
   disablePart,
+  deletePart,
 } from '@/api/parts';
 import type { PartViewRecord } from '@/api/parts';
 
@@ -391,6 +393,25 @@ const handleToggleStatus = async (row: PartViewRecord) => {
     fetchData();
   } catch {
     // User cancelled or API error (already shown by interceptor)
+  }
+};
+
+const handleDelete = async (row: PartViewRecord) => {
+  try {
+    await ElMessageBox.confirm(
+      '删除后该配件将不再出现在配件列表、新建工单选择和普通入库选择中，历史工单、库存流水和财务成本仍会保留。',
+      `删除配件【${row.partName}】`,
+      {
+        confirmButtonText: '删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+      },
+    );
+    await deletePart(row.id);
+    ElMessage.success('配件已删除');
+    fetchData();
+  } catch {
+    // User cancelled or API error.
   }
 };
 

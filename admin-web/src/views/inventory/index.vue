@@ -220,7 +220,7 @@
         </el-table-column>
         <el-table-column prop="businessType" label="业务类型" width="100" />
         <el-table-column prop="businessId" label="关联业务ID" width="120" />
-        <el-table-column prop="operatorId" label="操作人ID" width="90" />
+        <el-table-column prop="operatorName" label="操作人" width="120" />
         <el-table-column prop="createdAt" label="操作时间" width="160" />
         <el-table-column prop="remark" label="备注" min-width="120" show-overflow-tooltip />
       </el-table>

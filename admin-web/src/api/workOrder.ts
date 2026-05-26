@@ -209,3 +209,8 @@ export async function cancelWorkOrder(
 ) {
   return await request.post(`/api/admin/work-orders/${workOrderId}/cancel`, data);
 }
+
+/** DELETE /api/admin/work-orders/{id} */
+export async function deleteDraftWorkOrder(workOrderId: string | number) {
+  return await request.delete(`/api/admin/work-orders/${workOrderId}`);
+}

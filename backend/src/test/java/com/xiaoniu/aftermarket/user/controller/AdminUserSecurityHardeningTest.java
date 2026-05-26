@@ -208,14 +208,8 @@ class AdminUserSecurityHardeningTest {
                                   "initialPassword": "Niu12345"
                                 }
                                 """))
-                .andExpect(status().isOk());
-
-        // Verify the user was created in store 2 (not store 1)
-        mockMvc.perform(get("/api/admin/users")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(1L, 1L, Set.of("USER_MANAGE")))
-                        .param("username", "cross_store_user"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.records").isEmpty());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("USER_OPERATION_NOT_ALLOWED"));
     }
 
     @Test

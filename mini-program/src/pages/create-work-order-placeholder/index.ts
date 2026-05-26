@@ -431,7 +431,7 @@ Page({
       Toast({ context: this, selector: '#t-toast', message: '请输入车架号、车型或客户手机号', icon: 'close-circle' });
       return;
     }
-    searchVehicles(keyword).then(res => {
+    searchVehicles(keyword, this.data.selectedCustomerId).then(res => {
       this.setData({ vehicleSearchResults: res.data || [] });
     }).catch(console.error);
   },
@@ -458,8 +458,10 @@ Page({
       selectedCustomerId: vehicle.customerId || this.data.selectedCustomerId,
       selectedVehicleId: vehicle.id,
       'draft.customerNameSnapshot': vehicle.customerName || this.data.draft.customerNameSnapshot,
+      'draft.customerPhoneSnapshot': vehicle.customerPhone || this.data.draft.customerPhoneSnapshot,
       'draft.vehicleModelSnapshot': vehicle.model || '',
       'draft.frameNoSnapshot': vehicle.frameNo || '',
+      'draft.batteryNoSnapshot': vehicle.batteryNo || '',
       vehicleSearchVisible: false
     });
   },

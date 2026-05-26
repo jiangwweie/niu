@@ -309,6 +309,38 @@ class WorkOrderControllerTest {
         assertTrue("更新后客户".equals(name));
     }
 
+    @Test
+    void deleteDraftSoftDeletesAndHidesFromList() throws Exception {
+        mockMvc.perform(delete("/api/admin/work-orders/5001")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"));
+
+        Integer deleted = jdbcTemplate.queryForObject(
+                "SELECT deleted FROM work_order WHERE id = 5001", Integer.class);
+        assertTrue(deleted != null && deleted == 1);
+
+        mockMvc.perform(get("/api/admin/work-orders")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.records[?(@.id == 5001)]", hasSize(0)));
+    }
+
+    @Test
+    void deleteRepairingWorkOrderFails() throws Exception {
+        mockMvc.perform(delete("/api/admin/work-orders/5003")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("WORK_ORDER_NOT_DRAFT"));
+
+        Integer deleted = jdbcTemplate.queryForObject(
+                "SELECT deleted FROM work_order WHERE id = 5003", Integer.class);
+        assertTrue(deleted != null && deleted == 0);
+    }
+
     // ========== 8. Add charge item ==========
 
     @Test

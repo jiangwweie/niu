@@ -3,6 +3,7 @@ package com.xiaoniu.aftermarket.user.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
+import com.xiaoniu.aftermarket.common.enums.AccountType;
 import com.xiaoniu.aftermarket.common.enums.CommonStatus;
 import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
@@ -112,12 +113,15 @@ public class AdminUserServiceImpl implements AdminUserService {
         ensureUniquePhone(request.phone(), null);
         String password = hasText(request.initialPassword()) ? request.initialPassword() : generateTemporaryPassword();
         validatePassword(password);
-        // superAdmin 可跨门店创建用户，普通管理员只能在自己门店内创建
-        Long targetStoreId = isSuperAdmin(currentUserId) && request.storeId() != null
-                ? request.storeId()
-                : currentStoreId;
+        boolean superAdmin = isSuperAdmin(currentUserId);
+        if (!superAdmin && request.storeId() != null && !request.storeId().equals(currentStoreId)) {
+            throw new BusinessException(ErrorCode.USER_OPERATION_NOT_ALLOWED, "门店管理员只能创建本门店员工账号");
+        }
+        // superAdmin 可跨门店创建用户，门店管理员只能在自己门店内创建 STORE 账号
+        Long targetStoreId = superAdmin && request.storeId() != null ? request.storeId() : currentStoreId;
         SysUserEntity user = new SysUserEntity();
         user.setStoreId(targetStoreId);
+        user.setAccountType(AccountType.STORE_VALUE);
         user.setUsername(request.username().trim());
         user.setRealName(request.realName().trim());
         user.setPhone(blankToNull(request.phone()));
@@ -139,6 +143,9 @@ public class AdminUserServiceImpl implements AdminUserService {
     public UserDetailResponse updateUser(Long currentUserId, Long currentStoreId, Long id, UpdateUserRequest request) {
         SysUserEntity user = requireUser(currentStoreId, id);
         ensureUniquePhone(request.phone(), id);
+        if (request.roleCodes() != null && currentUserId.equals(id)) {
+            throw new BusinessException(ErrorCode.USER_OPERATION_NOT_ALLOWED, "不能修改自己的角色");
+        }
         if (hasText(request.realName())) {
             user.setRealName(request.realName().trim());
         }

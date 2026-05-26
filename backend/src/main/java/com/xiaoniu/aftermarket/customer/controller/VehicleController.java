@@ -28,7 +28,9 @@ public class VehicleController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String vin,
             @RequestParam(required = false) String model,
+            @RequestParam(required = false) String batteryNo,
             @RequestParam(required = false) String customerPhone,
+            @RequestParam(required = false) Long customerId,
             @RequestParam(required = false) Integer pageNo,
             @RequestParam(required = false) Integer pageSize) {
         CurrentUser user = requireCurrentUser();
@@ -37,7 +39,9 @@ public class VehicleController {
         query.setKeyword(keyword);
         query.setVin(vin);
         query.setModel(model);
+        query.setBatteryNo(batteryNo);
         query.setCustomerPhone(customerPhone);
+        query.setCustomerId(customerId);
         query.setPageNo(pageNo);
         query.setPageSize(pageSize);
         return ApiResponse.success(vehicleService.pageQuery(query));
@@ -56,6 +60,14 @@ public class VehicleController {
                                      @Valid @RequestBody UpdateVehicleRequest request) {
         CurrentUser user = requireCurrentUser();
         vehicleService.update(id, user.storeId(), user.userId(), request);
+        return ApiResponse.success(null);
+    }
+
+    @PreAuthorize("hasAuthority('CUSTOMER_MANAGE')")
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> delete(@PathVariable Long id) {
+        CurrentUser user = requireCurrentUser();
+        vehicleService.delete(id, user.storeId(), user.userId());
         return ApiResponse.success(null);
     }
 

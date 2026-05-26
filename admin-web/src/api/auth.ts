@@ -4,6 +4,14 @@ import type { AuthUser } from '@/stores/auth';
 export interface LoginRequest {
   username: string;
   password?: string;
+  captchaId?: string;
+  captchaCode?: string;
+}
+
+export interface CaptchaResponse {
+  captchaId: string;
+  captchaText: string;
+  expiresInSeconds: number;
 }
 
 export interface LoginResponse {
@@ -20,6 +28,10 @@ export interface ChangePasswordRequest {
 
 export async function loginWithPassword(data: LoginRequest): Promise<LoginResponse> {
   return await request.post('/api/auth/login/password', data);
+}
+
+export async function getCaptcha(): Promise<CaptchaResponse> {
+  return await request.get('/api/auth/captcha');
 }
 
 export async function getMe(): Promise<AuthUser> {

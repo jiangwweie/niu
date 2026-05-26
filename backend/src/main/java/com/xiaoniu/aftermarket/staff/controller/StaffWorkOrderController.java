@@ -152,6 +152,8 @@ public class StaffWorkOrderController {
         UpdateWorkOrderDraftCommand command = new UpdateWorkOrderDraftCommand();
         command.setStoreId(user.storeId());
         command.setOperatorId(user.userId());
+        command.setCustomerId(request.customerId());
+        command.setVehicleId(request.vehicleId());
         command.setCustomerNameSnapshot(request.customerNameSnapshot());
         command.setCustomerPhoneSnapshot(request.customerPhoneSnapshot());
         command.setVehicleModelSnapshot(request.vehicleModelSnapshot());
@@ -160,9 +162,18 @@ public class StaffWorkOrderController {
         command.setRepairItem(request.repairItem());
         command.setRemark(request.remark());
 
+        draftReferenceResolver.resolve(command);
         workOrderService.updateDraft(workOrderId, command);
         WorkOrderDetailResponse detail = workOrderService.getById(workOrderId);
         return ApiResponse.success(StaffWorkOrderDetail.from(detail));
+    }
+
+    @PreAuthorize("hasAuthority('WORK_ORDER_UPDATE')")
+    @DeleteMapping("/{workOrderId}")
+    public ApiResponse<Void> deleteDraft(@PathVariable Long workOrderId) {
+        CurrentUser user = requireCurrentUser();
+        workOrderService.deleteDraft(user.storeId(), workOrderId, user.userId());
+        return ApiResponse.success(null);
     }
 
     @PreAuthorize("hasAuthority('WORK_ORDER_UPDATE')")

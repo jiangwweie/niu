@@ -1,6 +1,7 @@
 package com.xiaoniu.aftermarket.auth.controller;
 
 import com.xiaoniu.aftermarket.auth.dto.AuthUserResponse;
+import com.xiaoniu.aftermarket.auth.dto.CaptchaResponse;
 import com.xiaoniu.aftermarket.auth.dto.ChangePasswordRequest;
 import com.xiaoniu.aftermarket.auth.dto.LoginResponse;
 import com.xiaoniu.aftermarket.auth.dto.PasswordLoginRequest;
@@ -8,6 +9,7 @@ import com.xiaoniu.aftermarket.auth.dto.WechatBindRequest;
 import com.xiaoniu.aftermarket.auth.dto.WechatLoginRequest;
 import com.xiaoniu.aftermarket.auth.security.AuthenticatedUser;
 import com.xiaoniu.aftermarket.auth.service.AuthService;
+import com.xiaoniu.aftermarket.auth.service.CaptchaService;
 import com.xiaoniu.aftermarket.auth.service.WechatService;
 import com.xiaoniu.aftermarket.common.api.ApiResponse;
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
@@ -31,10 +33,17 @@ public class AuthController {
 
     private final AuthService authService;
     private final WechatService wechatService;
+    private final CaptchaService captchaService;
 
-    public AuthController(AuthService authService, WechatService wechatService) {
+    public AuthController(AuthService authService, WechatService wechatService, CaptchaService captchaService) {
         this.authService = authService;
         this.wechatService = wechatService;
+        this.captchaService = captchaService;
+    }
+
+    @GetMapping("/captcha")
+    public ApiResponse<CaptchaResponse> captcha() {
+        return ApiResponse.success(captchaService.create());
     }
 
     @PostMapping("/login/password")
@@ -45,6 +54,14 @@ public class AuthController {
         } catch (BadCredentialsException | DisabledException exception) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.failure(ErrorCode.UNAUTHORIZED));
+        } catch (BusinessException exception) {
+            if (exception.getErrorCode() == ErrorCode.CAPTCHA_REQUIRED
+                    || exception.getErrorCode() == ErrorCode.CAPTCHA_INVALID
+                    || exception.getErrorCode() == ErrorCode.CAPTCHA_EXPIRED) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.failure(exception.getErrorCode(), exception.getMessage()));
+            }
+            throw exception;
         }
     }
 

@@ -12,6 +12,14 @@
         <el-form-item prop="password">
           <el-input v-model="loginForm.password" type="password" placeholder="请输入密码" prefix-icon="Lock" show-password />
         </el-form-item>
+        <el-form-item prop="captchaCode">
+          <div class="captcha-row">
+            <el-input v-model="loginForm.captchaCode" placeholder="请输入验证码" prefix-icon="Key" />
+            <el-button class="captcha-text" :loading="captchaLoading" @click="refreshCaptcha">
+              {{ loginForm.captchaText || '刷新' }}
+            </el-button>
+          </div>
+        </el-form-item>
         <el-form-item>
           <el-button type="primary" class="login-btn" :loading="loading" @click="handleLogin">登录</el-button>
         </el-form-item>
@@ -21,10 +29,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
+import { onMounted, ref, reactive } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import { loginWithPassword } from '@/api/auth';
+import { getCaptcha, loginWithPassword } from '@/api/auth';
 import { useAuthStore } from '@/stores/auth';
 
 const router = useRouter();
@@ -33,15 +41,32 @@ const authStore = useAuthStore();
 
 const loginFormRef = ref();
 const loading = ref(false);
+const captchaLoading = ref(false);
 
 const loginForm = reactive({
   username: '',
-  password: ''
+  password: '',
+  captchaId: '',
+  captchaCode: '',
+  captchaText: ''
 });
 
 const loginRules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
+  captchaCode: [{ required: true, message: '请输入验证码', trigger: 'blur' }]
+};
+
+const refreshCaptcha = async () => {
+  captchaLoading.value = true;
+  try {
+    const captcha = await getCaptcha();
+    loginForm.captchaId = captcha.captchaId;
+    loginForm.captchaText = captcha.captchaText;
+    loginForm.captchaCode = '';
+  } finally {
+    captchaLoading.value = false;
+  }
 };
 
 const handleLogin = async () => {
@@ -50,7 +75,12 @@ const handleLogin = async () => {
     if (valid) {
       loading.value = true;
       try {
-        const res = await loginWithPassword(loginForm);
+        const res = await loginWithPassword({
+          username: loginForm.username,
+          password: loginForm.password,
+          captchaId: loginForm.captchaId,
+          captchaCode: loginForm.captchaCode
+        });
         authStore.setToken(res.accessToken);
         authStore.setUser(res.user);
         
@@ -65,6 +95,7 @@ const handleLogin = async () => {
           router.push('/');
         }
       } catch (error: any) {
+        await refreshCaptcha();
         // Error already handled by interceptor, or fallback here
         if (!error.message || error.message === '网络请求错误') {
           ElMessage.error('登录失败，请检查用户名或密码');
@@ -75,6 +106,8 @@ const handleLogin = async () => {
     }
   });
 };
+
+onMounted(refreshCaptcha);
 </script>
 
 <style scoped>
@@ -103,5 +136,14 @@ const handleLogin = async () => {
 }
 .login-btn {
   width: 100%;
+}
+.captcha-row {
+  display: grid;
+  grid-template-columns: 1fr 132px;
+  gap: 10px;
+  width: 100%;
+}
+.captcha-text {
+  font-weight: 600;
 }
 </style>

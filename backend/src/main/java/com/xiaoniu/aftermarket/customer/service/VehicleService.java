@@ -8,4 +8,5 @@ public interface VehicleService {
     VehicleDetailResponse getDetail(Long vehicleId, Long storeId);
     Long create(Long customerId, Long storeId, Long operatorId, CreateVehicleRequest request);
     void update(Long vehicleId, Long storeId, Long operatorId, UpdateVehicleRequest request);
+    void delete(Long vehicleId, Long storeId, Long operatorId);
 }

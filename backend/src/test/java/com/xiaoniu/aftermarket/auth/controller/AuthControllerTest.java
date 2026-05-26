@@ -52,9 +52,7 @@ class AuthControllerTest {
     void loginSuccessReturnsAccessTokenAndUserInfo() throws Exception {
         mockMvc.perform(post("/api/auth/login/password")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"username":"admin01","password":"dev123"}
-                                """))
+                        .content(loginBody("admin01", "dev123")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.accessToken").value(notNullValue()))
@@ -69,12 +67,34 @@ class AuthControllerTest {
     }
 
     @Test
+    void loginWithoutCaptchaReturnsCaptchaRequired() throws Exception {
+        mockMvc.perform(post("/api/auth/login/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"admin01\",\"password\":\"dev123\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("CAPTCHA_REQUIRED"));
+    }
+
+    @Test
+    void captchaIsOneTimeUse() throws Exception {
+        String body = loginBody("admin01", "dev123");
+        mockMvc.perform(post("/api/auth/login/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/auth/login/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("CAPTCHA_INVALID"));
+    }
+
+    @Test
     void wrongPasswordReturnsUnauthorized() throws Exception {
         mockMvc.perform(post("/api/auth/login/password")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"username":"admin01","password":"wrong"}
-                                """))
+                        .content(loginBody("admin01", "wrong")))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
@@ -83,9 +103,7 @@ class AuthControllerTest {
     void nonexistentUserReturnsUnauthorized() throws Exception {
         mockMvc.perform(post("/api/auth/login/password")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"username":"missing","password":"dev123"}
-                                """))
+                        .content(loginBody("missing", "dev123")))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
@@ -94,17 +112,13 @@ class AuthControllerTest {
     void disabledOrDeletedUsersCannotLogin() throws Exception {
         mockMvc.perform(post("/api/auth/login/password")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"username":"disabled01","password":"dev123"}
-                                """))
+                        .content(loginBody("disabled01", "dev123")))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
 
         mockMvc.perform(post("/api/auth/login/password")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"username":"deleted01","password":"dev123"}
-                                """))
+                        .content(loginBody("deleted01", "dev123")))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
@@ -220,13 +234,26 @@ class AuthControllerTest {
     private String loginAndGetToken(String username, String password) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/auth/login/password")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"username":"%s","password":"%s"}
-                                """.formatted(username, password)))
+                        .content(loginBody(username, password)))
                 .andExpect(status().isOk())
                 .andReturn();
         JsonNode response = objectMapper.readTree(result.getResponse().getContentAsString());
         return response.path("data").path("accessToken").asText();
+    }
+
+    private String loginBody(String username, String password) throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/auth/captcha"))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode captcha = objectMapper.readTree(result.getResponse().getContentAsString()).path("data");
+        return """
+                {"username":"%s","password":"%s","captchaId":"%s","captchaCode":"%s"}
+                """.formatted(username, password, captcha.path("captchaId").asText(), answer(captcha.path("captchaText").asText()));
+    }
+
+    private String answer(String captchaText) {
+        String[] parts = captchaText.replace("= ?", "").split("\\+");
+        return String.valueOf(Integer.parseInt(parts[0].trim()) + Integer.parseInt(parts[1].trim()));
     }
 
     @TestConfiguration

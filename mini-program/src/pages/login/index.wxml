@@ -19,6 +19,24 @@
       prefixIcon="lock-on"
       clearable
     />
+    <view class="captcha-row">
+      <t-input
+        value="{{captchaCode}}"
+        placeholder="请输入验证码"
+        bind:change="onCaptchaChange"
+        prefixIcon="secured"
+        clearable
+      />
+      <t-button
+        theme="default"
+        variant="outline"
+        loading="{{captchaLoading}}"
+        bind:tap="refreshCaptcha"
+        class="captcha-btn"
+      >
+        {{captchaText || '刷新'}}
+      </t-button>
+    </view>
 
     <t-button
       theme="primary"

@@ -8,6 +8,8 @@ import com.xiaoniu.aftermarket.common.enums.PartSource;
 import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
 import com.xiaoniu.aftermarket.common.service.SequenceService;
+import com.xiaoniu.aftermarket.inventory.entity.InventoryStockEntity;
+import com.xiaoniu.aftermarket.inventory.mapper.InventoryStockMapper;
 import com.xiaoniu.aftermarket.part.dto.CreatePartCommand;
 import com.xiaoniu.aftermarket.part.dto.PartQueryRequest;
 import com.xiaoniu.aftermarket.part.dto.PartQueryResponse;
@@ -28,12 +30,15 @@ public class PartServiceImpl implements PartService {
     private final PartMapper partMapper;
     private final PartBarcodeMapper partBarcodeMapper;
     private final SequenceService sequenceService;
+    private final InventoryStockMapper inventoryStockMapper;
 
     public PartServiceImpl(PartMapper partMapper, PartBarcodeMapper partBarcodeMapper,
-                           SequenceService sequenceService) {
+                           SequenceService sequenceService,
+                           InventoryStockMapper inventoryStockMapper) {
         this.partMapper = partMapper;
         this.partBarcodeMapper = partBarcodeMapper;
         this.sequenceService = sequenceService;
+        this.inventoryStockMapper = inventoryStockMapper;
     }
 
     @Override
@@ -44,7 +49,11 @@ public class PartServiceImpl implements PartService {
     @Override
     public PartEntity getByBarcode(Long storeId, String barcode) {
         PartBarcodeEntity barcodeEntity = partBarcodeMapper.selectByStoreIdAndBarcode(storeId, barcode);
-        return barcodeEntity == null ? null : partMapper.selectById(barcodeEntity.getPartId());
+        if (barcodeEntity == null) {
+            return null;
+        }
+        PartEntity part = partMapper.selectById(barcodeEntity.getPartId());
+        return part == null || part.getDeleted() != null && part.getDeleted() == 1 ? null : part;
     }
 
     @Override
@@ -180,6 +189,27 @@ public class PartServiceImpl implements PartService {
 
     @Override
     @Transactional
+    public void deletePart(Long storeId, Long partId, Long operatorId) {
+        PartEntity existing = partMapper.selectById(partId);
+        if (existing == null || existing.getDeleted() != null && existing.getDeleted() == 1) {
+            throw new BusinessException(ErrorCode.PART_NOT_FOUND);
+        }
+        if (!storeId.equals(existing.getStoreId())) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "配件不属于当前门店");
+        }
+        InventoryStockEntity stock = inventoryStockMapper.selectByStoreIdAndPartId(storeId, partId);
+        if (stock != null && (positive(stock.getActualQty())
+                || positive(stock.getAvailableQty())
+                || positive(stock.getReservedQty()))) {
+            throw new BusinessException(ErrorCode.PART_HAS_STOCK);
+        }
+        existing.setDeleted(1);
+        existing.setUpdatedBy(operatorId);
+        partMapper.updateById(existing);
+    }
+
+    @Override
+    @Transactional
     public PartBarcodeEntity createBarcode(Long storeId, Long partId, String barcode, Long operatorId) {
         PartEntity part = partMapper.selectById(partId);
         if (part == null) {
@@ -295,6 +325,10 @@ public class PartServiceImpl implements PartService {
         if (!StringUtils.hasText(partName)) {
             throw new BusinessException(ErrorCode.PART_NAME_REQUIRED);
         }
+    }
+
+    private boolean positive(Integer value) {
+        return value != null && value > 0;
     }
 
     private void checkPartCodeUnique(Long storeId, String partCode) {

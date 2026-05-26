@@ -26,6 +26,8 @@ public interface PartService {
 
     void disablePart(Long storeId, Long partId);
 
+    void deletePart(Long storeId, Long partId, Long operatorId);
+
     PartBarcodeEntity createBarcode(Long storeId, Long partId, String barcode, Long operatorId);
 
     void updateDefaultBarcode(Long partId, String newDefaultBarcode);

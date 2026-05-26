@@ -5,6 +5,10 @@ Page({
   data: {
     username: '',
     password: '',
+    captchaId: '',
+    captchaText: '',
+    captchaCode: '',
+    captchaLoading: false,
     loading: false,
     wechatLoading: false
   },
@@ -14,6 +18,7 @@ Page({
       wx.switchTab({ url: '/pages/dashboard/index' });
     }
     this.redirectUrl = options.redirect ? decodeURIComponent(options.redirect) : '';
+    this.refreshCaptcha();
   },
 
   redirectUrl: '',
@@ -26,9 +31,33 @@ Page({
     this.setData({ password: e.detail.value });
   },
 
+  onCaptchaChange(e: any) {
+    this.setData({ captchaCode: e.detail.value });
+  },
+
+  async refreshCaptcha() {
+    this.setData({ captchaLoading: true });
+    try {
+      const res = await authApi.getCaptcha();
+      this.setData({
+        captchaId: res.data.captchaId,
+        captchaText: res.data.captchaText,
+        captchaCode: ''
+      });
+    } catch (e) {
+      wx.showToast({ title: '验证码加载失败', icon: 'none' });
+    } finally {
+      this.setData({ captchaLoading: false });
+    }
+  },
+
   async handleLogin() {
     if (!this.data.username || !this.data.password) {
       wx.showToast({ title: '请输入账号密码', icon: 'none' });
+      return;
+    }
+    if (!this.data.captchaCode) {
+      wx.showToast({ title: '请输入验证码', icon: 'none' });
       return;
     }
 
@@ -36,7 +65,9 @@ Page({
     try {
       const res = await authApi.loginWithPassword({
         username: this.data.username,
-        password: this.data.password
+        password: this.data.password,
+        captchaId: this.data.captchaId,
+        captchaCode: this.data.captchaCode
       });
       authStore.setToken(res.data.accessToken);
       authStore.setUser(res.data.user as any);
@@ -57,6 +88,7 @@ Page({
       }, 500);
     } catch (e) {
       // request wrapper handles error toast
+      this.refreshCaptcha();
     } finally {
       this.setData({ loading: false });
     }

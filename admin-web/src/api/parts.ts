@@ -169,6 +169,10 @@ export function disablePart(partId: string | number) {
   return request.post(`/api/admin/parts/${partId}/disable`);
 }
 
+export function deletePart(partId: string | number) {
+  return request.delete(`/api/admin/parts/${partId}`);
+}
+
 /**
  * PUT /api/admin/parts/{partId}
  * Updates a part. Returns void.

@@ -44,6 +44,7 @@ class PartServiceTest {
 
     @BeforeEach
     void cleanPartTables() {
+        jdbcTemplate.execute("DELETE FROM inventory_stock");
         jdbcTemplate.execute("DELETE FROM part_barcode");
         jdbcTemplate.execute("DELETE FROM part");
         jdbcTemplate.execute("DELETE FROM sequence_daily");
@@ -153,6 +154,37 @@ class PartServiceTest {
         BusinessException ex = assertThrows(BusinessException.class,
                 () -> partService.disablePart(STORE_ID, 99999L));
         assertEquals(ErrorCode.PART_NOT_FOUND, ex.getErrorCode());
+    }
+
+    @Test
+    void deletePartWithStockFails() {
+        PartEntity part = partService.createOfficialPart(buildOfficialCommand("有库存配件", "DEL-STOCK-001"));
+        jdbcTemplate.update("""
+                INSERT INTO inventory_stock (store_id, part_id, actual_qty, available_qty, reserved_qty)
+                VALUES (?, ?, 1, 1, 0)
+                """, STORE_ID, part.getId());
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> partService.deletePart(STORE_ID, part.getId(), OPERATOR_ID));
+        assertEquals(ErrorCode.PART_HAS_STOCK, ex.getErrorCode());
+    }
+
+    @Test
+    void deletePartWithoutStockSoftDeletesAndPageQueryHidesIt() {
+        PartEntity part = partService.createOfficialPart(buildOfficialCommand("零库存配件", "DEL-ZERO-001"));
+        jdbcTemplate.update("""
+                INSERT INTO inventory_stock (store_id, part_id, actual_qty, available_qty, reserved_qty)
+                VALUES (?, ?, 0, 0, 0)
+                """, STORE_ID, part.getId());
+
+        partService.deletePart(STORE_ID, part.getId(), OPERATOR_ID);
+
+        PartEntity deleted = partService.getById(part.getId());
+        assertEquals(1, deleted.getDeleted());
+        PartQueryRequest request = new PartQueryRequest();
+        request.setStoreId(STORE_ID);
+        request.setPartCode("DEL-ZERO-001");
+        assertEquals(0, partService.pageQuery(request).total());
     }
 
     @Test

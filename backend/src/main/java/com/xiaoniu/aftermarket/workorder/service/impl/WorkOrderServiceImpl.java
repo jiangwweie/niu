@@ -140,13 +140,18 @@ public class WorkOrderServiceImpl implements WorkOrderService {
             throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "storeId不能为空");
         }
         WorkOrderEntity entity = workOrderMapper.selectById(workOrderId);
-        if (entity == null || !command.getStoreId().equals(entity.getStoreId())) {
+        if (entity == null || entity.getDeleted() != null && entity.getDeleted() == 1
+                || !command.getStoreId().equals(entity.getStoreId())) {
             throw new BusinessException(ErrorCode.WORK_ORDER_NOT_FOUND);
         }
         if (!WorkOrderStatus.DRAFT.getCode().equals(entity.getStatus())) {
             throw new BusinessException(ErrorCode.WORK_ORDER_NOT_DRAFT);
         }
 
+        if (command.getCustomerId() != null || command.getVehicleId() != null) {
+            entity.setCustomerId(command.getCustomerId());
+            entity.setVehicleId(command.getVehicleId());
+        }
         if (StringUtils.hasText(command.getCustomerNameSnapshot())) {
             entity.setCustomerNameSnapshot(command.getCustomerNameSnapshot());
         }
@@ -174,9 +179,26 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     }
 
     @Override
+    @Transactional
+    public void deleteDraft(Long storeId, Long workOrderId, Long operatorId) {
+        WorkOrderEntity entity = workOrderMapper.selectById(workOrderId);
+        if (entity == null || entity.getDeleted() != null && entity.getDeleted() == 1
+                || !storeId.equals(entity.getStoreId())) {
+            throw new BusinessException(ErrorCode.WORK_ORDER_NOT_FOUND);
+        }
+        if (!WorkOrderStatus.DRAFT.getCode().equals(entity.getStatus())) {
+            throw new BusinessException(ErrorCode.WORK_ORDER_NOT_DRAFT, "仅新建中的草稿工单允许删除");
+        }
+        entity.setDeleted(1);
+        entity.setUpdatedBy(operatorId);
+        entity.setUpdatedAt(LocalDateTime.now());
+        workOrderMapper.updateById(entity);
+    }
+
+    @Override
     public WorkOrderDetailResponse getById(Long workOrderId) {
         WorkOrderEntity entity = workOrderMapper.selectById(workOrderId);
-        if (entity == null) {
+        if (entity == null || entity.getDeleted() != null && entity.getDeleted() == 1) {
             throw new BusinessException(ErrorCode.WORK_ORDER_NOT_FOUND);
         }
 

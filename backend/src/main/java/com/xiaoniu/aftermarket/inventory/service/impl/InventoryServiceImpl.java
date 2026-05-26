@@ -18,6 +18,8 @@ import com.xiaoniu.aftermarket.inventory.mapper.InventoryStockMapper;
 import com.xiaoniu.aftermarket.inventory.service.InventoryService;
 import com.xiaoniu.aftermarket.part.entity.PartEntity;
 import com.xiaoniu.aftermarket.part.mapper.PartMapper;
+import com.xiaoniu.aftermarket.user.entity.SysUserEntity;
+import com.xiaoniu.aftermarket.user.mapper.SysUserMapper;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,13 +36,16 @@ public class InventoryServiceImpl implements InventoryService {
     private final InventoryStockMapper inventoryStockMapper;
     private final InventoryFlowMapper inventoryFlowMapper;
     private final PartMapper partMapper;
+    private final SysUserMapper userMapper;
 
     public InventoryServiceImpl(InventoryStockMapper inventoryStockMapper,
                                 InventoryFlowMapper inventoryFlowMapper,
-                                PartMapper partMapper) {
+                                PartMapper partMapper,
+                                SysUserMapper userMapper) {
         this.inventoryStockMapper = inventoryStockMapper;
         this.inventoryFlowMapper = inventoryFlowMapper;
         this.partMapper = partMapper;
+        this.userMapper = userMapper;
     }
 
     @Override
@@ -49,7 +54,7 @@ public class InventoryServiceImpl implements InventoryService {
         validateInbound(command);
 
         PartEntity part = partMapper.selectById(command.getPartId());
-        if (part == null) {
+        if (part == null || part.getDeleted() != null && part.getDeleted() == 1) {
             throw new BusinessException(ErrorCode.PART_NOT_FOUND);
         }
         if (!CommonStatus.ENABLED.getCode().equals(part.getStatus())) {
@@ -133,7 +138,7 @@ public class InventoryServiceImpl implements InventoryService {
         validateAdjust(command);
 
         PartEntity part = partMapper.selectById(command.getPartId());
-        if (part == null) {
+        if (part == null || part.getDeleted() != null && part.getDeleted() == 1) {
             throw new BusinessException(ErrorCode.PART_NOT_FOUND);
         }
         validatePartInStore(part, command.getStoreId());
@@ -276,9 +281,13 @@ public class InventoryServiceImpl implements InventoryService {
                     .collect(Collectors.toSet());
 
             Map<Long, PartEntity> partMap = loadPartsMap(flowPartIds);
+            Map<Long, SysUserEntity> userMap = loadUsersMap(entities.stream()
+                    .map(InventoryFlowEntity::getOperatorId)
+                    .filter(java.util.Objects::nonNull)
+                    .collect(Collectors.toSet()));
 
             records = entities.stream()
-                    .map(flow -> toFlowQueryResponse(flow, partMap.get(flow.getPartId())))
+                    .map(flow -> toFlowQueryResponse(flow, partMap.get(flow.getPartId()), userMap.get(flow.getOperatorId())))
                     .toList();
         }
 
@@ -292,6 +301,14 @@ public class InventoryServiceImpl implements InventoryService {
         List<PartEntity> parts = partMapper.selectBatchIds(new ArrayList<>(partIds));
         return parts.stream()
                 .collect(Collectors.toMap(PartEntity::getId, p -> p));
+    }
+
+    private Map<Long, SysUserEntity> loadUsersMap(Set<Long> userIds) {
+        if (userIds.isEmpty()) {
+            return Map.of();
+        }
+        return userMapper.selectBatchIds(new ArrayList<>(userIds)).stream()
+                .collect(Collectors.toMap(SysUserEntity::getId, u -> u));
     }
 
     private List<Long> findPartIdsByFilters(Long storeId, String partCode, String partName) {
@@ -354,7 +371,8 @@ public class InventoryServiceImpl implements InventoryService {
     }
 
     private InventoryFlowQueryResponse toFlowQueryResponse(InventoryFlowEntity flow,
-                                                            PartEntity part) {
+                                                            PartEntity part,
+                                                            SysUserEntity operator) {
         InventoryFlowQueryResponse response = new InventoryFlowQueryResponse();
         response.setId(flow.getId());
         response.setStoreId(flow.getStoreId());
@@ -370,6 +388,7 @@ public class InventoryServiceImpl implements InventoryService {
         response.setBusinessType(flow.getBusinessType());
         response.setBusinessId(flow.getBusinessId());
         response.setOperatorId(flow.getOperatorId());
+        response.setOperatorName(operatorName(operator));
         response.setOperatedAt(flow.getOperatedAt());
         response.setReason(flow.getReason());
         response.setRemark(flow.getRemark());
@@ -379,5 +398,15 @@ public class InventoryServiceImpl implements InventoryService {
             response.setPartName(part.getPartName());
         }
         return response;
+    }
+
+    private String operatorName(SysUserEntity operator) {
+        if (operator == null) {
+            return null;
+        }
+        if (StringUtils.hasText(operator.getRealName())) {
+            return operator.getRealName();
+        }
+        return operator.getUsername();
     }
 }

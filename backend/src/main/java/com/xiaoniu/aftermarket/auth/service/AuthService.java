@@ -39,6 +39,7 @@ public class AuthService {
     private final PermissionQueryService permissionQueryService;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
+    private final CaptchaService captchaService;
 
     public AuthService(SysUserMapper userMapper,
                        SysUserRoleMapper userRoleMapper,
@@ -46,7 +47,8 @@ public class AuthService {
                        StoreMapper storeMapper,
                        PermissionQueryService permissionQueryService,
                        PasswordEncoder passwordEncoder,
-                       JwtProvider jwtProvider) {
+                       JwtProvider jwtProvider,
+                       CaptchaService captchaService) {
         this.userMapper = userMapper;
         this.userRoleMapper = userRoleMapper;
         this.roleMapper = roleMapper;
@@ -54,10 +56,12 @@ public class AuthService {
         this.permissionQueryService = permissionQueryService;
         this.passwordEncoder = passwordEncoder;
         this.jwtProvider = jwtProvider;
+        this.captchaService = captchaService;
     }
 
     @Transactional
     public LoginResponse loginWithPassword(PasswordLoginRequest request) {
+        captchaService.validateAndConsume(request.captchaId(), request.captchaCode());
         SysUserEntity user = userMapper.selectOne(
                 new LambdaQueryWrapper<SysUserEntity>()
                         .eq(SysUserEntity::getUsername, request.username())

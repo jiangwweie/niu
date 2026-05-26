@@ -28,11 +28,13 @@ public class StaffVehicleController {
     @PreAuthorize("hasAuthority('CUSTOMER_VIEW')")
     @GetMapping("/search")
     public ApiResponse<List<VehicleSearchResult>> search(
-            @RequestParam String keyword) {
+            @RequestParam String keyword,
+            @RequestParam(required = false) Long customerId) {
         CurrentUser user = requireCurrentUser();
         VehiclePageQuery query = new VehiclePageQuery();
         query.setStoreId(user.storeId());
         query.setKeyword(keyword);
+        query.setCustomerId(customerId);
         query.setPageNo(1);
         query.setPageSize(20);
         PageResponse<VehicleResponse> page = vehicleService.pageQuery(query);
@@ -55,7 +57,7 @@ public class StaffVehicleController {
 
     private VehicleSearchResult toSearchResult(VehicleResponse r) {
         return new VehicleSearchResult(r.getId(), r.getFrameNo(), r.getModel(),
-                r.getCustomerId(), r.getCustomerName());
+                r.getBatteryNo(), r.getCustomerId(), r.getCustomerName(), r.getCustomerPhone());
     }
 
     private CurrentUser requireCurrentUser() {
@@ -64,5 +66,6 @@ public class StaffVehicleController {
     }
 
     public record VehicleSearchResult(Long id, String frameNo, String model,
-                                       Long customerId, String customerName) {}
+                                       String batteryNo, Long customerId,
+                                       String customerName, String customerPhone) {}
 }

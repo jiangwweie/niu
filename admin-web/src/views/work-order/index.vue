@@ -125,9 +125,15 @@
           </template>
         </el-table-column>
         <el-table-column prop="createdAt" label="创建时间" width="160" />
-        <el-table-column label="操作" width="100" fixed="right" align="center">
+        <el-table-column label="操作" width="140" fixed="right" align="center">
           <template #default="{ row }">
             <el-button link type="primary" @click="handleView(row)">查看</el-button>
+            <el-button
+              v-if="row.progressStatus === 'DRAFT' || row.status === 'DRAFT'"
+              link
+              type="danger"
+              @click="handleDeleteDraft(row)"
+            >删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -585,6 +591,7 @@ import {
   deliverWorkOrder,
   addNonInventoryCharge,
   cancelWorkOrder,
+  deleteDraftWorkOrder,
 } from '@/api/workOrder';
 import { useAuthStore } from '@/stores/auth';
 import {
@@ -751,6 +758,17 @@ const handleView = async (row: WorkOrderRecord) => {
   } catch {
     // request interceptor already shows error
   }
+};
+
+const handleDeleteDraft = async (row: WorkOrderRecord) => {
+  await ElMessageBox.confirm(
+    '删除草稿后将不再显示，该操作不会影响库存和财务记录。',
+    `删除草稿工单「${row.orderNo}」`,
+    { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' },
+  );
+  await deleteDraftWorkOrder(row.id);
+  ElMessage.success('草稿工单已删除');
+  fetchData();
 };
 
 const loadCashierRecords = async (workOrderId: string) => {
