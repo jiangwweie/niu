@@ -140,7 +140,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
             throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "storeId不能为空");
         }
         WorkOrderEntity entity = workOrderMapper.selectById(workOrderId);
-        if (entity == null || entity.getDeleted() != null && entity.getDeleted() == 1
+        if (entity == null || (entity.getDeleted() != null && entity.getDeleted() == 1)
                 || !command.getStoreId().equals(entity.getStoreId())) {
             throw new BusinessException(ErrorCode.WORK_ORDER_NOT_FOUND);
         }
@@ -182,7 +182,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     @Transactional
     public void deleteDraft(Long storeId, Long workOrderId, Long operatorId) {
         WorkOrderEntity entity = workOrderMapper.selectById(workOrderId);
-        if (entity == null || entity.getDeleted() != null && entity.getDeleted() == 1
+        if (entity == null || (entity.getDeleted() != null && entity.getDeleted() == 1)
                 || !storeId.equals(entity.getStoreId())) {
             throw new BusinessException(ErrorCode.WORK_ORDER_NOT_FOUND);
         }
@@ -198,7 +198,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     @Override
     public WorkOrderDetailResponse getById(Long workOrderId) {
         WorkOrderEntity entity = workOrderMapper.selectById(workOrderId);
-        if (entity == null || entity.getDeleted() != null && entity.getDeleted() == 1) {
+        if (entity == null || (entity.getDeleted() != null && entity.getDeleted() == 1)) {
             throw new BusinessException(ErrorCode.WORK_ORDER_NOT_FOUND);
         }
 

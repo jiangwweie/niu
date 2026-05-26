@@ -15,9 +15,15 @@
         <el-form-item prop="captchaCode">
           <div class="captcha-row">
             <el-input v-model="loginForm.captchaCode" placeholder="请输入验证码" prefix-icon="Key" />
-            <el-button class="captcha-text" :loading="captchaLoading" @click="refreshCaptcha">
-              {{ loginForm.captchaText || '刷新' }}
-            </el-button>
+            <button class="captcha-image-button" type="button" :disabled="captchaLoading" @click="refreshCaptcha">
+              <img
+                v-if="loginForm.captchaImageBase64"
+                :src="`data:image/png;base64,${loginForm.captchaImageBase64}`"
+                alt="验证码"
+                class="captcha-image"
+              />
+              <span v-else>{{ loginForm.captchaText || '刷新' }}</span>
+            </button>
           </div>
         </el-form-item>
         <el-form-item>
@@ -48,7 +54,8 @@ const loginForm = reactive({
   password: '',
   captchaId: '',
   captchaCode: '',
-  captchaText: ''
+  captchaText: '',
+  captchaImageBase64: ''
 });
 
 const loginRules = {
@@ -62,7 +69,8 @@ const refreshCaptcha = async () => {
   try {
     const captcha = await getCaptcha();
     loginForm.captchaId = captcha.captchaId;
-    loginForm.captchaText = captcha.captchaText;
+    loginForm.captchaText = captcha.captchaText || '';
+    loginForm.captchaImageBase64 = captcha.imageBase64 || '';
     loginForm.captchaCode = '';
   } finally {
     captchaLoading.value = false;
@@ -143,7 +151,25 @@ onMounted(refreshCaptcha);
   gap: 10px;
   width: 100%;
 }
-.captcha-text {
+.captcha-image-button {
+  width: 132px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  overflow: hidden;
   font-weight: 600;
+  color: #606266;
+}
+.captcha-image-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+.captcha-image {
+  display: block;
+  width: 132px;
+  height: 40px;
 }
 </style>

@@ -6,7 +6,8 @@
 - 逻辑删除入口：客户、车辆、配件、草稿工单统一使用逻辑删除，不做物理删除。
 - 工单录入档案关联：新建/编辑草稿支持客户、车辆档案 ID，并由后端校验门店和归属关系后回填快照。
 - 门店管理员员工管理：STORE_ADMIN 可以创建和管理本门店员工，但不能越权创建平台账号、跨店账号或 SUPER_ADMIN。
-- 登录验证码：admin-web 和小程序账号密码登录增加后端校验的一次性算术验证码；微信快捷登录不要求验证码。
+- 登录验证码：admin-web 和小程序账号密码登录增加后端校验的一次性图片算术验证码；微信快捷登录不要求验证码。
+- Review 修复：验证码内存容量上限、客户/车辆删除未完成工单保护、角色列表过滤下沉到 Service、草稿引用回填去重、配件删除更新时间、车辆分页 total 修正。
 
 ## 2. 库存流水审计字段验收
 
@@ -17,8 +18,8 @@
 
 ## 3. 逻辑删除规则
 
-- 客户：`DELETE /api/admin/customers/{id}`，删除后客户列表和新建工单搜索默认不返回，历史工单快照不受影响。
-- 车辆：`DELETE /api/admin/vehicles/{id}`，删除后车辆列表、客户详情车辆列表和新建工单车辆搜索默认不返回，历史快照保留。
+- 客户：`DELETE /api/admin/customers/{id}`，删除后客户列表和新建工单搜索默认不返回，历史工单快照不受影响；若仍有关联 `DRAFT`、`REPAIRING`、`REPAIR_DONE` 工单则拒绝删除。
+- 车辆：`DELETE /api/admin/vehicles/{id}`，删除后车辆列表、客户详情车辆列表和新建工单车辆搜索默认不返回，历史快照保留；若仍有关联 `DRAFT`、`REPAIRING`、`REPAIR_DONE` 工单则拒绝删除。
 - 配件：`DELETE /api/admin/parts/{partId}`，有 `actualQty`、`availableQty`、`reservedQty` 任一大于 0 时拒绝删除。
 - 工单：`DELETE /api/admin/work-orders/{workOrderId}` 仅允许 `DRAFT` 草稿逻辑删除；其他状态拒绝，应走既有业务动作。
 
@@ -40,11 +41,12 @@
 
 ## 6. 登录验证码验收
 
-- `GET /api/auth/captcha` 返回 `captchaId`、算术题文本和过期秒数。
+- `GET /api/auth/captcha` 返回 `captchaId`、图片验证码 `imageBase64` 和过期秒数；测试 profile 会额外返回 `captchaText` 便于自动化测试。
 - `POST /api/auth/login/password` 必须传 `captchaId` 和 `captchaCode`。
 - 验证码由后端校验，一次性使用，5 分钟过期。
 - 登录成功或失败后验证码均失效。
-- 验证码缺失、错误、过期返回中文友好错误码；微信快捷登录不需要验证码。
+- 验证码缺失、错误、过期、请求过量返回中文友好错误码；微信快捷登录不需要验证码。
+- 内存验证码最多保留 10000 条，超过上限时拒绝创建，避免无认证接口被高频调用撑爆内存。
 
 ## 7. 权限边界
 
@@ -52,26 +54,26 @@
 - 配件删除：`PART_MANAGE`。
 - 草稿工单删除：`WORK_ORDER_UPDATE`，且服务层二次校验状态。
 - 员工创建：`USER_MANAGE`，服务层执行门店边界和角色边界。
+- `WORK_ORDER_UPDATE` 继续覆盖草稿删除，这是本阶段 Owner 给定权限建议；后续如要拆出 `WORK_ORDER_DELETE`，需要配套 RBAC seed 和生产权限迁移。
 
 ## 8. 测试结果
 
-- 后端 `mvn test`：通过，687 tests，0 failures，0 errors。
-- 后端重点回归 `mvn -Dtest=AuthControllerTest,CustomerVehicleControllerTest,PartServiceTest,WorkOrderControllerTest test`：通过，111 tests，0 failures，0 errors。
+- 后端 `mvn test`：通过，690 tests，0 failures，0 errors。
+- 后端重点回归 `mvn -Dtest=AuthControllerTest,CustomerVehicleControllerTest,PartServiceTest,WorkOrderControllerTest,AdminUserManagementControllerTest,PlatformStoreControllerTest,WechatAuthTest test`：通过，156 tests，0 failures，0 errors。
 - admin-web `npx vue-tsc --noEmit`：通过。
 - admin-web `npm run build`：通过；仅有既有 chunk size / Rollup PURE 注释告警。
-- mini-program `npx tsc --noEmit`：未通过，失败点为历史依赖声明和 TDesign 声明缺失，包括 `miniprogram-api-typings` 与 DOM 类型重复、`tdesign-miniprogram` 声明缺失等；本次业务改动未出现新增 TypeScript 业务代码错误。
+- mini-program `npx tsc --noEmit`：未通过，失败点仍为历史依赖声明和 TDesign 声明缺失，包括 `miniprogram-api-typings` 与 DOM 类型重复、`tdesign-miniprogram` 声明缺失等；本次业务改动未出现新增 TypeScript 业务代码错误。
 - `git diff --check`：通过。
 
 ## 9. 未做事项
 
-- 未增加 Redis 或外部验证码存储，第一版使用进程内存保存。
-- 未做图形验证码，第一版使用算术验证码。
+- 未增加 Redis 或外部验证码存储，第一版使用进程内存保存并加容量上限。
 - 未实现已取消工单删除。
 - 未改动库存预占、扣减、释放触发规则。
 - 未改动支付、退款、交付关闭核心语义。
 
 ## 10. 风险项
 
-- 内存验证码在多实例部署下不共享；正式多实例前需要迁移到共享缓存。
+- 内存验证码在多实例部署下不共享；正式多实例前需要迁移到共享缓存或在网关按实例粘性路由。
 - 删除入口复用现有 `deleted` 字段，无新增数据库迁移；若生产历史数据存在脏数据，需要独立数据核查。
 - 小程序历史 TypeScript 基线可能包含非本次业务代码错误，验收时需要区分新增影响。

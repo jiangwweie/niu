@@ -10,6 +10,7 @@ import com.xiaoniu.aftermarket.customer.entity.VehicleEntity;
 import com.xiaoniu.aftermarket.customer.mapper.CustomerMapper;
 import com.xiaoniu.aftermarket.customer.mapper.VehicleMapper;
 import com.xiaoniu.aftermarket.customer.service.CustomerService;
+import com.xiaoniu.aftermarket.common.enums.WorkOrderStatus;
 import com.xiaoniu.aftermarket.workorder.dto.WorkOrderQueryResponse;
 import com.xiaoniu.aftermarket.workorder.entity.WorkOrderEntity;
 import com.xiaoniu.aftermarket.workorder.mapper.WorkOrderMapper;
@@ -20,6 +21,12 @@ import org.springframework.util.StringUtils;
 
 @Service
 public class CustomerServiceImpl implements CustomerService {
+
+    private static final List<String> ACTIVE_WORK_ORDER_STATUSES = List.of(
+            WorkOrderStatus.DRAFT.getCode(),
+            WorkOrderStatus.REPAIRING.getCode(),
+            WorkOrderStatus.REPAIR_DONE.getCode()
+    );
 
     private final CustomerMapper customerMapper;
     private final VehicleMapper vehicleMapper;
@@ -192,6 +199,15 @@ public class CustomerServiceImpl implements CustomerService {
                         .eq(CustomerEntity::getDeleted, 0));
         if (entity == null) {
             throw new BusinessException(ErrorCode.CUSTOMER_NOT_FOUND);
+        }
+        Long activeOrders = workOrderMapper.selectCount(
+                new LambdaQueryWrapper<WorkOrderEntity>()
+                        .eq(WorkOrderEntity::getStoreId, storeId)
+                        .eq(WorkOrderEntity::getCustomerId, customerId)
+                        .eq(WorkOrderEntity::getDeleted, 0)
+                        .in(WorkOrderEntity::getStatus, ACTIVE_WORK_ORDER_STATUSES));
+        if (activeOrders > 0) {
+            throw new BusinessException(ErrorCode.CUSTOMER_HAS_ACTIVE_ORDERS);
         }
         entity.setDeleted(1);
         entity.setUpdatedBy(operatorId);

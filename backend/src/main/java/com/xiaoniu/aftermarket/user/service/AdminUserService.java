@@ -28,7 +28,7 @@ public interface AdminUserService {
 
     ResetPasswordResponse resetPassword(Long currentUserId, Long currentStoreId, Long id, ResetPasswordRequest request);
 
-    List<RoleResponse> listRoles(Long storeId);
+    List<RoleResponse> listRoles(Long storeId, Long currentUserId);
 
     List<PermissionResponse> listPermissions();
 }

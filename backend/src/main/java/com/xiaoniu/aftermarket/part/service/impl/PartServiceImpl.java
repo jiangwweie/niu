@@ -19,6 +19,7 @@ import com.xiaoniu.aftermarket.part.entity.PartEntity;
 import com.xiaoniu.aftermarket.part.mapper.PartBarcodeMapper;
 import com.xiaoniu.aftermarket.part.mapper.PartMapper;
 import com.xiaoniu.aftermarket.part.service.PartService;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,7 +54,7 @@ public class PartServiceImpl implements PartService {
             return null;
         }
         PartEntity part = partMapper.selectById(barcodeEntity.getPartId());
-        return part == null || part.getDeleted() != null && part.getDeleted() == 1 ? null : part;
+        return part == null || (part.getDeleted() != null && part.getDeleted() == 1) ? null : part;
     }
 
     @Override
@@ -191,7 +192,7 @@ public class PartServiceImpl implements PartService {
     @Transactional
     public void deletePart(Long storeId, Long partId, Long operatorId) {
         PartEntity existing = partMapper.selectById(partId);
-        if (existing == null || existing.getDeleted() != null && existing.getDeleted() == 1) {
+        if (existing == null || (existing.getDeleted() != null && existing.getDeleted() == 1)) {
             throw new BusinessException(ErrorCode.PART_NOT_FOUND);
         }
         if (!storeId.equals(existing.getStoreId())) {
@@ -205,6 +206,7 @@ public class PartServiceImpl implements PartService {
         }
         existing.setDeleted(1);
         existing.setUpdatedBy(operatorId);
+        existing.setUpdatedAt(LocalDateTime.now());
         partMapper.updateById(existing);
     }
 

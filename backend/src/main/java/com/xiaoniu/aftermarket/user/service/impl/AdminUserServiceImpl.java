@@ -207,13 +207,14 @@ public class AdminUserServiceImpl implements AdminUserService {
     }
 
     @Override
-    public List<RoleResponse> listRoles(Long storeId) {
+    public List<RoleResponse> listRoles(Long storeId, Long currentUserId) {
         return roleMapper.selectList(new LambdaQueryWrapper<SysRoleEntity>()
                         .and(w -> w.isNull(SysRoleEntity::getStoreId).or().eq(SysRoleEntity::getStoreId, storeId))
                         .eq(SysRoleEntity::getStatus, CommonStatus.ENABLED.name())
                         .eq(SysRoleEntity::getDeleted, 0)
                         .orderByAsc(SysRoleEntity::getSortOrder, SysRoleEntity::getId))
                 .stream()
+                .filter(role -> isSuperAdmin(currentUserId) || !"SUPER_ADMIN".equals(role.getRoleCode()))
                 .map(role -> new RoleResponse(role.getRoleCode(), role.getRoleName(), role.getRemark(), permissionCodesByRole(role.getId())))
                 .toList();
     }

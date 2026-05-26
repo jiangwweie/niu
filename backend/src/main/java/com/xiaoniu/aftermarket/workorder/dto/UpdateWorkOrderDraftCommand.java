@@ -3,7 +3,7 @@ package com.xiaoniu.aftermarket.workorder.dto;
 import lombok.Data;
 
 @Data
-public class UpdateWorkOrderDraftCommand {
+public class UpdateWorkOrderDraftCommand implements DraftSnapshotWritable {
 
     private Long storeId;
     private Long customerId;

@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xiaoniu.aftermarket.test.TestAuthHelper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -38,17 +39,7 @@ class PlatformStoreControllerTest {
     }
 
     private String loginBody(String username, String password) throws Exception {
-        MvcResult result = mockMvc.perform(get("/api/auth/captcha"))
-                .andExpect(status().isOk())
-                .andReturn();
-        JsonNode captcha = objectMapper.readTree(result.getResponse().getContentAsString()).path("data");
-        return "{\"username\":\"%s\",\"password\":\"%s\",\"captchaId\":\"%s\",\"captchaCode\":\"%s\"}"
-                .formatted(username, password, captcha.path("captchaId").asText(), answer(captcha.path("captchaText").asText()));
-    }
-
-    private String answer(String captchaText) {
-        String[] parts = captchaText.replace("= ?", "").split("\\+");
-        return String.valueOf(Integer.parseInt(parts[0].trim()) + Integer.parseInt(parts[1].trim()));
+        return TestAuthHelper.loginBody(mockMvc, objectMapper, username, password);
     }
 
     // --- Test 1: Platform admin /api/auth/me returns accountType=PLATFORM ---

@@ -181,6 +181,7 @@ class PartServiceTest {
 
         PartEntity deleted = partService.getById(part.getId());
         assertEquals(1, deleted.getDeleted());
+        assertNotNull(deleted.getUpdatedAt());
         PartQueryRequest request = new PartQueryRequest();
         request.setStoreId(STORE_ID);
         request.setPartCode("DEL-ZERO-001");

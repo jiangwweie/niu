@@ -34,7 +34,8 @@
         bind:tap="refreshCaptcha"
         class="captcha-btn"
       >
-        {{captchaText || '刷新'}}
+        <image wx:if="{{captchaImageSrc}}" src="{{captchaImageSrc}}" mode="aspectFit" class="captcha-image" />
+        <text wx:else>{{captchaText || '刷新'}}</text>
       </t-button>
     </view>
 

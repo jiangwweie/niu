@@ -255,6 +255,23 @@ class CustomerVehicleControllerTest {
                 .andExpect(jsonPath("$.data", hasSize(0)));
     }
 
+    @Test
+    void deleteCustomerWithActiveWorkOrder_returns400() throws Exception {
+        jdbcTemplate.execute("""
+            INSERT INTO work_order (id, store_id, work_order_no, customer_id, vehicle_id,
+                                    customer_name_snapshot, customer_phone_snapshot,
+                                    vehicle_model_snapshot, frame_no_snapshot, repair_item,
+                                    status, receivable_amount, received_amount)
+            VALUES (5002, 1, 'WO-0002', 9002, 8002, '李四', '13800002222',
+                    'MQi', 'VIN-LI-001', '进行中工单', 'REPAIRING', 100.00, 0.00)
+            """);
+
+        mockMvc.perform(delete("/api/admin/customers/9002")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithCustomerManage()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("CUSTOMER_HAS_ACTIVE_ORDERS"));
+    }
+
     // ========== Vehicle CRUD ==========
 
     @Test
@@ -353,6 +370,23 @@ class CustomerVehicleControllerTest {
                         .param("keyword", "VIN-ZHANG"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data", hasSize(0)));
+    }
+
+    @Test
+    void deleteVehicleWithActiveWorkOrder_returns400() throws Exception {
+        jdbcTemplate.execute("""
+            INSERT INTO work_order (id, store_id, work_order_no, customer_id, vehicle_id,
+                                    customer_name_snapshot, customer_phone_snapshot,
+                                    vehicle_model_snapshot, frame_no_snapshot, repair_item,
+                                    status, receivable_amount, received_amount)
+            VALUES (5002, 1, 'WO-0002', 9002, 8002, '李四', '13800002222',
+                    'MQi', 'VIN-LI-001', '进行中工单', 'DRAFT', 0.00, 0.00)
+            """);
+
+        mockMvc.perform(delete("/api/admin/vehicles/8002")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithCustomerManage()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VEHICLE_HAS_ACTIVE_ORDERS"));
     }
 
     // ========== Staff Search ==========

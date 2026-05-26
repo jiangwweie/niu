@@ -8,6 +8,7 @@ import com.xiaoniu.aftermarket.customer.entity.VehicleEntity;
 import com.xiaoniu.aftermarket.customer.mapper.CustomerMapper;
 import com.xiaoniu.aftermarket.customer.mapper.VehicleMapper;
 import com.xiaoniu.aftermarket.workorder.dto.CreateDraftWorkOrderCommand;
+import com.xiaoniu.aftermarket.workorder.dto.DraftSnapshotWritable;
 import com.xiaoniu.aftermarket.workorder.dto.UpdateWorkOrderDraftCommand;
 import org.springframework.stereotype.Service;
 
@@ -69,20 +70,7 @@ public class WorkOrderDraftReferenceResolver {
         return new ResolvedDraftReference(customer, vehicle);
     }
 
-    private void apply(CreateDraftWorkOrderCommand command, ResolvedDraftReference resolved) {
-        if (resolved.vehicle() != null) {
-            command.setCustomerId(resolved.vehicle().getCustomerId());
-            command.setVehicleModelSnapshot(resolved.vehicle().getModel());
-            command.setFrameNoSnapshot(resolved.vehicle().getFrameNo());
-            command.setBatteryNoSnapshot(resolved.vehicle().getBatteryNo());
-        }
-        if (resolved.customer() != null) {
-            command.setCustomerNameSnapshot(resolved.customer().getCustomerName());
-            command.setCustomerPhoneSnapshot(resolved.customer().getPhone());
-        }
-    }
-
-    private void apply(UpdateWorkOrderDraftCommand command, ResolvedDraftReference resolved) {
+    private void apply(DraftSnapshotWritable command, ResolvedDraftReference resolved) {
         if (resolved.vehicle() != null) {
             command.setCustomerId(resolved.vehicle().getCustomerId());
             command.setVehicleModelSnapshot(resolved.vehicle().getModel());

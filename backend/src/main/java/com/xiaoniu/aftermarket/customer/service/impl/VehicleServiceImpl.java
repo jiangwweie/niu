@@ -2,6 +2,7 @@ package com.xiaoniu.aftermarket.customer.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
+import com.xiaoniu.aftermarket.common.enums.WorkOrderStatus;
 import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
 import com.xiaoniu.aftermarket.customer.dto.*;
@@ -21,6 +22,12 @@ import org.springframework.util.StringUtils;
 
 @Service
 public class VehicleServiceImpl implements VehicleService {
+
+    private static final List<String> ACTIVE_WORK_ORDER_STATUSES = List.of(
+            WorkOrderStatus.DRAFT.getCode(),
+            WorkOrderStatus.REPAIRING.getCode(),
+            WorkOrderStatus.REPAIR_DONE.getCode()
+    );
 
     private final VehicleMapper vehicleMapper;
     private final CustomerMapper customerMapper;
@@ -81,6 +88,19 @@ public class VehicleServiceImpl implements VehicleService {
             wrapper.in(VehicleEntity::getCustomerId, customerIds);
         }
 
+        List<Long> activeCustomerIds = customerMapper.selectList(
+                        new LambdaQueryWrapper<CustomerEntity>()
+                                .eq(CustomerEntity::getStoreId, query.getStoreId())
+                                .eq(CustomerEntity::getDeleted, 0)
+                                .select(CustomerEntity::getId))
+                .stream()
+                .map(CustomerEntity::getId)
+                .toList();
+        if (activeCustomerIds.isEmpty()) {
+            return new PageResponse<>(List.of(), pageNo, pageSize, 0);
+        }
+        wrapper.in(VehicleEntity::getCustomerId, activeCustomerIds);
+
         long total = vehicleMapper.selectCount(wrapper);
         if (total == 0) {
             return new PageResponse<>(List.of(), pageNo, pageSize, 0);
@@ -103,7 +123,6 @@ public class VehicleServiceImpl implements VehicleService {
         }
 
         List<VehicleResponse> responseList = entities.stream()
-                .filter(entity -> entity.getCustomerId() == null || customerMap.containsKey(entity.getCustomerId()))
                 .map(entity -> toResponse(entity, customerMap))
                 .toList();
 
@@ -226,6 +245,15 @@ public class VehicleServiceImpl implements VehicleService {
                         .eq(VehicleEntity::getDeleted, 0));
         if (entity == null) {
             throw new BusinessException(ErrorCode.VEHICLE_NOT_FOUND);
+        }
+        Long activeOrders = workOrderMapper.selectCount(
+                new LambdaQueryWrapper<WorkOrderEntity>()
+                        .eq(WorkOrderEntity::getStoreId, storeId)
+                        .eq(WorkOrderEntity::getVehicleId, vehicleId)
+                        .eq(WorkOrderEntity::getDeleted, 0)
+                        .in(WorkOrderEntity::getStatus, ACTIVE_WORK_ORDER_STATUSES));
+        if (activeOrders > 0) {
+            throw new BusinessException(ErrorCode.VEHICLE_HAS_ACTIVE_ORDERS);
         }
         entity.setDeleted(1);
         entity.setUpdatedBy(operatorId);

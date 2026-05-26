@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xiaoniu.aftermarket.auth.security.AuthenticatedUser;
 import com.xiaoniu.aftermarket.auth.security.JwtProvider;
 import com.xiaoniu.aftermarket.DataResetTestExecutionListener;
+import com.xiaoniu.aftermarket.test.TestAuthHelper;
 import com.xiaoniu.aftermarket.user.entity.SysUserEntity;
 import com.xiaoniu.aftermarket.user.mapper.SysUserMapper;
 import java.time.Instant;
@@ -152,16 +153,6 @@ class AdminUserManagementControllerTest {
     }
 
     private String loginBody(String username, String password) throws Exception {
-        MvcResult result = mockMvc.perform(get("/api/auth/captcha"))
-                .andExpect(status().isOk())
-                .andReturn();
-        JsonNode captcha = objectMapper.readTree(result.getResponse().getContentAsString()).path("data");
-        return "{\"username\":\"%s\",\"password\":\"%s\",\"captchaId\":\"%s\",\"captchaCode\":\"%s\"}"
-                .formatted(username, password, captcha.path("captchaId").asText(), answer(captcha.path("captchaText").asText()));
-    }
-
-    private String answer(String captchaText) {
-        String[] parts = captchaText.replace("= ?", "").split("\\+");
-        return String.valueOf(Integer.parseInt(parts[0].trim()) + Integer.parseInt(parts[1].trim()));
+        return TestAuthHelper.loginBody(mockMvc, objectMapper, username, password);
     }
 }

@@ -7,6 +7,7 @@ Page({
     password: '',
     captchaId: '',
     captchaText: '',
+    captchaImageSrc: '',
     captchaCode: '',
     captchaLoading: false,
     loading: false,
@@ -41,10 +42,12 @@ Page({
       const res = await authApi.getCaptcha();
       this.setData({
         captchaId: res.data.captchaId,
-        captchaText: res.data.captchaText,
+        captchaText: res.data.captchaText || '',
+        captchaImageSrc: res.data.imageBase64 ? `data:image/png;base64,${res.data.imageBase64}` : '',
         captchaCode: ''
       });
     } catch (e) {
+      this.setData({ captchaText: '重试', captchaImageSrc: '' });
       wx.showToast({ title: '验证码加载失败', icon: 'none' });
     } finally {
       this.setData({ captchaLoading: false });

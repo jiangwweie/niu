@@ -4,7 +4,7 @@ import java.util.List;
 import lombok.Data;
 
 @Data
-public class CreateDraftWorkOrderCommand {
+public class CreateDraftWorkOrderCommand implements DraftSnapshotWritable {
 
     private Long storeId;
     private Long customerId;

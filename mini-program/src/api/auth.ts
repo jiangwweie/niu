@@ -23,7 +23,8 @@ export interface LoginResponse {
 
 export interface CaptchaResponse {
   captchaId: string;
-  captchaText: string;
+  captchaText?: string;
+  imageBase64?: string;
   expiresInSeconds: number;
 }
 

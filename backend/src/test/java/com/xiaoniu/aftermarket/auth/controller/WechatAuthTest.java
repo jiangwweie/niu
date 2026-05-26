@@ -10,6 +10,7 @@ import cn.binarywang.wx.miniapp.api.WxMaService;
 import cn.binarywang.wx.miniapp.api.WxMaUserService;
 import cn.binarywang.wx.miniapp.bean.WxMaJscode2SessionResult;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xiaoniu.aftermarket.test.TestAuthHelper;
 import me.chanjar.weixin.common.error.WxError;
 import me.chanjar.weixin.common.error.WxErrorException;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,17 +59,7 @@ class WechatAuthTest {
     }
 
     private String loginBody(String username, String password) throws Exception {
-        MvcResult result = mockMvc.perform(get("/api/auth/captcha"))
-                .andExpect(status().isOk())
-                .andReturn();
-        var captcha = objectMapper.readTree(result.getResponse().getContentAsString()).path("data");
-        return "{\"username\":\"%s\",\"password\":\"%s\",\"captchaId\":\"%s\",\"captchaCode\":\"%s\"}"
-                .formatted(username, password, captcha.path("captchaId").asText(), answer(captcha.path("captchaText").asText()));
-    }
-
-    private String answer(String captchaText) {
-        String[] parts = captchaText.replace("= ?", "").split("\\+");
-        return String.valueOf(Integer.parseInt(parts[0].trim()) + Integer.parseInt(parts[1].trim()));
+        return TestAuthHelper.loginBody(mockMvc, objectMapper, username, password);
     }
 
     // --- WeChat Login Tests ---

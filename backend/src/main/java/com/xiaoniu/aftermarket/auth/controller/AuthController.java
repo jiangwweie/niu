@@ -57,7 +57,8 @@ public class AuthController {
         } catch (BusinessException exception) {
             if (exception.getErrorCode() == ErrorCode.CAPTCHA_REQUIRED
                     || exception.getErrorCode() == ErrorCode.CAPTCHA_INVALID
-                    || exception.getErrorCode() == ErrorCode.CAPTCHA_EXPIRED) {
+                    || exception.getErrorCode() == ErrorCode.CAPTCHA_EXPIRED
+                    || exception.getErrorCode() == ErrorCode.CAPTCHA_LIMIT_EXCEEDED) {
                 return ResponseEntity.badRequest()
                         .body(ApiResponse.failure(exception.getErrorCode(), exception.getMessage()));
             }

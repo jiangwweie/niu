@@ -16,6 +16,7 @@ import com.xiaoniu.aftermarket.auth.security.JwtProvider;
 import com.xiaoniu.aftermarket.common.api.ApiResponse;
 import com.xiaoniu.aftermarket.common.context.CurrentUser;
 import com.xiaoniu.aftermarket.common.context.CurrentUserContext;
+import com.xiaoniu.aftermarket.test.TestAuthHelper;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Set;
@@ -73,6 +74,16 @@ class AuthControllerTest {
                         .content("{\"username\":\"admin01\",\"password\":\"dev123\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("CAPTCHA_REQUIRED"));
+    }
+
+    @Test
+    void captchaReturnsChallengeImage() throws Exception {
+        mockMvc.perform(get("/api/auth/captcha"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.captchaId").isNotEmpty())
+                .andExpect(jsonPath("$.data.imageBase64").isNotEmpty())
+                .andExpect(jsonPath("$.data.expiresInSeconds").value(300));
     }
 
     @Test
@@ -242,18 +253,7 @@ class AuthControllerTest {
     }
 
     private String loginBody(String username, String password) throws Exception {
-        MvcResult result = mockMvc.perform(get("/api/auth/captcha"))
-                .andExpect(status().isOk())
-                .andReturn();
-        JsonNode captcha = objectMapper.readTree(result.getResponse().getContentAsString()).path("data");
-        return """
-                {"username":"%s","password":"%s","captchaId":"%s","captchaCode":"%s"}
-                """.formatted(username, password, captcha.path("captchaId").asText(), answer(captcha.path("captchaText").asText()));
-    }
-
-    private String answer(String captchaText) {
-        String[] parts = captchaText.replace("= ?", "").split("\\+");
-        return String.valueOf(Integer.parseInt(parts[0].trim()) + Integer.parseInt(parts[1].trim()));
+        return TestAuthHelper.loginBody(mockMvc, objectMapper, username, password);
     }
 
     @TestConfiguration

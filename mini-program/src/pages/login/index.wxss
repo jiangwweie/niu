@@ -46,6 +46,12 @@
   font-weight: 600;
 }
 
+.captcha-image {
+  width: 180rpx;
+  height: 54rpx;
+  display: block;
+}
+
 .divider {
   display: flex;
   align-items: center;
