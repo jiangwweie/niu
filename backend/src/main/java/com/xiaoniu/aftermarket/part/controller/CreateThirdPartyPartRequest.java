@@ -8,6 +8,7 @@ public record CreateThirdPartyPartRequest(
         String model,
         String categoryCode,
         BigDecimal referenceCostPrice,
+        String defaultBarcode,
         String locationRemark,
         String remark
 ) {

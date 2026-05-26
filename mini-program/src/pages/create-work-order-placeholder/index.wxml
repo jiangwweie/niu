@@ -167,6 +167,15 @@
       <t-cell-group>
         <block wx:if="{{currentItemForm.chargeType === 'PART' && !editingItemId}}">
           <t-cell title="选择配件" arrow bind:tap="openPartSelector" note="{{selectedPart ? selectedPart.partName : '请选择(必填)'}}" />
+          <view class="scan-part-actions">
+            <t-button theme="primary" variant="outline" icon="scan" size="small" bind:tap="scanPartForChargeItem">扫码选件</t-button>
+            <t-button theme="default" variant="outline" size="small" bind:tap="openTempPartDialog">临时新增配件</t-button>
+          </view>
+          <view class="selected-part-panel" wx:if="{{selectedPart}}">
+            <text class="part-desc">编码: {{selectedPart.partCode}}</text>
+            <text class="part-desc" wx:if="{{selectedPart.defaultBarcode}}">条码: {{selectedPart.defaultBarcode}}</text>
+            <text class="part-desc" wx:if="{{selectedPart.model}}">型号: {{selectedPart.model}}</text>
+          </view>
         </block>
 
         <t-input label="项目名称" placeholder="必填" value="{{currentItemForm.itemName}}" bind:change="onItemFormChange" data-field="itemName" align="right" />
@@ -197,6 +206,31 @@
         <text class="part-desc">编码: {{item.partCode}}</text>
       </view>
       <view class="empty-state" wx:if="{{partList.length === 0}}">暂无配件</view>
+    </scroll-view>
+  </t-popup>
+
+  <!-- 临时新增配件弹窗 -->
+  <t-popup visible="{{tempPartDialogVisible}}" bind:visible-change="onTempPartPopupVisibleChange" placement="bottom">
+    <view class="popup-header">
+      <text class="popup-title">临时新增配件</text>
+      <t-icon name="close" size="24" bind:tap="closeTempPartDialog" />
+    </view>
+    <scroll-view scroll-y class="popup-body">
+      <t-cell-group>
+        <t-input label="配件名称" placeholder="必填" value="{{tempPartForm.partName}}" bind:change="onTempPartFormChange" data-field="partName" align="right" />
+        <t-input label="条码" placeholder="扫码值/选填" value="{{tempPartForm.barcode}}" bind:change="onTempPartFormChange" data-field="barcode" align="right" />
+        <t-input label="型号" placeholder="选填" value="{{tempPartForm.model}}" bind:change="onTempPartFormChange" data-field="model" align="right" />
+        <t-input label="分类" placeholder="选填" value="{{tempPartForm.categoryCode}}" bind:change="onTempPartFormChange" data-field="categoryCode" align="right" />
+        <t-input label="数量" type="number" placeholder="必填(>0)" value="{{tempPartForm.quantity}}" bind:change="onTempPartFormChange" data-field="quantity" align="right" />
+        <t-input label="单位" placeholder="选填" value="{{tempPartForm.unit}}" bind:change="onTempPartFormChange" data-field="unit" align="right" />
+        <t-input label="销售单价" type="digit" placeholder="必填(>=0)" value="{{tempPartForm.unitPrice}}" bind:change="onTempPartFormChange" data-field="unitPrice" align="right" />
+        <t-input label="单位成本" type="digit" placeholder="选填(>=0)" value="{{tempPartForm.unitCost}}" bind:change="onTempPartFormChange" data-field="unitCost" align="right" />
+        <t-input label="库位" placeholder="选填" value="{{tempPartForm.locationRemark}}" bind:change="onTempPartFormChange" data-field="locationRemark" align="right" />
+        <t-input label="备注" placeholder="选填" value="{{tempPartForm.remark}}" bind:change="onTempPartFormChange" data-field="remark" align="right" />
+      </t-cell-group>
+      <view class="popup-footer">
+        <t-button theme="primary" block size="large" bind:tap="submitTempPartCharge" loading="{{tempPartSaving}}">入库并加入工单</t-button>
+      </view>
     </scroll-view>
   </t-popup>
 

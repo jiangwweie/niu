@@ -90,6 +90,7 @@
             <template #default="{ row }">
               <el-button link type="primary" @click="handleView(row)">查看</el-button>
               <el-button link type="primary" @click="openEditDialog(row)">编辑</el-button>
+              <el-button link type="primary" :disabled="!row.barcode" @click="printBarcode(row)">打印条码</el-button>
               <el-button link :type="row.status ? 'danger' : 'success'" @click="handleToggleStatus(row)">
                 {{ row.status ? '停用' : '启用' }}
               </el-button>
@@ -127,7 +128,23 @@
           <el-descriptions-item label="型号">{{ detailDrawer.data.model || '-' }}</el-descriptions-item>
           <el-descriptions-item label="分类">{{ detailDrawer.data.category || '-' }}</el-descriptions-item>
           <el-descriptions-item label="成本价"><MoneyText :amount="detailDrawer.data.costPrice" /></el-descriptions-item>
-          <el-descriptions-item label="条形码">{{ detailDrawer.data.barcode || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="条形码">
+            <span>{{ detailDrawer.data.barcode || '-' }}</span>
+            <el-button
+              v-if="detailDrawer.data.barcode"
+              link
+              type="primary"
+              class="inline-action"
+              @click="copyBarcode(detailDrawer.data.barcode)"
+            >复制</el-button>
+            <el-button
+              v-if="detailDrawer.data.barcode"
+              link
+              type="primary"
+              class="inline-action"
+              @click="printBarcode(detailDrawer.data)"
+            >打印</el-button>
+          </el-descriptions-item>
           <el-descriptions-item label="库存位置" :span="2">{{ detailDrawer.data.location || '-' }}</el-descriptions-item>
           <el-descriptions-item label="状态">
             <el-tag :type="detailDrawer.data.status ? 'success' : 'info'" size="small">
@@ -352,6 +369,7 @@ const submitEdit = async () => {
           model: editDialog.form.model || undefined,
           categoryCode: editDialog.form.categoryCode || undefined,
           referenceCostPrice: editDialog.form.referenceCostPrice || undefined,
+          defaultBarcode: editDialog.form.defaultBarcode || undefined,
           locationRemark: editDialog.form.locationRemark || undefined,
           remark: editDialog.form.remark || undefined,
         });
@@ -361,6 +379,7 @@ const submitEdit = async () => {
           model: editDialog.form.model || undefined,
           categoryCode: editDialog.form.categoryCode || undefined,
           referenceCostPrice: editDialog.form.referenceCostPrice || undefined,
+          defaultBarcode: editDialog.form.defaultBarcode || undefined,
           locationRemark: editDialog.form.locationRemark || undefined,
           remark: editDialog.form.remark || undefined,
         });
@@ -415,6 +434,68 @@ const handleDelete = async (row: PartViewRecord) => {
   }
 };
 
+const copyBarcode = async (barcode: string) => {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(barcode);
+    } else {
+      const textarea = document.createElement('textarea');
+      textarea.value = barcode;
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+    ElMessage.success('条码已复制');
+  } catch {
+    ElMessage.error('复制失败，请手动复制');
+  }
+};
+
+const escapeHtml = (value: string) => value
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
+
+const printBarcode = (row: PartViewRecord) => {
+  if (!row.barcode) {
+    ElMessage.warning('当前配件没有条码');
+    return;
+  }
+  const popup = window.open('', '_blank', 'width=420,height=320');
+  if (!popup) {
+    ElMessage.error('浏览器阻止了打印窗口');
+    return;
+  }
+  popup.document.write(`
+    <html>
+      <head>
+        <title>打印条码</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; padding: 24px; }
+          .label { border: 1px solid #111; padding: 18px; width: 320px; }
+          .name { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+          .code { font-size: 13px; color: #555; margin-bottom: 16px; }
+          .barcode { font-size: 24px; letter-spacing: 2px; font-weight: 700; }
+        </style>
+      </head>
+      <body>
+        <div class="label">
+          <div class="name">${escapeHtml(row.partName)}</div>
+          <div class="code">${escapeHtml(row.partCode)}</div>
+          <div class="barcode">${escapeHtml(row.barcode)}</div>
+        </div>
+        <script>window.onload = function () { window.print(); };<\/script>
+      </body>
+    </html>
+  `);
+  popup.document.close();
+};
+
 onMounted(() => {
   fetchData();
 });
@@ -438,5 +519,8 @@ onMounted(() => {
 .table-wrapper {
   width: 100%;
   overflow-x: auto;
+}
+.inline-action {
+  margin-left: 8px;
 }
 </style>

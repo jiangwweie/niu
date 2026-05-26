@@ -11,6 +11,7 @@ public class InventoryInboundCommand {
     private Integer quantity;
     private BigDecimal unitCost;
     private String barcode;
+    private String code;
     private String locationRemark;
     private Long operatorId;
     private String reason;

@@ -13,6 +13,8 @@ public class CreatePartCommand {
     private String model;
     private String categoryCode;
     private BigDecimal referenceCostPrice;
+    private String defaultBarcode;
     private String locationRemark;
+    private String createSource;
     private String remark;
 }

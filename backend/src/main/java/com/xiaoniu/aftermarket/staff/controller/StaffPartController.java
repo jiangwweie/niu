@@ -7,6 +7,7 @@ import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.common.enums.CommonStatus;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
+import com.xiaoniu.aftermarket.part.dto.PartLookupResponse;
 import com.xiaoniu.aftermarket.part.dto.PartQueryRequest;
 import com.xiaoniu.aftermarket.part.dto.PartQueryResponse;
 import com.xiaoniu.aftermarket.part.entity.PartEntity;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequestMapping("/api/staff/parts")
@@ -52,6 +54,13 @@ public class StaffPartController {
         request.setPageSize(pageSize);
         PageResponse<PartQueryResponse> result = partService.pageQuery(request);
         return ApiResponse.success(result.map(StaffPartListItem::from));
+    }
+
+    @PreAuthorize("hasAnyAuthority('INVENTORY_VIEW', 'WORK_ORDER_CREATE', 'WORK_ORDER_UPDATE')")
+    @GetMapping("/lookup")
+    public ApiResponse<PartLookupResponse> lookup(@RequestParam String code) {
+        CurrentUser user = requireCurrentUser();
+        return ApiResponse.success(partService.lookup(user.storeId(), code));
     }
 
     @GetMapping("/{partId}")

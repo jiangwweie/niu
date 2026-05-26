@@ -78,14 +78,15 @@ public class StaffInventoryController {
         command.setQuantity(request.quantity());
         command.setUnitCost(request.unitCost());
         command.setBarcode(request.barcode());
+        command.setCode(request.code());
         command.setLocationRemark(request.locationRemark());
         command.setReason(request.reason());
         command.setRemark(request.remark());
 
         inventoryService.inbound(command);
 
-        InventoryStockEntity stock = inventoryService.getByPartId(user.storeId(), request.partId());
-        PartEntity part = partMapper.selectById(request.partId());
+        InventoryStockEntity stock = inventoryService.getByPartId(user.storeId(), command.getPartId());
+        PartEntity part = partMapper.selectById(command.getPartId());
         InventoryFlowEntity flow = stock != null && stock.getLastFlowId() != null
                 ? inventoryFlowMapper.selectById(stock.getLastFlowId())
                 : null;

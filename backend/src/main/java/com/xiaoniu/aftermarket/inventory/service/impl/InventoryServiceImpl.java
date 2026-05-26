@@ -18,6 +18,7 @@ import com.xiaoniu.aftermarket.inventory.mapper.InventoryStockMapper;
 import com.xiaoniu.aftermarket.inventory.service.InventoryService;
 import com.xiaoniu.aftermarket.part.entity.PartEntity;
 import com.xiaoniu.aftermarket.part.mapper.PartMapper;
+import com.xiaoniu.aftermarket.part.service.PartService;
 import com.xiaoniu.aftermarket.user.entity.SysUserEntity;
 import com.xiaoniu.aftermarket.user.mapper.SysUserMapper;
 import java.time.LocalDateTime;
@@ -36,15 +37,18 @@ public class InventoryServiceImpl implements InventoryService {
     private final InventoryStockMapper inventoryStockMapper;
     private final InventoryFlowMapper inventoryFlowMapper;
     private final PartMapper partMapper;
+    private final PartService partService;
     private final SysUserMapper userMapper;
 
     public InventoryServiceImpl(InventoryStockMapper inventoryStockMapper,
                                 InventoryFlowMapper inventoryFlowMapper,
                                 PartMapper partMapper,
+                                PartService partService,
                                 SysUserMapper userMapper) {
         this.inventoryStockMapper = inventoryStockMapper;
         this.inventoryFlowMapper = inventoryFlowMapper;
         this.partMapper = partMapper;
+        this.partService = partService;
         this.userMapper = userMapper;
     }
 
@@ -52,6 +56,7 @@ public class InventoryServiceImpl implements InventoryService {
     @Transactional
     public void inbound(InventoryInboundCommand command) {
         validateInbound(command);
+        resolveInboundPart(command);
 
         PartEntity part = partMapper.selectById(command.getPartId());
         if (part == null || part.getDeleted() != null && part.getDeleted() == 1) {
@@ -129,6 +134,12 @@ public class InventoryServiceImpl implements InventoryService {
         if (command.getUnitCost() != null) {
             part.setReferenceCostPrice(command.getUnitCost());
             partMapper.updateById(part);
+        }
+
+        String inboundBarcode = firstText(command.getBarcode(), command.getCode());
+        if (StringUtils.hasText(inboundBarcode)) {
+            partService.ensureBarcodeForPart(command.getStoreId(), command.getPartId(),
+                    inboundBarcode, command.getOperatorId());
         }
     }
 
@@ -334,6 +345,30 @@ public class InventoryServiceImpl implements InventoryService {
         if (command.getUnitCost() != null && command.getUnitCost().signum() < 0) {
             throw new BusinessException(ErrorCode.INBOUND_UNIT_COST_NEGATIVE);
         }
+        if (command.getPartId() == null
+                && !StringUtils.hasText(command.getBarcode())
+                && !StringUtils.hasText(command.getCode())) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "partId或条码不能为空");
+        }
+    }
+
+    private void resolveInboundPart(InventoryInboundCommand command) {
+        if (command.getPartId() != null) {
+            return;
+        }
+        String code = firstText(command.getBarcode(), command.getCode());
+        PartEntity part = partService.lookupEnabledPartByCode(command.getStoreId(), code);
+        if (part == null) {
+            throw new BusinessException(ErrorCode.PART_NOT_FOUND, "未识别该条码");
+        }
+        command.setPartId(part.getId());
+    }
+
+    private String firstText(String first, String second) {
+        if (StringUtils.hasText(first)) {
+            return first.trim();
+        }
+        return StringUtils.hasText(second) ? second.trim() : null;
     }
 
     private void validateAdjust(InventoryAdjustCommand command) {

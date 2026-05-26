@@ -2,6 +2,7 @@ package com.xiaoniu.aftermarket.part.service;
 
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
 import com.xiaoniu.aftermarket.part.dto.CreatePartCommand;
+import com.xiaoniu.aftermarket.part.dto.PartLookupResponse;
 import com.xiaoniu.aftermarket.part.dto.PartQueryRequest;
 import com.xiaoniu.aftermarket.part.dto.PartQueryResponse;
 import com.xiaoniu.aftermarket.part.dto.UpdatePartCommand;
@@ -16,6 +17,10 @@ public interface PartService {
 
     PartEntity getByPartCode(Long storeId, String partCode);
 
+    PartEntity lookupEnabledPartByCode(Long storeId, String code);
+
+    PartLookupResponse lookup(Long storeId, String code);
+
     PartEntity createOfficialPart(CreatePartCommand command);
 
     PartEntity createThirdPartyPart(CreatePartCommand command);
@@ -29,6 +34,8 @@ public interface PartService {
     void deletePart(Long storeId, Long partId, Long operatorId);
 
     PartBarcodeEntity createBarcode(Long storeId, Long partId, String barcode, Long operatorId);
+
+    void ensureBarcodeForPart(Long storeId, Long partId, String barcode, Long operatorId);
 
     void updateDefaultBarcode(Long partId, String newDefaultBarcode);
 

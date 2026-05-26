@@ -70,6 +70,24 @@ page {
   margin-top: 6rpx;
 }
 
+.stock-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 12rpx;
+  margin-top: 16rpx;
+  padding: 14rpx 16rpx;
+  background: #fff;
+  border-radius: 8rpx;
+  font-size: 22rpx;
+  color: #333;
+}
+
+.scan-actions {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 16rpx;
+}
+
 .change-hint {
   font-size: 22rpx;
   color: #0052d9;

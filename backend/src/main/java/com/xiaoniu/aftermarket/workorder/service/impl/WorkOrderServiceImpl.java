@@ -23,6 +23,7 @@ import com.xiaoniu.aftermarket.payment.service.CashierStatusService;
 import com.xiaoniu.aftermarket.payment.service.impl.PaymentAmountService;
 import com.xiaoniu.aftermarket.part.entity.PartEntity;
 import com.xiaoniu.aftermarket.part.mapper.PartMapper;
+import com.xiaoniu.aftermarket.part.service.PartService;
 import com.xiaoniu.aftermarket.workorder.dto.AddWorkOrderChargeItemCommand;
 import com.xiaoniu.aftermarket.workorder.dto.AddNonInventoryChargeCommand;
 import com.xiaoniu.aftermarket.workorder.dto.AdjustChargeItemsCommand;
@@ -67,6 +68,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     private final WorkOrderStatusLogMapper statusLogMapper;
     private final SequenceService sequenceService;
     private final PartMapper partMapper;
+    private final PartService partService;
     private final InventoryStockMapper inventoryStockMapper;
     private final InventoryFlowMapper inventoryFlowMapper;
     private final PaymentAmountService paymentAmountService;
@@ -78,6 +80,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
                                 WorkOrderStatusLogMapper statusLogMapper,
                                 SequenceService sequenceService,
 	                                PartMapper partMapper,
+                                    PartService partService,
 	                                InventoryStockMapper inventoryStockMapper,
 	                                InventoryFlowMapper inventoryFlowMapper,
 	                                PaymentAmountService paymentAmountService,
@@ -88,6 +91,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         this.statusLogMapper = statusLogMapper;
         this.sequenceService = sequenceService;
         this.partMapper = partMapper;
+        this.partService = partService;
         this.inventoryStockMapper = inventoryStockMapper;
         this.inventoryFlowMapper = inventoryFlowMapper;
         this.paymentAmountService = paymentAmountService;
@@ -310,6 +314,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         entity.setUnitPrice(command.getUnitPrice());
         entity.setRemark(command.getRemark());
 
+        resolveChargeItemPart(command, workOrder.getStoreId());
         validateChargeItemFields(command, workOrder.getStoreId());
         populateChargeItemByType(entity, command);
 
@@ -318,7 +323,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
                 .setScale(2, RoundingMode.HALF_UP);
         entity.setLineAmount(lineAmount);
         entity.setStatus("ACTIVE");
-        entity.setTempPart(false);
+        entity.setTempPart(Boolean.TRUE.equals(command.getTempPart()));
 
         chargeItemMapper.insert(entity);
         recalculateReceivableAmount(workOrderId);
@@ -593,6 +598,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         addCommand.setUnitPrice(command.getUnitPrice());
         addCommand.setRemark(command.getReason() + (StringUtils.hasText(command.getRemark())
                 ? "；" + command.getRemark() : ""));
+        resolveChargeItemPart(addCommand, workOrder.getStoreId());
         validateChargeItemFields(addCommand, workOrder.getStoreId());
 
         WorkOrderChargeItemEntity entity = new WorkOrderChargeItemEntity();
@@ -609,7 +615,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
                 .setScale(2, RoundingMode.HALF_UP);
         entity.setLineAmount(lineAmount);
         entity.setStatus("ACTIVE");
-        entity.setTempPart(false);
+        entity.setTempPart(Boolean.TRUE.equals(addCommand.getTempPart()));
         chargeItemMapper.insert(entity);
         recalculateReceivableAmount(workOrder.getId());
         paymentAmountService.updateReceivedAmount(workOrder.getId());
@@ -944,6 +950,28 @@ public class WorkOrderServiceImpl implements WorkOrderService {
                 throw new BusinessException(ErrorCode.PART_FORBIDDEN_FOR_NON_PART_CHARGE);
             }
         }
+    }
+
+    private void resolveChargeItemPart(AddWorkOrderChargeItemCommand command, Long storeId) {
+        if (!ChargeType.PART.getCode().equals(command.getChargeType()) || command.getPartId() != null) {
+            return;
+        }
+        String code = firstText(command.getBarcode(), command.getCode());
+        if (!StringUtils.hasText(code)) {
+            return;
+        }
+        PartEntity part = partService.lookupEnabledPartByCode(storeId, code);
+        if (part == null) {
+            throw new BusinessException(ErrorCode.PART_NOT_FOUND, "未识别该条码");
+        }
+        command.setPartId(part.getId());
+    }
+
+    private String firstText(String first, String second) {
+        if (StringUtils.hasText(first)) {
+            return first.trim();
+        }
+        return StringUtils.hasText(second) ? second.trim() : null;
     }
 
     private void populateChargeItemByType(WorkOrderChargeItemEntity entity,

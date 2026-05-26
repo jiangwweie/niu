@@ -5,6 +5,8 @@ import {
   CreateDraftWorkOrderRequest,
   UpdateDraftWorkOrderRequest,
   AddChargeItemRequest,
+  AddTempPartChargeRequest,
+  AddTempPartChargeResponse,
   UpdateChargeItemRequest,
   SubmitWorkOrderRequest,
   CancelWorkOrderRequest,
@@ -65,6 +67,16 @@ export const addChargeItem = (workOrderId: string | number, data: AddChargeItemR
     method: 'POST',
     data,
     mockData: undefined,
+    showLoading: true
+  });
+};
+
+export const addTempPartCharge = (workOrderId: string | number, data: AddTempPartChargeRequest) => {
+  return request<AddTempPartChargeResponse>({
+    url: `/api/staff/work-orders/${workOrderId}/temp-part-charge`,
+    method: 'POST',
+    data,
+    mockData: { partId: Date.now(), chargeItemId: Date.now() + 1 },
     showLoading: true
   });
 };

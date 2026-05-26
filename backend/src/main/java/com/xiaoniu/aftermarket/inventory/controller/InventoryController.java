@@ -77,6 +77,7 @@ public class InventoryController {
         command.setQuantity(request.quantity());
         command.setUnitCost(request.unitCost());
         command.setBarcode(request.barcode());
+        command.setCode(request.code());
         command.setLocationRemark(request.locationRemark());
         command.setReason(request.reason());
         command.setRemark(request.remark());

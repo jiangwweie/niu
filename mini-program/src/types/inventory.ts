@@ -11,10 +11,11 @@ export interface InventoryStock {
 }
 
 export interface InboundRequest {
-  partId: number | string;
+  partId?: number | string;
   quantity: number;
   unitCost?: number;
   barcode?: string;
+  code?: string;
   locationRemark?: string;
   reason?: string;
   remark?: string;

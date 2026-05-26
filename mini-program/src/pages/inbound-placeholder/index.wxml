@@ -10,11 +10,22 @@
         <t-tag theme="primary" variant="light">{{selectedPart.categoryCode}}</t-tag>
       </view>
       <text class="part-desc">编码: {{selectedPart.partCode}}</text>
+      <text class="part-desc" wx:if="{{selectedPart.officialPartNo}}">官方品号: {{selectedPart.officialPartNo}}</text>
+      <text class="part-desc" wx:if="{{selectedPart.source}}">来源: {{selectedPart.source}}</text>
       <text class="part-desc" wx:if="{{selectedPart.model}}">型号: {{selectedPart.model}}</text>
+      <view class="stock-summary" wx:if="{{lookupResult}}">
+        <text>当前库存 可用 {{lookupResult.availableQty || 0}}</text>
+        <text>实际 {{lookupResult.actualQty || 0}}</text>
+        <text>预占 {{lookupResult.reservedQty || 0}}</text>
+      </view>
       <view class="change-hint">点击更换配件</view>
     </view>
 
-    <t-button block theme="default" icon="scan" disabled bind:tap="handleScan" style="margin-top: 16px; opacity: 0.5;">扫码识别（暂未开放，请手动选择配件）</t-button>
+    <t-button block theme="default" icon="scan" bind:tap="handleScan" style="margin-top: 16px;">扫码识别配件</t-button>
+    <view class="scan-actions" wx:if="{{!selectedPart && formData.barcode}}">
+      <t-button theme="primary" variant="outline" size="small" bind:tap="showPartSelector">手动选择配件</t-button>
+      <t-button theme="default" variant="outline" size="small" disabled>新增配件</t-button>
+    </view>
   </view>
 
   <view class="section" wx:if="{{!successResult}}">

@@ -14,6 +14,8 @@ import com.xiaoniu.aftermarket.payment.dto.RecordRefundCommand;
 import com.xiaoniu.aftermarket.payment.dto.RefundRecordResponse;
 import com.xiaoniu.aftermarket.payment.service.PaymentService;
 import com.xiaoniu.aftermarket.payment.service.RefundService;
+import com.xiaoniu.aftermarket.staff.dto.StaffTempPartChargeRequest;
+import com.xiaoniu.aftermarket.staff.dto.StaffTempPartChargeResponse;
 import com.xiaoniu.aftermarket.staff.dto.StaffAddChargeItemRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffCancelWorkOrderRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffAddNonInventoryChargeRequest;
@@ -28,6 +30,7 @@ import com.xiaoniu.aftermarket.staff.dto.StaffSubmitWorkOrderRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffUpdateChargeItemRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffUpdateDraftWorkOrderRequest;
 import com.xiaoniu.aftermarket.workorder.application.SettleWorkOrderApplicationService;
+import com.xiaoniu.aftermarket.workorder.application.AddTempPartChargeApplicationService;
 import com.xiaoniu.aftermarket.workorder.dto.AddWorkOrderChargeItemCommand;
 import com.xiaoniu.aftermarket.workorder.dto.AddNonInventoryChargeCommand;
 import com.xiaoniu.aftermarket.workorder.dto.CancelWorkOrderCommand;
@@ -62,6 +65,7 @@ public class StaffWorkOrderController {
     private final RecordRefundApplicationService recordRefundService;
     private final RefundService refundService;
     private final SettleWorkOrderApplicationService settleService;
+    private final AddTempPartChargeApplicationService addTempPartChargeService;
 
     public StaffWorkOrderController(WorkOrderService workOrderService,
                                     WorkOrderMapper workOrderMapper,
@@ -70,7 +74,8 @@ public class StaffWorkOrderController {
                                     PaymentService paymentService,
                                     RecordRefundApplicationService recordRefundService,
                                     RefundService refundService,
-                                    SettleWorkOrderApplicationService settleService) {
+                                    SettleWorkOrderApplicationService settleService,
+                                    AddTempPartChargeApplicationService addTempPartChargeService) {
         this.workOrderService = workOrderService;
         this.workOrderMapper = workOrderMapper;
         this.draftReferenceResolver = draftReferenceResolver;
@@ -79,6 +84,7 @@ public class StaffWorkOrderController {
         this.recordRefundService = recordRefundService;
         this.refundService = refundService;
         this.settleService = settleService;
+        this.addTempPartChargeService = addTempPartChargeService;
     }
 
     @GetMapping
@@ -188,6 +194,8 @@ public class StaffWorkOrderController {
         command.setChargeType(request.chargeType());
         command.setItemName(request.itemName());
         command.setPartId(request.partId());
+        command.setBarcode(request.barcode());
+        command.setCode(request.code());
         command.setQuantity(request.quantity());
         command.setUnit(request.unit());
         command.setUnitPrice(request.unitPrice());
@@ -195,6 +203,34 @@ public class StaffWorkOrderController {
 
         Long chargeItemId = workOrderService.addChargeItem(workOrderId, command);
         return ApiResponse.success(new StaffChargeItemIdResponse(chargeItemId));
+    }
+
+    @PreAuthorize("hasAuthority('WORK_ORDER_UPDATE')")
+    @PostMapping("/{workOrderId}/temp-part-charge")
+    public ApiResponse<StaffTempPartChargeResponse> addTempPartCharge(
+            @PathVariable Long workOrderId,
+            @Valid @RequestBody StaffTempPartChargeRequest request) {
+        CurrentUser user = requireCurrentUser();
+        AddTempPartChargeApplicationService.Command command =
+                new AddTempPartChargeApplicationService.Command(
+                        user.storeId(),
+                        user.userId(),
+                        workOrderId,
+                        request.source(),
+                        request.partName(),
+                        request.officialPartNo(),
+                        request.barcode(),
+                        request.model(),
+                        request.categoryCode(),
+                        request.quantity(),
+                        request.unit(),
+                        request.unitPrice(),
+                        request.unitCost(),
+                        request.locationRemark(),
+                        request.remark()
+                );
+        AddTempPartChargeApplicationService.Result result = addTempPartChargeService.execute(command);
+        return ApiResponse.success(new StaffTempPartChargeResponse(result.partId(), result.chargeItemId()));
     }
 
     @PreAuthorize("hasAuthority('WORK_ORDER_UPDATE')")

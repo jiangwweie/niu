@@ -9,6 +9,7 @@ public record CreateOfficialPartRequest(
         String model,
         String categoryCode,
         BigDecimal referenceCostPrice,
+        String defaultBarcode,
         String locationRemark,
         String remark
 ) {

@@ -1,12 +1,13 @@
-import { getParts } from '../../api/parts';
+import { getParts, lookupPartByCode } from '../../api/parts';
 import { inboundInventory } from '../../api/inventory';
-import { Part } from '../../types/parts';
+import { Part, PartLookupResult } from '../../types/parts';
 import { InboundRequest, InboundResponse } from '../../types/inventory';
 import Toast from 'tdesign-miniprogram/toast/index';
 
 Page({
   data: {
     selectedPart: null as Part | null,
+    lookupResult: null as PartLookupResult | null,
     formData: {
       quantity: '',
       unitCost: '',
@@ -62,16 +63,65 @@ Page({
     const item = e.currentTarget.dataset.item;
     this.setData({
       selectedPart: item,
+      lookupResult: null,
       partSelectorVisible: false
     });
   },
 
   handleScan() {
-    wx.showModal({
-      title: '提示',
-      content: '扫码能力后续接入，当前请手动选择配件或输入条码。',
-      showCancel: false
+    wx.scanCode({
+      scanType: ['barCode', 'qrCode'],
+      success: (scanRes) => {
+        const scanValue = (scanRes.result || '').trim();
+        if (!scanValue) {
+          Toast({ context: this, selector: '#t-toast', message: '未读取到条码', icon: 'close-circle' });
+          return;
+        }
+        this.lookupScannedPart(scanValue);
+      },
+      fail: () => {
+        Toast({ context: this, selector: '#t-toast', message: '扫码已取消', icon: 'close-circle' });
+      }
     });
+  },
+
+  lookupScannedPart(scanValue: string) {
+    lookupPartByCode(scanValue).then(res => {
+      const result = res.data;
+      if (!result.matched || !result.partId) {
+        this.setData({
+          selectedPart: null,
+          lookupResult: null,
+          'formData.barcode': scanValue
+        });
+        wx.showModal({
+          title: '未识别该条码',
+          content: '可手动选择已有配件，或新增配件后再入库。',
+          confirmText: '手动选择',
+          cancelText: '我知道了',
+          success: modalRes => {
+            if (modalRes.confirm) this.showPartSelector();
+          }
+        });
+        return;
+      }
+      const part: Part = {
+        id: result.partId,
+        partCode: result.partCode || '',
+        partName: result.name || '',
+        source: result.source || '',
+        officialPartNo: result.officialPartNo,
+        defaultBarcode: result.defaultBarcode,
+        model: result.model,
+        categoryCode: result.category || ''
+      };
+      this.setData({
+        selectedPart: part,
+        lookupResult: result,
+        'formData.barcode': scanValue
+      });
+      Toast({ context: this, selector: '#t-toast', message: '已识别配件', icon: 'check-circle' });
+    }).catch(console.error);
   },
 
   onQuantityChange(e: any) { this.setData({ 'formData.quantity': e.detail.value }); },
@@ -119,7 +169,13 @@ Page({
     inboundInventory(req).then(res => {
       this.setData({
         submitting: false,
-        successResult: res.data
+        successResult: res.data,
+        lookupResult: this.data.lookupResult ? {
+          ...this.data.lookupResult,
+          actualQty: res.data.actualQty,
+          availableQty: res.data.availableQty,
+          reservedQty: res.data.reservedQty
+        } : null
       });
       Toast({ context: this, selector: '#t-toast', message: '入库成功', icon: 'check-circle' });
     }).catch(err => {
@@ -130,6 +186,7 @@ Page({
   resetForm() {
     this.setData({
       selectedPart: null,
+      lookupResult: null,
       formData: {
         quantity: '',
         unitCost: '',

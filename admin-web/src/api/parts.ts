@@ -134,6 +134,7 @@ export function createOfficialPart(body: {
   model?: string;
   categoryCode?: string;
   referenceCostPrice?: number;
+  defaultBarcode?: string;
   locationRemark?: string;
   remark?: string;
 }) {
@@ -149,6 +150,7 @@ export function createThirdPartyPart(body: {
   model?: string;
   categoryCode?: string;
   referenceCostPrice?: number;
+  defaultBarcode?: string;
   locationRemark?: string;
   remark?: string;
 }) {

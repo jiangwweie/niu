@@ -1,9 +1,10 @@
-import { getParts } from '../../api/parts';
+import { getParts, lookupPartByCode } from '../../api/parts';
 import { searchCustomers, searchVehicles, CustomerSearchResult, VehicleSearchResult } from '../../api/customer';
 import {
   createDraftWorkOrder,
   getWorkOrderDetail,
   addChargeItem,
+  addTempPartCharge,
   updateChargeItem,
   deleteChargeItem,
   submitWorkOrder,
@@ -13,7 +14,7 @@ import {
   markRepairDone,
   deliverWorkOrder
 } from '../../api/workOrder';
-import { Part } from '../../types/parts';
+import { Part, PartLookupResult } from '../../types/parts';
 import {
   WorkOrder,
   WorkOrderItem,
@@ -33,6 +34,19 @@ import {
 } from '../../utils/statusText';
 
 const NO_CHARGE_REASONS = ['官方售后', '免费检测', '老板免单', '质保处理', '其他'];
+
+function partFromLookup(result: PartLookupResult): Part {
+  return {
+    id: result.partId || '',
+    partCode: result.partCode || '',
+    partName: result.name || '',
+    source: result.source || '',
+    officialPartNo: result.officialPartNo,
+    defaultBarcode: result.defaultBarcode,
+    model: result.model,
+    categoryCode: result.category || ''
+  };
+}
 
 function resolveStatusText(d: WorkOrder | null): string {
   if (!d) return '';
@@ -86,6 +100,23 @@ Page({
     partList: [] as Part[],
     allParts: [] as Part[],
     deletingItem: false,
+    lastScannedCode: '',
+
+    // Temporary part
+    tempPartDialogVisible: false,
+    tempPartSaving: false,
+    tempPartForm: {
+      partName: '',
+      barcode: '',
+      model: '',
+      categoryCode: '',
+      quantity: '1',
+      unit: '件',
+      unitPrice: '',
+      unitCost: '',
+      locationRemark: '',
+      remark: ''
+    },
 
     // Submit
     submitDialogVisible: false,
@@ -212,6 +243,7 @@ Page({
       itemPopupVisible: true,
       editingItemId: null,
       selectedPart: null,
+      lastScannedCode: '',
       currentItemForm: {
         chargeType: type,
         itemName: type === 'LABOR' ? '维修工时费' : '',
@@ -366,7 +398,148 @@ Page({
     this.setData({
       selectedPart: item,
       'currentItemForm.itemName': item.partName,
+      lastScannedCode: '',
       partSelectorVisible: false
+    });
+  },
+
+  scanPartForChargeItem() {
+    wx.scanCode({
+      scanType: ['barCode', 'qrCode'],
+      success: (scanRes) => {
+        const scanValue = (scanRes.result || '').trim();
+        if (!scanValue) {
+          Toast({ context: this, selector: '#t-toast', message: '未读取到条码', icon: 'close-circle' });
+          return;
+        }
+        lookupPartByCode(scanValue).then(res => {
+          const result = res.data;
+          if (!result.matched || !result.partId) {
+            this.setData({
+              lastScannedCode: scanValue,
+              'tempPartForm.barcode': scanValue
+            });
+            wx.showModal({
+              title: '未识别该条码',
+              content: '可手动搜索已有配件，或临时新增配件并加入当前工单。',
+              confirmText: '临时新增',
+              cancelText: '手动搜索',
+              success: modalRes => {
+                if (modalRes.confirm) {
+                  this.openTempPartDialog();
+                } else {
+                  this.openPartSelector();
+                }
+              }
+            });
+            return;
+          }
+          const part = partFromLookup(result);
+          this.setData({
+            selectedPart: part,
+            lastScannedCode: scanValue,
+            'currentItemForm.itemName': part.partName
+          });
+          Toast({ context: this, selector: '#t-toast', message: '已识别配件', icon: 'check-circle' });
+        }).catch(console.error);
+      },
+      fail: () => {
+        Toast({ context: this, selector: '#t-toast', message: '扫码已取消', icon: 'close-circle' });
+      }
+    });
+  },
+
+  openTempPartDialog() {
+    const quantity = this.data.currentItemForm.quantity || '1';
+    const unit = this.data.currentItemForm.unit || '件';
+    const unitPrice = this.data.currentItemForm.unitPrice || '';
+    this.setData({
+      tempPartDialogVisible: true,
+      tempPartForm: {
+        ...this.data.tempPartForm,
+        barcode: this.data.lastScannedCode || this.data.tempPartForm.barcode,
+        quantity,
+        unit,
+        unitPrice
+      }
+    });
+  },
+
+  closeTempPartDialog() {
+    this.setData({ tempPartDialogVisible: false });
+  },
+
+  onTempPartPopupVisibleChange(e: any) {
+    this.setData({ tempPartDialogVisible: e.detail.visible || false });
+  },
+
+  onTempPartFormChange(e: any) {
+    const field = e.currentTarget.dataset.field;
+    this.setData({ [`tempPartForm.${field}`]: e.detail.value });
+  },
+
+  submitTempPartCharge() {
+    if (this.data.tempPartSaving || !this.data.workOrderId) return;
+    const form = this.data.tempPartForm;
+    if (!form.partName || form.partName.trim() === '') {
+      Toast({ context: this, selector: '#t-toast', message: '请输入配件名称', icon: 'close-circle' });
+      return;
+    }
+    const qty = Number(form.quantity);
+    if (!Number.isInteger(qty) || qty <= 0) {
+      Toast({ context: this, selector: '#t-toast', message: '请输入正确的整数数量', icon: 'close-circle' });
+      return;
+    }
+    const unitPrice = parseFloat(form.unitPrice);
+    if (isNaN(unitPrice) || unitPrice < 0) {
+      Toast({ context: this, selector: '#t-toast', message: '销售单价不能小于0', icon: 'close-circle' });
+      return;
+    }
+    let unitCost: number | undefined;
+    if (form.unitCost) {
+      unitCost = parseFloat(form.unitCost);
+      if (isNaN(unitCost) || unitCost < 0) {
+        Toast({ context: this, selector: '#t-toast', message: '单位成本不能小于0', icon: 'close-circle' });
+        return;
+      }
+    }
+
+    this.setData({ tempPartSaving: true });
+    addTempPartCharge(this.data.workOrderId, {
+      partName: form.partName,
+      barcode: form.barcode || undefined,
+      model: form.model || undefined,
+      categoryCode: form.categoryCode || undefined,
+      quantity: qty,
+      unit: form.unit || '件',
+      unitPrice,
+      unitCost,
+      locationRemark: form.locationRemark || undefined,
+      remark: form.remark || undefined
+    }).then(() => {
+      this.setData({
+        tempPartDialogVisible: false,
+        itemPopupVisible: false,
+        selectedPart: null,
+        lastScannedCode: '',
+        tempPartForm: {
+          partName: '',
+          barcode: '',
+          model: '',
+          categoryCode: '',
+          quantity: '1',
+          unit: '件',
+          unitPrice: '',
+          unitCost: '',
+          locationRemark: '',
+          remark: ''
+        }
+      });
+      Toast({ context: this, selector: '#t-toast', message: '临时配件已加入工单', icon: 'check-circle' });
+      this.refreshWorkOrder();
+    }).catch(console.error)
+    .finally(() => {
+      this.setData({ tempPartSaving: false });
     });
   },
 

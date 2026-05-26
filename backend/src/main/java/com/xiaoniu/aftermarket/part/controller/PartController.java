@@ -7,6 +7,7 @@ import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
 import com.xiaoniu.aftermarket.part.dto.CreatePartCommand;
+import com.xiaoniu.aftermarket.part.dto.PartLookupResponse;
 import com.xiaoniu.aftermarket.part.dto.PartQueryRequest;
 import com.xiaoniu.aftermarket.part.dto.PartQueryResponse;
 import com.xiaoniu.aftermarket.part.dto.UpdatePartCommand;
@@ -53,6 +54,13 @@ public class PartController {
         return ApiResponse.success(partService.pageQuery(request));
     }
 
+    @PreAuthorize("hasAnyAuthority('PART_MANAGE', 'INVENTORY_VIEW')")
+    @GetMapping("/lookup")
+    public ApiResponse<PartLookupResponse> lookup(@RequestParam String code) {
+        CurrentUser user = requireCurrentUser();
+        return ApiResponse.success(partService.lookup(user.storeId(), code));
+    }
+
     @GetMapping("/{partId}")
     public ApiResponse<PartDetailResponse> getPart(@PathVariable Long partId) {
         CurrentUser user = requireCurrentUser();
@@ -84,7 +92,8 @@ public class PartController {
     public ApiResponse<Void> createOfficialPart(@Valid @RequestBody CreateOfficialPartRequest request) {
         CurrentUser user = requireCurrentUser();
         CreatePartCommand command = buildCreateCommand(user, request.partName(), request.model(),
-                request.categoryCode(), request.referenceCostPrice(), request.locationRemark(), request.remark());
+                request.categoryCode(), request.referenceCostPrice(), request.defaultBarcode(),
+                request.locationRemark(), request.remark());
         command.setOfficialPartNo(request.officialPartNo());
         partService.createOfficialPart(command);
         return ApiResponse.success(null);
@@ -95,7 +104,8 @@ public class PartController {
     public ApiResponse<Void> createThirdPartyPart(@Valid @RequestBody CreateThirdPartyPartRequest request) {
         CurrentUser user = requireCurrentUser();
         CreatePartCommand command = buildCreateCommand(user, request.partName(), request.model(),
-                request.categoryCode(), request.referenceCostPrice(), request.locationRemark(), request.remark());
+                request.categoryCode(), request.referenceCostPrice(), request.defaultBarcode(),
+                request.locationRemark(), request.remark());
         partService.createThirdPartyPart(command);
         return ApiResponse.success(null);
     }
@@ -152,7 +162,7 @@ public class PartController {
 
     private CreatePartCommand buildCreateCommand(CurrentUser user, String partName, String model,
                                                  String categoryCode, java.math.BigDecimal referenceCostPrice,
-                                                 String locationRemark, String remark) {
+                                                 String defaultBarcode, String locationRemark, String remark) {
         CreatePartCommand command = new CreatePartCommand();
         command.setStoreId(user.storeId());
         command.setOperatorId(user.userId());
@@ -160,6 +170,7 @@ public class PartController {
         command.setModel(model);
         command.setCategoryCode(categoryCode);
         command.setReferenceCostPrice(referenceCostPrice);
+        command.setDefaultBarcode(defaultBarcode);
         command.setLocationRemark(locationRemark);
         command.setRemark(remark);
         return command;

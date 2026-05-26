@@ -171,6 +171,8 @@ public class WorkOrderController {
         command.setChargeType(request.chargeType());
         command.setItemName(request.itemName());
         command.setPartId(request.partId());
+        command.setBarcode(request.barcode());
+        command.setCode(request.code());
         command.setQuantity(request.quantity());
         command.setUnit(request.unit());
         command.setUnitPrice(request.unitPrice());

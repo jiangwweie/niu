@@ -1,6 +1,8 @@
 import { authStore } from '../../stores/auth';
 import { getInventoryStocks } from '../../api/inventory';
+import { lookupPartByCode } from '../../api/parts';
 import { InventoryStock } from '../../types/inventory';
+import { PartLookupResult } from '../../types/parts';
 import { hasPermission } from '../../utils/permission';
 
 const SOURCE_TEXT_MAP: Record<string, string> = {
@@ -35,6 +37,7 @@ Page({
   data: {
     keyword: '',
     stocks: [] as InventoryListItem[],
+    scannedStock: null as (PartLookupResult & { sourceText?: string; availableQtyClass?: string }) | null,
     hasInboundPermission: false,
   },
   onShow() {
@@ -50,12 +53,45 @@ Page({
   goToInbound() {
     wx.navigateTo({ url: '/pages/inbound-placeholder/index' });
   },
+  handleScanLookup() {
+    wx.scanCode({
+      scanType: ['barCode', 'qrCode'],
+      success: (scanRes) => {
+        const scanValue = (scanRes.result || '').trim();
+        if (!scanValue) {
+          wx.showToast({ title: '未读取到条码', icon: 'none' });
+          return;
+        }
+        lookupPartByCode(scanValue).then(res => {
+          const result = res.data;
+          if (!result.matched) {
+            this.setData({ scannedStock: null });
+            wx.showToast({ title: '未识别该条码', icon: 'none' });
+            return;
+          }
+          const sourceKey = result.source || '';
+          this.setData({
+            keyword: result.partCode || '',
+            scannedStock: {
+              ...result,
+              sourceText: SOURCE_TEXT_MAP[sourceKey] || '',
+              availableQtyClass: getAvailableQtyClass(Number(result.availableQty || 0))
+            }
+          });
+          this.fetchData();
+        }).catch(console.error);
+      },
+      fail: () => {
+        wx.showToast({ title: '扫码已取消', icon: 'none' });
+      }
+    });
+  },
   onSearch(e: any) {
-    this.setData({ keyword: e.detail.value });
+    this.setData({ keyword: e.detail.value, scannedStock: null });
     this.fetchData();
   },
   onClear() {
-    this.setData({ keyword: '' });
+    this.setData({ keyword: '', scannedStock: null });
     this.fetchData();
   },
   async fetchData() {

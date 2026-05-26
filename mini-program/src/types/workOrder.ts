@@ -100,10 +100,32 @@ export interface AddChargeItemRequest {
   chargeType: string;
   itemName: string;
   partId?: string | number;
+  barcode?: string;
+  code?: string;
   quantity: number;
   unit?: string;
   unitPrice: number;
   remark?: string;
+}
+
+export interface AddTempPartChargeRequest {
+  source?: string;
+  partName: string;
+  officialPartNo?: string;
+  barcode?: string;
+  model?: string;
+  categoryCode?: string;
+  quantity: number;
+  unit?: string;
+  unitPrice: number;
+  unitCost?: number;
+  locationRemark?: string;
+  remark?: string;
+}
+
+export interface AddTempPartChargeResponse {
+  partId: string | number;
+  chargeItemId: string | number;
 }
 
 export interface UpdateChargeItemRequest {
