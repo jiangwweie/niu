@@ -39,12 +39,12 @@ function partFromLookup(result: PartLookupResult): Part {
   return {
     id: result.partId || '',
     partCode: result.partCode || '',
-    partName: result.name || '',
+    partName: result.partName || result.name || '',
     source: result.source || '',
     officialPartNo: result.officialPartNo,
     defaultBarcode: result.defaultBarcode,
     model: result.model,
-    categoryCode: result.category || ''
+    categoryCode: result.categoryCode || result.category || ''
   };
 }
 
@@ -441,7 +441,25 @@ Page({
             'currentItemForm.itemName': part.partName
           });
           Toast({ context: this, selector: '#t-toast', message: '已识别配件', icon: 'check-circle' });
-        }).catch(console.error);
+        }).catch(() => {
+          this.setData({
+            lastScannedCode: scanValue,
+            'tempPartForm.barcode': scanValue
+          });
+          wx.showModal({
+            title: '未识别该条码',
+            content: '可手动搜索已有配件，或临时新增配件并加入当前工单。',
+            confirmText: '临时新增',
+            cancelText: '手动搜索',
+            success: modalRes => {
+              if (modalRes.confirm) {
+                this.openTempPartDialog();
+              } else {
+                this.openPartSelector();
+              }
+            }
+          });
+        });
       },
       fail: () => {
         Toast({ context: this, selector: '#t-toast', message: '扫码已取消', icon: 'close-circle' });

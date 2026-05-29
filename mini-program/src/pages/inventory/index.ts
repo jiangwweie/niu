@@ -79,7 +79,10 @@ Page({
             }
           });
           this.fetchData();
-        }).catch(console.error);
+        }).catch(() => {
+          this.setData({ scannedStock: null });
+          wx.showToast({ title: '未找到对应配件', icon: 'none' });
+        });
       },
       fail: () => {
         wx.showToast({ title: '扫码已取消', icon: 'none' });

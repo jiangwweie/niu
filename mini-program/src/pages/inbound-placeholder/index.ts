@@ -108,12 +108,12 @@ Page({
       const part: Part = {
         id: result.partId,
         partCode: result.partCode || '',
-        partName: result.name || '',
+        partName: result.partName || result.name || '',
         source: result.source || '',
         officialPartNo: result.officialPartNo,
         defaultBarcode: result.defaultBarcode,
         model: result.model,
-        categoryCode: result.category || ''
+        categoryCode: result.categoryCode || result.category || ''
       };
       this.setData({
         selectedPart: part,
@@ -121,7 +121,22 @@ Page({
         'formData.barcode': scanValue
       });
       Toast({ context: this, selector: '#t-toast', message: '已识别配件', icon: 'check-circle' });
-    }).catch(console.error);
+    }).catch(() => {
+      this.setData({
+        selectedPart: null,
+        lookupResult: null,
+        'formData.barcode': scanValue
+      });
+      wx.showModal({
+        title: '未识别该条码',
+        content: '可手动选择已有配件，或新增配件后再入库。',
+        confirmText: '手动选择',
+        cancelText: '我知道了',
+        success: modalRes => {
+          if (modalRes.confirm) this.showPartSelector();
+        }
+      });
+    });
   },
 
   onQuantityChange(e: any) { this.setData({ 'formData.quantity': e.detail.value }); },

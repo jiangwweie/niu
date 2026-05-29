@@ -359,7 +359,7 @@ public class InventoryServiceImpl implements InventoryService {
         String code = firstText(command.getBarcode(), command.getCode());
         PartEntity part = partService.lookupEnabledPartByCode(command.getStoreId(), code);
         if (part == null) {
-            throw new BusinessException(ErrorCode.PART_NOT_FOUND, "未识别该条码");
+            throw new BusinessException(ErrorCode.PART_NOT_FOUND, "未找到对应配件，请先新增配件");
         }
         command.setPartId(part.getId());
     }

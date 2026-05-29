@@ -56,13 +56,28 @@ class M18BBarcodeScanIntegrationTest {
                 .andExpect(jsonPath("$.data.matched").value(true))
                 .andExpect(jsonPath("$.data.partId").value(91001))
                 .andExpect(jsonPath("$.data.partCode").value("M18B-PART-001"))
+                .andExpect(jsonPath("$.data.partName").value("扫码电池"))
+                .andExpect(jsonPath("$.data.categoryCode").value("BATTERY"))
+                .andExpect(jsonPath("$.data.costPrice").value(10.0))
+                .andExpect(jsonPath("$.data.enabled").value(true))
                 .andExpect(jsonPath("$.data.actualQty").value(10))
                 .andExpect(jsonPath("$.data.availableQty").value(8))
                 .andExpect(jsonPath("$.data.reservedQty").value(2));
     }
 
     @Test
-    void lookupFallsBackToPartCodeAndOfficialPartNo() throws Exception {
+    void adminLookupByPartBarcodeSucceeds() throws Exception {
+        mockMvc.perform(get("/api/admin/parts/lookup")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .param("code", "M18B-BC-PRIMARY"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.matched").value(true))
+                .andExpect(jsonPath("$.data.partId").value(91001));
+    }
+
+    @Test
+    void lookupFallsBackToPartCodeOfficialPartNoAndDefaultBarcode() throws Exception {
         mockMvc.perform(get("/api/staff/parts/lookup")
                         .header("X-User-Id", "1")
                         .header("X-Store-Id", "1")
@@ -78,13 +93,33 @@ class M18BBarcodeScanIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.matched").value(true))
                 .andExpect(jsonPath("$.data.partId").value(91002));
+
+        mockMvc.perform(get("/api/staff/parts/lookup")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .param("code", "M18B-DEFAULT-ONLY"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.matched").value(true))
+                .andExpect(jsonPath("$.data.partId").value(91006));
+    }
+
+    @Test
+    void lookupBlankCodeReturnsBadRequest() throws Exception {
+        mockMvc.perform(get("/api/staff/parts/lookup")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .param("code", "   "))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"))
+                .andExpect(jsonPath("$.message").value("条码/编码不能为空"));
     }
 
     @Test
     void lookupDoesNotMatchDisabledDeletedOrCrossStoreParts() throws Exception {
-        assertLookupNotMatched("M18B-BC-DISABLED", 1);
-        assertLookupNotMatched("M18B-BC-DELETED", 1);
-        assertLookupNotMatched("M18B-BC-CROSS", 1);
+        assertLookupRejected("M18B-BC-DISABLED", 1);
+        assertLookupRejected("M18B-BC-DELETED", 1);
+        assertLookupRejected("M18B-BC-CROSS", 1);
+        assertLookupRejected("M18B-BC-UNKNOWN", 1);
     }
 
     @Test
@@ -138,7 +173,45 @@ class M18BBarcodeScanIntegrationTest {
                         .content(body))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("PART_NOT_FOUND"))
-                .andExpect(jsonPath("$.message").value("未识别该条码"));
+                .andExpect(jsonPath("$.message").value("未找到对应配件，请先新增配件"));
+    }
+
+    @Test
+    void adminInboundWithOnlyBarcodeResolvesPartAndWritesInboundFlow() throws Exception {
+        String body = """
+                {"barcode":"M18B-BC-PRIMARY","quantity":2,"unitCost":11.00,"reason":"管理端扫码入库"}
+                """;
+        mockMvc.perform(post("/api/admin/inventory/inbound")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .contentType("application/json")
+                        .content(body))
+                .andExpect(status().isOk());
+
+        assertStock(91001, 12, 10, 2);
+
+        Integer inboundFlows = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*) FROM inventory_flow
+                WHERE store_id = 1 AND part_id = 91001 AND flow_type = 'INBOUND'
+                """, Integer.class);
+        assertEquals(1, inboundFlows);
+    }
+
+    @Test
+    void inboundWithPartIdStillUsesOriginalPath() throws Exception {
+        String body = """
+                {"partId":91001,"quantity":1,"unitCost":9.99,"reason":"原路径入库"}
+                """;
+        mockMvc.perform(post("/api/staff/inventory/inbound")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .contentType("application/json")
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.partId").value(91001))
+                .andExpect(jsonPath("$.data.actualQty").value(11))
+                .andExpect(jsonPath("$.data.availableQty").value(9))
+                .andExpect(jsonPath("$.data.reservedQty").value(2));
     }
 
     @Test
@@ -215,13 +288,14 @@ class M18BBarcodeScanIntegrationTest {
                 Integer.class, chargeItemId, partId));
     }
 
-    private void assertLookupNotMatched(String code, int storeId) throws Exception {
+    private void assertLookupRejected(String code, int storeId) throws Exception {
         mockMvc.perform(get("/api/staff/parts/lookup")
                         .header("X-User-Id", "1")
                         .header("X-Store-Id", String.valueOf(storeId))
                         .param("code", code))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.matched").value(false));
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("PART_NOT_FOUND"))
+                .andExpect(jsonPath("$.message").value("未找到对应配件"));
     }
 
     private void assertStock(long partId, int actual, int available, int reserved) {
@@ -277,6 +351,12 @@ class M18BBarcodeScanIntegrationTest {
                                   reference_cost_price, default_barcode, location_remark, create_source, status, remark)
                 VALUES (91005, 2, 'M18B-PART-CROSS', NULL, '跨店扫码件', 'NQi', 'THIRD_PARTY', 'TEMP',
                         5.00, 'M18B-BC-CROSS', NULL, 'NORMAL', 'ENABLED', NULL)
+                """);
+        jdbcTemplate.execute("""
+                INSERT INTO part (id, store_id, part_code, official_part_no, part_name, model, source, category_code,
+                                  reference_cost_price, default_barcode, location_remark, create_source, status, remark)
+                VALUES (91006, 1, 'M18B-PART-DEFAULT', NULL, '默认码配件', 'UQi', 'THIRD_PARTY', 'TEMP',
+                        6.00, 'M18B-DEFAULT-ONLY', NULL, 'NORMAL', 'ENABLED', NULL)
                 """);
         jdbcTemplate.execute("""
                 INSERT INTO part_barcode (store_id, part_id, barcode, barcode_type, is_primary, status)

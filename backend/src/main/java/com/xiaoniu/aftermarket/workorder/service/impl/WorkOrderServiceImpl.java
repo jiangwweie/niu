@@ -962,7 +962,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         }
         PartEntity part = partService.lookupEnabledPartByCode(storeId, code);
         if (part == null) {
-            throw new BusinessException(ErrorCode.PART_NOT_FOUND, "未识别该条码");
+            throw new BusinessException(ErrorCode.PART_NOT_FOUND, "未找到对应配件");
         }
         command.setPartId(part.getId());
     }

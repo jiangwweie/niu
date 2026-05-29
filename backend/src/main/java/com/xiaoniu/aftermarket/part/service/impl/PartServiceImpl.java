@@ -386,9 +386,12 @@ public class PartServiceImpl implements PartService {
 
     @Override
     public PartLookupResponse lookup(Long storeId, String code) {
+        if (!StringUtils.hasText(code)) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "条码/编码不能为空");
+        }
         PartEntity part = lookupEnabledPartByCode(storeId, code);
         if (part == null) {
-            return PartLookupResponse.notMatched();
+            throw new BusinessException(ErrorCode.PART_NOT_FOUND, "未找到对应配件");
         }
         InventoryStockEntity stock = inventoryStockMapper.selectByStoreIdAndPartId(storeId, part.getId());
         return PartLookupResponse.matched(part, stock);
