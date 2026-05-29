@@ -8,18 +8,27 @@ const LEGACY_WORK_ORDER_STATUSES = new Set([
 
 export const LEGACY_WORK_ORDER_STATUS_TEXT = '旧状态，请先清理试运行数据';
 
+const PROGRESS_STATUS_MAP: Record<string, string> = {
+  DRAFT: '新建中',
+  REPAIRING: '维修中',
+  REPAIR_DONE: '维修完成',
+  DELIVERED: '已交付',
+  CANCELLED: '已取消',
+  // Legacy statuses — kept for display so old data is readable
+  PENDING_ACCEPT: '待接单',
+  ACCEPTED: '已接单',
+  PART_ORDERED: '配件已订',
+  PART_ARRIVED: '配件已到',
+  SETTLED: '已结算',
+};
+
 export const getProgressStatusText = (status?: string | null, text?: string | null) => {
-  if (text) return text;
   if (!status) return '-';
-  if (LEGACY_WORK_ORDER_STATUSES.has(status)) return LEGACY_WORK_ORDER_STATUS_TEXT;
-  const map: Record<string, string> = {
-    DRAFT: '新建中',
-    REPAIRING: '维修中',
-    REPAIR_DONE: '维修完成',
-    DELIVERED: '已交付',
-    CANCELLED: '已取消',
-  };
-  return map[status] || LEGACY_WORK_ORDER_STATUS_TEXT;
+  // Frontend map takes priority to ensure consistent Chinese display
+  if (PROGRESS_STATUS_MAP[status]) return PROGRESS_STATUS_MAP[status];
+  // Fall back to backend-provided text for any future statuses
+  if (text) return text;
+  return '-';
 };
 
 export const getCashierStatusText = (status?: string | null, text?: string | null) => {

@@ -68,7 +68,9 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="paidAt" label="收款时间" width="170" />
+          <el-table-column label="收款时间" width="170">
+            <template #default="{ row }">{{ formatDateTime(row.paidAt) }}</template>
+          </el-table-column>
           <el-table-column label="备注" min-width="120" show-overflow-tooltip>
             <template #default="{ row }">
               {{ row.remark || '-' }}
@@ -107,7 +109,7 @@
             {{ getMethodLabel(viewDrawer.current.paymentMethod) }}
           </el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="收款时间">{{ viewDrawer.current.paidAt }}</el-descriptions-item>
+        <el-descriptions-item label="收款时间">{{ formatDateTime(viewDrawer.current.paidAt) }}</el-descriptions-item>
         <el-descriptions-item label="操作人">{{ formatPerson(viewDrawer.current.operatorName, viewDrawer.current.operatorId) }}</el-descriptions-item>
         <el-descriptions-item label="收款人">{{ formatPerson(viewDrawer.current.receiverName, viewDrawer.current.receiverId) }}</el-descriptions-item>
         <el-descriptions-item label="备注">{{ viewDrawer.current.remark || '-' }}</el-descriptions-item>
@@ -123,6 +125,7 @@ import { ElMessage } from 'element-plus';
 import PageContainer from '@/components/PageContainer.vue';
 import MoneyText from '@/components/MoneyText.vue';
 import { getPaymentList } from '@/api/payment';
+import { formatDateTime } from '@/utils/formatDateTime';
 import type { PaymentQuery, PaymentRecord } from '@/types/payment';
 
 const dateRange = ref<[string, string] | null>(null);

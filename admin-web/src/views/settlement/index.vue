@@ -83,7 +83,9 @@
               <span v-else class="text-info">未录入</span>
             </template>
           </el-table-column>
-          <el-table-column prop="settlementTime" label="官方结算时间" width="160" />
+          <el-table-column label="官方结算时间" width="160">
+            <template #default="{ row }">{{ formatDateTime(row.settlementTime) }}</template>
+          </el-table-column>
           <el-table-column label="操作" width="240" fixed="right" align="center">
             <template #default="{ row }">
               <el-button link type="primary" @click="handleView(row)">查看</el-button>
@@ -140,7 +142,7 @@
             <MoneyText v-if="viewDrawer.detail.settlementAmount != null" :amount="viewDrawer.detail.settlementAmount" />
             <span v-else class="text-info">未录入</span>
           </el-descriptions-item>
-          <el-descriptions-item label="官方结算时间" :span="2">{{ viewDrawer.detail.settlementTime || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="官方结算时间" :span="2">{{ formatDateTime(viewDrawer.detail.settlementTime) }}</el-descriptions-item>
           <el-descriptions-item label="备注" :span="2">{{ viewDrawer.detail.remark || viewDrawer.detail.settlementRemark || '-' }}</el-descriptions-item>
         </el-descriptions>
 
@@ -218,6 +220,7 @@ import {
 } from '@/api/officialSettlement';
 import { hasPermission } from '@/utils/permission';
 import { getProgressStatusText } from '@/utils/statusText';
+import { formatDateTime } from '@/utils/formatDateTime';
 import type { OfficialSettlementQuery, OfficialSettlementRecord } from '@/types/officialSettlement';
 import type { OfficialAfterSalesDetailResp } from '@/api/officialSettlement';
 

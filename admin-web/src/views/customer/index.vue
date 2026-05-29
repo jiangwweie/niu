@@ -138,6 +138,7 @@ import {
   type CustomerListItem, type CustomerDetail,
 } from '@/api/customer';
 import { getProgressStatusText } from '@/utils/statusText';
+import { formatDateTime } from '@/utils/formatDateTime';
 
 const router = useRouter();
 
@@ -167,10 +168,6 @@ function statusTagType(s: string) {
   return 'warning';
 }
 
-function formatDateTime(dt: string | null) {
-  if (!dt) return '-';
-  return dt.replace('T', ' ').substring(0, 19);
-}
 
 async function fetchData() {
   loading.value = true;

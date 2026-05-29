@@ -124,7 +124,9 @@
             {{ row.officialOrderNo || '-' }}
           </template>
         </el-table-column>
-        <el-table-column prop="createdAt" label="创建时间" width="160" />
+        <el-table-column label="创建时间" width="160">
+          <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+        </el-table-column>
         <el-table-column label="操作" width="140" fixed="right" align="center">
           <template #default="{ row }">
             <el-button link type="primary" @click="handleView(row)">查看</el-button>
@@ -166,7 +168,7 @@
           <el-descriptions-item label="车型">{{ currentOrder.scooterModel }}</el-descriptions-item>
           <el-descriptions-item label="车架号">{{ currentOrder.vin }}</el-descriptions-item>
           <el-descriptions-item label="电池号">{{ currentOrder.batteryNo || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="创建时间">{{ currentOrder.createdAt }}</el-descriptions-item>
+          <el-descriptions-item label="创建时间">{{ formatDateTime(currentOrder.createdAt) }}</el-descriptions-item>
           <el-descriptions-item label="无需收款原因" v-if="currentOrder.noChargeReason" :span="2">
             <el-tag type="info">{{ getNoChargeReasonText(currentOrder.noChargeReason) }}</el-tag>
             <span v-if="currentOrder.noChargeRemark" style="margin-left: 8px; color: #606266;">{{ currentOrder.noChargeRemark }}</span>
@@ -327,7 +329,9 @@
             <el-table-column label="收款方式" width="100">
               <template #default="{ row }">{{ getPaymentMethodLabel(row.paymentMethod) }}</template>
             </el-table-column>
-            <el-table-column label="收款时间" prop="paidAt" width="160" />
+            <el-table-column label="收款时间" width="160">
+              <template #default="{ row }">{{ formatDateTime(row.paidAt) }}</template>
+            </el-table-column>
             <el-table-column label="操作人" width="120">
               <template #default="{ row }">{{ formatPerson(row.operatorName, row.operatorId) }}</template>
             </el-table-column>
@@ -349,7 +353,9 @@
               <template #default="{ row }">{{ getPaymentMethodLabel(row.refundMethod) }}</template>
             </el-table-column>
             <el-table-column label="退款原因" prop="reason" min-width="120" show-overflow-tooltip />
-            <el-table-column label="退款时间" prop="refundedAt" width="160" />
+            <el-table-column label="退款时间" width="160">
+              <template #default="{ row }">{{ formatDateTime(row.refundedAt) }}</template>
+            </el-table-column>
             <el-table-column label="操作人" width="120">
               <template #default="{ row }">{{ formatPerson(row.operatorName, row.operatorId) }}</template>
             </el-table-column>
@@ -609,6 +615,7 @@ import {
   getNoChargeReasonText,
   getProgressStatusText,
 } from '@/utils/statusText';
+import { formatDateTime } from '@/utils/formatDateTime';
 import type { WorkOrderRecord, WorkOrderQuery } from '@/types/workOrder';
 
 const authStore = useAuthStore();

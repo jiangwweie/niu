@@ -86,7 +86,9 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="submittedAt" label="提交时间" width="160" />
+          <el-table-column label="提交时间" width="160">
+            <template #default="{ row }">{{ formatDateTime(row.submittedAt) }}</template>
+          </el-table-column>
           <el-table-column label="确认人" width="100">
             <template #default="{ row }">
               {{ formatPerson(row.confirmedByName, row.confirmedBy) }}
@@ -94,7 +96,7 @@
           </el-table-column>
           <el-table-column label="确认时间" width="160">
             <template #default="{ row }">
-              {{ row.confirmedAt || '-' }}
+              {{ formatDateTime(row.confirmedAt) }}
             </template>
           </el-table-column>
           <el-table-column label="操作" width="220" fixed="right" align="center">
@@ -136,7 +138,7 @@
           <el-descriptions-item label="申请金额">
             <MoneyText :amount="viewDrawer.current.amount" />
           </el-descriptions-item>
-          <el-descriptions-item label="提交时间">{{ viewDrawer.current.submittedAt }}</el-descriptions-item>
+          <el-descriptions-item label="提交时间">{{ formatDateTime(viewDrawer.current.submittedAt) }}</el-descriptions-item>
           <el-descriptions-item label="用途" :span="2">{{ viewDrawer.current.purpose }}</el-descriptions-item>
           <el-descriptions-item label="备注" :span="2">{{ viewDrawer.current.remark || '-' }}</el-descriptions-item>
         </el-descriptions>
@@ -147,14 +149,14 @@
             <span v-else class="text-info">-</span>
           </el-descriptions-item>
           <el-descriptions-item label="确认人">{{ formatPerson(viewDrawer.current.confirmedByName, viewDrawer.current.confirmedBy) }}</el-descriptions-item>
-          <el-descriptions-item label="确认时间" :span="2">{{ viewDrawer.current.confirmedAt || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="确认时间" :span="2">{{ formatDateTime(viewDrawer.current.confirmedAt) }}</el-descriptions-item>
         </el-descriptions>
 
         <el-descriptions v-if="viewDrawer.current.status === 'REJECTED' || viewDrawer.current.status === 'CANCELLED'" title="驳回/取消信息" :column="2" border size="small" style="margin-bottom: 20px;">
           <el-descriptions-item v-if="viewDrawer.current.status === 'REJECTED'" label="驳回原因" :span="2"><span class="text-danger">{{ viewDrawer.current.rejectReason || '-' }}</span></el-descriptions-item>
           <el-descriptions-item v-if="viewDrawer.current.status === 'CANCELLED'" label="取消原因" :span="2"><span class="text-warning">{{ viewDrawer.current.cancelReason || '-' }}</span></el-descriptions-item>
           <el-descriptions-item label="处理人">{{ viewDrawer.current.rejectedBy || viewDrawer.current.cancelledBy || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="处理时间">{{ viewDrawer.current.rejectedAt || viewDrawer.current.cancelledAt || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="处理时间">{{ formatDateTime(viewDrawer.current.rejectedAt || viewDrawer.current.cancelledAt) }}</el-descriptions-item>
         </el-descriptions>
       </div>
     </el-drawer>
@@ -204,6 +206,7 @@ import {
 } from '@/api/reimbursement';
 import { exportReimbursements } from '@/api/export';
 import { hasPermission } from '@/utils/permission';
+import { formatDateTime } from '@/utils/formatDateTime';
 import type { ReimbursementQuery, ReimbursementRecord } from '@/types/reimbursement';
 
 const dateRange = ref<[string, string] | null>(null);

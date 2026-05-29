@@ -68,7 +68,9 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="refundedAt" label="退款时间" width="170" />
+          <el-table-column label="退款时间" width="170">
+            <template #default="{ row }">{{ formatDateTime(row.refundedAt) }}</template>
+          </el-table-column>
           <el-table-column prop="reason" label="退款原因" width="140" show-overflow-tooltip />
           <el-table-column label="备注" min-width="120" show-overflow-tooltip>
             <template #default="{ row }">
@@ -110,7 +112,7 @@
             {{ getMethodLabel(viewDrawer.current.refundMethod) }}
           </el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="退款时间">{{ viewDrawer.current.refundedAt }}</el-descriptions-item>
+        <el-descriptions-item label="退款时间">{{ formatDateTime(viewDrawer.current.refundedAt) }}</el-descriptions-item>
         <el-descriptions-item label="操作人">{{ formatPerson(viewDrawer.current.operatorName, viewDrawer.current.operatorId) }}</el-descriptions-item>
         <el-descriptions-item label="退款原因">{{ viewDrawer.current.reason || '-' }}</el-descriptions-item>
         <el-descriptions-item label="备注">{{ viewDrawer.current.remark || '-' }}</el-descriptions-item>
@@ -126,6 +128,7 @@ import { ElMessage } from 'element-plus';
 import PageContainer from '@/components/PageContainer.vue';
 import MoneyText from '@/components/MoneyText.vue';
 import { getRefundList } from '@/api/refund';
+import { formatDateTime } from '@/utils/formatDateTime';
 import type { RefundQuery, RefundRecord } from '@/types/refund';
 
 const dateRange = ref<[string, string] | null>(null);

@@ -65,7 +65,9 @@
               <span class="text-warning">{{ row.reservedQty }}</span>
             </template>
           </el-table-column>
-          <el-table-column prop="lastChangedAt" label="最近流水时间" width="160" />
+          <el-table-column label="最近流水时间" width="160">
+            <template #default="{ row }">{{ formatDateTime(row.lastChangedAt) }}</template>
+          </el-table-column>
           <el-table-column label="操作" width="220" fixed="right">
             <template #default="{ row }">
               <el-button v-if="hasPermission('INVENTORY_INBOUND')" link type="success" @click="openInboundDialog(row)">入库</el-button>
@@ -221,7 +223,9 @@
         <el-table-column prop="businessType" label="业务类型" width="100" />
         <el-table-column prop="businessId" label="关联业务ID" width="120" />
         <el-table-column prop="operatorName" label="操作人" width="120" />
-        <el-table-column prop="createdAt" label="操作时间" width="160" />
+        <el-table-column label="操作时间" width="160">
+          <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+        </el-table-column>
         <el-table-column prop="remark" label="备注" min-width="120" show-overflow-tooltip />
       </el-table>
       <div class="pagination-wrapper" v-if="logsDrawer.total > logsDrawer.pageSize">
@@ -252,6 +256,7 @@ import {
 import { getPartsList } from '@/api/parts';
 import type { PartViewRecord } from '@/api/parts';
 import { hasPermission } from '@/utils/permission';
+import { formatDateTime } from '@/utils/formatDateTime';
 import type { InventoryQuery, InventoryRecord, InventoryLogRecord } from '@/types/inventory';
 
 const router = useRouter();
