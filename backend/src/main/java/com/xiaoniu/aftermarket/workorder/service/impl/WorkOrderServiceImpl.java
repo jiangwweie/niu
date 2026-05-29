@@ -1145,11 +1145,13 @@ public class WorkOrderServiceImpl implements WorkOrderService {
                 || CashierStatus.NO_CHARGE.getCode().equals(cashier.getCashierStatus())));
         response.setCanCancel(WorkOrderStatus.DRAFT.getCode().equals(entity.getStatus())
                 || WorkOrderStatus.REPAIRING.getCode().equals(entity.getStatus()));
-        response.setCanRecordPayment(WorkOrderStatus.REPAIRING.getCode().equals(entity.getStatus())
-                || WorkOrderStatus.REPAIR_DONE.getCode().equals(entity.getStatus()));
+        response.setCanRecordPayment((WorkOrderStatus.REPAIRING.getCode().equals(entity.getStatus())
+                || WorkOrderStatus.REPAIR_DONE.getCode().equals(entity.getStatus()))
+                && cashier.getOutstandingAmount().compareTo(BigDecimal.ZERO) > 0);
         response.setCanRecordRefund((WorkOrderStatus.REPAIRING.getCode().equals(entity.getStatus())
                 || WorkOrderStatus.REPAIR_DONE.getCode().equals(entity.getStatus())
-                || WorkOrderStatus.CANCELLED.getCode().equals(entity.getStatus()))
+                || WorkOrderStatus.CANCELLED.getCode().equals(entity.getStatus())
+                || WorkOrderStatus.DELIVERED.getCode().equals(entity.getStatus()))
                 && cashier.getRefundableAmount().compareTo(BigDecimal.ZERO) > 0);
         response.setCanRefundAfterDelivery(WorkOrderStatus.DELIVERED.getCode().equals(entity.getStatus())
                 && cashier.getRefundableAmount().compareTo(BigDecimal.ZERO) > 0);

@@ -45,7 +45,7 @@
           <span class="table-title">配件资料列表</span>
         </div>
         <div class="toolbar-right">
-          <el-button type="success" @click="openAddDialog">新增配件</el-button>
+          <el-button v-if="hasPermission('PART_MANAGE')" type="success" @click="openAddDialog">新增配件</el-button>
         </div>
       </div>
 
@@ -60,8 +60,8 @@
           <el-table-column prop="partName" label="配件名称" min-width="150" show-overflow-tooltip />
           <el-table-column label="来源" width="90" align="center">
             <template #default="{ row }">
-              <el-tag :type="row.source === 'official' ? 'danger' : 'info'" size="small">
-                {{ row.source === 'official' ? '官方' : '第三方' }}
+              <el-tag :type="isOfficialSource(row.source) ? 'danger' : 'info'" size="small">
+                {{ isOfficialSource(row.source) ? '官方' : '第三方' }}
               </el-tag>
             </template>
           </el-table-column>
@@ -89,12 +89,15 @@
           <el-table-column label="操作" width="240" fixed="right">
             <template #default="{ row }">
               <el-button link type="primary" @click="handleView(row)">查看</el-button>
-              <el-button link type="primary" @click="openEditDialog(row)">编辑</el-button>
+              <el-button v-if="hasPermission('PART_MANAGE')" link type="primary" @click="openEditDialog(row)">编辑</el-button>
               <el-button link type="primary" :disabled="!row.barcode" @click="printBarcode(row)">打印条码</el-button>
-              <el-button link :type="row.status ? 'danger' : 'success'" @click="handleToggleStatus(row)">
+              <el-button v-if="hasPermission('PART_MANAGE')" link :type="row.status ? 'danger' : 'success'" @click="handleToggleStatus(row)">
                 {{ row.status ? '停用' : '启用' }}
               </el-button>
-              <el-button link type="danger" @click="handleDelete(row)">删除</el-button>
+              <el-button v-if="hasPermission('PART_MANAGE') && row.canDelete" link type="danger" @click="handleDelete(row)">删除</el-button>
+              <el-tooltip v-else-if="hasPermission('PART_MANAGE')" content="已有库存、库存流水或工单引用，不能直接删除，请使用停用">
+                <el-button link type="info" disabled>删除</el-button>
+              </el-tooltip>
             </template>
           </el-table-column>
         </el-table>
@@ -120,8 +123,8 @@
           <el-descriptions-item label="配件编码">{{ detailDrawer.data.partCode }}</el-descriptions-item>
           <el-descriptions-item label="配件名称">{{ detailDrawer.data.partName }}</el-descriptions-item>
           <el-descriptions-item label="来源">
-            <el-tag :type="detailDrawer.data.source === 'official' ? 'danger' : 'info'" size="small">
-              {{ detailDrawer.data.source === 'official' ? '官方' : '第三方' }}
+            <el-tag :type="isOfficialSource(detailDrawer.data.source) ? 'danger' : 'info'" size="small">
+              {{ isOfficialSource(detailDrawer.data.source) ? '官方' : '第三方' }}
             </el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="官方品号">{{ detailDrawer.data.officialCode || '-' }}</el-descriptions-item>
@@ -202,8 +205,10 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import JsBarcode from 'jsbarcode';
 import PageContainer from '@/components/PageContainer.vue';
 import MoneyText from '@/components/MoneyText.vue';
+import { hasPermission } from '@/utils/permission';
 import {
   getPartsList,
   getPartDetail,
@@ -232,6 +237,8 @@ const queryParams = reactive({
 const loading = ref(false);
 const tableData = ref<PartViewRecord[]>([]);
 const total = ref(0);
+
+const isOfficialSource = (source?: string) => String(source || '').toUpperCase() === 'OFFICIAL';
 
 const fetchData = async () => {
   loading.value = true;
@@ -416,9 +423,13 @@ const handleToggleStatus = async (row: PartViewRecord) => {
 };
 
 const handleDelete = async (row: PartViewRecord) => {
+  if (row.canDelete === false) {
+    ElMessage.warning('该配件已有库存、库存流水或工单引用，不能直接删除，请使用停用。');
+    return;
+  }
   try {
     await ElMessageBox.confirm(
-      '删除后该配件将不再出现在配件列表、新建工单选择和普通入库选择中，历史工单、库存流水和财务成本仍会保留。',
+      '删除前请确认该配件没有库存、库存流水和工单引用。已有业务记录的配件请使用停用。',
       `删除配件【${row.partName}】`,
       {
         confirmButtonText: '删除',
@@ -466,28 +477,46 @@ const printBarcode = (row: PartViewRecord) => {
     ElMessage.warning('当前配件没有条码');
     return;
   }
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  try {
+    JsBarcode(svg, row.barcode, {
+      format: 'CODE128',
+      displayValue: true,
+      fontSize: 16,
+      textMargin: 6,
+      width: 2,
+      height: 72,
+      margin: 0,
+    });
+  } catch {
+    ElMessage.error('条码内容无法生成 Code128');
+    return;
+  }
   const popup = window.open('', '_blank', 'width=420,height=320');
   if (!popup) {
     ElMessage.error('浏览器阻止了打印窗口');
     return;
   }
+  const barcodeSvg = svg.outerHTML;
   popup.document.write(`
     <html>
       <head>
         <title>打印条码</title>
         <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; padding: 24px; }
-          .label { border: 1px solid #111; padding: 18px; width: 320px; }
-          .name { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
-          .code { font-size: 13px; color: #555; margin-bottom: 16px; }
-          .barcode { font-size: 24px; letter-spacing: 2px; font-weight: 700; }
+          @page { size: 70mm 35mm; margin: 4mm; }
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; padding: 8px; }
+          .label { border: 1px solid #111; box-sizing: border-box; padding: 8px 10px; width: 62mm; min-height: 27mm; }
+          .name { font-size: 14px; font-weight: 600; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+          .code { font-size: 11px; color: #555; margin-bottom: 6px; }
+          .barcode-svg { display: block; width: 100%; }
+          .barcode-svg svg { width: 100%; height: auto; }
         </style>
       </head>
       <body>
         <div class="label">
           <div class="name">${escapeHtml(row.partName)}</div>
           <div class="code">${escapeHtml(row.partCode)}</div>
-          <div class="barcode">${escapeHtml(row.barcode)}</div>
+          <div class="barcode-svg">${barcodeSvg}</div>
         </div>
         <script>window.onload = function () { window.print(); };<\/script>
       </body>

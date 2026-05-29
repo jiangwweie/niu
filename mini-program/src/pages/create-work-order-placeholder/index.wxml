@@ -141,15 +141,18 @@
     </view>
 
     <!-- 记录收款 -->
-    <view class="payment-action" wx:if="{{workOrder.canRecordPayment}}" style="margin-top: 16px; padding: 0 16px;">
+    <view class="payment-action" wx:if="{{canShowRecordPayment}}" style="margin-top: 16px; padding: 0 16px;">
       <view style="font-size: 12px; color: #666; margin-bottom: 12px; text-align: center;">
         操作结果以系统校验为准。收款不改变工单进度状态。
       </view>
       <t-button block theme="primary" size="large" bind:tap="openPaymentDialog" loading="{{paymentLoading}}">记录收款</t-button>
     </view>
+    <view wx:if="{{showPaidInFullHint}}" style="margin-top: 16px; padding: 0 16px; text-align: center; color: #00a870; font-size: 13px;">
+      已收齐
+    </view>
 
     <!-- 记录退款 -->
-    <view class="refund-action" wx:if="{{workOrder.canRecordRefund}}" style="margin-top: 16px; padding: 0 16px;">
+    <view class="refund-action" wx:if="{{canShowRecordRefund}}" style="margin-top: 16px; padding: 0 16px;">
       <view style="font-size: 12px; color: #666; margin-bottom: 12px; text-align: center;">
         退款上限以系统校验为准。
       </view>
@@ -175,10 +178,12 @@
             <text class="part-desc">编码: {{selectedPart.partCode}}</text>
             <text class="part-desc" wx:if="{{selectedPart.defaultBarcode}}">条码: {{selectedPart.defaultBarcode}}</text>
             <text class="part-desc" wx:if="{{selectedPart.model}}">型号: {{selectedPart.model}}</text>
+            <text class="part-desc" wx:if="{{selectedPartStock && selectedPartStock.hasStockRecord}}">库存: 可用 {{selectedPartStock.availableQty}} / 实际 {{selectedPartStock.actualQty}} / 预占 {{selectedPartStock.reservedQty}}</text>
+            <text class="part-desc" wx:if="{{selectedPartStock && !selectedPartStock.hasStockRecord}}" style="color: #e34d59;">暂无库存记录</text>
           </view>
         </block>
 
-        <t-input label="项目名称" placeholder="必填" value="{{currentItemForm.itemName}}" bind:change="onItemFormChange" data-field="itemName" align="right" />
+        <t-input label="项目名称" placeholder="{{currentItemForm.chargeType === 'PART' ? '选择配件后自动带出' : '必填'}}" value="{{currentItemForm.itemName}}" bind:change="onItemFormChange" data-field="itemName" align="right" readonly="{{currentItemForm.chargeType === 'PART'}}" />
         <t-input label="数量" type="number" placeholder="必填(>0)" value="{{currentItemForm.quantity}}" bind:change="onItemFormChange" data-field="quantity" align="right" />
         <t-input label="单位" placeholder="选填" value="{{currentItemForm.unit}}" bind:change="onItemFormChange" data-field="unit" align="right" />
         <t-input label="单价(元)" type="digit" placeholder="必填(>=0)" value="{{currentItemForm.unitPrice}}" bind:change="onItemFormChange" data-field="unitPrice" align="right" />
@@ -281,7 +286,8 @@
         <t-input label="工单编号" value="{{workOrder.workOrderNo || '草稿'}}" align="right" readonly />
         <t-input label="应收总计" value="¥{{workOrder.receivableAmount != null ? workOrder.receivableAmount : '0'}}" align="right" readonly />
         <t-input label="已收金额" value="¥{{workOrder.netReceived != null ? workOrder.netReceived : workOrder.receivedAmount != null ? workOrder.receivedAmount : '0'}}" align="right" readonly />
-        <t-input label="收款金额" type="digit" placeholder="必填(>0)" value="{{paymentForm.amount}}" bind:change="onPaymentFormChange" data-field="amount" align="right" />
+        <t-input label="待收金额" value="¥{{outstandingAmountStr}}" align="right" readonly />
+        <t-input label="收款金额" type="digit" placeholder="{{outstandingAmount > 0 ? '不超过待收¥' + outstandingAmountStr : '已收齐'}}" value="{{paymentForm.amount}}" bind:change="onPaymentFormChange" data-field="amount" align="right" />
 
         <view style="padding: 16px; display: flex; align-items: center; justify-content: space-between;">
           <text style="font-size: 16px; color: #333;">收款方式</text>
@@ -316,8 +322,8 @@
         注意：此处仅记录线下退款结果。
       </view>
       <t-cell-group>
-        <t-input label="可退金额" value="¥{{workOrder.refundableAmount != null ? workOrder.refundableAmount : workOrder.receivedAmount != null ? workOrder.receivedAmount : '0'}}" align="right" readonly />
-        <t-input label="退款金额" type="digit" placeholder="必填(>0)" value="{{refundForm.amount}}" bind:change="onRefundFormChange" data-field="amount" align="right" />
+        <t-input label="可退金额" value="¥{{refundableAmountStr}}" align="right" readonly />
+        <t-input label="退款金额" type="digit" placeholder="{{refundableAmount > 0 ? '不超过可退 ¥' + refundableAmountStr : '无可退金额'}}" value="{{refundForm.amount}}" bind:change="onRefundFormChange" data-field="amount" align="right" />
 
         <view style="padding: 16px; display: flex; align-items: center; justify-content: space-between;">
           <text style="font-size: 16px; color: #333;">退款方式</text>
@@ -393,14 +399,17 @@
     </view>
     <view style="padding: 12px 16px; display: flex; gap: 8px;">
       <t-search placeholder="姓名或手机号" value="{{customerSearchKeyword}}" bind:change="onCustomerSearchInput" bind:submit="onCustomerSearch" />
+      <t-button size="small" theme="primary" bind:tap="onCustomerSearch">搜索</t-button>
     </view>
     <scroll-view scroll-y class="search-result-list">
       <view class="search-result-item" wx:for="{{customerSearchResults}}" wx:key="id" bind:tap="selectCustomer" data-item="{{item}}">
         <view class="result-name">{{item.customerName}}</view>
         <view class="result-desc">{{item.phone || '无手机号'}}</view>
       </view>
-      <view class="empty-state" wx:if="{{customerSearchResults.length === 0 && customerSearchKeyword}}">未找到匹配客户</view>
-      <view class="empty-state" wx:if="{{customerSearchResults.length === 0 && !customerSearchKeyword}}">输入姓名或手机号搜索</view>
+      <view class="empty-state" wx:if="{{customerSearchState === 'loading'}}">搜索中</view>
+      <view class="empty-state" wx:if="{{customerSearchState === 'empty'}}">未找到客户，可直接填写新客户信息</view>
+      <view class="empty-state" wx:if="{{customerSearchState === 'error'}}">{{customerSearchError}}</view>
+      <view class="empty-state" wx:if="{{customerSearchState === 'idle'}}">输入姓名或手机号搜索客户</view>
     </scroll-view>
   </t-popup>
 

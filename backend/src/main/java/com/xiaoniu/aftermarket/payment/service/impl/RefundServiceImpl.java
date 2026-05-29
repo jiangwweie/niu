@@ -14,6 +14,8 @@ import com.xiaoniu.aftermarket.payment.dto.RefundRecordResponse;
 import com.xiaoniu.aftermarket.payment.entity.RefundRecordEntity;
 import com.xiaoniu.aftermarket.payment.mapper.RefundRecordMapper;
 import com.xiaoniu.aftermarket.payment.service.RefundService;
+import com.xiaoniu.aftermarket.user.entity.SysUserEntity;
+import com.xiaoniu.aftermarket.user.mapper.SysUserMapper;
 import com.xiaoniu.aftermarket.workorder.entity.WorkOrderEntity;
 import com.xiaoniu.aftermarket.workorder.mapper.WorkOrderMapper;
 import java.math.BigDecimal;
@@ -45,15 +47,18 @@ public class RefundServiceImpl implements RefundService {
     private final WorkOrderMapper workOrderMapper;
     private final SequenceService sequenceService;
     private final PaymentAmountService paymentAmountService;
+    private final SysUserMapper userMapper;
 
     public RefundServiceImpl(RefundRecordMapper refundRecordMapper,
                              WorkOrderMapper workOrderMapper,
                              SequenceService sequenceService,
-                             PaymentAmountService paymentAmountService) {
+                             PaymentAmountService paymentAmountService,
+                             SysUserMapper userMapper) {
         this.refundRecordMapper = refundRecordMapper;
         this.workOrderMapper = workOrderMapper;
         this.sequenceService = sequenceService;
         this.paymentAmountService = paymentAmountService;
+        this.userMapper = userMapper;
     }
 
     @Override
@@ -199,6 +204,7 @@ public class RefundServiceImpl implements RefundService {
         response.setRefundMethod(entity.getRefundMethod());
         response.setRefundedAt(entity.getRefundedAt());
         response.setOperatorId(entity.getOperatorId());
+        response.setOperatorName(userDisplayName(entity.getOperatorId()));
         response.setReason(entity.getReason());
         response.setRemark(entity.getRemark());
         return response;
@@ -240,9 +246,21 @@ public class RefundServiceImpl implements RefundService {
         response.setRefundMethod(entity.getRefundMethod());
         response.setRefundedAt(entity.getRefundedAt());
         response.setOperatorId(entity.getOperatorId());
+        response.setOperatorName(userDisplayName(entity.getOperatorId()));
         response.setReason(entity.getReason());
         response.setRemark(entity.getRemark());
         return response;
+    }
+
+    private String userDisplayName(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+        SysUserEntity user = userMapper.selectById(userId);
+        if (user == null) {
+            return null;
+        }
+        return StringUtils.hasText(user.getRealName()) ? user.getRealName() : user.getUsername();
     }
 
 }

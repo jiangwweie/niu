@@ -2,6 +2,7 @@ import { getParts, lookupPartByCode } from '../../api/parts';
 import { inboundInventory } from '../../api/inventory';
 import { Part, PartLookupResult } from '../../types/parts';
 import { InboundRequest, InboundResponse } from '../../types/inventory';
+import { authStore } from '../../stores/auth';
 import Toast from 'tdesign-miniprogram/toast/index';
 
 Page({
@@ -29,6 +30,12 @@ Page({
     this.loadParts();
   },
 
+  onShow() {
+    if (!authStore.isLoggedIn) {
+      wx.redirectTo({ url: '/pages/login/index?redirect=' + encodeURIComponent('/pages/inbound-placeholder/index') });
+    }
+  },
+
   loadParts() {
     getParts().then(res => {
       // 真实后端已过滤 DISABLED
@@ -44,6 +51,10 @@ Page({
 
   showPartSelector() {
     this.setData({ partSelectorVisible: true });
+  },
+
+  showCreatePartHint() {
+    Toast({ context: this, selector: '#t-toast', message: '请先在配件管理中新增配件，或使用工单临时新增配件。', icon: 'info-circle' });
   },
 
   onPopupVisibleChange(e: any) {

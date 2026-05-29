@@ -1,5 +1,6 @@
 import { getParts } from '../../api/parts';
 import { Part } from '../../types/parts';
+import { authStore } from '../../stores/auth';
 
 Page({
   data: {
@@ -8,6 +9,12 @@ Page({
   },
   onLoad() {
     this.fetchData();
+  },
+  onShow() {
+    if (!authStore.isLoggedIn) {
+      wx.redirectTo({ url: '/pages/login/index?redirect=' + encodeURIComponent('/pages/parts/index') });
+      return;
+    }
   },
   onSearch(e: any) {
     this.setData({ keyword: e.detail.value });

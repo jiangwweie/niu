@@ -20,4 +20,5 @@ public class PartQueryResponse {
     private String createSource;
     private String status;
     private String remark;
+    private Boolean canDelete;
 }

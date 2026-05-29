@@ -15,6 +15,8 @@ import com.xiaoniu.aftermarket.reimbursement.dto.SubmitReimbursementCommand;
 import com.xiaoniu.aftermarket.reimbursement.entity.ReimbursementEntity;
 import com.xiaoniu.aftermarket.reimbursement.mapper.ReimbursementMapper;
 import com.xiaoniu.aftermarket.reimbursement.service.ReimbursementService;
+import com.xiaoniu.aftermarket.user.entity.SysUserEntity;
+import com.xiaoniu.aftermarket.user.mapper.SysUserMapper;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
@@ -28,11 +30,14 @@ public class ReimbursementServiceImpl implements ReimbursementService {
 
     private final ReimbursementMapper reimbursementMapper;
     private final SequenceService sequenceService;
+    private final SysUserMapper userMapper;
 
     public ReimbursementServiceImpl(ReimbursementMapper reimbursementMapper,
-                                    SequenceService sequenceService) {
+                                    SequenceService sequenceService,
+                                    SysUserMapper userMapper) {
         this.reimbursementMapper = reimbursementMapper;
         this.sequenceService = sequenceService;
+        this.userMapper = userMapper;
     }
 
     @Override
@@ -88,7 +93,7 @@ public class ReimbursementServiceImpl implements ReimbursementService {
         wrapper.orderByDesc("submitted_at").orderByDesc("id")
                 .last("LIMIT " + pageSize + " OFFSET " + (long) (pageNo - 1) * pageSize);
         List<ReimbursementResponse> records = reimbursementMapper.selectList(wrapper).stream()
-                .map(ReimbursementResponse::from)
+                .map(this::toResponse)
                 .toList();
         return new PageResponse<>(records, pageNo, pageSize, total);
     }
@@ -96,7 +101,7 @@ public class ReimbursementServiceImpl implements ReimbursementService {
     @Override
     public ReimbursementResponse getById(Long storeId, Long reimbursementId) {
         ReimbursementEntity entity = loadInStore(storeId, reimbursementId);
-        return ReimbursementResponse.from(entity);
+        return toResponse(entity);
     }
 
     @Override
@@ -228,5 +233,22 @@ public class ReimbursementServiceImpl implements ReimbursementService {
 
     private BigDecimal normalizeAmount(BigDecimal amount) {
         return amount.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private ReimbursementResponse toResponse(ReimbursementEntity entity) {
+        ReimbursementResponse response = ReimbursementResponse.from(entity);
+        response.setApplicantName(userDisplayName(entity.getApplicantId()));
+        return response;
+    }
+
+    private String userDisplayName(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+        SysUserEntity user = userMapper.selectById(userId);
+        if (user == null) {
+            return null;
+        }
+        return StringUtils.hasText(user.getRealName()) ? user.getRealName() : user.getUsername();
     }
 }

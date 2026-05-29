@@ -1619,12 +1619,13 @@ class StaffControllerTest {
                         .content("""
                                 {"amount": 10.00, "refundMethod": "CASH", "reason": "已结算退款测试"}
                                 """))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("PAYMENT_WORK_ORDER_STATUS_INVALID"));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.amount").value(10.00))
+                .andExpect(jsonPath("$.data.operatorId").value(7));
 
         assertEquals("DELIVERED", jdbcTemplate.queryForObject(
                 "SELECT status FROM work_order WHERE id = 80002", String.class));
-        assertEquals(0, jdbcTemplate.queryForObject(
+        assertEquals(1, jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM refund_record WHERE store_id = 1 AND work_order_id = 80002",
                 Integer.class));
         assertEquals(0, jdbcTemplate.queryForObject(
@@ -1682,6 +1683,17 @@ class StaffControllerTest {
         assertEquals(consumeCount, jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM inventory_flow WHERE store_id = 1 AND work_order_id = 80131 AND flow_type = 'CONSUME'",
                 Integer.class));
+    }
+
+    @Test
+    void staffMarkRepairDoneAcceptsMissingBody() throws Exception {
+        seedSettleWorkOrder(80133, "REPAIRING", "100.00", "100.00", 1);
+
+        mockMvc.perform(post("/api/staff/work-orders/80133/mark-repair-done")
+                        .header("X-User-Id", "7")
+                        .header("X-Store-Id", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("REPAIR_DONE"));
     }
 
     @Test

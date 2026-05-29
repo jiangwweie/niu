@@ -16,6 +16,8 @@ import com.xiaoniu.aftermarket.payment.entity.PaymentRecordEntity;
 import com.xiaoniu.aftermarket.payment.mapper.PaymentRecordMapper;
 import com.xiaoniu.aftermarket.payment.service.PaymentService;
 import com.xiaoniu.aftermarket.payment.service.CashierStatusService;
+import com.xiaoniu.aftermarket.user.entity.SysUserEntity;
+import com.xiaoniu.aftermarket.user.mapper.SysUserMapper;
 import com.xiaoniu.aftermarket.workorder.entity.WorkOrderEntity;
 import com.xiaoniu.aftermarket.workorder.mapper.WorkOrderMapper;
 import java.math.BigDecimal;
@@ -47,17 +49,20 @@ public class PaymentServiceImpl implements PaymentService {
     private final SequenceService sequenceService;
     private final PaymentAmountService paymentAmountService;
     private final CashierStatusService cashierStatusService;
+    private final SysUserMapper userMapper;
 
     public PaymentServiceImpl(PaymentRecordMapper paymentRecordMapper,
                               WorkOrderMapper workOrderMapper,
                               SequenceService sequenceService,
                               PaymentAmountService paymentAmountService,
-                              CashierStatusService cashierStatusService) {
+                              CashierStatusService cashierStatusService,
+                              SysUserMapper userMapper) {
         this.paymentRecordMapper = paymentRecordMapper;
         this.workOrderMapper = workOrderMapper;
         this.sequenceService = sequenceService;
         this.paymentAmountService = paymentAmountService;
         this.cashierStatusService = cashierStatusService;
+        this.userMapper = userMapper;
     }
 
     @Override
@@ -260,7 +265,9 @@ public class PaymentServiceImpl implements PaymentService {
         response.setPaymentMethod(entity.getPaymentMethod());
         response.setPaidAt(entity.getPaidAt());
         response.setReceiverId(entity.getReceiverId());
+        response.setReceiverName(userDisplayName(entity.getReceiverId()));
         response.setOperatorId(entity.getOperatorId());
+        response.setOperatorName(userDisplayName(entity.getOperatorId()));
         response.setRemark(entity.getRemark());
         return response;
     }
@@ -301,9 +308,22 @@ public class PaymentServiceImpl implements PaymentService {
         response.setPaymentMethod(entity.getPaymentMethod());
         response.setPaidAt(entity.getPaidAt());
         response.setReceiverId(entity.getReceiverId());
+        response.setReceiverName(userDisplayName(entity.getReceiverId()));
         response.setOperatorId(entity.getOperatorId());
+        response.setOperatorName(userDisplayName(entity.getOperatorId()));
         response.setRemark(entity.getRemark());
         return response;
+    }
+
+    private String userDisplayName(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+        SysUserEntity user = userMapper.selectById(userId);
+        if (user == null) {
+            return null;
+        }
+        return StringUtils.hasText(user.getRealName()) ? user.getRealName() : user.getUsername();
     }
 
 }

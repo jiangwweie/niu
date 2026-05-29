@@ -14,6 +14,7 @@ public class RefundRecordResponse {
     private String refundMethod;
     private LocalDateTime refundedAt;
     private Long operatorId;
+    private String operatorName;
     private String reason;
     private String remark;
 }

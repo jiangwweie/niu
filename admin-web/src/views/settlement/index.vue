@@ -205,7 +205,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import PageContainer from '@/components/PageContainer.vue';
 import MoneyText from '@/components/MoneyText.vue';
 import StatusTag from '@/components/StatusTag.vue';
@@ -356,6 +356,11 @@ const submitSettle = async () => {
     ElMessage.warning('结算金额必须大于0');
     return;
   }
+  await ElMessageBox.confirm(
+    `确认后会影响官方结算状态和财务统计。\n结算金额：¥${Number(settleDialog.form.settlementAmount).toFixed(2)}`,
+    '确认官方已结算',
+    { type: 'warning', confirmButtonText: '确认结算', cancelButtonText: '取消' },
+  );
   settleDialog.submitting = true;
   try {
     await markOfficialSettled(settleDialog.workOrderId, {
@@ -392,6 +397,11 @@ const submitNoSettlementRequired = async () => {
     ElMessage.warning('请输入无需结算的原因');
     return;
   }
+  await ElMessageBox.confirm(
+    `确认后该官方售后单会标记为无需结算，并影响官方结算状态统计。\n原因：${noSettleDialog.form.reason}`,
+    '确认无需结算',
+    { type: 'warning', confirmButtonText: '确认无需结算', cancelButtonText: '取消' },
+  );
   noSettleDialog.submitting = true;
   try {
     await markNoSettlementRequired(noSettleDialog.workOrderId, {

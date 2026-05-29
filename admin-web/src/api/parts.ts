@@ -16,6 +16,7 @@ interface PartResp {
   createSource: string;
   status: string;
   remark: string;
+  canDelete?: boolean;
 }
 
 /** View-compatible part row (what the table template binds to) */
@@ -32,6 +33,7 @@ export interface PartViewRecord {
   location: string;
   status: boolean;
   remark: string;
+  canDelete?: boolean;
 }
 
 /** Pagination params for list endpoint */
@@ -74,6 +76,7 @@ function adaptPart(resp: PartResp): PartViewRecord {
     location: resp.locationRemark || '',
     status: resp.status === 'ENABLED',
     remark: resp.remark || '',
+    canDelete: resp.canDelete,
   };
 }
 

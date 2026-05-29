@@ -84,6 +84,7 @@ public class PartController {
         qr.setCreateSource(entity.getCreateSource());
         qr.setStatus(entity.getStatus());
         qr.setRemark(entity.getRemark());
+        qr.setCanDelete(partService.canDelete(user.storeId(), partId));
         return ApiResponse.success(PartDetailResponse.fromQueryResponse(qr));
     }
 

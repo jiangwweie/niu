@@ -24,6 +24,7 @@ export interface PartLookupResult {
   category?: string;
   costPrice?: number;
   enabled?: boolean;
+  hasStockRecord?: boolean;
   actualQty?: number;
   availableQty?: number;
   reservedQty?: number;

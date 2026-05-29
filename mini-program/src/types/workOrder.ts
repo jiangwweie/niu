@@ -162,7 +162,9 @@ export interface StaffPaymentRecordResponse {
   paymentMethod: string;
   paidAt?: string;
   receiverId?: number | string;
+  receiverName?: string;
   operatorId?: number | string;
+  operatorName?: string;
   remark?: string;
 }
 
@@ -182,6 +184,7 @@ export interface StaffRefundRecordResponse {
   refundMethod: string;
   refundedAt?: string;
   operatorId?: number | string;
+  operatorName?: string;
   reason?: string;
   remark?: string;
 }

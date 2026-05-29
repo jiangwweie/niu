@@ -12,6 +12,7 @@ public class ReimbursementResponse {
     private Long id;
     private String reimbursementNo;
     private Long applicantId;
+    private String applicantName;
     private String purpose;
     private BigDecimal amount;
     private String status;

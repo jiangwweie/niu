@@ -9,6 +9,8 @@ import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
 import com.xiaoniu.aftermarket.common.service.SequenceService;
 import com.xiaoniu.aftermarket.inventory.entity.InventoryStockEntity;
+import com.xiaoniu.aftermarket.inventory.entity.InventoryFlowEntity;
+import com.xiaoniu.aftermarket.inventory.mapper.InventoryFlowMapper;
 import com.xiaoniu.aftermarket.inventory.mapper.InventoryStockMapper;
 import com.xiaoniu.aftermarket.part.dto.CreatePartCommand;
 import com.xiaoniu.aftermarket.part.dto.PartLookupResponse;
@@ -20,6 +22,8 @@ import com.xiaoniu.aftermarket.part.entity.PartEntity;
 import com.xiaoniu.aftermarket.part.mapper.PartBarcodeMapper;
 import com.xiaoniu.aftermarket.part.mapper.PartMapper;
 import com.xiaoniu.aftermarket.part.service.PartService;
+import com.xiaoniu.aftermarket.workorder.entity.WorkOrderChargeItemEntity;
+import com.xiaoniu.aftermarket.workorder.mapper.WorkOrderChargeItemMapper;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.dao.DuplicateKeyException;
@@ -34,14 +38,20 @@ public class PartServiceImpl implements PartService {
     private final PartBarcodeMapper partBarcodeMapper;
     private final SequenceService sequenceService;
     private final InventoryStockMapper inventoryStockMapper;
+    private final InventoryFlowMapper inventoryFlowMapper;
+    private final WorkOrderChargeItemMapper chargeItemMapper;
 
     public PartServiceImpl(PartMapper partMapper, PartBarcodeMapper partBarcodeMapper,
                            SequenceService sequenceService,
-                           InventoryStockMapper inventoryStockMapper) {
+                           InventoryStockMapper inventoryStockMapper,
+                           InventoryFlowMapper inventoryFlowMapper,
+                           WorkOrderChargeItemMapper chargeItemMapper) {
         this.partMapper = partMapper;
         this.partBarcodeMapper = partBarcodeMapper;
         this.sequenceService = sequenceService;
         this.inventoryStockMapper = inventoryStockMapper;
+        this.inventoryFlowMapper = inventoryFlowMapper;
+        this.chargeItemMapper = chargeItemMapper;
     }
 
     @Override
@@ -199,6 +209,13 @@ public class PartServiceImpl implements PartService {
     }
 
     @Override
+    public boolean canDelete(Long storeId, Long partId) {
+        return !hasStockQuantity(storeId, partId)
+                && !hasInventoryFlows(storeId, partId)
+                && !hasWorkOrderReferences(partId);
+    }
+
+    @Override
     @Transactional
     public void deletePart(Long storeId, Long partId, Long operatorId) {
         PartEntity existing = partMapper.selectById(partId);
@@ -208,10 +225,7 @@ public class PartServiceImpl implements PartService {
         if (!storeId.equals(existing.getStoreId())) {
             throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "配件不属于当前门店");
         }
-        InventoryStockEntity stock = inventoryStockMapper.selectByStoreIdAndPartId(storeId, partId);
-        if (stock != null && (positive(stock.getActualQty())
-                || positive(stock.getAvailableQty())
-                || positive(stock.getReservedQty()))) {
+        if (!canDelete(storeId, partId)) {
             throw new BusinessException(ErrorCode.PART_HAS_STOCK);
         }
         existing.setDeleted(1);
@@ -594,6 +608,28 @@ public class PartServiceImpl implements PartService {
         response.setCreateSource(entity.getCreateSource());
         response.setStatus(entity.getStatus());
         response.setRemark(entity.getRemark());
+        response.setCanDelete(canDelete(entity.getStoreId(), entity.getId()));
         return response;
+    }
+
+    private boolean hasStockQuantity(Long storeId, Long partId) {
+        InventoryStockEntity stock = inventoryStockMapper.selectByStoreIdAndPartId(storeId, partId);
+        return stock != null && (positive(stock.getActualQty())
+                || positive(stock.getAvailableQty())
+                || positive(stock.getReservedQty()));
+    }
+
+    private boolean hasInventoryFlows(Long storeId, Long partId) {
+        QueryWrapper<InventoryFlowEntity> wrapper = new QueryWrapper<>();
+        wrapper.eq("store_id", storeId)
+                .eq("part_id", partId);
+        return inventoryFlowMapper.selectCount(wrapper) > 0;
+    }
+
+    private boolean hasWorkOrderReferences(Long partId) {
+        QueryWrapper<WorkOrderChargeItemEntity> wrapper = new QueryWrapper<>();
+        wrapper.eq("part_id", partId)
+                .eq("deleted", 0);
+        return chargeItemMapper.selectCount(wrapper) > 0;
     }
 }

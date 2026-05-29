@@ -48,6 +48,10 @@ Page({
     receivedAmountStr: '0.00',
     netReceivedStr: '0.00',
     refundableAmountStr: '0.00',
+    refundableAmount: 0,
+    canShowRecordPayment: false,
+    canShowRecordRefund: false,
+    showPaidInFullHint: false,
 
     // Cancel
     cancelDialogVisible: false,
@@ -131,10 +135,22 @@ Page({
         receivedAmountStr: (d?.receivedAmount ?? 0).toFixed(2),
         netReceivedStr: netReceived.toFixed(2),
         refundableAmountStr: refundable.toFixed(2),
+        ...this.resolveActionState(order, outstanding, refundable),
       });
     } catch (e) {
       wx.showToast({ title: '加载失败', icon: 'none' });
     }
+  },
+
+  resolveActionState(order: WorkOrder | null, outstanding: number, refundable: number) {
+    const status = order?.progressStatus || order?.status;
+    const paymentAllowedStatus = status === 'REPAIRING' || status === 'REPAIR_DONE';
+    return {
+      canShowRecordPayment: !!order?.canRecordPayment && paymentAllowedStatus && outstanding > 0,
+      canShowRecordRefund: !!order?.canRecordRefund && status !== 'DRAFT',
+      showPaidInFullHint: paymentAllowedStatus && outstanding <= 0,
+      refundableAmount: Math.max(refundable, 0),
+    };
   },
 
   // --- Cancel Work Order ---
@@ -184,7 +200,11 @@ Page({
   // --- Record Payment ---
   openPaymentPopup() {
     const order = this.data.order;
-    if (!order?.canRecordPayment) {
+    if (!this.data.canShowRecordPayment) {
+      if (this.data.outstandingAmount <= 0) {
+        Toast({ context: this, selector: '#t-toast', message: '已无待收金额，无需继续收款', icon: 'close-circle' });
+        return;
+      }
       Toast({ context: this, selector: '#t-toast', message: '当前状态不允许记录收款', icon: 'close-circle' });
       return;
     }
@@ -321,7 +341,7 @@ Page({
       return;
     }
 
-    const maxRefundable = this.data.order?.refundableAmount ?? this.data.order?.receivedAmount ?? 0; // 后端应返回 refundableAmount，fallback receivedAmount 仅为兼容旧 mock
+    const maxRefundable = this.data.refundableAmount || 0;
     if (maxRefundable <= 0) {
       Toast({ context: this, selector: '#t-toast', message: '当前无可退金额', icon: 'close-circle' });
       return;

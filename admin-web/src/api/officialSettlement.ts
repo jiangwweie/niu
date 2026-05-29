@@ -42,6 +42,11 @@ interface PageResp<T> {
   total: number;
 }
 
+function formatDateTime(value?: string | null) {
+  if (!value) return undefined;
+  return value.replace('T', ' ').substring(0, 16);
+}
+
 function adaptOfficialAfterSalesList(resp: OfficialAfterSalesListResp): OfficialSettlementRecord {
   return {
     id: String(resp.id),
@@ -58,7 +63,7 @@ function adaptOfficialAfterSalesList(resp: OfficialAfterSalesListResp): Official
     receivableAmount: 0,
     settlementStatus: (resp.settlementStatus as OfficialSettlementRecord['settlementStatus']) || 'PENDING',
     settlementAmount: resp.settlementAmount ?? undefined,
-    settlementTime: resp.settlementTime || undefined,
+    settlementTime: formatDateTime(resp.settlementTime),
   };
 }
 
@@ -81,7 +86,11 @@ export async function getOfficialAfterSalesList(params: OfficialSettlementQuery)
 }
 
 export async function getOfficialAfterSalesDetail(workOrderId: number): Promise<OfficialAfterSalesDetailResp> {
-  return await request.get(`/api/admin/work-orders/${workOrderId}/official-after-sales`);
+  const detail = await request.get<unknown, OfficialAfterSalesDetailResp>(`/api/admin/work-orders/${workOrderId}/official-after-sales`);
+  return {
+    ...detail,
+    settlementTime: formatDateTime(detail.settlementTime) || null,
+  };
 }
 
 export async function saveOfficialOrderInfo(workOrderId: number, body: { officialOrderNo: string; remark?: string }): Promise<number> {

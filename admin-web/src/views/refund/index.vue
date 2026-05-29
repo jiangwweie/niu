@@ -111,7 +111,7 @@
           </el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="退款时间">{{ viewDrawer.current.refundedAt }}</el-descriptions-item>
-        <el-descriptions-item label="操作人">{{ viewDrawer.current.operatorId ?? '-' }}</el-descriptions-item>
+        <el-descriptions-item label="操作人">{{ formatPerson(viewDrawer.current.operatorName, viewDrawer.current.operatorId) }}</el-descriptions-item>
         <el-descriptions-item label="退款原因">{{ viewDrawer.current.reason || '-' }}</el-descriptions-item>
         <el-descriptions-item label="备注">{{ viewDrawer.current.remark || '-' }}</el-descriptions-item>
       </el-descriptions>
@@ -141,6 +141,8 @@ const queryParams = reactive<RefundQuery>({
 const loading = ref(false);
 const tableData = ref<RefundRecord[]>([]);
 const total = ref(0);
+
+const formatPerson = (name?: string, id?: number | null) => name || (id ? `员工 #${id}` : '-');
 
 const fetchData = async () => {
   loading.value = true;

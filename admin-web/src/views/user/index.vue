@@ -1,7 +1,7 @@
 <template>
   <PageContainer title="员工与权限" description="账号生命周期与预设角色查看">
     <template #action>
-      <el-button type="primary" :icon="Plus" @click="openCreate">新增员工</el-button>
+      <el-button v-if="hasUserManage" type="primary" :icon="Plus" @click="openCreate">新增员工</el-button>
     </template>
 
     <!-- 查询过滤区 -->
@@ -61,10 +61,10 @@
         <el-table-column prop="updatedAt" label="更新时间" min-width="170" />
         <el-table-column label="操作" width="340" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
-            <el-button link type="primary" @click="openReset(row)">重置密码</el-button>
-            <el-button v-if="row.enabled" link type="danger" @click="toggleUser(row, false)">停用</el-button>
-            <el-button v-else link type="success" @click="toggleUser(row, true)">启用</el-button>
+            <el-button v-if="hasUserManage" link type="primary" @click="openEdit(row)">编辑</el-button>
+            <el-button v-if="hasUserManage" link type="primary" @click="openReset(row)">重置密码</el-button>
+            <el-button v-if="hasUserManage && row.enabled" link type="danger" @click="toggleUser(row, false)">停用</el-button>
+            <el-button v-else-if="hasUserManage" link type="success" @click="toggleUser(row, true)">启用</el-button>
             <el-button v-if="row.wechatBound && hasUserManage" link type="warning" @click="handleUnbindWechat(row)">解绑微信</el-button>
           </template>
         </el-table-column>

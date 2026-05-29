@@ -16,6 +16,8 @@ public class PaymentQueryResponse {
     private String paymentMethod;
     private LocalDateTime paidAt;
     private Long receiverId;
+    private String receiverName;
     private Long operatorId;
+    private String operatorName;
     private String remark;
 }

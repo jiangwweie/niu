@@ -1,5 +1,7 @@
 import { getParts, lookupPartByCode } from '../../api/parts';
+import { getInventoryStockDetail } from '../../api/inventory';
 import { searchCustomers, searchVehicles, CustomerSearchResult, VehicleSearchResult } from '../../api/customer';
+import { authStore } from '../../stores/auth';
 import {
   createDraftWorkOrder,
   getWorkOrderDetail,
@@ -34,6 +36,7 @@ import {
 } from '../../utils/statusText';
 
 const NO_CHARGE_REASONS = ['官方售后', '免费检测', '老板免单', '质保处理', '其他'];
+let customerSearchTimer: number | undefined;
 
 function partFromLookup(result: PartLookupResult): Part {
   return {
@@ -80,6 +83,8 @@ Page({
     vehicleSearchVisible: false,
     customerSearchKeyword: '',
     vehicleSearchKeyword: '',
+    customerSearchState: 'idle',
+    customerSearchError: '',
 
     // Charge Item Form
     itemPopupVisible: false,
@@ -99,6 +104,7 @@ Page({
     selectedPart: null as Part | null,
     partList: [] as Part[],
     allParts: [] as Part[],
+    selectedPartStock: null as { hasStockRecord: boolean; actualQty: number; availableQty: number; reservedQty: number } | null,
     deletingItem: false,
     lastScannedCode: '',
 
@@ -160,6 +166,13 @@ Page({
     deliverConfirmText: '',
     deliverRemark: '',
     deliverLoading: false,
+    canShowRecordPayment: false,
+    canShowRecordRefund: false,
+    showPaidInFullHint: false,
+    outstandingAmount: 0,
+    outstandingAmountStr: '0.00',
+    refundableAmount: 0,
+    refundableAmountStr: '0.00',
   },
 
   onLoad() {
@@ -167,6 +180,10 @@ Page({
   },
 
   onShow() {
+    if (!authStore.isLoggedIn) {
+      wx.redirectTo({ url: '/pages/login/index?redirect=' + encodeURIComponent('/pages/create-work-order-placeholder/index') });
+      return;
+    }
     if (this.data.workOrderId) {
       this.refreshWorkOrder();
     }
@@ -232,9 +249,29 @@ Page({
       };
       this.setData({
         workOrder,
-        statusText: resolveStatusText(workOrder)
+        statusText: resolveStatusText(workOrder),
+        ...this.resolveActionState(workOrder)
       });
     }).catch(console.error);
+  },
+
+  resolveActionState(order: WorkOrder | null) {
+    const status = order?.progressStatus || order?.status;
+    const netReceived = Number(order?.netReceived ?? order?.receivedAmount ?? 0);
+    const receivable = Number(order?.receivableAmount ?? 0);
+    const outstanding = Math.max(Number(order?.outstandingAmount ?? (receivable - netReceived)), 0);
+    const refundable = Math.max(Number(order?.refundableAmount ?? 0), 0);
+    const paymentAllowedStatus = status === 'REPAIRING' || status === 'REPAIR_DONE';
+    const canShowRecordPayment = !!order?.canRecordPayment && paymentAllowedStatus && outstanding > 0;
+    return {
+      canShowRecordPayment,
+      canShowRecordRefund: !!order?.canRecordRefund && status !== 'DRAFT',
+      showPaidInFullHint: paymentAllowedStatus && outstanding <= 0,
+      outstandingAmount: outstanding,
+      outstandingAmountStr: outstanding.toFixed(2),
+      refundableAmount: refundable,
+      refundableAmountStr: refundable.toFixed(2),
+    };
   },
 
   openAddItem(e: any) {
@@ -243,6 +280,7 @@ Page({
       itemPopupVisible: true,
       editingItemId: null,
       selectedPart: null,
+      selectedPartStock: null,
       lastScannedCode: '',
       currentItemForm: {
         chargeType: type,
@@ -253,6 +291,9 @@ Page({
         remark: ''
       }
     });
+    if (type === 'PART') {
+      Toast({ context: this, selector: '#t-toast', message: '配件需从配件库选择；手工输入请使用工时或其他费用。', icon: 'info-circle' });
+    }
   },
 
   editItem(e: any) {
@@ -261,6 +302,7 @@ Page({
       itemPopupVisible: true,
       editingItemId: item.id,
       selectedPart: null,
+      selectedPartStock: null,
       currentItemForm: {
         chargeType: item.chargeType,
         itemName: item.itemName,
@@ -284,6 +326,10 @@ Page({
 
   onItemFormChange(e: any) {
     const field = e.currentTarget.dataset.field;
+    if (this.data.currentItemForm.chargeType === 'PART' && field === 'itemName') {
+      Toast({ context: this, selector: '#t-toast', message: '配件需从配件库选择；手工输入请使用工时或其他费用。', icon: 'close-circle' });
+      return;
+    }
     this.setData({ [`currentItemForm.${field}`]: e.detail.value });
   },
 
@@ -298,7 +344,7 @@ Page({
     }
 
     if (chargeType === 'PART' && !this.data.editingItemId && !this.data.selectedPart) {
-      Toast({ context: this, selector: '#t-toast', message: '配件必须选择', icon: 'close-circle' });
+      Toast({ context: this, selector: '#t-toast', message: '配件必须从配件库选择', icon: 'close-circle' });
       return;
     }
 
@@ -312,6 +358,22 @@ Page({
     if (isNaN(price) || price < 0) {
       Toast({ context: this, selector: '#t-toast', message: '单价不能小于0', icon: 'close-circle' });
       return;
+    }
+
+    if (chargeType === 'PART' && !this.data.editingItemId) {
+      const stock = this.data.selectedPartStock;
+      if (!stock?.hasStockRecord) {
+        Toast({ context: this, selector: '#t-toast', message: '该配件暂未入库，请先完成入库操作，或使用临时新增配件并入库。', icon: 'close-circle' });
+        return;
+      }
+      if (stock.availableQty <= 0) {
+        Toast({ context: this, selector: '#t-toast', message: '该配件暂无可用库存，请先入库或调整配件。', icon: 'close-circle' });
+        return;
+      }
+      if (qty > stock.availableQty) {
+        Toast({ context: this, selector: '#t-toast', message: '可用库存不足，当前可用 ' + stock.availableQty + '。', icon: 'close-circle' });
+        return;
+      }
     }
 
     this.setData({ savingItem: true });
@@ -401,6 +463,29 @@ Page({
       lastScannedCode: '',
       partSelectorVisible: false
     });
+    this.loadSelectedPartStock(item.id);
+  },
+
+  loadSelectedPartStock(partId: string | number) {
+    getInventoryStockDetail(String(partId)).then(res => {
+      this.setData({
+        selectedPartStock: {
+          hasStockRecord: true,
+          actualQty: Number(res.data.actualQty || 0),
+          availableQty: Number(res.data.availableQty || 0),
+          reservedQty: Number(res.data.reservedQty || 0),
+        }
+      });
+    }).catch(() => {
+      this.setData({
+        selectedPartStock: {
+          hasStockRecord: false,
+          actualQty: 0,
+          availableQty: 0,
+          reservedQty: 0,
+        }
+      });
+    });
   },
 
   scanPartForChargeItem() {
@@ -437,6 +522,12 @@ Page({
           const part = partFromLookup(result);
           this.setData({
             selectedPart: part,
+            selectedPartStock: {
+              hasStockRecord: result.hasStockRecord !== false,
+              actualQty: Number(result.actualQty || 0),
+              availableQty: Number(result.availableQty || 0),
+              reservedQty: Number(result.reservedQty || 0),
+            },
             lastScannedCode: scanValue,
             'currentItemForm.itemName': part.partName
           });
@@ -563,7 +654,18 @@ Page({
 
   // --- Customer Search ---
   onCustomerSearchInput(e: any) {
-    this.setData({ customerSearchKeyword: e.detail.value });
+    const value = e.detail.value;
+    this.setData({ customerSearchKeyword: value });
+    if (customerSearchTimer) {
+      clearTimeout(customerSearchTimer);
+    }
+    customerSearchTimer = setTimeout(() => {
+      if (this.data.customerSearchKeyword.trim()) {
+        this.onCustomerSearch();
+      } else {
+        this.setData({ customerSearchState: 'idle', customerSearchResults: [], customerSearchError: '' });
+      }
+    }, 300) as unknown as number;
   },
 
   onCustomerSearch() {
@@ -572,16 +674,22 @@ Page({
       Toast({ context: this, selector: '#t-toast', message: '请输入客户姓名或手机号', icon: 'close-circle' });
       return;
     }
+    this.setData({ customerSearchState: 'loading', customerSearchError: '' });
     searchCustomers(keyword).then(res => {
-      this.setData({ customerSearchResults: res.data || [] });
-    }).catch(console.error);
+      const results = res.data || [];
+      this.setData({ customerSearchResults: results, customerSearchState: results.length > 0 ? 'success' : 'empty' });
+    }).catch((err: Error) => {
+      this.setData({ customerSearchState: 'error', customerSearchError: err.message || '搜索失败，请稍后重试' });
+    });
   },
 
   openCustomerSearch() {
     this.setData({
       customerSearchVisible: true,
       customerSearchKeyword: '',
-      customerSearchResults: []
+      customerSearchResults: [],
+      customerSearchState: 'idle',
+      customerSearchError: ''
     });
   },
 
@@ -754,7 +862,11 @@ Page({
   // --- Record Payment ---
   openPaymentDialog() {
     const order = this.data.workOrder;
-    if (!order?.canRecordPayment) {
+    if (!this.data.canShowRecordPayment) {
+      if (this.data.outstandingAmount <= 0) {
+        Toast({ context: this, selector: '#t-toast', message: '已无待收金额，无需继续收款', icon: 'close-circle' });
+        return;
+      }
       Toast({ context: this, selector: '#t-toast', message: '当前状态不允许记录收款', icon: 'close-circle' });
       return;
     }
@@ -797,6 +909,15 @@ Page({
 
     if (!this.data.paymentForm.paymentMethod) {
       Toast({ context: this, selector: '#t-toast', message: '请选择收款方式', icon: 'close-circle' });
+      return;
+    }
+    const max = this.data.outstandingAmount || 0;
+    if (max <= 0) {
+      Toast({ context: this, selector: '#t-toast', message: '已无待收金额，无需继续收款', icon: 'close-circle' });
+      return;
+    }
+    if (amount > max) {
+      Toast({ context: this, selector: '#t-toast', message: '收款金额超过待收金额 ¥' + max.toFixed(2), icon: 'close-circle' });
       return;
     }
 
@@ -869,6 +990,15 @@ Page({
 
     if (!this.data.refundForm.reason || this.data.refundForm.reason.trim() === '') {
       Toast({ context: this, selector: '#t-toast', message: '请输入退款原因', icon: 'close-circle' });
+      return;
+    }
+    const maxRefundable = this.data.refundableAmount || 0;
+    if (maxRefundable <= 0) {
+      Toast({ context: this, selector: '#t-toast', message: '当前无可退金额', icon: 'close-circle' });
+      return;
+    }
+    if (amount > maxRefundable) {
+      Toast({ context: this, selector: '#t-toast', message: '退款金额超过可退金额 ¥' + maxRefundable.toFixed(2), icon: 'close-circle' });
       return;
     }
 

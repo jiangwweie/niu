@@ -8,6 +8,7 @@ export interface RefundRecord {
   refundMethod: string;
   refundedAt: string;
   operatorId: number | null;
+  operatorName?: string;
   reason: string;
   remark?: string;
 }

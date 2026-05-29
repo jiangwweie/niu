@@ -15,7 +15,7 @@
           <el-input v-model="queryParams.reimbursementNo" placeholder="请输入报销编号" clearable style="width: 220px;" />
         </el-form-item>
         <el-form-item label="报销人">
-          <el-input v-model="queryParams.applicantId" placeholder="请输入报销人" clearable style="width: 220px;" />
+          <el-input v-model="queryParams.applicantIdStr" placeholder="请输入报销人ID" clearable style="width: 220px;" />
         </el-form-item>
         <el-form-item label="报销状态">
           <el-select v-model="queryParams.status" placeholder="请选择" clearable style="width: 220px;">
@@ -62,7 +62,11 @@
           border
         >
           <el-table-column prop="reimbursementNo" label="报销编号" width="160" />
-          <el-table-column prop="applicantId" label="报销人" width="100" />
+          <el-table-column label="报销人" width="140">
+            <template #default="{ row }">
+              {{ formatPerson(row.applicantName, row.applicantId) }}
+            </template>
+          </el-table-column>
           <el-table-column prop="purpose" label="用途" min-width="160" show-overflow-tooltip />
           <el-table-column label="申请金额" width="120" align="right">
             <template #default="{ row }">
@@ -85,7 +89,7 @@
           <el-table-column prop="submittedAt" label="提交时间" width="160" />
           <el-table-column label="确认人" width="100">
             <template #default="{ row }">
-              {{ row.confirmedBy || '-' }}
+              {{ formatPerson(row.confirmedByName, row.confirmedBy) }}
             </template>
           </el-table-column>
           <el-table-column label="确认时间" width="160">
@@ -123,7 +127,7 @@
       <div v-if="viewDrawer.current">
         <el-descriptions title="报销基础信息" :column="2" border size="small" style="margin-bottom: 20px;">
           <el-descriptions-item label="报销编号" :span="2">{{ viewDrawer.current.reimbursementNo }}</el-descriptions-item>
-          <el-descriptions-item label="报销人">{{ viewDrawer.current.applicantId }}</el-descriptions-item>
+          <el-descriptions-item label="报销人">{{ formatPerson(viewDrawer.current.applicantName, viewDrawer.current.applicantId) }}</el-descriptions-item>
           <el-descriptions-item label="状态">
             <el-tag :type="getStatusTagType(viewDrawer.current.status)" size="small">
               {{ getStatusLabel(viewDrawer.current.status) }}
@@ -142,7 +146,7 @@
             <MoneyText v-if="viewDrawer.current.confirmedAmount !== undefined && viewDrawer.current.confirmedAmount !== null" :amount="viewDrawer.current.confirmedAmount" type="success" />
             <span v-else class="text-info">-</span>
           </el-descriptions-item>
-          <el-descriptions-item label="确认人">{{ viewDrawer.current.confirmedBy || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="确认人">{{ formatPerson(viewDrawer.current.confirmedByName, viewDrawer.current.confirmedBy) }}</el-descriptions-item>
           <el-descriptions-item label="确认时间" :span="2">{{ viewDrawer.current.confirmedAt || '-' }}</el-descriptions-item>
         </el-descriptions>
 
@@ -189,7 +193,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import PageContainer from '@/components/PageContainer.vue';
 import MoneyText from '@/components/MoneyText.vue';
 import { 
@@ -216,6 +220,8 @@ const loading = ref(false);
 const exportLoading = ref(false);
 const tableData = ref<ReimbursementRecord[]>([]);
 const total = ref(0);
+
+const formatPerson = (name?: string, id?: string | number | null) => name || (id ? `员工 #${id}` : '-');
 
 const fetchData = async () => {
   loading.value = true;
@@ -338,6 +344,11 @@ const submitConfirm = async () => {
     ElMessage.warning('确认金额必须大于0');
     return;
   }
+  await ElMessageBox.confirm(
+    `确认报销后，该金额会计入运营成本。\n确认金额：¥${Number(confirmDialog.form.confirmedAmount).toFixed(2)}`,
+    '确认报销',
+    { type: 'warning', confirmButtonText: '确认报销', cancelButtonText: '取消' },
+  );
   confirmDialog.submitting = true;
   try {
     await confirmReimbursement(confirmDialog.reimbursementId, {

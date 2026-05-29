@@ -104,7 +104,7 @@ export const submitWorkOrder = (workOrderId: string | number, data?: SubmitWorkO
   return request<WorkOrder>({
     url: `/api/staff/work-orders/${workOrderId}/submit`,
     method: 'POST',
-    data,
+    data: data || {},
     mockData: { id: workOrderId, progressStatus: 'REPAIRING', progressStatusText: '维修中' } as WorkOrder,
     showLoading: true
   });
@@ -162,7 +162,7 @@ export const markRepairDone = (workOrderId: string | number, data?: MarkRepairDo
   return request<WorkOrder>({
     url: `/api/staff/work-orders/${workOrderId}/mark-repair-done`,
     method: 'POST',
-    data,
+    data: data || {},
     mockData: { id: workOrderId, progressStatus: 'REPAIR_DONE', progressStatusText: '维修完成' } as WorkOrder,
     showLoading: true
   });
@@ -177,7 +177,7 @@ export const deliverWorkOrder = (workOrderId: string | number, data?: DeliverWor
   return request<WorkOrder>({
     url: `/api/staff/work-orders/${workOrderId}/deliver`,
     method: 'POST',
-    data,
+    data: data || {},
     mockData: { id: workOrderId, progressStatus: 'DELIVERED', progressStatusText: '已交付' } as WorkOrder,
     showLoading: true
   });
@@ -203,7 +203,7 @@ export const settleWorkOrder = (workOrderId: string | number, data?: SettleWorkO
   return request<StaffSettledWorkOrderResponse>({
     url: `/api/staff/work-orders/${workOrderId}/settle`,
     method: 'POST',
-    data,
+    data: data || {},
     mockData: { workOrderId, status: 'DELIVERED', receivableAmount: 0, receivedAmount: 0, settledAt: new Date().toISOString(), settlerId: 1 } as StaffSettledWorkOrderResponse,
     showLoading: true
   });

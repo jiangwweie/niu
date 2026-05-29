@@ -12,6 +12,7 @@ interface RefundResp {
   refundMethod: string;
   refundedAt: string;
   operatorId: number | null;
+  operatorName?: string | null;
   reason: string | null;
   remark: string | null;
 }
@@ -26,6 +27,7 @@ function adaptRefund(resp: RefundResp): RefundRecord {
     refundMethod: resp.refundMethod || '',
     refundedAt: resp.refundedAt || '',
     operatorId: resp.operatorId,
+    operatorName: resp.operatorName || undefined,
     reason: resp.reason || '',
     remark: resp.remark || undefined,
   };

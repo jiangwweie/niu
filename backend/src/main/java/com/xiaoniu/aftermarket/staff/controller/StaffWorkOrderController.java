@@ -305,15 +305,17 @@ public class StaffWorkOrderController {
     @PreAuthorize("hasAuthority('WORK_ORDER_SETTLE')")
     public ApiResponse<StaffWorkOrderDetail> markRepairDone(
             @PathVariable Long workOrderId,
-            @Valid @RequestBody StaffMarkRepairDoneRequest request) {
+            @Valid @RequestBody(required = false) StaffMarkRepairDoneRequest request) {
         CurrentUser user = requireCurrentUser();
         MarkRepairDoneWorkOrderCommand command = new MarkRepairDoneWorkOrderCommand();
         command.setStoreId(user.storeId());
         command.setWorkOrderId(workOrderId);
         command.setOperatorId(user.userId());
-        command.setNoChargeReason(request.noChargeReason());
-        command.setNoChargeRemark(request.noChargeRemark());
-        command.setRemark(request.remark());
+        if (request != null) {
+            command.setNoChargeReason(request.noChargeReason());
+            command.setNoChargeRemark(request.noChargeRemark());
+            command.setRemark(request.remark());
+        }
         workOrderService.markRepairDone(command);
         return ApiResponse.success(StaffWorkOrderDetail.from(workOrderService.getById(workOrderId)));
     }
@@ -398,6 +400,7 @@ public class StaffWorkOrderController {
         command.setRefundedAt(request.refundedAt());
         command.setReason(request.reason());
         command.setRemark(request.remark());
+        command.setAllowDeliveredAfterRefund(true);
 
         Long refundId = recordRefundService.execute(command);
         RefundRecordResponse response = refundService.listByWorkOrderId(workOrderId).stream()

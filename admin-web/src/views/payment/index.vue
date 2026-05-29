@@ -108,8 +108,8 @@
           </el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="收款时间">{{ viewDrawer.current.paidAt }}</el-descriptions-item>
-        <el-descriptions-item label="操作人">{{ viewDrawer.current.operatorId ?? '-' }}</el-descriptions-item>
-        <el-descriptions-item label="收款人">{{ viewDrawer.current.receiverId ?? '-' }}</el-descriptions-item>
+        <el-descriptions-item label="操作人">{{ formatPerson(viewDrawer.current.operatorName, viewDrawer.current.operatorId) }}</el-descriptions-item>
+        <el-descriptions-item label="收款人">{{ formatPerson(viewDrawer.current.receiverName, viewDrawer.current.receiverId) }}</el-descriptions-item>
         <el-descriptions-item label="备注">{{ viewDrawer.current.remark || '-' }}</el-descriptions-item>
       </el-descriptions>
     </el-drawer>
@@ -138,6 +138,8 @@ const queryParams = reactive<PaymentQuery>({
 const loading = ref(false);
 const tableData = ref<PaymentRecord[]>([]);
 const total = ref(0);
+
+const formatPerson = (name?: string, id?: number | null) => name || (id ? `员工 #${id}` : '-');
 
 const fetchData = async () => {
   loading.value = true;

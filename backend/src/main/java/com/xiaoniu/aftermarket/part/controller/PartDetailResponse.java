@@ -17,7 +17,8 @@ public record PartDetailResponse(
         String locationRemark,
         String createSource,
         String status,
-        String remark
+        String remark,
+        Boolean canDelete
 ) {
 
     public static PartDetailResponse fromQueryResponse(PartQueryResponse r) {
@@ -35,7 +36,8 @@ public record PartDetailResponse(
                 r.getLocationRemark(),
                 r.getCreateSource(),
                 r.getStatus(),
-                r.getRemark()
+                r.getRemark(),
+                r.getCanDelete()
         );
     }
 }

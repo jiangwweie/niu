@@ -105,7 +105,7 @@
           </el-table-column>
           <el-table-column prop="customerNameSnapshot" label="客户" />
           <el-table-column prop="receivableAmount" label="应收" width="90" align="right">
-            <template #default="{ row }">¥{{ row.receivableAmount }}</template>
+            <template #default="{ row }"><MoneyText :amount="row.receivableAmount ?? 0" /></template>
           </el-table-column>
           <el-table-column prop="createdAt" label="创建时间" width="170">
             <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
@@ -126,6 +126,7 @@ import { ref, reactive, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
 import PageContainer from '@/components/PageContainer.vue';
+import MoneyText from '@/components/MoneyText.vue';
 import { hasPermission } from '@/utils/permission';
 import {
   getVehicleList, getVehicleDetail, updateVehicle, deleteVehicle,

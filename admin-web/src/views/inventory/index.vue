@@ -45,8 +45,8 @@
           <el-table-column prop="partName" label="配件名称" min-width="150" show-overflow-tooltip />
           <el-table-column label="来源" width="90" align="center">
             <template #default="{ row }">
-              <el-tag :type="row.source === 'OFFICIAL' ? 'danger' : 'info'" size="small">
-                {{ row.source === 'OFFICIAL' ? '官方' : '第三方' }}
+              <el-tag :type="isOfficialSource(row.source) ? 'danger' : 'info'" size="small">
+                {{ isOfficialSource(row.source) ? '官方' : '第三方' }}
               </el-tag>
             </template>
           </el-table-column>
@@ -240,7 +240,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import { useRouter } from 'vue-router';
 import PageContainer from '@/components/PageContainer.vue';
 import {
@@ -269,6 +269,8 @@ const queryParams = reactive<InventoryQuery>({
 const loading = ref(false);
 const tableData = ref<InventoryRecord[]>([]);
 const total = ref(0);
+
+const isOfficialSource = (source?: string) => String(source || '').toUpperCase() === 'OFFICIAL';
 
 const fetchData = async () => {
   loading.value = true;
@@ -408,6 +410,11 @@ const submitInbound = async () => {
     ElMessage.warning('入库数量必须大于 0');
     return;
   }
+  await ElMessageBox.confirm(
+    `配件：${inboundDialog.partDisplay || inboundDialog.partId}\n入库数量：${inboundDialog.form.quantity}\n单位成本：${inboundDialog.form.unitCost || 0}\n条码：无\n确认后将生成入库库存流水。`,
+    '确认入库',
+    { type: 'warning', confirmButtonText: '确认入库', cancelButtonText: '取消' },
+  );
   inboundDialog.submitting = true;
   try {
     await submitInboundApi({
@@ -459,6 +466,11 @@ const submitAdjust = async () => {
     ElMessage.warning('请选择调整原因');
     return;
   }
+  await ElMessageBox.confirm(
+    `配件：${adjustDialog.partDisplay || adjustDialog.partId}\n调整数量：${adjustDialog.form.quantityDelta}\n调整原因：${adjustDialog.form.reason}\n库存调整会生成库存流水。`,
+    '确认库存调整',
+    { type: 'warning', confirmButtonText: '确认调整', cancelButtonText: '取消' },
+  );
   adjustDialog.submitting = true;
   try {
     await submitAdjustApi({

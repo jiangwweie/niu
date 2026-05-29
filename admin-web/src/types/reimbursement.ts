@@ -2,6 +2,7 @@ export interface ReimbursementRecord {
   id: string | number;
   reimbursementNo: string;
   applicantId: number;
+  applicantName?: string;
   purpose: string;
   amount: number;
   status: 'PENDING' | 'CONFIRMED' | 'REJECTED' | 'CANCELLED';
@@ -9,6 +10,7 @@ export interface ReimbursementRecord {
   submittedAt?: string;
   confirmedAmount?: number;
   confirmedBy?: number;
+  confirmedByName?: string;
   confirmedAt?: string;
   rejectedBy?: number;
   rejectedAt?: string;

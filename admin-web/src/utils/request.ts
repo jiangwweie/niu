@@ -41,7 +41,7 @@ request.interceptors.response.use(
       return body.data;
     }
     // Backend returned a business error inside 200
-    const msg = getFriendlyErrorMessage(body?.code, body?.message);
+    const msg = body?.message || getFriendlyErrorMessage(body?.code);
     ElMessage.error(msg);
     return Promise.reject(new Error(msg));
   },
@@ -60,17 +60,17 @@ request.interceptors.response.use(
     }
 
     const data = error.response?.data as any;
-    let msg = getFriendlyErrorMessage(data?.code, data?.message || error.message || '网络请求错误');
+    let msg = data?.message || getFriendlyErrorMessage(data?.code, error.message || '网络请求错误');
     if (data instanceof Blob && data.type.includes('application/json')) {
       try {
         const json = JSON.parse(await data.text());
-        msg = getFriendlyErrorMessage(json.code, json.message || msg);
+        msg = json.message || getFriendlyErrorMessage(json.code, msg);
       } catch {
         msg = '请求失败';
       }
     }
     ElMessage.error(msg);
-    return Promise.reject(error);
+    return Promise.reject(new Error(msg));
   },
 );
 

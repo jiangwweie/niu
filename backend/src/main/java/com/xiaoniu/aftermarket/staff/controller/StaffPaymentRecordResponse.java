@@ -12,7 +12,9 @@ public record StaffPaymentRecordResponse(
         String paymentMethod,
         LocalDateTime paidAt,
         Long receiverId,
+        String receiverName,
         Long operatorId,
+        String operatorName,
         String remark
 ) {
 
@@ -25,7 +27,9 @@ public record StaffPaymentRecordResponse(
                 response.getPaymentMethod(),
                 response.getPaidAt(),
                 response.getReceiverId(),
+                response.getReceiverName(),
                 response.getOperatorId(),
+                response.getOperatorName(),
                 response.getRemark()
         );
     }

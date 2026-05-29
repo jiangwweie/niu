@@ -12,6 +12,7 @@ public record StaffRefundRecordResponse(
         String refundMethod,
         LocalDateTime refundedAt,
         Long operatorId,
+        String operatorName,
         String reason,
         String remark
 ) {
@@ -25,6 +26,7 @@ public record StaffRefundRecordResponse(
                 response.getRefundMethod(),
                 response.getRefundedAt(),
                 response.getOperatorId(),
+                response.getOperatorName(),
                 response.getReason(),
                 response.getRemark()
         );

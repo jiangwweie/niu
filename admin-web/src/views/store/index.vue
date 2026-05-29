@@ -17,7 +17,7 @@
         <el-input v-model="form.remark" type="textarea" :rows="3" />
       </el-form-item>
       <el-form-item>
-        <el-button type="primary" :loading="saving" @click="save">保存</el-button>
+        <el-button v-if="hasStoreManage" type="primary" :loading="saving" @click="save">保存</el-button>
       </el-form-item>
     </el-form>
   </PageContainer>
@@ -30,9 +30,11 @@ import PageContainer from '@/components/PageContainer.vue';
 import { getCurrentStore, updateCurrentStore } from '@/api/store';
 import { getMe } from '@/api/auth';
 import { useAuthStore } from '@/stores/auth';
+import { hasPermission } from '@/utils/permission';
 
 const saving = ref(false);
 const authStore = useAuthStore();
+const hasStoreManage = hasPermission('STORE_MANAGE');
 const form = reactive({
   storeName: '',
   contactName: '',

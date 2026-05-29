@@ -14,6 +14,8 @@ public class PaymentRecordResponse {
     private String paymentMethod;
     private LocalDateTime paidAt;
     private Long receiverId;
+    private String receiverName;
     private Long operatorId;
+    private String operatorName;
     private String remark;
 }

@@ -79,7 +79,7 @@ export const request = <T = any>(options: RequestOptions): Promise<ApiResponse<T
         if (res.statusCode >= 200 && res.statusCode < 300) {
           const apiRes = res.data as ApiResponse<T>;
           if (apiRes.code !== 'SUCCESS' && apiRes.code !== 200) {
-            const message = getFriendlyErrorMessage(apiRes.code, apiRes.message);
+            const message = apiRes.message || getFriendlyErrorMessage(apiRes.code);
             wx.showToast({ title: message, icon: 'none' });
             reject(new Error(message));
           } else {
@@ -87,7 +87,7 @@ export const request = <T = any>(options: RequestOptions): Promise<ApiResponse<T
           }
         } else {
           const apiRes = res.data as Partial<ApiResponse<any>> | undefined;
-          const message = getFriendlyErrorMessage(apiRes?.code, apiRes?.message || '请求失败，请稍后重试');
+          const message = apiRes?.message || getFriendlyErrorMessage(apiRes?.code, '请求失败，请稍后重试');
           const error = new Error(message) as ApiError;
           error.code = apiRes?.code;
           error.statusCode = res.statusCode;

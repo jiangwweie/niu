@@ -24,11 +24,17 @@
           </el-menu-item>
 
           <!-- 业务管理 -->
-          <el-sub-menu index="business">
+          <el-sub-menu
+            v-if="hasAnyPermission(['WORK_ORDER_VIEW', 'WORK_ORDER_CREATE', 'WORK_ORDER_SETTLE', 'CUSTOMER_VIEW', 'CUSTOMER_MANAGE'])"
+            index="business"
+          >
             <template #title>
               <span>业务管理</span>
             </template>
-            <el-menu-item index="/work-order">
+            <el-menu-item
+              v-if="hasAnyPermission(['WORK_ORDER_VIEW', 'WORK_ORDER_CREATE', 'WORK_ORDER_SETTLE'])"
+              index="/work-order"
+            >
               <template #title>工单管理</template>
             </el-menu-item>
             <el-menu-item
@@ -46,11 +52,17 @@
           </el-sub-menu>
 
           <!-- 配件库存 -->
-          <el-sub-menu index="inventory">
+          <el-sub-menu
+            v-if="hasAnyPermission(['PART_VIEW', 'PART_MANAGE', 'INVENTORY_VIEW', 'INVENTORY_INBOUND', 'INVENTORY_ADJUST'])"
+            index="inventory"
+          >
             <template #title>
               <span>配件库存</span>
             </template>
-            <el-menu-item index="/parts">
+            <el-menu-item
+              v-if="hasAnyPermission(['PART_VIEW', 'PART_MANAGE'])"
+              index="/parts"
+            >
               <template #title>配件管理</template>
             </el-menu-item>
             <el-menu-item
@@ -104,7 +116,8 @@
               hasPermission('STORE_MANAGE') ||
               hasAnyPermission(['USER_MANAGE', 'ROLE_MANAGE']) ||
               hasPermission('DICT_MANAGE') ||
-              true
+              hasPermission('EXCEL_EXPORT') ||
+              hasRole('SUPER_ADMIN')
             "
             index="settings"
           >
@@ -120,7 +133,7 @@
             <el-menu-item v-if="hasPermission('DICT_MANAGE')" index="/dictionary">
               <template #title>基础配置</template>
             </el-menu-item>
-            <el-menu-item index="/export">
+            <el-menu-item v-if="hasPermission('EXCEL_EXPORT')" index="/export">
               <template #title>数据导出</template>
             </el-menu-item>
             <el-menu-item v-if="hasRole('SUPER_ADMIN')" index="/trial-data">

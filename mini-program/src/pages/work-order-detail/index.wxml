@@ -99,11 +99,12 @@
   </view>
 
   <!-- 收款按钮 -->
-  <view class="section cashier-actions-section" wx:if="{{order.canRecordPayment || order.canRecordRefund}}">
+  <view class="section cashier-actions-section" wx:if="{{canShowRecordPayment || canShowRecordRefund || showPaidInFullHint}}">
     <text class="section-title">收银操作</text>
     <view class="cashier-actions">
-      <t-button wx:if="{{order.canRecordPayment}}" theme="primary" variant="base" block size="medium" bind:tap="openPaymentPopup">记录收款</t-button>
-      <t-button wx:if="{{order.canRecordRefund}}" theme="warning" variant="outline" block size="medium" bind:tap="openRefundPopup">记录退款</t-button>
+      <view wx:if="{{showPaidInFullHint}}" style="color: #00a870; font-size: 13px; margin-bottom: 8px;">已收齐</view>
+      <t-button wx:if="{{canShowRecordPayment}}" theme="primary" variant="base" block size="medium" bind:tap="openPaymentPopup">记录收款</t-button>
+      <t-button wx:if="{{canShowRecordRefund}}" theme="warning" variant="outline" block size="medium" bind:tap="openRefundPopup">记录退款</t-button>
     </view>
   </view>
 

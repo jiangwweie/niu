@@ -8,7 +8,9 @@ export interface PaymentRecord {
   paymentMethod: string;
   paidAt: string;
   receiverId: number | null;
+  receiverName?: string;
   operatorId: number | null;
+  operatorName?: string;
   remark?: string;
 }
 

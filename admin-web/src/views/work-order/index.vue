@@ -196,7 +196,7 @@
             <template #default="{ row }"><MoneyText :amount="row.lineAmount" /></template>
           </el-table-column>
           <el-table-column label="成本金额" width="100" align="right">
-            <template #default="{ row }"><MoneyText :amount="row.costAmount || '-' " /></template>
+            <template #default="{ row }"><MoneyText :amount="row.costAmount ?? 0" /></template>
           </el-table-column>
           <el-table-column label="影响库存" width="90" align="center">
             <template #default="{ row }">
@@ -328,6 +328,12 @@
               <template #default="{ row }">{{ getPaymentMethodLabel(row.paymentMethod) }}</template>
             </el-table-column>
             <el-table-column label="收款时间" prop="paidAt" width="160" />
+            <el-table-column label="操作人" width="120">
+              <template #default="{ row }">{{ formatPerson(row.operatorName, row.operatorId) }}</template>
+            </el-table-column>
+            <el-table-column label="收款人" width="120">
+              <template #default="{ row }">{{ formatPerson(row.receiverName, row.receiverId) }}</template>
+            </el-table-column>
             <el-table-column label="备注" prop="remark" min-width="120" show-overflow-tooltip />
           </el-table>
         </div>
@@ -344,6 +350,9 @@
             </el-table-column>
             <el-table-column label="退款原因" prop="reason" min-width="120" show-overflow-tooltip />
             <el-table-column label="退款时间" prop="refundedAt" width="160" />
+            <el-table-column label="操作人" width="120">
+              <template #default="{ row }">{{ formatPerson(row.operatorName, row.operatorId) }}</template>
+            </el-table-column>
           </el-table>
         </div>
       </template>
@@ -690,6 +699,7 @@ const drawerVisible = ref(false);
 const currentOrder = ref<WorkOrderRecord | null>(null);
 const workOrderPayments = ref<any[]>([]);
 const workOrderRefunds = ref<any[]>([]);
+const formatPerson = (name?: string, id?: number | string | null) => name || (id ? `员工 #${id}` : '-');
 
 const pendingAmount = computed(() => {
   if (!currentOrder.value) return 0;

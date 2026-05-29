@@ -12,7 +12,9 @@ interface PaymentResp {
   paymentMethod: string;
   paidAt: string;
   receiverId: number | null;
+  receiverName?: string | null;
   operatorId: number | null;
+  operatorName?: string | null;
   remark: string | null;
 }
 
@@ -26,7 +28,9 @@ function adaptPayment(resp: PaymentResp): PaymentRecord {
     paymentMethod: resp.paymentMethod || '',
     paidAt: resp.paidAt || '',
     receiverId: resp.receiverId,
+    receiverName: resp.receiverName || undefined,
     operatorId: resp.operatorId,
+    operatorName: resp.operatorName || undefined,
     remark: resp.remark || undefined,
   };
 }

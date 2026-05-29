@@ -1,4 +1,5 @@
 import { submitReimbursement } from '../../api/reimbursement';
+import { authStore } from '../../stores/auth';
 import Toast from 'tdesign-miniprogram/toast/index';
 
 Page({
@@ -9,6 +10,12 @@ Page({
       remark: ''
     },
     submitLoading: false
+  },
+
+  onShow() {
+    if (!authStore.isLoggedIn) {
+      wx.redirectTo({ url: '/pages/login/index?redirect=' + encodeURIComponent('/pages/reimbursement-placeholder/index') });
+    }
   },
 
   onFormChange(e: any) {
