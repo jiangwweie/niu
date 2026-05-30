@@ -2,7 +2,14 @@
   <!-- 顶部搜索 + 新建按钮 -->
   <view class="toolbar">
     <view class="search-wrap">
-      <t-search value="{{keyword}}" placeholder="搜索工单号 / 客户姓名" bind:change="onSearch" bind:clear="onClear" />
+      <t-search
+        value="{{keyword}}"
+        placeholder="搜索工单号 / 客户名 / 手机号 / 车架号"
+        bind:change="onSearch"
+        bind:clear="onClear"
+        bind:submit="onSubmitSearch"
+        bind:action-click="onSubmitSearch"
+      />
     </view>
     <t-button
       wx:if="{{hasCreateOrderPermission}}"
@@ -27,10 +34,10 @@
 
   <!-- 工单列表 -->
   <view class="list">
-    <block wx:if="{{filteredOrders.length > 0}}">
+    <block wx:if="{{orders.length > 0}}">
       <view
         class="card"
-        wx:for="{{filteredOrders}}"
+        wx:for="{{orders}}"
         wx:key="id"
         bindtap="onTapDetail"
         data-id="{{item.id}}"

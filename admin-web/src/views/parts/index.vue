@@ -77,6 +77,12 @@
               <MoneyText :amount="row.costPrice" />
             </template>
           </el-table-column>
+          <el-table-column label="销售价" width="100" align="right">
+            <template #default="{ row }">
+              <MoneyText v-if="row.salePrice != null" :amount="row.salePrice" />
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
           <el-table-column prop="barcode" label="条形码" width="140" />
           <el-table-column prop="location" label="库存位置" width="140" show-overflow-tooltip />
           <el-table-column label="状态" width="80" align="center">
@@ -86,7 +92,7 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="240" fixed="right">
+          <el-table-column label="操作" width="280" fixed="right">
             <template #default="{ row }">
               <el-button link type="primary" @click="handleView(row)">查看</el-button>
               <el-button v-if="hasPermission('PART_MANAGE')" link type="primary" @click="openEditDialog(row)">编辑</el-button>
@@ -94,10 +100,14 @@
               <el-button v-if="hasPermission('PART_MANAGE')" link :type="row.status ? 'danger' : 'success'" @click="handleToggleStatus(row)">
                 {{ row.status ? '停用' : '启用' }}
               </el-button>
-              <el-button v-if="hasPermission('PART_MANAGE') && row.canDelete" link type="danger" @click="handleDelete(row)">删除</el-button>
-              <el-tooltip v-else-if="hasPermission('PART_MANAGE')" content="已有库存、库存流水或工单引用，不能直接删除，请使用停用">
-                <el-button link type="info" disabled>删除</el-button>
-              </el-tooltip>
+              <el-dropdown v-if="hasPermission('PART_MANAGE')" trigger="click" @command="(command: string) => handleAdvancedCommand(command, row)">
+                <el-button link type="warning">高级操作</el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="delete" :disabled="row.canDelete === false">删除</el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
             </template>
           </el-table-column>
         </el-table>
@@ -131,6 +141,10 @@
           <el-descriptions-item label="型号">{{ detailDrawer.data.model || '-' }}</el-descriptions-item>
           <el-descriptions-item label="分类">{{ detailDrawer.data.category || '-' }}</el-descriptions-item>
           <el-descriptions-item label="成本价"><MoneyText :amount="detailDrawer.data.costPrice" /></el-descriptions-item>
+          <el-descriptions-item label="销售价">
+            <MoneyText v-if="detailDrawer.data.salePrice != null" :amount="detailDrawer.data.salePrice" />
+            <span v-else>-</span>
+          </el-descriptions-item>
           <el-descriptions-item label="条形码">
             <span>{{ detailDrawer.data.barcode || '-' }}</span>
             <el-button
@@ -182,6 +196,9 @@
         </el-form-item>
         <el-form-item label="成本价">
           <el-input-number v-model="editDialog.form.referenceCostPrice" :min="0" :precision="2" :step="10" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="销售价">
+          <el-input-number v-model="editDialog.form.defaultSalePrice" :min="0" :precision="2" :step="10" style="width: 100%" />
         </el-form-item>
         <el-form-item label="条形码">
           <el-input v-model="editDialog.form.defaultBarcode" placeholder="请输入条形码" />
@@ -298,6 +315,7 @@ const editDialog = reactive({
     model: '',
     categoryCode: '',
     referenceCostPrice: 0,
+    defaultSalePrice: null as number | null,
     defaultBarcode: '',
     locationRemark: '',
     remark: '',
@@ -314,6 +332,7 @@ const openAddDialog = () => {
     model: '',
     categoryCode: '',
     referenceCostPrice: 0,
+    defaultSalePrice: null as number | null,
     defaultBarcode: '',
     locationRemark: '',
     remark: '',
@@ -331,6 +350,7 @@ const openEditDialog = (row: PartViewRecord) => {
     model: row.model,
     categoryCode: row.category,
     referenceCostPrice: row.costPrice,
+    defaultSalePrice: row.salePrice,
     defaultBarcode: row.barcode,
     locationRemark: row.location,
     remark: row.remark,
@@ -358,6 +378,7 @@ const submitEdit = async () => {
         model: editDialog.form.model || undefined,
         categoryCode: editDialog.form.categoryCode || undefined,
         referenceCostPrice: editDialog.form.referenceCostPrice || undefined,
+        defaultSalePrice: editDialog.form.defaultSalePrice ?? undefined,
         defaultBarcode: editDialog.form.defaultBarcode || undefined,
         locationRemark: editDialog.form.locationRemark || undefined,
         remark: editDialog.form.remark || undefined,
@@ -376,6 +397,7 @@ const submitEdit = async () => {
           model: editDialog.form.model || undefined,
           categoryCode: editDialog.form.categoryCode || undefined,
           referenceCostPrice: editDialog.form.referenceCostPrice || undefined,
+          defaultSalePrice: editDialog.form.defaultSalePrice ?? undefined,
           defaultBarcode: editDialog.form.defaultBarcode || undefined,
           locationRemark: editDialog.form.locationRemark || undefined,
           remark: editDialog.form.remark || undefined,
@@ -386,6 +408,7 @@ const submitEdit = async () => {
           model: editDialog.form.model || undefined,
           categoryCode: editDialog.form.categoryCode || undefined,
           referenceCostPrice: editDialog.form.referenceCostPrice || undefined,
+          defaultSalePrice: editDialog.form.defaultSalePrice ?? undefined,
           defaultBarcode: editDialog.form.defaultBarcode || undefined,
           locationRemark: editDialog.form.locationRemark || undefined,
           remark: editDialog.form.remark || undefined,
@@ -442,6 +465,12 @@ const handleDelete = async (row: PartViewRecord) => {
     fetchData();
   } catch {
     // User cancelled or API error.
+  }
+};
+
+const handleAdvancedCommand = (command: string, row: PartViewRecord) => {
+  if (command === 'delete') {
+    handleDelete(row);
   }
 };
 

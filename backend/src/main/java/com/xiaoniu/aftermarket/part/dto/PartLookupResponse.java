@@ -17,6 +17,7 @@ public record PartLookupResponse(
         String categoryCode,
         String category,
         BigDecimal costPrice,
+        BigDecimal salePrice,
         Boolean enabled,
         Boolean hasStockRecord,
         Integer actualQty,
@@ -26,7 +27,7 @@ public record PartLookupResponse(
 
     public static PartLookupResponse notMatched() {
         return new PartLookupResponse(false, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     public static PartLookupResponse matched(PartEntity part, InventoryStockEntity stock) {
@@ -43,6 +44,7 @@ public record PartLookupResponse(
                 part.getCategoryCode(),
                 part.getCategoryCode(),
                 part.getReferenceCostPrice(),
+                part.getDefaultSalePrice(),
                 "ENABLED".equals(part.getStatus()),
                 stock != null,
                 stock != null ? stock.getActualQty() : 0,

@@ -5,13 +5,6 @@
       <t-search value="{{keyword}}" placeholder="搜索配件编码 / 名称" bind:change="onSearch" bind:clear="onClear" />
     </view>
     <t-button
-      theme="primary"
-      size="small"
-      icon="scan"
-      bind:tap="handleScanLookup"
-      custom-style="flex-shrink:0;margin-left:12rpx;"
-    >扫码</t-button>
-    <t-button
       wx:if="{{hasInboundPermission}}"
       theme="success"
       size="small"
@@ -19,31 +12,6 @@
       bind:tap="goToInbound"
       custom-style="flex-shrink:0;margin-left:12rpx;"
     >入库</t-button>
-  </view>
-
-  <view class="scan-result-card" wx:if="{{scannedStock}}">
-    <view class="card-row card-row-top">
-      <text class="part-name">{{scannedStock.name}}</text>
-      <view class="source-tag source-{{scannedStock.source}}">{{scannedStock.sourceText}}</view>
-    </view>
-    <text class="part-code">编码: {{scannedStock.partCode}}</text>
-    <text class="part-code" wx:if="{{scannedStock.defaultBarcode}}">条码: {{scannedStock.defaultBarcode}}</text>
-    <view class="stock-row">
-      <view class="stock-cell">
-        <text class="stock-label">可用</text>
-        <text class="stock-val {{scannedStock.availableQtyClass}}">{{scannedStock.availableQty}}</text>
-      </view>
-      <view class="stock-divider" />
-      <view class="stock-cell">
-        <text class="stock-label">实际</text>
-        <text class="stock-val">{{scannedStock.actualQty}}</text>
-      </view>
-      <view class="stock-divider" />
-      <view class="stock-cell">
-        <text class="stock-label">预占</text>
-        <text class="stock-val {{scannedStock.reservedQty > 0 ? 'stock-reserved' : ''}}">{{scannedStock.reservedQty}}</text>
-      </view>
-    </view>
   </view>
 
   <!-- 库存列表 -->

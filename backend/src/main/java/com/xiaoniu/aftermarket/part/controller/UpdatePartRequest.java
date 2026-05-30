@@ -8,6 +8,7 @@ public record UpdatePartRequest(
         String model,
         String categoryCode,
         BigDecimal referenceCostPrice,
+        BigDecimal defaultSalePrice,
         String defaultBarcode,
         String locationRemark,
         String remark

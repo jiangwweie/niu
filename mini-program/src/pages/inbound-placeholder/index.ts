@@ -75,7 +75,8 @@ Page({
     this.setData({
       selectedPart: item,
       lookupResult: null,
-      partSelectorVisible: false
+      partSelectorVisible: false,
+      'formData.unitCost': item.costPrice != null ? String(item.costPrice) : ''
     });
   },
 
@@ -124,12 +125,15 @@ Page({
         officialPartNo: result.officialPartNo,
         defaultBarcode: result.defaultBarcode,
         model: result.model,
-        categoryCode: result.categoryCode || result.category || ''
+        categoryCode: result.categoryCode || result.category || '',
+        costPrice: result.costPrice,
+        salePrice: result.salePrice
       };
       this.setData({
         selectedPart: part,
         lookupResult: result,
-        'formData.barcode': scanValue
+        'formData.barcode': scanValue,
+        'formData.unitCost': part.costPrice != null ? String(part.costPrice) : ''
       });
       Toast({ context: this, selector: '#t-toast', message: '已识别配件', icon: 'check-circle' });
     }).catch(() => {

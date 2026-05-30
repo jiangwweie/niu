@@ -89,6 +89,7 @@ public class StaffWorkOrderController {
 
     @GetMapping
     public ApiResponse<PageResponse<StaffWorkOrderListItem>> listWorkOrders(
+            @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String workOrderNo,
             @RequestParam(required = false) String customerName,
             @RequestParam(required = false) String customerPhone,
@@ -100,6 +101,7 @@ public class StaffWorkOrderController {
         CurrentUser user = requireCurrentUser();
         WorkOrderQueryRequest request = new WorkOrderQueryRequest();
         request.setStoreId(user.storeId());
+        request.setKeyword(keyword);
         request.setWorkOrderNo(workOrderNo);
         request.setCustomerName(customerName);
         request.setCustomerPhone(customerPhone);

@@ -11,6 +11,7 @@ import {
 
 const PROGRESS_TABS = [
   { value: '', label: '全部' },
+  { value: 'DRAFT', label: '新建中' },
   { value: 'REPAIRING', label: '维修中' },
   { value: 'REPAIR_DONE', label: '维修完成' },
   { value: 'DELIVERED', label: '已交付' },
@@ -58,8 +59,9 @@ Page({
     activeStatus: '',
     progressTabs: PROGRESS_TABS,
     orders: [] as WorkOrderListItem[],
-    filteredOrders: [] as WorkOrderListItem[],
     hasCreateOrderPermission: false,
+    pageNo: 1,
+    pageSize: 20,
   },
   onShow() {
     if (!authStore.isLoggedIn) {
@@ -76,27 +78,28 @@ Page({
   },
   onSearch(e: any) {
     this.setData({ keyword: e.detail.value });
+  },
+  onSubmitSearch() {
+    this.setData({ pageNo: 1 });
     this.fetchData();
   },
   onClear() {
-    this.setData({ keyword: '' });
+    this.setData({ keyword: '', pageNo: 1 });
     this.fetchData();
   },
   onTabChange(e: any) {
     const status = e.currentTarget.dataset.status as string;
-    this.setData({ activeStatus: status });
-    this.applyFilter();
-  },
-  applyFilter() {
-    const { orders, activeStatus } = this.data;
-    const filtered = activeStatus
-      ? orders.filter(o => o.progressKey === activeStatus)
-      : orders;
-    this.setData({ filteredOrders: filtered });
+    this.setData({ activeStatus: status, pageNo: 1 });
+    this.fetchData();
   },
   async fetchData() {
     try {
-      const res = await getWorkOrders({ keyword: this.data.keyword });
+      const res = await getWorkOrders({
+        keyword: this.data.keyword,
+        status: this.data.activeStatus || undefined,
+        pageNo: this.data.pageNo,
+        pageSize: this.data.pageSize,
+      });
       const orders = (res.data.records || []).map((item: WorkOrder) => ({
         ...item,
         progressText: resolveProgressText(item),
@@ -107,7 +110,6 @@ Page({
         outstandingDisplay: (item.outstandingAmount != null ? item.outstandingAmount : Math.max(0, (item.receivableAmount || 0) - (item.receivedAmount || 0))).toFixed(2),
       }));
       this.setData({ orders });
-      this.applyFilter();
     } catch (e) {
       wx.showToast({ title: '加载失败', icon: 'none' });
     }

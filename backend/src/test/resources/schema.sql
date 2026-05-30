@@ -183,6 +183,7 @@ CREATE TABLE IF NOT EXISTS part (
     source VARCHAR(32) NOT NULL,
     category_code VARCHAR(64) NULL,
     reference_cost_price DECIMAL(18,4) NULL,
+    default_sale_price DECIMAL(18,2) NULL,
     default_barcode VARCHAR(128) NULL,
     location_remark VARCHAR(255) NULL,
     create_source VARCHAR(32) NOT NULL,

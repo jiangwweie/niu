@@ -11,6 +11,7 @@ interface PartResp {
   source: string;
   categoryCode: string;
   referenceCostPrice: number;
+  defaultSalePrice?: number;
   defaultBarcode: string;
   locationRemark: string;
   createSource: string;
@@ -29,6 +30,7 @@ export interface PartViewRecord {
   model: string;
   category: string;
   costPrice: number;
+  salePrice: number | null;
   barcode: string;
   location: string;
   status: boolean;
@@ -72,6 +74,7 @@ function adaptPart(resp: PartResp): PartViewRecord {
     model: resp.model || '',
     category: resp.categoryCode || '',
     costPrice: resp.referenceCostPrice || 0,
+    salePrice: resp.defaultSalePrice ?? null,
     barcode: resp.defaultBarcode || '',
     location: resp.locationRemark || '',
     status: resp.status === 'ENABLED',
@@ -137,6 +140,7 @@ export function createOfficialPart(body: {
   model?: string;
   categoryCode?: string;
   referenceCostPrice?: number;
+  defaultSalePrice?: number;
   defaultBarcode?: string;
   locationRemark?: string;
   remark?: string;
@@ -153,6 +157,7 @@ export function createThirdPartyPart(body: {
   model?: string;
   categoryCode?: string;
   referenceCostPrice?: number;
+  defaultSalePrice?: number;
   defaultBarcode?: string;
   locationRemark?: string;
   remark?: string;
@@ -188,6 +193,7 @@ export function updatePart(partId: string | number, body: {
   model?: string;
   categoryCode?: string;
   referenceCostPrice?: number;
+  defaultSalePrice?: number;
   defaultBarcode?: string;
   locationRemark?: string;
   remark?: string;

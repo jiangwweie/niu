@@ -10,7 +10,8 @@ export const mockParts = {
       officialPartNo: 'N-BK-001',
       model: 'NQi/MQi',
       categoryCode: 'BRAKE',
-      retailPrice: 85.00
+      costPrice: 58.00,
+      salePrice: 85.00
     },
     {
       id: 101,
@@ -19,7 +20,8 @@ export const mockParts = {
       source: 'THIRD_PARTY',
       model: '通用',
       categoryCode: 'ACCESSORY',
-      retailPrice: 45.00
+      costPrice: 30.00,
+      salePrice: 45.00
     }
   ] as Part[],
   pageNo: 1,

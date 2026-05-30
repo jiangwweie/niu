@@ -15,6 +15,7 @@ public class PartQueryResponse {
     private String source;
     private String categoryCode;
     private BigDecimal referenceCostPrice;
+    private BigDecimal defaultSalePrice;
     private String defaultBarcode;
     private String locationRemark;
     private String createSource;

@@ -53,6 +53,7 @@ class PartServiceTest {
     @Test
     void createOfficialPartSuccessfully() {
         CreatePartCommand command = buildOfficialCommand("官方刹车片", "OF-BRAKE-001");
+        command.setDefaultSalePrice(new BigDecimal("39.90"));
 
         PartEntity result = partService.createOfficialPart(command);
 
@@ -64,6 +65,7 @@ class PartServiceTest {
         assertEquals("官方刹车片", result.getPartName());
         assertEquals(PartSource.OFFICIAL.getCode(), result.getSource());
         assertEquals(CommonStatus.ENABLED.getCode(), result.getStatus());
+        assertEquals(0, new BigDecimal("39.90").compareTo(result.getDefaultSalePrice()));
         assertNull(result.getDefaultBarcode());
     }
 
@@ -167,11 +169,13 @@ class PartServiceTest {
         BusinessException ex = assertThrows(BusinessException.class,
                 () -> partService.deletePart(STORE_ID, part.getId(), OPERATOR_ID));
         assertEquals(ErrorCode.PART_HAS_STOCK, ex.getErrorCode());
+        assertEquals("该配件已有库存流水或工单记录，不能删除。可以停用，停用后不会再被新工单选择。", ex.getMessage());
     }
 
     @Test
     void deletePartWithoutStockSoftDeletesAndPageQueryHidesIt() {
         PartEntity part = partService.createOfficialPart(buildOfficialCommand("零库存配件", "DEL-ZERO-001"));
+        partService.createBarcode(STORE_ID, part.getId(), "DEL-ZERO-BC-001", OPERATOR_ID);
         jdbcTemplate.update("""
                 INSERT INTO inventory_stock (store_id, part_id, actual_qty, available_qty, reserved_qty)
                 VALUES (?, ?, 0, 0, 0)
@@ -181,11 +185,33 @@ class PartServiceTest {
 
         PartEntity deleted = partService.getById(part.getId());
         assertEquals(1, deleted.getDeleted());
+        assertEquals(CommonStatus.DISABLED.getCode(), deleted.getStatus());
         assertNotNull(deleted.getUpdatedAt());
+        Integer barcodeDeleted = jdbcTemplate.queryForObject(
+                "SELECT deleted FROM part_barcode WHERE store_id = ? AND part_id = ? AND barcode = ?",
+                Integer.class, STORE_ID, part.getId(), "DEL-ZERO-BC-001");
+        assertEquals(1, barcodeDeleted);
+        assertNull(partService.getByBarcode(STORE_ID, "DEL-ZERO-BC-001"));
         PartQueryRequest request = new PartQueryRequest();
         request.setStoreId(STORE_ID);
         request.setPartCode("DEL-ZERO-001");
         assertEquals(0, partService.pageQuery(request).total());
+    }
+
+    @Test
+    void deletePartWithWorkOrderReferenceFails() {
+        PartEntity part = partService.createOfficialPart(buildOfficialCommand("工单引用配件", "DEL-WO-001"));
+        jdbcTemplate.update("""
+                INSERT INTO work_order_charge_item
+                    (store_id, work_order_id, charge_type, item_name, part_id, quantity, unit_price,
+                     line_amount, cost_price_snapshot, line_cost_amount, inventory_affecting, status, created_by)
+                VALUES (?, ?, 'PART', ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', ?)
+                """, STORE_ID, 90001L, "工单引用配件", part.getId(), 1, new BigDecimal("30.00"),
+                new BigDecimal("30.00"), new BigDecimal("10.50"), new BigDecimal("10.50"), 1, OPERATOR_ID);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> partService.deletePart(STORE_ID, part.getId(), OPERATOR_ID));
+        assertEquals(ErrorCode.PART_HAS_STOCK, ex.getErrorCode());
     }
 
     @Test
@@ -197,12 +223,14 @@ class PartServiceTest {
         command.setStoreId(STORE_ID);
         command.setPartName("更新后名称");
         command.setModel("V2");
+        command.setDefaultSalePrice(new BigDecimal("88.80"));
         partService.updatePart(command);
 
         PartEntity updated = partService.getById(part.getId());
         assertEquals("更新后名称", updated.getPartName());
         assertEquals("V2", updated.getModel());
         assertEquals("UPD-001", updated.getPartCode());
+        assertEquals(0, new BigDecimal("88.80").compareTo(updated.getDefaultSalePrice()));
     }
 
     @Test
@@ -216,7 +244,9 @@ class PartServiceTest {
 
     @Test
     void pageQuerySuccessfully() {
-        partService.createOfficialPart(buildOfficialCommand("刹车片A", "PG-001"));
+        CreatePartCommand firstCommand = buildOfficialCommand("刹车片A", "PG-001");
+        firstCommand.setDefaultSalePrice(new BigDecimal("28.00"));
+        partService.createOfficialPart(firstCommand);
         partService.createOfficialPart(buildOfficialCommand("刹车片B", "PG-002"));
         partService.createThirdPartyPart(buildThirdPartyCommand("电池C"));
 
@@ -228,6 +258,11 @@ class PartServiceTest {
         PageResponse<PartQueryResponse> response = partService.pageQuery(request);
         assertEquals(3, response.total());
         assertEquals(3, response.records().size());
+        PartQueryResponse first = response.records().stream()
+                .filter(item -> "PG-001".equals(item.getPartCode()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(0, new BigDecimal("28.00").compareTo(first.getDefaultSalePrice()));
     }
 
     @Test

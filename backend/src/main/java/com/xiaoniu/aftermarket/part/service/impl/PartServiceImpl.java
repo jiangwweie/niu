@@ -97,6 +97,7 @@ public class PartServiceImpl implements PartService {
         part.setSource(PartSource.OFFICIAL.getCode());
         part.setCategoryCode(command.getCategoryCode());
         part.setReferenceCostPrice(command.getReferenceCostPrice());
+        part.setDefaultSalePrice(command.getDefaultSalePrice());
         part.setLocationRemark(command.getLocationRemark());
         part.setCreateSource(resolveCreateSource(command));
         part.setStatus(CommonStatus.ENABLED.getCode());
@@ -128,6 +129,7 @@ public class PartServiceImpl implements PartService {
         part.setSource(PartSource.THIRD_PARTY.getCode());
         part.setCategoryCode(command.getCategoryCode());
         part.setReferenceCostPrice(command.getReferenceCostPrice());
+        part.setDefaultSalePrice(command.getDefaultSalePrice());
         part.setLocationRemark(command.getLocationRemark());
         part.setCreateSource(resolveCreateSource(command));
         part.setStatus(CommonStatus.ENABLED.getCode());
@@ -167,6 +169,9 @@ public class PartServiceImpl implements PartService {
         }
         if (command.getReferenceCostPrice() != null) {
             existing.setReferenceCostPrice(command.getReferenceCostPrice());
+        }
+        if (command.getDefaultSalePrice() != null) {
+            existing.setDefaultSalePrice(command.getDefaultSalePrice());
         }
         if (command.getLocationRemark() != null) {
             existing.setLocationRemark(command.getLocationRemark());
@@ -226,12 +231,16 @@ public class PartServiceImpl implements PartService {
             throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "配件不属于当前门店");
         }
         if (!canDelete(storeId, partId)) {
-            throw new BusinessException(ErrorCode.PART_HAS_STOCK);
+            throw new BusinessException(ErrorCode.PART_HAS_STOCK,
+                    "该配件已有库存流水或工单记录，不能删除。可以停用，停用后不会再被新工单选择。");
         }
         existing.setDeleted(1);
+        existing.setStatus(CommonStatus.DISABLED.getCode());
+        existing.setDefaultBarcode(null);
         existing.setUpdatedBy(operatorId);
         existing.setUpdatedAt(LocalDateTime.now());
         partMapper.updateById(existing);
+        softDeletePartBarcodes(storeId, partId, operatorId);
     }
 
     @Override
@@ -603,6 +612,7 @@ public class PartServiceImpl implements PartService {
         response.setSource(entity.getSource());
         response.setCategoryCode(entity.getCategoryCode());
         response.setReferenceCostPrice(entity.getReferenceCostPrice());
+        response.setDefaultSalePrice(entity.getDefaultSalePrice());
         response.setDefaultBarcode(entity.getDefaultBarcode());
         response.setLocationRemark(entity.getLocationRemark());
         response.setCreateSource(entity.getCreateSource());
@@ -631,5 +641,18 @@ public class PartServiceImpl implements PartService {
         wrapper.eq("part_id", partId)
                 .eq("deleted", 0);
         return chargeItemMapper.selectCount(wrapper) > 0;
+    }
+
+    private void softDeletePartBarcodes(Long storeId, Long partId, Long operatorId) {
+        UpdateWrapper<PartBarcodeEntity> wrapper = new UpdateWrapper<>();
+        wrapper.eq("store_id", storeId)
+                .eq("part_id", partId)
+                .eq("deleted", 0)
+                .set("deleted", 1)
+                .set("status", CommonStatus.DISABLED.getCode())
+                .set("is_primary", false)
+                .set("updated_by", operatorId)
+                .set("updated_at", LocalDateTime.now());
+        partBarcodeMapper.update(null, wrapper);
     }
 }

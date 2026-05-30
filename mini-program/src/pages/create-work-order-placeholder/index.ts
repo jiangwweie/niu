@@ -47,7 +47,9 @@ function partFromLookup(result: PartLookupResult): Part {
     officialPartNo: result.officialPartNo,
     defaultBarcode: result.defaultBarcode,
     model: result.model,
-    categoryCode: result.categoryCode || result.category || ''
+    categoryCode: result.categoryCode || result.category || '',
+    costPrice: result.costPrice,
+    salePrice: result.salePrice
   };
 }
 
@@ -460,6 +462,7 @@ Page({
     this.setData({
       selectedPart: item,
       'currentItemForm.itemName': item.partName,
+      'currentItemForm.unitPrice': item.salePrice != null ? String(item.salePrice) : '',
       lastScannedCode: '',
       partSelectorVisible: false
     });
@@ -529,7 +532,8 @@ Page({
               reservedQty: Number(result.reservedQty || 0),
             },
             lastScannedCode: scanValue,
-            'currentItemForm.itemName': part.partName
+            'currentItemForm.itemName': part.partName,
+            'currentItemForm.unitPrice': part.salePrice != null ? String(part.salePrice) : ''
           });
           Toast({ context: this, selector: '#t-toast', message: '已识别配件', icon: 'check-circle' });
         }).catch(() => {

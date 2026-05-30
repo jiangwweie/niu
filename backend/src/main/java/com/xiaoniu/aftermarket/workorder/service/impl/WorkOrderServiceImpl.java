@@ -255,6 +255,24 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         QueryWrapper<WorkOrderEntity> wrapper = new QueryWrapper<>();
         wrapper.eq("store_id", request.getStoreId()).eq("deleted", 0);
 
+        if (StringUtils.hasText(request.getKeyword())) {
+            String keyword = request.getKeyword().trim();
+            List<Long> officialWorkOrderIds = findOfficialWorkOrderIdsByKeyword(request.getStoreId(), keyword);
+            wrapper.and(group -> group
+                    .like("work_order_no", keyword)
+                    .or().like("customer_name_snapshot", keyword)
+                    .or().like("customer_phone_snapshot", keyword)
+                    .or().like("frame_no_snapshot", keyword)
+                    .or().like("vehicle_model_snapshot", keyword)
+                    .or(sub -> {
+                        if (officialWorkOrderIds.isEmpty()) {
+                            sub.apply("1 = 0");
+                        } else {
+                            sub.in("id", officialWorkOrderIds);
+                        }
+                    }));
+        }
+
         if (StringUtils.hasText(request.getStatus())) {
             wrapper.eq("status", request.getStatus());
         }
@@ -1104,6 +1122,22 @@ public class WorkOrderServiceImpl implements WorkOrderService {
                         OfficialAfterSalesEntity::getWorkOrderId,
                         java.util.function.Function.identity(),
                         (left, right) -> left));
+    }
+
+    private List<Long> findOfficialWorkOrderIdsByKeyword(Long storeId, String keyword) {
+        if (!StringUtils.hasText(keyword)) {
+            return List.of();
+        }
+        QueryWrapper<OfficialAfterSalesEntity> wrapper = new QueryWrapper<>();
+        wrapper.select("work_order_id")
+                .eq("store_id", storeId)
+                .eq("deleted", 0)
+                .eq("is_official_after_sales", true)
+                .like("official_order_no", keyword.trim());
+        return officialAfterSalesMapper.selectList(wrapper).stream()
+                .map(OfficialAfterSalesEntity::getWorkOrderId)
+                .distinct()
+                .toList();
     }
 
     private WorkOrderQueryResponse toQueryResponse(WorkOrderEntity entity, OfficialAfterSalesEntity officialAfterSales) {

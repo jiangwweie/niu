@@ -35,13 +35,13 @@ class PartControllerTest {
         jdbcTemplate.execute("DELETE FROM part WHERE id IN (1001, 1002)");
         jdbcTemplate.execute("""
             INSERT INTO part (id, store_id, part_code, official_part_no, part_name, model, source, category_code,
-                              reference_cost_price, default_barcode, location_remark, create_source, status, remark)
-            VALUES (1001, 1, 'P-TEST-001', 'OFF-001', '测试电池', 'NQi', 'OFFICIAL', 'BATTERY', 120.50, NULL, NULL, 'OFFICIAL', 'ENABLED', '测试备注')
+                              reference_cost_price, default_sale_price, default_barcode, location_remark, create_source, status, remark)
+            VALUES (1001, 1, 'P-TEST-001', 'OFF-001', '测试电池', 'NQi', 'OFFICIAL', 'BATTERY', 120.50, 168.00, NULL, NULL, 'OFFICIAL', 'ENABLED', '测试备注')
             """);
         jdbcTemplate.execute("""
             INSERT INTO part (id, store_id, part_code, official_part_no, part_name, model, source, category_code,
-                              reference_cost_price, default_barcode, location_remark, create_source, status, remark)
-            VALUES (1002, 1, 'P-TEST-002', NULL, '测试电机', 'MQi', 'THIRD_PARTY', 'MOTOR', 80.00, NULL, NULL, 'THIRD_PARTY', 'ENABLED', NULL)
+                              reference_cost_price, default_sale_price, default_barcode, location_remark, create_source, status, remark)
+            VALUES (1002, 1, 'P-TEST-002', NULL, '测试电机', 'MQi', 'THIRD_PARTY', 'MOTOR', 80.00, NULL, NULL, NULL, 'THIRD_PARTY', 'ENABLED', NULL)
             """);
     }
 
@@ -63,6 +63,7 @@ class PartControllerTest {
                 .andExpect(jsonPath("$.data.records[?(@.partCode=='P-TEST-001')]").exists())
                 .andExpect(jsonPath("$.data.records[?(@.partCode=='P-TEST-001')].partName").value("测试电池"))
                 .andExpect(jsonPath("$.data.records[?(@.partCode=='P-TEST-001')].source").value("OFFICIAL"))
+                .andExpect(jsonPath("$.data.records[?(@.partCode=='P-TEST-001')].defaultSalePrice").value(168.0))
                 .andExpect(jsonPath("$.data.records[?(@.partCode=='P-TEST-001')].status").value("ENABLED"));
     }
 
@@ -78,6 +79,7 @@ class PartControllerTest {
                 .andExpect(jsonPath("$.data.partName").value("测试电池"))
                 .andExpect(jsonPath("$.data.officialPartNo").value("OFF-001"))
                 .andExpect(jsonPath("$.data.source").value("OFFICIAL"))
+                .andExpect(jsonPath("$.data.defaultSalePrice").value(168.0))
                 .andExpect(jsonPath("$.data.deleted").doesNotExist())
                 .andExpect(jsonPath("$.data.createdBy").doesNotExist());
     }
@@ -89,7 +91,8 @@ class PartControllerTest {
                     "partName": "官方新配件",
                     "officialPartNo": "NEW-OFF-001",
                     "model": "UQi",
-                    "referenceCostPrice": 55.00
+                    "referenceCostPrice": 55.00,
+                    "defaultSalePrice": 88.00
                 }
                 """;
         mockMvc.perform(post("/api/admin/parts/official")
@@ -99,6 +102,11 @@ class PartControllerTest {
                         .content(body))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("SUCCESS"));
+        org.junit.jupiter.api.Assertions.assertEquals(
+                88.00,
+                jdbcTemplate.queryForObject(
+                        "SELECT default_sale_price FROM part WHERE official_part_no = 'NEW-OFF-001'",
+                        Double.class));
     }
 
     @Test

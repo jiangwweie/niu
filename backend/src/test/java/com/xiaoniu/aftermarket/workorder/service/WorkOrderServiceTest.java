@@ -28,6 +28,7 @@ import com.xiaoniu.aftermarket.payment.mapper.RefundRecordMapper;
 import com.xiaoniu.aftermarket.payment.service.PaymentService;
 import com.xiaoniu.aftermarket.payment.service.RefundService;
 import com.xiaoniu.aftermarket.part.dto.CreatePartCommand;
+import com.xiaoniu.aftermarket.part.dto.UpdatePartCommand;
 import com.xiaoniu.aftermarket.part.entity.PartEntity;
 import com.xiaoniu.aftermarket.part.service.PartService;
 import com.xiaoniu.aftermarket.workorder.dto.AddWorkOrderChargeItemCommand;
@@ -511,6 +512,88 @@ class WorkOrderServiceTest {
     }
 
     @Test
+    void pageQueryByKeywordSupportsSnapshotFields() {
+        Long firstId = workOrderService.createDraft(
+                buildCreateCommand("张三师傅", "13977770001", "小牛U1都市版"));
+        Long secondId = workOrderService.createDraft(
+                buildCreateCommand("李四", "13977770002", "小牛GOVA"));
+        updateFrameNo(firstId, "FRAME-M18C-001");
+
+        WorkOrderQueryRequest byCustomerName = new WorkOrderQueryRequest();
+        byCustomerName.setStoreId(STORE_ID);
+        byCustomerName.setKeyword("张三");
+        PageResponse<WorkOrderQueryResponse> customerPage = workOrderService.pageQuery(byCustomerName);
+        assertEquals(1, customerPage.total());
+        assertEquals(firstId, customerPage.records().get(0).getId());
+
+        WorkOrderQueryRequest byPhone = new WorkOrderQueryRequest();
+        byPhone.setStoreId(STORE_ID);
+        byPhone.setKeyword("70002");
+        PageResponse<WorkOrderQueryResponse> phonePage = workOrderService.pageQuery(byPhone);
+        assertEquals(1, phonePage.total());
+        assertEquals(secondId, phonePage.records().get(0).getId());
+
+        WorkOrderQueryRequest byFrameNo = new WorkOrderQueryRequest();
+        byFrameNo.setStoreId(STORE_ID);
+        byFrameNo.setKeyword("FRAME-M18C");
+        PageResponse<WorkOrderQueryResponse> framePage = workOrderService.pageQuery(byFrameNo);
+        assertEquals(1, framePage.total());
+        assertEquals(firstId, framePage.records().get(0).getId());
+
+        WorkOrderQueryRequest byVehicleModel = new WorkOrderQueryRequest();
+        byVehicleModel.setStoreId(STORE_ID);
+        byVehicleModel.setKeyword("GOVA");
+        PageResponse<WorkOrderQueryResponse> modelPage = workOrderService.pageQuery(byVehicleModel);
+        assertEquals(1, modelPage.total());
+        assertEquals(secondId, modelPage.records().get(0).getId());
+
+        WorkOrderQueryRequest byWorkOrderNo = new WorkOrderQueryRequest();
+        byWorkOrderNo.setStoreId(STORE_ID);
+        byWorkOrderNo.setKeyword(workOrderMapper.selectById(firstId).getWorkOrderNo());
+        PageResponse<WorkOrderQueryResponse> orderNoPage = workOrderService.pageQuery(byWorkOrderNo);
+        assertEquals(1, orderNoPage.total());
+        assertEquals(firstId, orderNoPage.records().get(0).getId());
+    }
+
+    @Test
+    void pageQueryByKeywordSupportsOfficialOrderNoAndStatus() {
+        Long repairingId = workOrderService.createDraft(
+                buildCreateCommand("官方查询客户", "13977771001", "小牛R1"));
+        jdbcTemplate.update("""
+                INSERT INTO official_after_sales
+                    (store_id, work_order_id, is_official_after_sales, official_order_no,
+                     official_settlement_status, created_by)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """, STORE_ID, repairingId, 1, "OFF-M18C-001", "PENDING", OPERATOR_ID);
+
+        WorkOrderEntity repairing = workOrderMapper.selectById(repairingId);
+        repairing.setStatus(WorkOrderStatus.REPAIRING.getCode());
+        workOrderMapper.updateById(repairing);
+
+        Long deliveredId = workOrderService.createDraft(
+                buildCreateCommand("官方查询客户2", "13977771002", "小牛R2"));
+        jdbcTemplate.update("""
+                INSERT INTO official_after_sales
+                    (store_id, work_order_id, is_official_after_sales, official_order_no,
+                     official_settlement_status, created_by)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """, STORE_ID, deliveredId, 1, "OFF-M18C-DELIVERED", "SETTLED", OPERATOR_ID);
+        WorkOrderEntity delivered = workOrderMapper.selectById(deliveredId);
+        delivered.setStatus(WorkOrderStatus.DELIVERED.getCode());
+        workOrderMapper.updateById(delivered);
+
+        WorkOrderQueryRequest keywordAndStatus = new WorkOrderQueryRequest();
+        keywordAndStatus.setStoreId(STORE_ID);
+        keywordAndStatus.setKeyword("OFF-M18C");
+        keywordAndStatus.setStatus(WorkOrderStatus.REPAIRING.getCode());
+        PageResponse<WorkOrderQueryResponse> page = workOrderService.pageQuery(keywordAndStatus);
+
+        assertEquals(1, page.total());
+        assertEquals(repairingId, page.records().get(0).getId());
+        assertEquals("OFF-M18C-001", page.records().get(0).getOfficialOrderNo());
+    }
+
+    @Test
     void pageQueryOfficialOnlyReturnsOfficialFields() {
         Long normalId = workOrderService.createDraft(
                 buildCreateCommand("普通客户", "13988881111", "小牛N1"));
@@ -555,6 +638,32 @@ class WorkOrderServiceTest {
         assertEquals(WorkOrderStatus.DRAFT.getCode(), detail.getStatus());
         assertEquals(2, detail.getChargeItems().size());
         assertEquals(0, new BigDecimal("280.00").compareTo(detail.getReceivableAmount()));
+    }
+
+    @Test
+    void addPartChargeItemKeepsSubmittedUnitPriceAfterPartDefaultSalePriceChanges() {
+        PartEntity part = createPart("默认售价配件", "PRICE-SNAP-001", new BigDecimal("50.00"));
+        UpdatePartCommand setSalePrice = new UpdatePartCommand();
+        setSalePrice.setPartId(part.getId());
+        setSalePrice.setStoreId(STORE_ID);
+        setSalePrice.setDefaultSalePrice(new BigDecimal("88.00"));
+        partService.updatePart(setSalePrice);
+
+        Long workOrderId = workOrderService.createDraft(
+                buildCreateCommand("价格快照客户", "13977772001", "小牛M+"));
+        Long chargeItemId = workOrderService.addChargeItem(workOrderId,
+                buildPartItem(part.getId(), "默认售价配件", 2, new BigDecimal("88.00")));
+
+        UpdatePartCommand updateSalePrice = new UpdatePartCommand();
+        updateSalePrice.setPartId(part.getId());
+        updateSalePrice.setStoreId(STORE_ID);
+        updateSalePrice.setDefaultSalePrice(new BigDecimal("108.00"));
+        partService.updatePart(updateSalePrice);
+
+        WorkOrderChargeItemEntity item = chargeItemMapper.selectById(chargeItemId);
+        assertEquals(0, new BigDecimal("88.00").compareTo(item.getUnitPrice()));
+        assertEquals(0, new BigDecimal("176.00").compareTo(item.getLineAmount()));
+        assertEquals(0, new BigDecimal("50.00").compareTo(item.getCostPriceSnapshot()));
     }
 
     // --- cross-store boundary tests ---

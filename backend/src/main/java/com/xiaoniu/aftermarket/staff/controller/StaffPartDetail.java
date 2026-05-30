@@ -1,6 +1,7 @@
 package com.xiaoniu.aftermarket.staff.controller;
 
 import com.xiaoniu.aftermarket.part.entity.PartEntity;
+import java.math.BigDecimal;
 
 public record StaffPartDetail(
         Long id,
@@ -10,6 +11,8 @@ public record StaffPartDetail(
         String model,
         String source,
         String categoryCode,
+        BigDecimal costPrice,
+        BigDecimal salePrice,
         String status,
         String remark
 ) {
@@ -23,6 +26,8 @@ public record StaffPartDetail(
                 entity.getModel(),
                 entity.getSource(),
                 entity.getCategoryCode(),
+                entity.getReferenceCostPrice(),
+                entity.getDefaultSalePrice(),
                 entity.getStatus(),
                 entity.getRemark()
         );

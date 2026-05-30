@@ -7,7 +7,8 @@ export interface Part {
   defaultBarcode?: string;
   model?: string;
   categoryCode: string;
-  retailPrice?: number;
+  costPrice?: number;
+  salePrice?: number;
 }
 
 export interface PartLookupResult {
@@ -23,6 +24,7 @@ export interface PartLookupResult {
   categoryCode?: string;
   category?: string;
   costPrice?: number;
+  salePrice?: number;
   enabled?: boolean;
   hasStockRecord?: boolean;
   actualQty?: number;

@@ -8,6 +8,7 @@ public class WorkOrderQueryRequest {
 
     private Long storeId;
     private String status;
+    private String keyword;
     private String workOrderNo;
     private String customerName;
     private String customerPhone;

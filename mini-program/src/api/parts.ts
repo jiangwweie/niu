@@ -42,6 +42,8 @@ export const lookupPartByCode = (code: string) => {
       name: matched.partName,
       model: matched.model,
       category: matched.categoryCode,
+      costPrice: matched.costPrice,
+      salePrice: matched.salePrice,
       actualQty: 0,
       availableQty: 0,
       reservedQty: 0

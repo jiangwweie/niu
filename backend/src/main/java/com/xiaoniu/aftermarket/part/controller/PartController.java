@@ -79,6 +79,7 @@ public class PartController {
         qr.setSource(entity.getSource());
         qr.setCategoryCode(entity.getCategoryCode());
         qr.setReferenceCostPrice(entity.getReferenceCostPrice());
+        qr.setDefaultSalePrice(entity.getDefaultSalePrice());
         qr.setDefaultBarcode(entity.getDefaultBarcode());
         qr.setLocationRemark(entity.getLocationRemark());
         qr.setCreateSource(entity.getCreateSource());
@@ -93,7 +94,8 @@ public class PartController {
     public ApiResponse<Void> createOfficialPart(@Valid @RequestBody CreateOfficialPartRequest request) {
         CurrentUser user = requireCurrentUser();
         CreatePartCommand command = buildCreateCommand(user, request.partName(), request.model(),
-                request.categoryCode(), request.referenceCostPrice(), request.defaultBarcode(),
+                request.categoryCode(), request.referenceCostPrice(), request.defaultSalePrice(),
+                request.defaultBarcode(),
                 request.locationRemark(), request.remark());
         command.setOfficialPartNo(request.officialPartNo());
         partService.createOfficialPart(command);
@@ -105,7 +107,8 @@ public class PartController {
     public ApiResponse<Void> createThirdPartyPart(@Valid @RequestBody CreateThirdPartyPartRequest request) {
         CurrentUser user = requireCurrentUser();
         CreatePartCommand command = buildCreateCommand(user, request.partName(), request.model(),
-                request.categoryCode(), request.referenceCostPrice(), request.defaultBarcode(),
+                request.categoryCode(), request.referenceCostPrice(), request.defaultSalePrice(),
+                request.defaultBarcode(),
                 request.locationRemark(), request.remark());
         partService.createThirdPartyPart(command);
         return ApiResponse.success(null);
@@ -125,6 +128,7 @@ public class PartController {
         command.setModel(request.model());
         command.setCategoryCode(request.categoryCode());
         command.setReferenceCostPrice(request.referenceCostPrice());
+        command.setDefaultSalePrice(request.defaultSalePrice());
         command.setDefaultBarcode(request.defaultBarcode());
         command.setLocationRemark(request.locationRemark());
         command.setRemark(request.remark());
@@ -163,7 +167,8 @@ public class PartController {
 
     private CreatePartCommand buildCreateCommand(CurrentUser user, String partName, String model,
                                                  String categoryCode, java.math.BigDecimal referenceCostPrice,
-                                                 String defaultBarcode, String locationRemark, String remark) {
+                                                 java.math.BigDecimal defaultSalePrice, String defaultBarcode,
+                                                 String locationRemark, String remark) {
         CreatePartCommand command = new CreatePartCommand();
         command.setStoreId(user.storeId());
         command.setOperatorId(user.userId());
@@ -171,6 +176,7 @@ public class PartController {
         command.setModel(model);
         command.setCategoryCode(categoryCode);
         command.setReferenceCostPrice(referenceCostPrice);
+        command.setDefaultSalePrice(defaultSalePrice);
         command.setDefaultBarcode(defaultBarcode);
         command.setLocationRemark(locationRemark);
         command.setRemark(remark);
