@@ -9,7 +9,7 @@ export const API_MODE: 'mock' | 'real' = 'real'; // 接入本地后端
 export type ApiEnv = 'dev' | 'prod';
 export const API_ENV: ApiEnv = 'dev';
 
-export const DEV_BASE_URL = 'http://localhost:8080';
+export const DEV_BASE_URL = 'http://192.168.123.243:18080';
 export const PROD_BASE_URL = 'https://api.xxx.com';
 
 const BASE_URLS: Record<ApiEnv, string> = {
