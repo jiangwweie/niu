@@ -4,6 +4,17 @@
     <!-- 查询过滤区 -->
     <el-card shadow="never" class="search-card">
       <el-form :model="queryParams" label-width="80px" class="search-form-flex" size="default">
+        <el-form-item label="视图">
+          <el-select v-model="queryParams.view" style="width: 220px;">
+            <el-option label="默认" value="DEFAULT" />
+            <el-option label="全部" value="ALL" />
+            <el-option label="有库存" value="HAS_STOCK" />
+            <el-option label="有预占" value="HAS_RESERVED" />
+            <el-option label="零库存" value="ZERO_STOCK" />
+            <el-option label="已停用仍有库存" value="DISABLED_WITH_STOCK" />
+            <el-option label="历史 / 归档" value="ARCHIVED" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="配件编码">
           <el-input v-model="queryParams.partCode" placeholder="请输入配件编码" clearable style="width: 220px;" />
         </el-form-item>
@@ -43,6 +54,20 @@
         >
           <el-table-column prop="partCode" label="配件编码" width="140" />
           <el-table-column prop="partName" label="配件名称" min-width="150" show-overflow-tooltip />
+          <el-table-column label="配件状态" width="100" align="center">
+            <template #default="{ row }">
+              <el-tag :type="row.partStatus === 'ENABLED' ? 'success' : 'info'" size="small">
+                {{ row.partStatus === 'ENABLED' ? '启用' : '停用' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="库存状态" width="130" align="center">
+            <template #default="{ row }">
+              <el-tag :type="getInventoryStateTagType(row.inventoryStateCode)" size="small">
+                {{ row.inventoryStateTag || '正常' }}
+              </el-tag>
+            </template>
+          </el-table-column>
           <el-table-column label="来源" width="90" align="center">
             <template #default="{ row }">
               <el-tag :type="isOfficialSource(row.source) ? 'danger' : 'info'" size="small">
@@ -67,6 +92,13 @@
           </el-table-column>
           <el-table-column label="最近流水时间" width="160">
             <template #default="{ row }">{{ formatDateTime(row.lastChangedAt) }}</template>
+          </el-table-column>
+          <el-table-column label="业务可用" width="100" align="center">
+            <template #default="{ row }">
+              <el-tag :type="row.canUseForNewBusiness ? 'success' : 'warning'" size="small">
+                {{ row.canUseForNewBusiness ? '可新业务使用' : '仅历史追溯' }}
+              </el-tag>
+            </template>
           </el-table-column>
           <el-table-column label="操作" width="220" fixed="right">
             <template #default="{ row }">
@@ -245,7 +277,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import PageContainer from '@/components/PageContainer.vue';
 import {
   getInventoryList,
@@ -260,12 +292,14 @@ import { formatDateTime } from '@/utils/formatDateTime';
 import type { InventoryQuery, InventoryRecord, InventoryLogRecord } from '@/types/inventory';
 
 const router = useRouter();
+const route = useRoute();
 
 /* ── Query ── */
 
 const queryParams = reactive<InventoryQuery>({
   pageNo: 1,
   pageSize: 10,
+  view: 'DEFAULT',
   partCode: '',
   partName: '',
   source: '',
@@ -276,6 +310,20 @@ const tableData = ref<InventoryRecord[]>([]);
 const total = ref(0);
 
 const isOfficialSource = (source?: string) => String(source || '').toUpperCase() === 'OFFICIAL';
+const getInventoryStateTagType = (code?: string) => {
+  switch (code) {
+    case 'HAS_RESERVED':
+      return 'warning';
+    case 'DISABLED_WITH_STOCK':
+      return 'danger';
+    case 'ARCHIVED':
+      return 'info';
+    case 'ZERO_STOCK':
+      return '';
+    default:
+      return 'success';
+  }
+};
 
 const fetchData = async () => {
   loading.value = true;
@@ -299,6 +347,7 @@ const handleReset = () => {
   queryParams.partCode = '';
   queryParams.partName = '';
   queryParams.source = '';
+  queryParams.view = 'DEFAULT';
   handleSearch();
 };
 
@@ -514,6 +563,14 @@ const openLogsDrawer = (row: InventoryRecord) => {
   fetchLogs();
 };
 
+const openLogsByPartId = async (partId: number) => {
+  logsDrawer.visible = true;
+  logsDrawer.partId = partId;
+  logsDrawer.pageNo = 1;
+  logsDrawer.data = [];
+  await fetchLogs();
+};
+
 const fetchLogs = async () => {
   logsDrawer.loading = true;
   try {
@@ -556,7 +613,19 @@ const getLogTypeTag = (type: string) => {
 /* ── Init ── */
 
 onMounted(() => {
+  if (typeof route.query.partCode === 'string') {
+    queryParams.partCode = route.query.partCode;
+  }
+  if (typeof route.query.view === 'string') {
+    queryParams.view = route.query.view;
+  }
   fetchData();
+  if (route.query.openLogs === '1' && route.query.partId) {
+    const partId = Number(route.query.partId);
+    if (!Number.isNaN(partId) && partId > 0) {
+      openLogsByPartId(partId);
+    }
+  }
 });
 </script>
 

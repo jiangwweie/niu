@@ -2,6 +2,7 @@ package com.xiaoniu.aftermarket.part.service;
 
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
 import com.xiaoniu.aftermarket.part.dto.CreatePartCommand;
+import com.xiaoniu.aftermarket.part.dto.PartDeleteCheckResponse;
 import com.xiaoniu.aftermarket.part.dto.PartLookupResponse;
 import com.xiaoniu.aftermarket.part.dto.PartQueryRequest;
 import com.xiaoniu.aftermarket.part.dto.PartQueryResponse;
@@ -16,6 +17,8 @@ public interface PartService {
     PartEntity getByBarcode(Long storeId, String barcode);
 
     PartEntity getByPartCode(Long storeId, String partCode);
+
+    PartEntity findVisiblePartByCode(Long storeId, String code);
 
     PartEntity lookupEnabledPartByCode(Long storeId, String code);
 
@@ -32,6 +35,8 @@ public interface PartService {
     void disablePart(Long storeId, Long partId);
 
     boolean canDelete(Long storeId, Long partId);
+
+    PartDeleteCheckResponse getDeleteCheck(Long storeId, Long partId);
 
     void deletePart(Long storeId, Long partId, Long operatorId);
 

@@ -17,7 +17,8 @@ public interface InventoryService {
     InventoryStockEntity getByPartId(Long storeId, Long partId);
 
     PageResponse<InventoryStockQueryResponse> pageQuery(Long storeId, String partCode,
-                                                        String partName, Integer pageNo,
+                                                        String partName, String source,
+                                                        String view, Integer pageNo,
                                                         Integer pageSize);
 
     PageResponse<InventoryFlowQueryResponse> pageFlowQuery(InventoryFlowQueryRequest request);

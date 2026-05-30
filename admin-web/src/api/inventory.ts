@@ -19,10 +19,16 @@ function adaptStock(resp: InventoryStockResp): InventoryRecord {
     partCode: resp.partCode,
     partName: resp.partName,
     source: resp.partSource || '',
+    partStatus: resp.partStatus || '',
     actualQty: resp.actualQty,
     availableQty: resp.availableQty,
     reservedQty: resp.reservedQty,
     lastChangedAt: resp.lastChangedAt || '',
+    inventoryStateCode: resp.inventoryStateCode || '',
+    inventoryStateTag: resp.inventoryStateTag || '',
+    archived: resp.archived ?? false,
+    canUseForNewBusiness: resp.canUseForNewBusiness ?? true,
+    hasHistoryReference: resp.hasHistoryReference ?? false,
   };
 }
 
@@ -62,6 +68,7 @@ export async function getInventoryList(
   if (params.partCode) backendParams.partCode = params.partCode;
   if (params.partName) backendParams.partName = params.partName;
   if (params.source) backendParams.source = params.source;
+  if (params.view) backendParams.view = params.view;
 
   const page: PaginatedResult<InventoryStockResp> = await request.get(
     '/api/admin/inventory/stocks',

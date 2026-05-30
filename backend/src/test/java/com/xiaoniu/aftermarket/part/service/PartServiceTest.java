@@ -12,6 +12,7 @@ import com.xiaoniu.aftermarket.common.enums.PartSource;
 import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
 import com.xiaoniu.aftermarket.part.dto.CreatePartCommand;
+import com.xiaoniu.aftermarket.part.dto.PartDeleteCheckResponse;
 import com.xiaoniu.aftermarket.part.dto.PartQueryRequest;
 import com.xiaoniu.aftermarket.part.dto.PartQueryResponse;
 import com.xiaoniu.aftermarket.part.dto.UpdatePartCommand;
@@ -169,7 +170,7 @@ class PartServiceTest {
         BusinessException ex = assertThrows(BusinessException.class,
                 () -> partService.deletePart(STORE_ID, part.getId(), OPERATOR_ID));
         assertEquals(ErrorCode.PART_HAS_STOCK, ex.getErrorCode());
-        assertEquals("该配件已有库存流水或工单记录，不能删除。可以停用，停用后不会再被新工单选择。", ex.getMessage());
+        assertEquals("该配件当前仍有库存，不能删除。请先通过库存调整处理库存后再删除。", ex.getMessage());
     }
 
     @Test
@@ -212,6 +213,43 @@ class PartServiceTest {
         BusinessException ex = assertThrows(BusinessException.class,
                 () -> partService.deletePart(STORE_ID, part.getId(), OPERATOR_ID));
         assertEquals(ErrorCode.PART_HAS_STOCK, ex.getErrorCode());
+    }
+
+    @Test
+    void getDeleteCheckReturnsStructuredReasons() {
+        PartEntity part = partService.createOfficialPart(buildOfficialCommand("删除校验配件", "DEL-CHECK-001"));
+        jdbcTemplate.update("""
+                INSERT INTO inventory_stock (id, store_id, part_id, actual_qty, available_qty, reserved_qty)
+                VALUES (98001, ?, ?, 2, 1, 1)
+                """, STORE_ID, part.getId());
+        jdbcTemplate.update("""
+                INSERT INTO inventory_flow
+                    (store_id, inventory_stock_id, part_id, flow_type, quantity_delta,
+                     actual_before, actual_after, available_before, available_after,
+                     reserved_before, reserved_after, business_type, operator_id, operated_at, reason, created_by)
+                VALUES (?, 98001, ?, 'INBOUND', 2, 0, 2, 0, 2, 0, 0, 'TEST', ?, CURRENT_TIMESTAMP, '测试', ?)
+                """, STORE_ID, part.getId(), OPERATOR_ID, OPERATOR_ID);
+        jdbcTemplate.update("""
+                INSERT INTO work_order_charge_item
+                    (store_id, work_order_id, charge_type, item_name, part_id, quantity, unit_price,
+                     line_amount, cost_price_snapshot, line_cost_amount, inventory_affecting, status, created_by)
+                VALUES (?, ?, 'PART', ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', ?)
+                """, STORE_ID, 99001L, "删除校验配件", part.getId(), 1, new BigDecimal("20.00"),
+                new BigDecimal("20.00"), new BigDecimal("8.00"), new BigDecimal("8.00"), 1, OPERATOR_ID);
+
+        PartDeleteCheckResponse response = partService.getDeleteCheck(STORE_ID, part.getId());
+
+        assertFalse(response.canDelete());
+        assertEquals(2, response.stockSummary().actualQty());
+        assertEquals(1, response.stockSummary().availableQty());
+        assertEquals(1, response.stockSummary().reservedQty());
+        assertEquals(1L, response.referenceSummary().inventoryFlowCount());
+        assertEquals(1L, response.referenceSummary().workOrderChargeItemCount());
+        assertEquals(1, response.referenceSummary().sampleWorkOrderIds().size());
+        assertTrue(response.reasons().stream().anyMatch(reason -> reason.contains("预占库存")));
+        assertTrue(response.reasons().stream().anyMatch(reason -> reason.contains("当前仍有库存")));
+        assertTrue(response.reasons().stream().anyMatch(reason -> reason.contains("库存流水")));
+        assertTrue(response.reasons().stream().anyMatch(reason -> reason.contains("工单记录")));
     }
 
     @Test

@@ -11,6 +11,7 @@ import com.xiaoniu.aftermarket.inventory.dto.InventoryFlowQueryRequest;
 import com.xiaoniu.aftermarket.inventory.dto.InventoryFlowQueryResponse;
 import com.xiaoniu.aftermarket.inventory.dto.InventoryInboundCommand;
 import com.xiaoniu.aftermarket.inventory.dto.InventoryStockQueryResponse;
+import com.xiaoniu.aftermarket.inventory.dto.InventoryViewType;
 import com.xiaoniu.aftermarket.inventory.entity.InventoryFlowEntity;
 import com.xiaoniu.aftermarket.inventory.entity.InventoryStockEntity;
 import com.xiaoniu.aftermarket.inventory.mapper.InventoryFlowMapper;
@@ -21,6 +22,8 @@ import com.xiaoniu.aftermarket.part.mapper.PartMapper;
 import com.xiaoniu.aftermarket.part.service.PartService;
 import com.xiaoniu.aftermarket.user.entity.SysUserEntity;
 import com.xiaoniu.aftermarket.user.mapper.SysUserMapper;
+import com.xiaoniu.aftermarket.workorder.entity.WorkOrderChargeItemEntity;
+import com.xiaoniu.aftermarket.workorder.mapper.WorkOrderChargeItemMapper;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,17 +42,20 @@ public class InventoryServiceImpl implements InventoryService {
     private final PartMapper partMapper;
     private final PartService partService;
     private final SysUserMapper userMapper;
+    private final WorkOrderChargeItemMapper chargeItemMapper;
 
     public InventoryServiceImpl(InventoryStockMapper inventoryStockMapper,
                                 InventoryFlowMapper inventoryFlowMapper,
                                 PartMapper partMapper,
                                 PartService partService,
-                                SysUserMapper userMapper) {
+                                SysUserMapper userMapper,
+                                WorkOrderChargeItemMapper chargeItemMapper) {
         this.inventoryStockMapper = inventoryStockMapper;
         this.inventoryFlowMapper = inventoryFlowMapper;
         this.partMapper = partMapper;
         this.partService = partService;
         this.userMapper = userMapper;
+        this.chargeItemMapper = chargeItemMapper;
     }
 
     @Override
@@ -216,12 +222,14 @@ public class InventoryServiceImpl implements InventoryService {
 
     @Override
     public PageResponse<InventoryStockQueryResponse> pageQuery(Long storeId, String partCode,
-                                                                String partName, Integer pageNo,
+                                                                String partName, String source,
+                                                                String view, Integer pageNo,
                                                                 Integer pageSize) {
         int pn = pageNo == null ? 1 : pageNo;
         int ps = pageSize == null ? 20 : pageSize;
+        InventoryViewType viewType = InventoryViewType.from(view);
 
-        List<Long> partIds = findPartIdsByFilters(storeId, partCode, partName);
+        List<Long> partIds = findPartIdsByFilters(storeId, partCode, partName, source);
 
         QueryWrapper<InventoryStockEntity> wrapper = new QueryWrapper<>();
         wrapper.eq("store_id", storeId)
@@ -234,27 +242,36 @@ public class InventoryServiceImpl implements InventoryService {
             wrapper.in("part_id", partIds);
         }
 
-        long total = inventoryStockMapper.selectCount(wrapper);
-
-        List<InventoryStockQueryResponse> records;
-        if (total == 0) {
-            records = List.of();
-        } else {
-            wrapper.last("ORDER BY id DESC LIMIT " + ps + " OFFSET " + (long) (pn - 1) * ps);
-            List<InventoryStockEntity> entities = inventoryStockMapper.selectList(wrapper);
-
-            Set<Long> stockPartIds = entities.stream()
-                    .map(InventoryStockEntity::getPartId)
-                    .collect(Collectors.toSet());
-
-            Map<Long, PartEntity> partMap = loadPartsMap(stockPartIds);
-
-            records = entities.stream()
-                    .map(stock -> toStockQueryResponse(stock, partMap.get(stock.getPartId())))
-                    .toList();
+        wrapper.last("ORDER BY id DESC");
+        List<InventoryStockEntity> entities = inventoryStockMapper.selectList(wrapper);
+        if (entities.isEmpty()) {
+            return new PageResponse<>(List.of(), pn, ps, 0);
         }
 
-        return new PageResponse<>(records, pn, ps, total);
+        Set<Long> stockPartIds = entities.stream()
+                .map(InventoryStockEntity::getPartId)
+                .collect(Collectors.toSet());
+        Map<Long, PartEntity> partMap = loadPartsMap(stockPartIds);
+        Map<Long, Long> inventoryFlowCountMap = loadInventoryFlowCountMap(storeId, stockPartIds);
+        Map<Long, Long> workOrderReferenceCountMap = loadWorkOrderReferenceCountMap(stockPartIds);
+
+        List<InventoryStockQueryResponse> filtered = entities.stream()
+                .map(stock -> toStockQueryResponse(
+                        stock,
+                        partMap.get(stock.getPartId()),
+                        inventoryFlowCountMap.getOrDefault(stock.getPartId(), 0L),
+                        workOrderReferenceCountMap.getOrDefault(stock.getPartId(), 0L)))
+                .filter(response -> matchesInventoryView(response, viewType))
+                .toList();
+
+        long total = filtered.size();
+        if (total == 0) {
+            return new PageResponse<>(List.of(), pn, ps, 0);
+        }
+
+        int fromIndex = Math.min((pn - 1) * ps, filtered.size());
+        int toIndex = Math.min(fromIndex + ps, filtered.size());
+        return new PageResponse<>(filtered.subList(fromIndex, toIndex), pn, ps, total);
     }
 
     @Override
@@ -263,7 +280,7 @@ public class InventoryServiceImpl implements InventoryService {
         int ps = request.getPageSize() == null ? 20 : request.getPageSize();
 
         List<Long> partIds = findPartIdsByFilters(request.getStoreId(),
-                request.getPartCode(), request.getPartName());
+                request.getPartCode(), request.getPartName(), null);
 
         QueryWrapper<InventoryFlowEntity> wrapper = new QueryWrapper<>();
         wrapper.eq("store_id", request.getStoreId());
@@ -322,8 +339,8 @@ public class InventoryServiceImpl implements InventoryService {
                 .collect(Collectors.toMap(SysUserEntity::getId, u -> u));
     }
 
-    private List<Long> findPartIdsByFilters(Long storeId, String partCode, String partName) {
-        if (!StringUtils.hasText(partCode) && !StringUtils.hasText(partName)) {
+    private List<Long> findPartIdsByFilters(Long storeId, String partCode, String partName, String source) {
+        if (!StringUtils.hasText(partCode) && !StringUtils.hasText(partName) && !StringUtils.hasText(source)) {
             return null;
         }
         QueryWrapper<PartEntity> pw = new QueryWrapper<>();
@@ -333,6 +350,9 @@ public class InventoryServiceImpl implements InventoryService {
         }
         if (StringUtils.hasText(partName)) {
             pw.like("part_name", partName);
+        }
+        if (StringUtils.hasText(source)) {
+            pw.eq("source", source);
         }
         List<PartEntity> parts = partMapper.selectList(pw);
         return parts.stream().map(PartEntity::getId).toList();
@@ -357,9 +377,12 @@ public class InventoryServiceImpl implements InventoryService {
             return;
         }
         String code = firstText(command.getBarcode(), command.getCode());
-        PartEntity part = partService.lookupEnabledPartByCode(command.getStoreId(), code);
+        PartEntity part = partService.findVisiblePartByCode(command.getStoreId(), code);
         if (part == null) {
             throw new BusinessException(ErrorCode.PART_NOT_FOUND, "未找到对应配件，请先新增配件");
+        }
+        if (!CommonStatus.ENABLED.getCode().equals(part.getStatus())) {
+            throw new BusinessException(ErrorCode.PART_DISABLED, "该配件已停用，请先在管理端启用后再入库");
         }
         command.setPartId(part.getId());
     }
@@ -387,7 +410,9 @@ public class InventoryServiceImpl implements InventoryService {
     }
 
     private InventoryStockQueryResponse toStockQueryResponse(InventoryStockEntity stock,
-                                                              PartEntity part) {
+                                                              PartEntity part,
+                                                              long inventoryFlowCount,
+                                                              long workOrderReferenceCount) {
         InventoryStockQueryResponse response = new InventoryStockQueryResponse();
         response.setId(stock.getId());
         response.setStoreId(stock.getStoreId());
@@ -401,8 +426,84 @@ public class InventoryServiceImpl implements InventoryService {
             response.setPartCode(part.getPartCode());
             response.setPartName(part.getPartName());
             response.setPartSource(part.getSource());
+            response.setPartStatus(part.getStatus());
+        }
+        boolean hasHistoryReference = inventoryFlowCount > 0 || workOrderReferenceCount > 0;
+        boolean archived = part != null
+                && CommonStatus.DISABLED.getCode().equals(part.getStatus())
+                && stock.getActualQty() == 0
+                && stock.getAvailableQty() == 0
+                && stock.getReservedQty() == 0
+                && hasHistoryReference;
+        response.setHasHistoryReference(hasHistoryReference);
+        response.setArchived(archived);
+        response.setCanUseForNewBusiness(part != null
+                && CommonStatus.ENABLED.getCode().equals(part.getStatus()));
+        if (stock.getReservedQty() != null && stock.getReservedQty() > 0) {
+            response.setInventoryStateCode("HAS_RESERVED");
+            response.setInventoryStateTag("有预占");
+        } else if (part != null
+                && CommonStatus.DISABLED.getCode().equals(part.getStatus())
+                && (stock.getActualQty() > 0 || stock.getAvailableQty() > 0 || stock.getReservedQty() > 0)) {
+            response.setInventoryStateCode("DISABLED_WITH_STOCK");
+            response.setInventoryStateTag("已停用仍有库存");
+        } else if (archived) {
+            response.setInventoryStateCode("ARCHIVED");
+            response.setInventoryStateTag("历史/归档");
+        } else if (stock.getActualQty() == 0 && stock.getAvailableQty() == 0 && stock.getReservedQty() == 0) {
+            response.setInventoryStateCode("ZERO_STOCK");
+            response.setInventoryStateTag("零库存");
+        } else {
+            response.setInventoryStateCode("NORMAL");
+            response.setInventoryStateTag("正常");
         }
         return response;
+    }
+
+    private Map<Long, Long> loadInventoryFlowCountMap(Long storeId, Set<Long> partIds) {
+        if (partIds.isEmpty()) {
+            return Map.of();
+        }
+        QueryWrapper<InventoryFlowEntity> wrapper = new QueryWrapper<>();
+        wrapper.eq("store_id", storeId)
+                .in("part_id", partIds)
+                .select("part_id");
+        return inventoryFlowMapper.selectList(wrapper).stream()
+                .collect(Collectors.groupingBy(InventoryFlowEntity::getPartId, Collectors.counting()));
+    }
+
+    private Map<Long, Long> loadWorkOrderReferenceCountMap(Set<Long> partIds) {
+        if (partIds.isEmpty()) {
+            return Map.of();
+        }
+        QueryWrapper<WorkOrderChargeItemEntity> wrapper = new QueryWrapper<>();
+        wrapper.in("part_id", partIds)
+                .eq("deleted", 0)
+                .select("part_id");
+        return chargeItemMapper.selectList(wrapper).stream()
+                .collect(Collectors.groupingBy(WorkOrderChargeItemEntity::getPartId, Collectors.counting()));
+    }
+
+    private boolean matchesInventoryView(InventoryStockQueryResponse response, InventoryViewType viewType) {
+        if (response.getPartStatus() == null) {
+            return false;
+        }
+        boolean actualPositive = response.getActualQty() != null && response.getActualQty() > 0;
+        boolean availablePositive = response.getAvailableQty() != null && response.getAvailableQty() > 0;
+        boolean reservedPositive = response.getReservedQty() != null && response.getReservedQty() > 0;
+        boolean zeroStock = !actualPositive && !availablePositive && !reservedPositive;
+        boolean enabled = CommonStatus.ENABLED.getCode().equals(response.getPartStatus());
+        boolean disabled = CommonStatus.DISABLED.getCode().equals(response.getPartStatus());
+
+        return switch (viewType) {
+            case DEFAULT -> actualPositive || availablePositive || reservedPositive;
+            case ALL -> true;
+            case HAS_STOCK -> actualPositive;
+            case HAS_RESERVED -> reservedPositive;
+            case ZERO_STOCK -> enabled && zeroStock;
+            case DISABLED_WITH_STOCK -> disabled && (actualPositive || availablePositive || reservedPositive);
+            case ARCHIVED -> disabled && zeroStock && Boolean.TRUE.equals(response.getHasHistoryReference());
+        };
     }
 
     private InventoryFlowQueryResponse toFlowQueryResponse(InventoryFlowEntity flow,

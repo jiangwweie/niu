@@ -136,7 +136,17 @@ Page({
         'formData.unitCost': part.costPrice != null ? String(part.costPrice) : ''
       });
       Toast({ context: this, selector: '#t-toast', message: '已识别配件', icon: 'check-circle' });
-    }).catch(() => {
+    }).catch((error: Error) => {
+      const message = error?.message || '';
+      if (message.includes('已停用')) {
+        this.setData({
+          selectedPart: null,
+          lookupResult: null,
+          'formData.barcode': scanValue
+        });
+        Toast({ context: this, selector: '#t-toast', message, icon: 'close-circle' });
+        return;
+      }
       this.setData({
         selectedPart: null,
         lookupResult: null,

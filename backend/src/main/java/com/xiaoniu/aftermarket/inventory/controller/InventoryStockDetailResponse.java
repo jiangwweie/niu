@@ -15,7 +15,13 @@ public record InventoryStockDetailResponse(
         Integer availableQty,
         Integer reservedQty,
         Long lastFlowId,
-        LocalDateTime lastChangedAt
+        LocalDateTime lastChangedAt,
+        String partStatus,
+        String inventoryStateCode,
+        String inventoryStateTag,
+        Boolean archived,
+        Boolean canUseForNewBusiness,
+        Boolean hasHistoryReference
 ) {
 
     public static InventoryStockDetailResponse fromQueryResponse(InventoryStockQueryResponse r) {
@@ -30,7 +36,13 @@ public record InventoryStockDetailResponse(
                 r.getAvailableQty(),
                 r.getReservedQty(),
                 r.getLastFlowId(),
-                r.getLastChangedAt()
+                r.getLastChangedAt(),
+                r.getPartStatus(),
+                r.getInventoryStateCode(),
+                r.getInventoryStateTag(),
+                r.getArchived(),
+                r.getCanUseForNewBusiness(),
+                r.getHasHistoryReference()
         );
     }
 }

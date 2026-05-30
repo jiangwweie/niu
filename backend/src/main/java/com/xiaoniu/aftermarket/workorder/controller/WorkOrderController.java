@@ -67,6 +67,7 @@ public class WorkOrderController {
             @RequestParam(required = false) String customerName,
             @RequestParam(required = false) String customerPhone,
             @RequestParam(required = false) String vehicleFrameNo,
+            @RequestParam(required = false) Long partId,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Boolean officialOnly,
             @RequestParam(required = false) String startTime,
@@ -90,6 +91,7 @@ public class WorkOrderController {
         request.setCustomerName(customerName);
         request.setCustomerPhone(customerPhone);
         request.setVehicleFrameNo(vehicleFrameNo);
+        request.setPartId(partId);
         request.setStatus(status);
         request.setOfficialOnly(officialOnly);
         request.setStartTime(parsedStart);

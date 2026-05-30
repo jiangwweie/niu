@@ -116,7 +116,13 @@ class M18BBarcodeScanIntegrationTest {
 
     @Test
     void lookupDoesNotMatchDisabledDeletedOrCrossStoreParts() throws Exception {
-        assertLookupRejected("M18B-BC-DISABLED", 1);
+        mockMvc.perform(get("/api/staff/parts/lookup")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .param("code", "M18B-BC-DISABLED"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("PART_DISABLED"))
+                .andExpect(jsonPath("$.message").value("该配件已停用，请先在管理端启用后再操作"));
         assertLookupRejected("M18B-BC-DELETED", 1);
         assertLookupRejected("M18B-BC-CROSS", 1);
         assertLookupRejected("M18B-BC-UNKNOWN", 1);

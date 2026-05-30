@@ -13,6 +13,7 @@ import com.xiaoniu.aftermarket.inventory.entity.InventoryFlowEntity;
 import com.xiaoniu.aftermarket.inventory.mapper.InventoryFlowMapper;
 import com.xiaoniu.aftermarket.inventory.mapper.InventoryStockMapper;
 import com.xiaoniu.aftermarket.part.dto.CreatePartCommand;
+import com.xiaoniu.aftermarket.part.dto.PartDeleteCheckResponse;
 import com.xiaoniu.aftermarket.part.dto.PartLookupResponse;
 import com.xiaoniu.aftermarket.part.dto.PartQueryRequest;
 import com.xiaoniu.aftermarket.part.dto.PartQueryResponse;
@@ -24,8 +25,10 @@ import com.xiaoniu.aftermarket.part.mapper.PartMapper;
 import com.xiaoniu.aftermarket.part.service.PartService;
 import com.xiaoniu.aftermarket.workorder.entity.WorkOrderChargeItemEntity;
 import com.xiaoniu.aftermarket.workorder.mapper.WorkOrderChargeItemMapper;
+import java.util.ArrayList;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -77,6 +80,35 @@ public class PartServiceImpl implements PartService {
                .eq("deleted", 0)
                .last("LIMIT 1");
         return partMapper.selectOne(wrapper);
+    }
+
+    @Override
+    public PartEntity findVisiblePartByCode(Long storeId, String code) {
+        String normalized = normalizeBarcode(code);
+        if (storeId == null || normalized == null) {
+            return null;
+        }
+
+        PartBarcodeEntity barcodeEntity = partBarcodeMapper.selectByStoreIdAndBarcode(storeId, normalized);
+        if (barcodeEntity != null) {
+            PartEntity part = partMapper.selectById(barcodeEntity.getPartId());
+            if (part != null && storeId.equals(part.getStoreId())
+                    && (part.getDeleted() == null || part.getDeleted() == 0)) {
+                return part;
+            }
+        }
+
+        PartEntity byPartCode = getByPartCode(storeId, normalized);
+        if (byPartCode != null) {
+            return byPartCode;
+        }
+
+        PartEntity byOfficialPartNo = selectVisibleByColumn(storeId, "official_part_no", normalized);
+        if (byOfficialPartNo != null) {
+            return byOfficialPartNo;
+        }
+
+        return selectVisibleByColumn(storeId, "default_barcode", normalized);
     }
 
     @Override
@@ -215,9 +247,24 @@ public class PartServiceImpl implements PartService {
 
     @Override
     public boolean canDelete(Long storeId, Long partId) {
-        return !hasStockQuantity(storeId, partId)
-                && !hasInventoryFlows(storeId, partId)
-                && !hasWorkOrderReferences(partId);
+        return buildDeleteCheck(storeId, partId).reasons().isEmpty();
+    }
+
+    @Override
+    public PartDeleteCheckResponse getDeleteCheck(Long storeId, Long partId) {
+        DeleteCheckResult result = buildDeleteCheck(storeId, partId);
+        return new PartDeleteCheckResponse(
+                result.reasons().isEmpty(),
+                result.reasons(),
+                new PartDeleteCheckResponse.StockSummary(
+                        result.actualQty(),
+                        result.availableQty(),
+                        result.reservedQty()),
+                new PartDeleteCheckResponse.ReferenceSummary(
+                        result.inventoryFlowCount(),
+                        result.workOrderChargeItemCount(),
+                        result.sampleWorkOrderIds())
+        );
     }
 
     @Override
@@ -230,9 +277,10 @@ public class PartServiceImpl implements PartService {
         if (!storeId.equals(existing.getStoreId())) {
             throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "配件不属于当前门店");
         }
-        if (!canDelete(storeId, partId)) {
+        DeleteCheckResult result = buildDeleteCheck(storeId, partId);
+        if (!result.reasons().isEmpty()) {
             throw new BusinessException(ErrorCode.PART_HAS_STOCK,
-                    "该配件已有库存流水或工单记录，不能删除。可以停用，停用后不会再被新工单选择。");
+                    String.join("；", result.reasons()));
         }
         existing.setDeleted(1);
         existing.setStatus(CommonStatus.DISABLED.getCode());
@@ -384,27 +432,8 @@ public class PartServiceImpl implements PartService {
 
     @Override
     public PartEntity lookupEnabledPartByCode(Long storeId, String code) {
-        String normalized = normalizeBarcode(code);
-        if (storeId == null || normalized == null) {
-            return null;
-        }
-
-        PartEntity byBarcode = getByBarcode(storeId, normalized);
-        if (isLookupVisible(byBarcode, storeId)) {
-            return byBarcode;
-        }
-
-        PartEntity byPartCode = getByPartCode(storeId, normalized);
-        if (isLookupVisible(byPartCode, storeId)) {
-            return byPartCode;
-        }
-
-        PartEntity byOfficialPartNo = selectEnabledByColumn(storeId, "official_part_no", normalized);
-        if (byOfficialPartNo != null) {
-            return byOfficialPartNo;
-        }
-
-        return selectEnabledByColumn(storeId, "default_barcode", normalized);
+        PartEntity part = findVisiblePartByCode(storeId, code);
+        return isLookupVisible(part, storeId) ? part : null;
     }
 
     @Override
@@ -412,9 +441,12 @@ public class PartServiceImpl implements PartService {
         if (!StringUtils.hasText(code)) {
             throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "条码/编码不能为空");
         }
-        PartEntity part = lookupEnabledPartByCode(storeId, code);
+        PartEntity part = findVisiblePartByCode(storeId, code);
         if (part == null) {
             throw new BusinessException(ErrorCode.PART_NOT_FOUND, "未找到对应配件");
+        }
+        if (!CommonStatus.ENABLED.getCode().equals(part.getStatus())) {
+            throw new BusinessException(ErrorCode.PART_DISABLED, "该配件已停用，请先在管理端启用后再操作");
         }
         InventoryStockEntity stock = inventoryStockMapper.selectByStoreIdAndPartId(storeId, part.getId());
         return PartLookupResponse.matched(part, stock);
@@ -546,6 +578,15 @@ public class PartServiceImpl implements PartService {
         return partMapper.selectOne(wrapper);
     }
 
+    private PartEntity selectVisibleByColumn(Long storeId, String column, String code) {
+        QueryWrapper<PartEntity> wrapper = new QueryWrapper<>();
+        wrapper.eq("store_id", storeId)
+                .eq(column, code)
+                .eq("deleted", 0)
+                .last("LIMIT 1");
+        return partMapper.selectOne(wrapper);
+    }
+
     private void insertBarcode(PartBarcodeEntity entity) {
         try {
             partBarcodeMapper.insert(entity);
@@ -602,6 +643,7 @@ public class PartServiceImpl implements PartService {
     }
 
     private PartQueryResponse toQueryResponse(PartEntity entity) {
+        DeleteCheckResult deleteCheck = buildDeleteCheck(entity.getStoreId(), entity.getId());
         PartQueryResponse response = new PartQueryResponse();
         response.setId(entity.getId());
         response.setStoreId(entity.getStoreId());
@@ -618,7 +660,18 @@ public class PartServiceImpl implements PartService {
         response.setCreateSource(entity.getCreateSource());
         response.setStatus(entity.getStatus());
         response.setRemark(entity.getRemark());
-        response.setCanDelete(canDelete(entity.getStoreId(), entity.getId()));
+        response.setCanDelete(deleteCheck.reasons().isEmpty());
+        response.setDeleteReasons(deleteCheck.reasons());
+        response.setDeleteBlockReasonSummary(deleteCheck.reasons().isEmpty()
+                ? null
+                : String.join("；", deleteCheck.reasons()));
+        response.setActualQty(deleteCheck.actualQty());
+        response.setAvailableQty(deleteCheck.availableQty());
+        response.setReservedQty(deleteCheck.reservedQty());
+        response.setInventoryFlowCount(deleteCheck.inventoryFlowCount());
+        response.setWorkOrderChargeItemCount(deleteCheck.workOrderChargeItemCount());
+        response.setArchived(deleteCheck.archived());
+        response.setHasHistoryReference(deleteCheck.hasHistoryReference());
         return response;
     }
 
@@ -643,6 +696,59 @@ public class PartServiceImpl implements PartService {
         return chargeItemMapper.selectCount(wrapper) > 0;
     }
 
+    private DeleteCheckResult buildDeleteCheck(Long storeId, Long partId) {
+        InventoryStockEntity stock = inventoryStockMapper.selectByStoreIdAndPartId(storeId, partId);
+        int actualQty = stock != null && stock.getActualQty() != null ? stock.getActualQty() : 0;
+        int availableQty = stock != null && stock.getAvailableQty() != null ? stock.getAvailableQty() : 0;
+        int reservedQty = stock != null && stock.getReservedQty() != null ? stock.getReservedQty() : 0;
+
+        QueryWrapper<InventoryFlowEntity> flowWrapper = new QueryWrapper<>();
+        flowWrapper.eq("store_id", storeId)
+                .eq("part_id", partId);
+        long inventoryFlowCount = inventoryFlowMapper.selectCount(flowWrapper);
+
+        QueryWrapper<WorkOrderChargeItemEntity> referenceWrapper = new QueryWrapper<>();
+        referenceWrapper.eq("part_id", partId)
+                .eq("deleted", 0);
+        long workOrderChargeItemCount = chargeItemMapper.selectCount(referenceWrapper);
+        referenceWrapper.select("DISTINCT work_order_id");
+        referenceWrapper.last("LIMIT 5");
+        List<Long> sampleWorkOrderIds = chargeItemMapper.selectList(referenceWrapper).stream()
+                .map(WorkOrderChargeItemEntity::getWorkOrderId)
+                .filter(Objects::nonNull)
+                .toList();
+
+        List<String> reasons = new ArrayList<>();
+        if (reservedQty > 0) {
+            reasons.add("该配件存在未结算工单预占库存，不能删除。请先处理相关工单。");
+        }
+        if (actualQty > 0 || availableQty > 0) {
+            reasons.add("该配件当前仍有库存，不能删除。请先通过库存调整处理库存后再删除。");
+        }
+        if (inventoryFlowCount > 0) {
+            reasons.add("该配件已有库存流水，不能删除。可以停用，停用后不会再被新工单选择。");
+        }
+        if (workOrderChargeItemCount > 0) {
+            reasons.add("该配件已有工单记录，不能删除。可以停用，历史工单仍会保留。");
+        }
+        boolean hasHistoryReference = inventoryFlowCount > 0 || workOrderChargeItemCount > 0;
+        boolean archived = actualQty == 0
+                && availableQty == 0
+                && reservedQty == 0
+                && hasHistoryReference;
+        return new DeleteCheckResult(
+                reasons,
+                actualQty,
+                availableQty,
+                reservedQty,
+                inventoryFlowCount,
+                workOrderChargeItemCount,
+                sampleWorkOrderIds,
+                archived,
+                hasHistoryReference
+        );
+    }
+
     private void softDeletePartBarcodes(Long storeId, Long partId, Long operatorId) {
         UpdateWrapper<PartBarcodeEntity> wrapper = new UpdateWrapper<>();
         wrapper.eq("store_id", storeId)
@@ -654,5 +760,18 @@ public class PartServiceImpl implements PartService {
                 .set("updated_by", operatorId)
                 .set("updated_at", LocalDateTime.now());
         partBarcodeMapper.update(null, wrapper);
+    }
+
+    private record DeleteCheckResult(
+            List<String> reasons,
+            int actualQty,
+            int availableQty,
+            int reservedQty,
+            long inventoryFlowCount,
+            long workOrderChargeItemCount,
+            List<Long> sampleWorkOrderIds,
+            boolean archived,
+            boolean hasHistoryReference
+    ) {
     }
 }

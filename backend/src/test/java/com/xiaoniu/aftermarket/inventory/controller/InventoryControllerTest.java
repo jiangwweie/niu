@@ -219,7 +219,24 @@ class InventoryControllerTest {
                 .andExpect(jsonPath("$.data.partSource").value("OFFICIAL"))
                 .andExpect(jsonPath("$.data.actualQty").value(100))
                 .andExpect(jsonPath("$.data.availableQty").value(80))
-                .andExpect(jsonPath("$.data.reservedQty").value(20));
+                .andExpect(jsonPath("$.data.reservedQty").value(20))
+                .andExpect(jsonPath("$.data.partStatus").value("ENABLED"));
+    }
+
+    @Test
+    void listStocksSupportsLifecycleViewFilter() throws Exception {
+        jdbcTemplate.execute("UPDATE part SET status = 'DISABLED' WHERE id = 2001");
+
+        mockMvc.perform(get("/api/admin/inventory/stocks")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .param("view", "DISABLED_WITH_STOCK"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.records", hasSize(1)))
+                .andExpect(jsonPath("$.data.records[0].partStatus").value("DISABLED"))
+                .andExpect(jsonPath("$.data.records[0].inventoryStateCode").value("HAS_RESERVED"))
+                .andExpect(jsonPath("$.data.records[0].inventoryStateTag").value("有预占"));
     }
 
     @Test

@@ -254,7 +254,7 @@ class InventoryServiceTest {
         inventoryService.inbound(buildInboundCommand(part2.getId(), 5));
 
         PageResponse<InventoryStockQueryResponse> response =
-                inventoryService.pageQuery(STORE_ID, null, null, 1, 10);
+                inventoryService.pageQuery(STORE_ID, null, null, null, "DEFAULT", 1, 10);
 
         assertEquals(2, response.total());
         assertEquals(2, response.records().size());
@@ -305,10 +305,56 @@ class InventoryServiceTest {
         inventoryService.inbound(buildInboundCommand(part2.getId(), 5));
 
         PageResponse<InventoryStockQueryResponse> response =
-                inventoryService.pageQuery(STORE_ID, "SRC-001", null, 1, 10);
+                inventoryService.pageQuery(STORE_ID, "SRC-001", null, null, "DEFAULT", 1, 10);
 
         assertEquals(1, response.total());
         assertEquals("SRC-001", response.records().get(0).getPartCode());
+    }
+
+    @Test
+    void defaultViewIncludesDisabledPartWithStock() {
+        PartEntity enabledPart = createOfficialPart("启用配件", "VIEW-EN-001");
+        PartEntity disabledPart = createOfficialPart("停用配件", "VIEW-DIS-001");
+        inventoryService.inbound(buildInboundCommand(enabledPart.getId(), 5));
+        inventoryService.inbound(buildInboundCommand(disabledPart.getId(), 3));
+        partService.disablePart(STORE_ID, disabledPart.getId());
+
+        PageResponse<InventoryStockQueryResponse> response =
+                inventoryService.pageQuery(STORE_ID, null, null, null, "DEFAULT", 1, 10);
+
+        assertEquals(2, response.total());
+        InventoryStockQueryResponse disabledRow = response.records().stream()
+                .filter(item -> disabledPart.getId().equals(item.getPartId()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals("DISABLED", disabledRow.getPartStatus());
+        assertEquals("DISABLED_WITH_STOCK", disabledRow.getInventoryStateCode());
+        assertEquals("已停用仍有库存", disabledRow.getInventoryStateTag());
+        assertEquals(false, disabledRow.getCanUseForNewBusiness());
+    }
+
+    @Test
+    void archivedViewOnlyReturnsDisabledZeroStockWithHistory() {
+        PartEntity archivedPart = createOfficialPart("历史配件", "VIEW-ARCH-001");
+        inventoryService.inbound(buildInboundCommand(archivedPart.getId(), 2));
+        inventoryService.adjust(buildAdjustCommand(archivedPart.getId(), -2, "清零"));
+        partService.disablePart(STORE_ID, archivedPart.getId());
+
+        PartEntity zeroStockEnabledPart = createOfficialPart("零库存启用", "VIEW-ZERO-001");
+        jdbcTemplate.update("""
+                INSERT INTO inventory_stock (store_id, part_id, actual_qty, available_qty, reserved_qty)
+                VALUES (?, ?, 0, 0, 0)
+                """, STORE_ID, zeroStockEnabledPart.getId());
+
+        PageResponse<InventoryStockQueryResponse> response =
+                inventoryService.pageQuery(STORE_ID, null, null, null, "ARCHIVED", 1, 10);
+
+        assertEquals(1, response.total());
+        InventoryStockQueryResponse archivedRow = response.records().get(0);
+        assertEquals(archivedPart.getId(), archivedRow.getPartId());
+        assertEquals("ARCHIVED", archivedRow.getInventoryStateCode());
+        assertTrue(Boolean.TRUE.equals(archivedRow.getArchived()));
+        assertTrue(Boolean.TRUE.equals(archivedRow.getHasHistoryReference()));
     }
 
     // --- unitCost persistence tests (Task 6.1) ---

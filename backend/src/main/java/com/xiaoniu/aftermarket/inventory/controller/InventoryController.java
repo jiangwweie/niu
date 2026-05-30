@@ -36,12 +36,14 @@ public class InventoryController {
     public ApiResponse<PageResponse<InventoryStockQueryResponse>> listStocks(
             @RequestParam(required = false) String partCode,
             @RequestParam(required = false) String partName,
+            @RequestParam(required = false) String source,
+            @RequestParam(required = false) String view,
             @RequestParam(required = false) Integer pageNo,
             @RequestParam(required = false) Integer pageSize) {
 
         CurrentUser user = requireCurrentUser();
         PageResponse<InventoryStockQueryResponse> result =
-                inventoryService.pageQuery(user.storeId(), partCode, partName, pageNo, pageSize);
+                inventoryService.pageQuery(user.storeId(), partCode, partName, source, view, pageNo, pageSize);
         return ApiResponse.success(result);
     }
 
@@ -63,6 +65,7 @@ public class InventoryController {
         qr.setReservedQty(entity.getReservedQty());
         qr.setLastFlowId(entity.getLastFlowId());
         qr.setLastChangedAt(entity.getLastChangedAt());
+        qr.setPartStatus(part != null ? part.getStatus() : null);
         return ApiResponse.success(InventoryStockDetailResponse.fromQueryResponse(qr));
     }
 

@@ -57,6 +57,7 @@ export interface WorkOrderQuery {
   customerName?: string;
   phone?: string;
   vin?: string;
+  partId?: number;
   status?: string;
   progressStatus?: string;
   cashierStatus?: string;

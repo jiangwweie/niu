@@ -239,4 +239,37 @@ class PartControllerTest {
                 .andExpect(jsonPath("$.data.records", hasSize(1)))
                 .andExpect(jsonPath("$.data.records[0].officialPartNo").value("OFF-001"));
     }
+
+    @Test
+    void getDeleteCheckReturnsStructuredPayload() throws Exception {
+        jdbcTemplate.execute("""
+            INSERT INTO inventory_stock (id, store_id, part_id, actual_qty, available_qty, reserved_qty)
+            VALUES (2101, 1, 1001, 2, 1, 1)
+            """);
+        jdbcTemplate.execute("""
+            INSERT INTO inventory_flow (id, store_id, inventory_stock_id, part_id, flow_type, quantity_delta,
+                                        actual_before, actual_after, available_before, available_after,
+                                        reserved_before, reserved_after, business_type, operator_id, operated_at, reason)
+            VALUES (3101, 1, 2101, 1001, 'INBOUND', 2, 0, 2, 0, 2, 0, 0, 'TEST', 1, CURRENT_TIMESTAMP, '测试')
+            """);
+        jdbcTemplate.execute("""
+            INSERT INTO work_order_charge_item
+                (id, store_id, work_order_id, charge_type, item_name, part_id, quantity, unit_price,
+                 line_amount, cost_price_snapshot, line_cost_amount, inventory_affecting, status, created_by)
+            VALUES (4101, 1, 90001, 'PART', '测试电池', 1001, 1, 20.00, 20.00, 10.00, 10.00, 1, 'ACTIVE', 1)
+            """);
+
+        mockMvc.perform(get("/api/admin/parts/1001/delete-check")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.canDelete").value(false))
+                .andExpect(jsonPath("$.data.stockSummary.actualQty").value(2))
+                .andExpect(jsonPath("$.data.stockSummary.availableQty").value(1))
+                .andExpect(jsonPath("$.data.stockSummary.reservedQty").value(1))
+                .andExpect(jsonPath("$.data.referenceSummary.inventoryFlowCount").value(1))
+                .andExpect(jsonPath("$.data.referenceSummary.workOrderChargeItemCount").value(1))
+                .andExpect(jsonPath("$.data.reasons", hasSize(4)));
+    }
 }

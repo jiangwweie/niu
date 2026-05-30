@@ -591,6 +591,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import PageContainer from '@/components/PageContainer.vue';
 import StatusTag from '@/components/StatusTag.vue';
@@ -619,6 +620,7 @@ import { formatDateTime } from '@/utils/formatDateTime';
 import type { WorkOrderRecord, WorkOrderQuery } from '@/types/workOrder';
 
 const authStore = useAuthStore();
+const route = useRoute();
 
 // 查询参数
 const queryParams = reactive<WorkOrderQuery>({
@@ -628,6 +630,7 @@ const queryParams = reactive<WorkOrderQuery>({
   customerName: '',
   phone: '',
   vin: '',
+  partId: undefined,
   status: '',
   progressStatus: '',
   cashierStatus: '',
@@ -693,6 +696,7 @@ const handleReset = () => {
   queryParams.customerName = '';
   queryParams.phone = '';
   queryParams.vin = '';
+  queryParams.partId = undefined;
   queryParams.status = '';
   queryParams.progressStatus = '';
   queryParams.cashierStatus = '';
@@ -1157,6 +1161,10 @@ const submitCancel = async () => {
 };
 
 onMounted(() => {
+  if (typeof route.query.partId === 'string') {
+    const partId = Number(route.query.partId);
+    queryParams.partId = Number.isNaN(partId) ? undefined : partId;
+  }
   fetchData();
 });
 </script>

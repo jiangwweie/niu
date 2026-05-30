@@ -2,6 +2,7 @@ package com.xiaoniu.aftermarket.part.controller;
 
 import com.xiaoniu.aftermarket.part.dto.PartQueryResponse;
 import java.math.BigDecimal;
+import java.util.List;
 
 public record PartDetailResponse(
         Long id,
@@ -19,7 +20,16 @@ public record PartDetailResponse(
         String createSource,
         String status,
         String remark,
-        Boolean canDelete
+        Boolean canDelete,
+        List<String> deleteReasons,
+        String deleteBlockReasonSummary,
+        Integer actualQty,
+        Integer availableQty,
+        Integer reservedQty,
+        Long inventoryFlowCount,
+        Long workOrderChargeItemCount,
+        Boolean archived,
+        Boolean hasHistoryReference
 ) {
 
     public static PartDetailResponse fromQueryResponse(PartQueryResponse r) {
@@ -39,7 +49,16 @@ public record PartDetailResponse(
                 r.getCreateSource(),
                 r.getStatus(),
                 r.getRemark(),
-                r.getCanDelete()
+                r.getCanDelete(),
+                r.getDeleteReasons(),
+                r.getDeleteBlockReasonSummary(),
+                r.getActualQty(),
+                r.getAvailableQty(),
+                r.getReservedQty(),
+                r.getInventoryFlowCount(),
+                r.getWorkOrderChargeItemCount(),
+                r.getArchived(),
+                r.getHasHistoryReference()
         );
     }
 }

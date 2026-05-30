@@ -104,7 +104,10 @@
                 <el-button link type="warning">高级操作</el-button>
                 <template #dropdown>
                   <el-dropdown-menu>
-                    <el-dropdown-item command="delete" :disabled="row.canDelete === false">删除</el-dropdown-item>
+                    <el-dropdown-item command="delete-check">查看删除校验</el-dropdown-item>
+                    <el-dropdown-item command="inventory-flows">查看库存流水</el-dropdown-item>
+                    <el-dropdown-item command="work-orders">查看关联工单</el-dropdown-item>
+                    <el-dropdown-item command="delete">安全删除</el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
@@ -216,6 +219,45 @@
       </template>
     </el-dialog>
 
+    <el-dialog v-model="deleteCheckDialog.visible" title="删除校验" width="640px">
+      <template v-if="deleteCheckDialog.data">
+        <el-alert
+          :title="deleteCheckDialog.data.canDelete ? '该配件满足安全删除条件' : '该配件当前不能删除'"
+          :type="deleteCheckDialog.data.canDelete ? 'success' : 'warning'"
+          :closable="false"
+          show-icon
+        />
+        <el-descriptions :column="3" border size="small" class="delete-check-section">
+          <el-descriptions-item label="实际库存">{{ deleteCheckDialog.data.stockSummary.actualQty }}</el-descriptions-item>
+          <el-descriptions-item label="可用库存">{{ deleteCheckDialog.data.stockSummary.availableQty }}</el-descriptions-item>
+          <el-descriptions-item label="预占库存">{{ deleteCheckDialog.data.stockSummary.reservedQty }}</el-descriptions-item>
+          <el-descriptions-item label="库存流水">{{ deleteCheckDialog.data.referenceSummary.inventoryFlowCount }}</el-descriptions-item>
+          <el-descriptions-item label="工单引用">{{ deleteCheckDialog.data.referenceSummary.workOrderChargeItemCount }}</el-descriptions-item>
+          <el-descriptions-item label="关联工单示例">
+            <span v-if="deleteCheckDialog.data.referenceSummary.sampleWorkOrderIds.length">
+              {{ deleteCheckDialog.data.referenceSummary.sampleWorkOrderIds.join('、') }}
+            </span>
+            <span v-else>-</span>
+          </el-descriptions-item>
+        </el-descriptions>
+        <div class="delete-check-section">
+          <div class="section-title">删除原因</div>
+          <el-empty v-if="!deleteCheckDialog.data.reasons.length" description="当前没有删除阻塞原因" :image-size="80" />
+          <el-tag
+            v-for="reason in deleteCheckDialog.data.reasons"
+            :key="reason"
+            type="warning"
+            class="reason-tag"
+          >
+            {{ reason }}
+          </el-tag>
+        </div>
+      </template>
+      <template #footer>
+        <el-button @click="deleteCheckDialog.visible = false">关闭</el-button>
+      </template>
+    </el-dialog>
+
   </PageContainer>
 </template>
 
@@ -223,6 +265,7 @@
 import { ref, reactive, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import JsBarcode from 'jsbarcode';
+import { useRouter } from 'vue-router';
 import PageContainer from '@/components/PageContainer.vue';
 import MoneyText from '@/components/MoneyText.vue';
 import { hasPermission } from '@/utils/permission';
@@ -235,8 +278,11 @@ import {
   enablePart,
   disablePart,
   deletePart,
+  getPartDeleteCheck,
 } from '@/api/parts';
 import type { PartViewRecord } from '@/api/parts';
+
+const router = useRouter();
 
 // 查询参数
 const queryParams = reactive({
@@ -290,6 +336,26 @@ const handleReset = () => {
 const detailDrawer = reactive({
   visible: false,
   data: null as PartViewRecord | null,
+});
+
+const deleteCheckDialog = reactive({
+  visible: false,
+  loading: false,
+  partName: '',
+  data: null as null | {
+    canDelete: boolean;
+    reasons: string[];
+    stockSummary: {
+      actualQty: number;
+      availableQty: number;
+      reservedQty: number;
+    };
+    referenceSummary: {
+      inventoryFlowCount: number;
+      workOrderChargeItemCount: number;
+      sampleWorkOrderIds: number[];
+    };
+  },
 });
 
 const handleView = async (row: PartViewRecord) => {
@@ -446,13 +512,22 @@ const handleToggleStatus = async (row: PartViewRecord) => {
 };
 
 const handleDelete = async (row: PartViewRecord) => {
-  if (row.canDelete === false) {
-    ElMessage.warning('该配件已有库存、库存流水或工单引用，不能直接删除，请使用停用。');
+  const deleteCheck = await showDeleteCheck(row);
+  if (!deleteCheck) {
     return;
   }
+  if (!deleteCheck.canDelete) return;
   try {
     await ElMessageBox.confirm(
-      '删除前请确认该配件没有库存、库存流水和工单引用。已有业务记录的配件请使用停用。',
+      [
+        `配件：${row.partName}`,
+        `实际库存：${deleteCheck.stockSummary.actualQty}`,
+        `可用库存：${deleteCheck.stockSummary.availableQty}`,
+        `预占库存：${deleteCheck.stockSummary.reservedQty}`,
+        `库存流水：${deleteCheck.referenceSummary.inventoryFlowCount}`,
+        `工单引用：${deleteCheck.referenceSummary.workOrderChargeItemCount}`,
+        '删除后该配件将从新业务选件、扫码 lookup、库存默认列表中消失。',
+      ].join('\n'),
       `删除配件【${row.partName}】`,
       {
         confirmButtonText: '删除',
@@ -468,9 +543,49 @@ const handleDelete = async (row: PartViewRecord) => {
   }
 };
 
-const handleAdvancedCommand = (command: string, row: PartViewRecord) => {
+const showDeleteCheck = async (row: PartViewRecord) => {
+  try {
+    deleteCheckDialog.loading = true;
+    deleteCheckDialog.partName = row.partName;
+    const data = await getPartDeleteCheck(row.id);
+    deleteCheckDialog.data = data;
+    deleteCheckDialog.visible = true;
+    return data;
+  } catch {
+    return null;
+  } finally {
+    deleteCheckDialog.loading = false;
+  }
+};
+
+const handleAdvancedCommand = async (command: string, row: PartViewRecord) => {
+  if (command === 'delete-check') {
+    await showDeleteCheck(row);
+    return;
+  }
+  if (command === 'inventory-flows') {
+    router.push({
+      name: 'Inventory',
+      query: {
+        view: 'ALL',
+        partCode: row.partCode,
+        partId: String(row.id),
+        openLogs: '1',
+      },
+    });
+    return;
+  }
+  if (command === 'work-orders') {
+    router.push({
+      name: 'WorkOrder',
+      query: {
+        partId: String(row.id),
+      },
+    });
+    return;
+  }
   if (command === 'delete') {
-    handleDelete(row);
+    await handleDelete(row);
   }
 };
 
@@ -580,5 +695,22 @@ onMounted(() => {
 }
 .inline-action {
   margin-left: 8px;
+}
+.delete-check-section {
+  margin-top: 16px;
+}
+.section-title {
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #303133;
+}
+.reason-tag {
+  margin-right: 8px;
+  margin-bottom: 8px;
+  white-space: normal;
+  height: auto;
+  line-height: 1.5;
+  padding: 6px 10px;
 }
 </style>

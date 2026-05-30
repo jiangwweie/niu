@@ -288,6 +288,13 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         if (StringUtils.hasText(request.getVehicleFrameNo())) {
             wrapper.like("frame_no_snapshot", request.getVehicleFrameNo().trim());
         }
+        if (request.getPartId() != null) {
+            List<Long> workOrderIds = chargeItemMapper.selectWorkOrderIdsByPartId(request.getPartId());
+            if (workOrderIds.isEmpty()) {
+                return new PageResponse<>(List.of(), pn, ps, 0);
+            }
+            wrapper.in("id", workOrderIds);
+        }
         if (request.getStartTime() != null) {
             wrapper.ge("created_at", request.getStartTime());
         }
@@ -978,9 +985,12 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         if (!StringUtils.hasText(code)) {
             return;
         }
-        PartEntity part = partService.lookupEnabledPartByCode(storeId, code);
+        PartEntity part = partService.findVisiblePartByCode(storeId, code);
         if (part == null) {
             throw new BusinessException(ErrorCode.PART_NOT_FOUND, "未找到对应配件");
+        }
+        if (!CommonStatus.ENABLED.getCode().equals(part.getStatus())) {
+            throw new BusinessException(ErrorCode.PART_DISABLED, "该配件已停用，请先在管理端启用后再操作");
         }
         command.setPartId(part.getId());
     }

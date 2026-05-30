@@ -623,6 +623,31 @@ class WorkOrderServiceTest {
     }
 
     @Test
+    void pageQuerySupportsPartIdFilter() {
+        PartEntity targetPart = createPart("过滤配件", "FILTER-PART-001", new BigDecimal("18.00"));
+        PartEntity otherPart = createPart("其他配件", "FILTER-PART-002", new BigDecimal("12.00"));
+
+        Long targetWorkOrderId = workOrderService.createDraft(
+                buildCreateCommand("过滤客户A", "13988883333", "小牛F1"));
+        workOrderService.addChargeItem(targetWorkOrderId,
+                buildPartItem(targetPart.getId(), "过滤配件", 1, new BigDecimal("30.00")));
+
+        Long otherWorkOrderId = workOrderService.createDraft(
+                buildCreateCommand("过滤客户B", "13988884444", "小牛F2"));
+        workOrderService.addChargeItem(otherWorkOrderId,
+                buildPartItem(otherPart.getId(), "其他配件", 1, new BigDecimal("40.00")));
+
+        WorkOrderQueryRequest request = new WorkOrderQueryRequest();
+        request.setStoreId(STORE_ID);
+        request.setPartId(targetPart.getId());
+
+        PageResponse<WorkOrderQueryResponse> page = workOrderService.pageQuery(request);
+
+        assertEquals(1, page.total());
+        assertEquals(targetWorkOrderId, page.records().get(0).getId());
+    }
+
+    @Test
     void getDetailWorks() {
         PartEntity part = createPart("刹车片", "DTL-001", new BigDecimal("50.00"));
         Long woId = workOrderService.createDraft(

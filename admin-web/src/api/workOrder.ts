@@ -109,6 +109,7 @@ export async function getWorkOrderList(
   if (params.customerName) backendParams.customerName = params.customerName;
   if (params.phone) backendParams.customerPhone = params.phone;
   if (params.vin) backendParams.vehicleFrameNo = params.vin;
+  if (params.partId) backendParams.partId = params.partId;
   if (params.status) backendParams.status = params.status;
   if (params.progressStatus) backendParams.status = params.progressStatus;
   if (params.isOfficial === true) backendParams.officialOnly = true;

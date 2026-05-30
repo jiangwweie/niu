@@ -17,4 +17,10 @@ public class InventoryStockQueryResponse {
     private Integer reservedQty;
     private Long lastFlowId;
     private LocalDateTime lastChangedAt;
+    private String partStatus;
+    private String inventoryStateCode;
+    private String inventoryStateTag;
+    private Boolean archived;
+    private Boolean canUseForNewBusiness;
+    private Boolean hasHistoryReference;
 }

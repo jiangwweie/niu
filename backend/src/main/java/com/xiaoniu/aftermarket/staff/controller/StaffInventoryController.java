@@ -46,7 +46,7 @@ public class StaffInventoryController {
 
         CurrentUser user = requireCurrentUser();
         PageResponse<InventoryStockQueryResponse> result =
-                inventoryService.pageQuery(user.storeId(), partCode, partName, pageNo, pageSize);
+                inventoryService.pageQuery(user.storeId(), partCode, partName, null, "ALL", pageNo, pageSize);
         return ApiResponse.success(result.map(StaffInventoryStockItem::from));
     }
 

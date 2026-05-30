@@ -6,16 +6,23 @@ export interface InventoryRecord {
   partCode: string;
   partName: string;
   source: string;
+  partStatus?: string;
   actualQty: number;
   availableQty: number;
   reservedQty: number;
   lastChangedAt: string;
+  inventoryStateCode?: string;
+  inventoryStateTag?: string;
+  archived?: boolean;
+  canUseForNewBusiness?: boolean;
+  hasHistoryReference?: boolean;
 }
 
 export interface InventoryQuery {
   partCode?: string;
   partName?: string;
   source?: string;
+  view?: string;
   pageNo: number;
   pageSize: number;
 }
@@ -52,11 +59,17 @@ export interface InventoryStockResp {
   partCode: string;
   partName: string;
   partSource: string;
+  partStatus?: string;
   actualQty: number;
   availableQty: number;
   reservedQty: number;
   lastFlowId: number | null;
   lastChangedAt: string | null;
+  inventoryStateCode?: string;
+  inventoryStateTag?: string;
+  archived?: boolean;
+  canUseForNewBusiness?: boolean;
+  hasHistoryReference?: boolean;
 }
 
 export interface InventoryFlowResp {

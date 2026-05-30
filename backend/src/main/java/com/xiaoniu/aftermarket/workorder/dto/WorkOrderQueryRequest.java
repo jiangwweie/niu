@@ -13,6 +13,7 @@ public class WorkOrderQueryRequest {
     private String customerName;
     private String customerPhone;
     private String vehicleFrameNo;
+    private Long partId;
     private Boolean officialOnly;
     private LocalDateTime startTime;
     private LocalDateTime endTime;

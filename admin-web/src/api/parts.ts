@@ -18,6 +18,30 @@ interface PartResp {
   status: string;
   remark: string;
   canDelete?: boolean;
+  deleteReasons?: string[];
+  deleteBlockReasonSummary?: string;
+  actualQty?: number;
+  availableQty?: number;
+  reservedQty?: number;
+  inventoryFlowCount?: number;
+  workOrderChargeItemCount?: number;
+  archived?: boolean;
+  hasHistoryReference?: boolean;
+}
+
+interface PartDeleteCheckResp {
+  canDelete: boolean;
+  reasons: string[];
+  stockSummary: {
+    actualQty: number;
+    availableQty: number;
+    reservedQty: number;
+  };
+  referenceSummary: {
+    inventoryFlowCount: number;
+    workOrderChargeItemCount: number;
+    sampleWorkOrderIds: number[];
+  };
 }
 
 /** View-compatible part row (what the table template binds to) */
@@ -36,6 +60,15 @@ export interface PartViewRecord {
   status: boolean;
   remark: string;
   canDelete?: boolean;
+  deleteReasons?: string[];
+  deleteBlockReasonSummary?: string;
+  actualQty?: number;
+  availableQty?: number;
+  reservedQty?: number;
+  inventoryFlowCount?: number;
+  workOrderChargeItemCount?: number;
+  archived?: boolean;
+  hasHistoryReference?: boolean;
 }
 
 /** Pagination params for list endpoint */
@@ -80,6 +113,15 @@ function adaptPart(resp: PartResp): PartViewRecord {
     status: resp.status === 'ENABLED',
     remark: resp.remark || '',
     canDelete: resp.canDelete,
+    deleteReasons: resp.deleteReasons || [],
+    deleteBlockReasonSummary: resp.deleteBlockReasonSummary || '',
+    actualQty: resp.actualQty ?? 0,
+    availableQty: resp.availableQty ?? 0,
+    reservedQty: resp.reservedQty ?? 0,
+    inventoryFlowCount: resp.inventoryFlowCount ?? 0,
+    workOrderChargeItemCount: resp.workOrderChargeItemCount ?? 0,
+    archived: resp.archived ?? false,
+    hasHistoryReference: resp.hasHistoryReference ?? false,
   };
 }
 
@@ -181,6 +223,10 @@ export function disablePart(partId: string | number) {
 
 export function deletePart(partId: string | number) {
   return request.delete(`/api/admin/parts/${partId}`);
+}
+
+export function getPartDeleteCheck(partId: string | number): Promise<PartDeleteCheckResp> {
+  return request.get(`/api/admin/parts/${partId}/delete-check`);
 }
 
 /**

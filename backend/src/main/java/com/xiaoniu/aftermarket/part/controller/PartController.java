@@ -7,6 +7,7 @@ import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
 import com.xiaoniu.aftermarket.part.dto.CreatePartCommand;
+import com.xiaoniu.aftermarket.part.dto.PartDeleteCheckResponse;
 import com.xiaoniu.aftermarket.part.dto.PartLookupResponse;
 import com.xiaoniu.aftermarket.part.dto.PartQueryRequest;
 import com.xiaoniu.aftermarket.part.dto.PartQueryResponse;
@@ -85,8 +86,38 @@ public class PartController {
         qr.setCreateSource(entity.getCreateSource());
         qr.setStatus(entity.getStatus());
         qr.setRemark(entity.getRemark());
-        qr.setCanDelete(partService.canDelete(user.storeId(), partId));
+        PartDeleteCheckResponse deleteCheck = partService.getDeleteCheck(user.storeId(), partId);
+        qr.setCanDelete(deleteCheck.canDelete());
+        qr.setDeleteReasons(deleteCheck.reasons());
+        qr.setDeleteBlockReasonSummary(deleteCheck.reasons().isEmpty() ? null : String.join("；", deleteCheck.reasons()));
+        qr.setActualQty(deleteCheck.stockSummary().actualQty());
+        qr.setAvailableQty(deleteCheck.stockSummary().availableQty());
+        qr.setReservedQty(deleteCheck.stockSummary().reservedQty());
+        qr.setInventoryFlowCount(deleteCheck.referenceSummary().inventoryFlowCount());
+        qr.setWorkOrderChargeItemCount(deleteCheck.referenceSummary().workOrderChargeItemCount());
+        qr.setArchived(entity.getDeleted() == null || entity.getDeleted() == 0
+                ? "DISABLED".equals(entity.getStatus())
+                && deleteCheck.stockSummary().actualQty() == 0
+                && deleteCheck.stockSummary().availableQty() == 0
+                && deleteCheck.stockSummary().reservedQty() == 0
+                && (deleteCheck.referenceSummary().inventoryFlowCount() > 0
+                || deleteCheck.referenceSummary().workOrderChargeItemCount() > 0)
+                : false);
+        qr.setHasHistoryReference(deleteCheck.referenceSummary().inventoryFlowCount() > 0
+                || deleteCheck.referenceSummary().workOrderChargeItemCount() > 0);
         return ApiResponse.success(PartDetailResponse.fromQueryResponse(qr));
+    }
+
+    @PreAuthorize("hasAuthority('PART_MANAGE')")
+    @GetMapping("/{partId}/delete-check")
+    public ApiResponse<PartDeleteCheckResponse> getDeleteCheck(@PathVariable Long partId) {
+        CurrentUser user = requireCurrentUser();
+        PartEntity entity = partService.getById(partId);
+        if (entity == null || (entity.getDeleted() != null && entity.getDeleted() == 1)
+                || !user.storeId().equals(entity.getStoreId())) {
+            throw new BusinessException(ErrorCode.PART_NOT_FOUND, "配件不存在");
+        }
+        return ApiResponse.success(partService.getDeleteCheck(user.storeId(), partId));
     }
 
     @PreAuthorize("hasAuthority('PART_MANAGE')")

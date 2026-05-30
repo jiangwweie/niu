@@ -16,4 +16,12 @@ public interface WorkOrderChargeItemMapper extends BaseMapper<WorkOrderChargeIte
             ORDER BY id ASC
             """)
     List<WorkOrderChargeItemEntity> selectByWorkOrderId(@Param("workOrderId") Long workOrderId);
+
+    @Select("""
+            SELECT DISTINCT work_order_id
+            FROM work_order_charge_item
+            WHERE part_id = #{partId} AND deleted = 0
+            ORDER BY work_order_id DESC
+            """)
+    List<Long> selectWorkOrderIdsByPartId(@Param("partId") Long partId);
 }

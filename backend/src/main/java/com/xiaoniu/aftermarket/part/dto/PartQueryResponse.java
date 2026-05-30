@@ -1,6 +1,7 @@
 package com.xiaoniu.aftermarket.part.dto;
 
 import java.math.BigDecimal;
+import java.util.List;
 import lombok.Data;
 
 @Data
@@ -22,4 +23,13 @@ public class PartQueryResponse {
     private String status;
     private String remark;
     private Boolean canDelete;
+    private List<String> deleteReasons;
+    private String deleteBlockReasonSummary;
+    private Integer actualQty;
+    private Integer availableQty;
+    private Integer reservedQty;
+    private Long inventoryFlowCount;
+    private Long workOrderChargeItemCount;
+    private Boolean archived;
+    private Boolean hasHistoryReference;
 }
