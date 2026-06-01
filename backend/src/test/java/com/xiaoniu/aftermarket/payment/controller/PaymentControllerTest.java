@@ -405,8 +405,8 @@ class PaymentControllerTest {
         mockMvc.perform(get("/api/admin/payments")
                         .header("X-User-Id", "1")
                         .header("X-Store-Id", "1")
-                        .param("startTime", "2026-06-01")
-                        .param("endTime", "2026-06-30"))
+                        .param("startTime", "2030-06-01")
+                        .param("endTime", "2030-06-30"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.total").value(0));

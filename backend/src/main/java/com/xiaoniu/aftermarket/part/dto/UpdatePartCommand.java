@@ -16,6 +16,7 @@ public class UpdatePartCommand {
     private BigDecimal referenceCostPrice;
     private BigDecimal defaultSalePrice;
     private String defaultBarcode;
+    private String externalBarcode;
     private String locationRemark;
     private String remark;
 }

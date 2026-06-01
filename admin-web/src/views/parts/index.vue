@@ -83,7 +83,7 @@
               <span v-else>-</span>
             </template>
           </el-table-column>
-          <el-table-column prop="barcode" label="条形码" width="140" />
+          <el-table-column prop="barcode" label="系统条码" width="160" />
           <el-table-column prop="location" label="库存位置" width="140" show-overflow-tooltip />
           <el-table-column label="状态" width="80" align="center">
             <template #default="{ row }">
@@ -96,7 +96,7 @@
             <template #default="{ row }">
               <el-button link type="primary" @click="handleView(row)">查看</el-button>
               <el-button v-if="hasPermission('PART_MANAGE')" link type="primary" @click="openEditDialog(row)">编辑</el-button>
-              <el-button link type="primary" :disabled="!row.barcode" @click="printBarcode(row)">打印条码</el-button>
+              <el-button link type="primary" @click="printBarcode(row)">打印条码</el-button>
               <el-button v-if="hasPermission('PART_MANAGE')" link :type="row.status ? 'danger' : 'success'" @click="handleToggleStatus(row)">
                 {{ row.status ? '停用' : '启用' }}
               </el-button>
@@ -148,7 +148,7 @@
             <MoneyText v-if="detailDrawer.data.salePrice != null" :amount="detailDrawer.data.salePrice" />
             <span v-else>-</span>
           </el-descriptions-item>
-          <el-descriptions-item label="条形码">
+          <el-descriptions-item label="系统条码">
             <span>{{ detailDrawer.data.barcode || '-' }}</span>
             <el-button
               v-if="detailDrawer.data.barcode"
@@ -203,8 +203,17 @@
         <el-form-item label="销售价">
           <el-input-number v-model="editDialog.form.defaultSalePrice" :min="0" :precision="2" :step="10" style="width: 100%" />
         </el-form-item>
-        <el-form-item label="条形码">
-          <el-input v-model="editDialog.form.defaultBarcode" placeholder="请输入条形码" />
+        <el-form-item label="系统条码">
+          <el-input
+            v-model="editDialog.form.defaultBarcode"
+            placeholder="留空由系统自动生成"
+          />
+        </el-form-item>
+        <el-form-item label="外部条码">
+          <el-input
+            v-model="editDialog.form.externalBarcode"
+            placeholder="选填，用于绑定包装条码/官方条码"
+          />
         </el-form-item>
         <el-form-item label="库存位置">
           <el-input v-model="editDialog.form.locationRemark" placeholder="例如：A区-01架-02层" />
@@ -383,6 +392,7 @@ const editDialog = reactive({
     referenceCostPrice: 0,
     defaultSalePrice: null as number | null,
     defaultBarcode: '',
+    externalBarcode: '',
     locationRemark: '',
     remark: '',
   },
@@ -400,6 +410,7 @@ const openAddDialog = () => {
     referenceCostPrice: 0,
     defaultSalePrice: null as number | null,
     defaultBarcode: '',
+    externalBarcode: '',
     locationRemark: '',
     remark: '',
   };
@@ -418,6 +429,7 @@ const openEditDialog = (row: PartViewRecord) => {
     referenceCostPrice: row.costPrice,
     defaultSalePrice: row.salePrice,
     defaultBarcode: row.barcode,
+    externalBarcode: '',
     locationRemark: row.location,
     remark: row.remark,
   };
@@ -446,6 +458,7 @@ const submitEdit = async () => {
         referenceCostPrice: editDialog.form.referenceCostPrice || undefined,
         defaultSalePrice: editDialog.form.defaultSalePrice ?? undefined,
         defaultBarcode: editDialog.form.defaultBarcode || undefined,
+        externalBarcode: editDialog.form.externalBarcode || undefined,
         locationRemark: editDialog.form.locationRemark || undefined,
         remark: editDialog.form.remark || undefined,
       });
@@ -465,6 +478,7 @@ const submitEdit = async () => {
           referenceCostPrice: editDialog.form.referenceCostPrice || undefined,
           defaultSalePrice: editDialog.form.defaultSalePrice ?? undefined,
           defaultBarcode: editDialog.form.defaultBarcode || undefined,
+          externalBarcode: editDialog.form.externalBarcode || undefined,
           locationRemark: editDialog.form.locationRemark || undefined,
           remark: editDialog.form.remark || undefined,
         });
@@ -476,6 +490,7 @@ const submitEdit = async () => {
           referenceCostPrice: editDialog.form.referenceCostPrice || undefined,
           defaultSalePrice: editDialog.form.defaultSalePrice ?? undefined,
           defaultBarcode: editDialog.form.defaultBarcode || undefined,
+          externalBarcode: editDialog.form.externalBarcode || undefined,
           locationRemark: editDialog.form.locationRemark || undefined,
           remark: editDialog.form.remark || undefined,
         });
@@ -618,7 +633,11 @@ const escapeHtml = (value: string) => value
 
 const printBarcode = (row: PartViewRecord) => {
   if (!row.barcode) {
-    ElMessage.warning('当前配件没有条码');
+    ElMessage.warning('当前配件缺少系统条码，请刷新列表后重试');
+    return;
+  }
+  if (!row.partCode) {
+    ElMessage.warning('当前配件缺少配件编码，无法打印');
     return;
   }
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -651,7 +670,7 @@ const printBarcode = (row: PartViewRecord) => {
           body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; padding: 8px; }
           .label { border: 1px solid #111; box-sizing: border-box; padding: 8px 10px; width: 62mm; min-height: 27mm; }
           .name { font-size: 14px; font-weight: 600; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-          .code { font-size: 11px; color: #555; margin-bottom: 6px; }
+          .code { font-size: 11px; color: #555; margin-bottom: 4px; }
           .barcode-svg { display: block; width: 100%; }
           .barcode-svg svg { width: 100%; height: auto; }
         </style>
@@ -660,6 +679,9 @@ const printBarcode = (row: PartViewRecord) => {
         <div class="label">
           <div class="name">${escapeHtml(row.partName)}</div>
           <div class="code">${escapeHtml(row.partCode)}</div>
+          ${row.officialCode ? `<div class="code">${escapeHtml(row.officialCode)}</div>` : ''}
+          ${row.model ? `<div class="code">${escapeHtml(row.model)}</div>` : ''}
+          <div class="code">${escapeHtml(row.barcode)}</div>
           <div class="barcode-svg">${barcodeSvg}</div>
         </div>
         <script>window.onload = function () { window.print(); };<\/script>

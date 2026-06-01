@@ -37,6 +37,9 @@ import org.springframework.util.StringUtils;
 @Service
 public class PartServiceImpl implements PartService {
 
+    private static final String BARCODE_TYPE_SYSTEM = "SYSTEM";
+    private static final String BARCODE_TYPE_MANUAL = "MANUAL";
+
     private final PartMapper partMapper;
     private final PartBarcodeMapper partBarcodeMapper;
     private final SequenceService sequenceService;
@@ -64,22 +67,34 @@ public class PartServiceImpl implements PartService {
 
     @Override
     public PartEntity getByBarcode(Long storeId, String barcode) {
-        PartBarcodeEntity barcodeEntity = partBarcodeMapper.selectByStoreIdAndBarcode(storeId, barcode);
+        String normalized = normalizeBarcode(barcode);
+        if (storeId == null || normalized == null) {
+            return null;
+        }
+        PartBarcodeEntity barcodeEntity = partBarcodeMapper.selectByStoreIdAndBarcode(storeId, normalized);
         if (barcodeEntity == null) {
             return null;
         }
         PartEntity part = partMapper.selectById(barcodeEntity.getPartId());
-        return part == null || (part.getDeleted() != null && part.getDeleted() == 1) ? null : part;
+        if (part == null || (part.getDeleted() != null && part.getDeleted() == 1)) {
+            return null;
+        }
+        return repairDefaultBarcodeIfNeeded(part, null);
     }
 
     @Override
     public PartEntity getByPartCode(Long storeId, String partCode) {
+        String normalized = normalizeBarcode(partCode);
+        if (storeId == null || normalized == null) {
+            return null;
+        }
         QueryWrapper<PartEntity> wrapper = new QueryWrapper<>();
         wrapper.eq("store_id", storeId)
-               .eq("part_code", partCode)
+               .eq("part_code", normalized)
                .eq("deleted", 0)
                .last("LIMIT 1");
-        return partMapper.selectOne(wrapper);
+        PartEntity part = partMapper.selectOne(wrapper);
+        return part == null ? null : repairDefaultBarcodeIfNeeded(part, null);
     }
 
     @Override
@@ -94,7 +109,7 @@ public class PartServiceImpl implements PartService {
             PartEntity part = partMapper.selectById(barcodeEntity.getPartId());
             if (part != null && storeId.equals(part.getStoreId())
                     && (part.getDeleted() == null || part.getDeleted() == 0)) {
-                return part;
+                return repairDefaultBarcodeIfNeeded(part, null);
             }
         }
 
@@ -139,11 +154,8 @@ public class PartServiceImpl implements PartService {
         checkPartCodeUnique(command.getStoreId(), part.getPartCode());
 
         partMapper.insert(part);
-        if (StringUtils.hasText(command.getDefaultBarcode())) {
-            syncDefaultBarcode(part, command.getDefaultBarcode(), command.getOperatorId());
-            partMapper.updateById(part);
-        }
-        return part;
+        initializeBarcodesForNewPart(part, command);
+        return repairDefaultBarcodeIfNeeded(part, command.getOperatorId());
     }
 
     @Override
@@ -169,11 +181,8 @@ public class PartServiceImpl implements PartService {
         part.setCreatedBy(command.getOperatorId());
 
         partMapper.insert(part);
-        if (StringUtils.hasText(command.getDefaultBarcode())) {
-            syncDefaultBarcode(part, command.getDefaultBarcode(), command.getOperatorId());
-            partMapper.updateById(part);
-        }
-        return part;
+        initializeBarcodesForNewPart(part, command);
+        return repairDefaultBarcodeIfNeeded(part, command.getOperatorId());
     }
 
     @Override
@@ -215,6 +224,9 @@ public class PartServiceImpl implements PartService {
         if (command.getDefaultBarcode() != null) {
             syncDefaultBarcode(existing, command.getDefaultBarcode(), command.getOperatorId());
         }
+        if (command.getExternalBarcode() != null) {
+            syncExternalBarcode(existing, command.getExternalBarcode(), command.getOperatorId());
+        }
 
         partMapper.updateById(existing);
     }
@@ -230,6 +242,7 @@ public class PartServiceImpl implements PartService {
         }
         existing.setStatus(CommonStatus.ENABLED.getCode());
         partMapper.updateById(existing);
+        updateBarcodeStatus(storeId, partId, CommonStatus.ENABLED.getCode(), false, null);
     }
 
     @Override
@@ -243,6 +256,7 @@ public class PartServiceImpl implements PartService {
         }
         existing.setStatus(CommonStatus.DISABLED.getCode());
         partMapper.updateById(existing);
+        updateBarcodeStatus(storeId, partId, CommonStatus.DISABLED.getCode(), false, null);
     }
 
     @Override
@@ -288,7 +302,7 @@ public class PartServiceImpl implements PartService {
         existing.setUpdatedBy(operatorId);
         existing.setUpdatedAt(LocalDateTime.now());
         partMapper.updateById(existing);
-        softDeletePartBarcodes(storeId, partId, operatorId);
+        updateBarcodeStatus(storeId, partId, CommonStatus.DISABLED.getCode(), true, operatorId);
     }
 
     @Override
@@ -317,7 +331,7 @@ public class PartServiceImpl implements PartService {
         entity.setStoreId(storeId);
         entity.setPartId(partId);
         entity.setBarcode(normalized);
-        entity.setBarcodeType("MANUAL");
+        entity.setBarcodeType(BARCODE_TYPE_MANUAL);
         entity.setPrimaryBarcode(!hasPrimary);
         entity.setStatus(CommonStatus.ENABLED.getCode());
         entity.setCreatedBy(operatorId);
@@ -325,6 +339,8 @@ public class PartServiceImpl implements PartService {
 
         if (!hasPrimary) {
             part.setDefaultBarcode(normalized);
+            part.setUpdatedBy(operatorId);
+            part.setUpdatedAt(LocalDateTime.now());
             partMapper.updateById(part);
         }
 
@@ -351,19 +367,20 @@ public class PartServiceImpl implements PartService {
             if (!partId.equals(existing.getPartId())) {
                 throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "条码已被其他配件使用");
             }
+            if ((existing.getDeleted() == null || existing.getDeleted() == 0)
+                    && CommonStatus.DISABLED.getCode().equals(existing.getStatus())
+                    && CommonStatus.ENABLED.getCode().equals(part.getStatus())) {
+                existing.setStatus(CommonStatus.ENABLED.getCode());
+                existing.setUpdatedBy(operatorId);
+                existing.setUpdatedAt(LocalDateTime.now());
+                partBarcodeMapper.updateById(existing);
+            }
             return;
         }
 
         boolean hasPrimary = hasPrimaryBarcode(partId);
-        PartBarcodeEntity entity = new PartBarcodeEntity();
-        entity.setStoreId(storeId);
-        entity.setPartId(partId);
-        entity.setBarcode(normalized);
-        entity.setBarcodeType("MANUAL");
-        entity.setPrimaryBarcode(!hasPrimary);
-        entity.setStatus(CommonStatus.ENABLED.getCode());
-        entity.setCreatedBy(operatorId);
-        insertBarcode(entity);
+        upsertBarcode(storeId, partId, normalized, BARCODE_TYPE_MANUAL, !hasPrimary,
+                CommonStatus.ENABLED.getCode(), operatorId, null);
 
         if (!hasPrimary) {
             part.setDefaultBarcode(normalized);
@@ -420,7 +437,7 @@ public class PartServiceImpl implements PartService {
             created.setStoreId(part.getStoreId());
             created.setPartId(partId);
             created.setBarcode(normalized);
-            created.setBarcodeType("MANUAL");
+            created.setBarcodeType(BARCODE_TYPE_MANUAL);
             created.setPrimaryBarcode(true);
             created.setStatus(CommonStatus.ENABLED.getCode());
             insertBarcode(created);
@@ -467,7 +484,10 @@ public class PartServiceImpl implements PartService {
         } else {
             wrapper.last("ORDER BY id DESC LIMIT " + pageSize + " OFFSET " + (long) (pageNo - 1) * pageSize);
             List<PartEntity> entities = partMapper.selectList(wrapper);
-            records = entities.stream().map(this::toQueryResponse).toList();
+            records = entities.stream()
+                    .map(entity -> repairDefaultBarcodeIfNeeded(entity, null))
+                    .map(this::toQueryResponse)
+                    .toList();
         }
 
         return new PageResponse<>(records, pageNo, pageSize, total);
@@ -533,24 +553,31 @@ public class PartServiceImpl implements PartService {
 
         if (newBarcode != null) {
             newBarcode.setPrimaryBarcode(true);
+            newBarcode.setBarcodeType(BARCODE_TYPE_SYSTEM);
+            newBarcode.setStatus(part.getStatus());
             newBarcode.setUpdatedBy(operatorId);
             newBarcode.setUpdatedAt(LocalDateTime.now());
             partBarcodeMapper.updateById(newBarcode);
         } else {
-            PartBarcodeEntity created = new PartBarcodeEntity();
-            created.setStoreId(part.getStoreId());
-            created.setPartId(part.getId());
-            created.setBarcode(normalized);
-            created.setBarcodeType("MANUAL");
-            created.setPrimaryBarcode(true);
-            created.setStatus(CommonStatus.ENABLED.getCode());
-            created.setCreatedBy(operatorId);
-            insertBarcode(created);
+            upsertBarcode(part.getStoreId(), part.getId(), normalized, BARCODE_TYPE_SYSTEM, true,
+                    part.getStatus(), operatorId, null);
         }
 
         part.setDefaultBarcode(normalized);
         part.setUpdatedBy(operatorId);
         part.setUpdatedAt(LocalDateTime.now());
+    }
+
+    private void syncExternalBarcode(PartEntity part, String externalBarcode, Long operatorId) {
+        String normalized = normalizeBarcode(externalBarcode);
+        if (normalized == null) {
+            return;
+        }
+        if (normalized.equals(normalizeBarcode(part.getDefaultBarcode()))) {
+            return;
+        }
+        upsertBarcode(part.getStoreId(), part.getId(), normalized, BARCODE_TYPE_MANUAL, false,
+                part.getStatus(), operatorId, null);
     }
 
     private String resolveCreateSource(CreatePartCommand command) {
@@ -559,6 +586,50 @@ public class PartServiceImpl implements PartService {
 
     private String normalizeBarcode(String barcode) {
         return StringUtils.hasText(barcode) ? barcode.trim() : null;
+    }
+
+    private void initializeBarcodesForNewPart(PartEntity part, CreatePartCommand command) {
+        String systemBarcode = resolveSystemDefaultBarcode(part, command.getDefaultBarcode());
+        syncDefaultBarcode(part, systemBarcode, command.getOperatorId());
+        syncExternalBarcode(part, command.getExternalBarcode(), command.getOperatorId());
+        partMapper.updateById(part);
+    }
+
+    private String resolveSystemDefaultBarcode(PartEntity part, String requestedDefaultBarcode) {
+        String normalized = normalizeBarcode(requestedDefaultBarcode);
+        if (normalized != null) {
+            return normalized;
+        }
+        String fallback = normalizeBarcode(part.getPartCode());
+        if (fallback == null) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "配件编码缺失，无法生成系统条码");
+        }
+        return fallback;
+    }
+
+    private PartEntity repairDefaultBarcodeIfNeeded(PartEntity part, Long operatorId) {
+        if (part == null || (part.getDeleted() != null && part.getDeleted() == 1)) {
+            return part;
+        }
+        Long effectiveOperatorId = operatorId != null ? operatorId : part.getUpdatedBy();
+        String desiredDefault = resolveSystemDefaultBarcode(part, part.getDefaultBarcode());
+        PartBarcodeEntity currentPrimary = findPrimaryBarcode(part.getId());
+        boolean defaultChanged = !desiredDefault.equals(normalizeBarcode(part.getDefaultBarcode()));
+        boolean primaryMissing = currentPrimary == null || !desiredDefault.equals(normalizeBarcode(currentPrimary.getBarcode()));
+        boolean statusMismatch = currentPrimary != null
+                && !Objects.equals(currentPrimary.getStatus(), part.getStatus());
+        if (!defaultChanged && !primaryMissing && !statusMismatch) {
+            return part;
+        }
+
+        if (defaultChanged || primaryMissing) {
+            syncDefaultBarcode(part, desiredDefault, effectiveOperatorId);
+        }
+        updateBarcodeStatus(part.getStoreId(), part.getId(), part.getStatus(), false, effectiveOperatorId);
+        if (defaultChanged || primaryMissing) {
+            partMapper.updateById(part);
+        }
+        return partMapper.selectById(part.getId());
     }
 
     private boolean isLookupVisible(PartEntity part, Long storeId) {
@@ -593,6 +664,44 @@ public class PartServiceImpl implements PartService {
         } catch (DuplicateKeyException e) {
             throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "条码已存在");
         }
+    }
+
+    private PartBarcodeEntity selectAnyBarcode(Long storeId, String barcode) {
+        QueryWrapper<PartBarcodeEntity> wrapper = new QueryWrapper<>();
+        wrapper.eq("store_id", storeId)
+                .eq("barcode", barcode)
+                .last("LIMIT 1");
+        return partBarcodeMapper.selectOne(wrapper);
+    }
+
+    private PartBarcodeEntity upsertBarcode(Long storeId, Long partId, String barcode, String barcodeType,
+                                            boolean primary, String status, Long operatorId, String remark) {
+        PartBarcodeEntity existing = selectAnyBarcode(storeId, barcode);
+        if (existing != null) {
+            if (!partId.equals(existing.getPartId())) {
+                throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "条码已被其他配件使用");
+            }
+            existing.setBarcodeType(barcodeType);
+            existing.setPrimaryBarcode(primary);
+            existing.setStatus(status);
+            existing.setRemark(remark);
+            existing.setDeleted(0);
+            existing.setUpdatedBy(operatorId);
+            existing.setUpdatedAt(LocalDateTime.now());
+            partBarcodeMapper.updateById(existing);
+            return existing;
+        }
+        PartBarcodeEntity created = new PartBarcodeEntity();
+        created.setStoreId(storeId);
+        created.setPartId(partId);
+        created.setBarcode(barcode);
+        created.setBarcodeType(barcodeType);
+        created.setPrimaryBarcode(primary);
+        created.setStatus(status);
+        created.setRemark(remark);
+        created.setCreatedBy(operatorId);
+        insertBarcode(created);
+        return created;
     }
 
     private boolean hasPrimaryBarcode(Long partId) {
@@ -749,16 +858,17 @@ public class PartServiceImpl implements PartService {
         );
     }
 
-    private void softDeletePartBarcodes(Long storeId, Long partId, Long operatorId) {
+    private void updateBarcodeStatus(Long storeId, Long partId, String status, boolean deleted, Long operatorId) {
         UpdateWrapper<PartBarcodeEntity> wrapper = new UpdateWrapper<>();
         wrapper.eq("store_id", storeId)
                 .eq("part_id", partId)
-                .eq("deleted", 0)
-                .set("deleted", 1)
-                .set("status", CommonStatus.DISABLED.getCode())
-                .set("is_primary", false)
+                .set("deleted", deleted ? 1 : 0)
+                .set("status", status)
                 .set("updated_by", operatorId)
                 .set("updated_at", LocalDateTime.now());
+        if (deleted) {
+            wrapper.set("is_primary", false);
+        }
         partBarcodeMapper.update(null, wrapper);
     }
 

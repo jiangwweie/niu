@@ -15,6 +15,7 @@ public class CreatePartCommand {
     private BigDecimal referenceCostPrice;
     private BigDecimal defaultSalePrice;
     private String defaultBarcode;
+    private String externalBarcode;
     private String locationRemark;
     private String createSource;
     private String remark;

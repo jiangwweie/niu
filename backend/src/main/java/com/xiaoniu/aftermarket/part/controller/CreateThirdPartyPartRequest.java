@@ -10,6 +10,7 @@ public record CreateThirdPartyPartRequest(
         BigDecimal referenceCostPrice,
         BigDecimal defaultSalePrice,
         String defaultBarcode,
+        String externalBarcode,
         String locationRemark,
         String remark
 ) {

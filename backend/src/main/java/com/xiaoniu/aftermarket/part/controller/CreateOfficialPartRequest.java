@@ -11,6 +11,7 @@ public record CreateOfficialPartRequest(
         BigDecimal referenceCostPrice,
         BigDecimal defaultSalePrice,
         String defaultBarcode,
+        String externalBarcode,
         String locationRemark,
         String remark
 ) {

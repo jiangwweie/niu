@@ -43,7 +43,7 @@ public class AddTempPartChargeApplicationService {
         createPart.setModel(command.model());
         createPart.setCategoryCode(command.categoryCode());
         createPart.setReferenceCostPrice(command.unitCost() != null ? command.unitCost() : BigDecimal.ZERO);
-        createPart.setDefaultBarcode(command.barcode());
+        createPart.setExternalBarcode(command.barcode());
         createPart.setLocationRemark(command.locationRemark());
         createPart.setCreateSource(CREATE_SOURCE_WORK_ORDER_TEMP);
         createPart.setRemark(command.remark());

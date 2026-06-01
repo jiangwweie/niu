@@ -281,9 +281,15 @@ class M18BBarcodeScanIntegrationTest {
 
         assertEquals("WORK_ORDER_TEMP", jdbcTemplate.queryForObject(
                 "SELECT create_source FROM part WHERE id = ?", String.class, partId));
+        assertEquals(jdbcTemplate.queryForObject(
+                "SELECT part_code FROM part WHERE id = ?", String.class, partId), jdbcTemplate.queryForObject(
+                "SELECT default_barcode FROM part WHERE id = ?", String.class, partId));
         assertEquals(1, jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM part_barcode WHERE store_id = 1 AND part_id = ? AND barcode = 'M18B-BC-TEMP' AND is_primary = 1",
+                "SELECT COUNT(*) FROM part_barcode WHERE store_id = 1 AND part_id = ? AND barcode = 'M18B-BC-TEMP' AND is_primary = 0",
                 Integer.class, partId));
+        assertEquals(1, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM part_barcode WHERE store_id = 1 AND part_id = ? AND barcode = (SELECT part_code FROM part WHERE id = ?) AND is_primary = 1",
+                Integer.class, partId, partId));
         assertEquals(2, jdbcTemplate.queryForObject(
                 "SELECT actual_qty FROM inventory_stock WHERE store_id = 1 AND part_id = ?", Integer.class, partId));
         assertEquals(1, jdbcTemplate.queryForObject(

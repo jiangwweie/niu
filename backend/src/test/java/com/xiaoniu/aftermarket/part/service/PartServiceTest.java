@@ -67,7 +67,7 @@ class PartServiceTest {
         assertEquals(PartSource.OFFICIAL.getCode(), result.getSource());
         assertEquals(CommonStatus.ENABLED.getCode(), result.getStatus());
         assertEquals(0, new BigDecimal("39.90").compareTo(result.getDefaultSalePrice()));
-        assertNull(result.getDefaultBarcode());
+        assertEquals("OF-BRAKE-001", result.getDefaultBarcode());
     }
 
     @Test
@@ -84,6 +84,7 @@ class PartServiceTest {
         assertEquals("第三方电池", result.getPartName());
         assertEquals(PartSource.THIRD_PARTY.getCode(), result.getSource());
         assertEquals(CommonStatus.ENABLED.getCode(), result.getStatus());
+        assertEquals(result.getPartCode(), result.getDefaultBarcode());
     }
 
     @Test
@@ -105,6 +106,38 @@ class PartServiceTest {
         BusinessException ex = assertThrows(BusinessException.class,
                 () -> partService.createOfficialPart(cmd2));
         assertEquals(ErrorCode.PART_CODE_DUPLICATE, ex.getErrorCode());
+    }
+
+    @Test
+    void createOfficialPartWithManualDefaultBarcodePersistsPrimaryBarcode() {
+        CreatePartCommand command = buildOfficialCommand("官方条码件", "OFF-BC-001");
+        command.setDefaultBarcode("OFF-BC-PRIMARY");
+        command.setExternalBarcode("OFF-BC-OUTER");
+
+        PartEntity result = partService.createOfficialPart(command);
+
+        assertEquals("OFF-BC-PRIMARY", result.getDefaultBarcode());
+        PartBarcodeEntity primary = findBarcode(STORE_ID, "OFF-BC-PRIMARY");
+        assertTrue(primary.getPrimaryBarcode());
+        assertEquals("SYSTEM", primary.getBarcodeType());
+        PartBarcodeEntity external = findBarcode(STORE_ID, "OFF-BC-OUTER");
+        assertFalse(external.getPrimaryBarcode());
+        assertEquals("MANUAL", external.getBarcodeType());
+    }
+
+    @Test
+    void createThirdPartyPartWithDuplicateDefaultBarcodeFails() {
+        CreatePartCommand first = buildThirdPartyCommand("三方A");
+        first.setDefaultBarcode("DUP-DEFAULT-001");
+        partService.createThirdPartyPart(first);
+
+        CreatePartCommand second = buildThirdPartyCommand("三方B");
+        second.setDefaultBarcode("DUP-DEFAULT-001");
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> partService.createThirdPartyPart(second));
+        assertEquals(ErrorCode.COMMON_BAD_REQUEST, ex.getErrorCode());
+        assertEquals("条码已被其他配件使用", ex.getMessage());
     }
 
     @Test
@@ -329,7 +362,7 @@ class PartServiceTest {
 
         assertNotNull(barcode);
         assertEquals("BARCODE-001", barcode.getBarcode());
-        assertTrue(barcode.getPrimaryBarcode());
+        assertFalse(barcode.getPrimaryBarcode());
 
         PartEntity found = partService.getByBarcode(STORE_ID, "BARCODE-001");
         assertNotNull(found);
@@ -339,12 +372,12 @@ class PartServiceTest {
     @Test
     void createBarcodeSetsDefaultBarcodeOnPart() {
         PartEntity part = partService.createOfficialPart(buildOfficialCommand("刹车片", "BC-002"));
-        assertNull(part.getDefaultBarcode());
+        assertEquals("BC-002", part.getDefaultBarcode());
 
         partService.createBarcode(STORE_ID, part.getId(), "BARCODE-002", OPERATOR_ID);
 
         PartEntity updated = partService.getById(part.getId());
-        assertEquals("BARCODE-002", updated.getDefaultBarcode());
+        assertEquals("BC-002", updated.getDefaultBarcode());
     }
 
     @Test
@@ -385,7 +418,7 @@ class PartServiceTest {
         partService.createBarcode(STORE_ID, part.getId(), "OLD-BC", OPERATOR_ID);
 
         PartEntity afterCreate = partService.getById(part.getId());
-        assertEquals("OLD-BC", afterCreate.getDefaultBarcode());
+        assertEquals("UB-001", afterCreate.getDefaultBarcode());
 
         partService.updateDefaultBarcode(part.getId(), "NEW-BC");
 
@@ -442,7 +475,7 @@ class PartServiceTest {
 
         PartEntity found = partService.getByBarcode(STORE_ID, "FIND-BC");
         assertEquals(part.getId(), found.getId());
-        assertEquals("FIND-BC", found.getDefaultBarcode());
+        assertEquals("GS-001", found.getDefaultBarcode());
 
         PartEntity notFound = partService.getByBarcode(STORE_ID, "NON-EXISTENT");
         assertNull(notFound);
@@ -454,6 +487,7 @@ class PartServiceTest {
     void updateDefaultBarcodeToNullDemotesOldPrimary() {
         PartEntity part = partService.createOfficialPart(buildOfficialCommand("刹车片", "NULL-001"));
         partService.createBarcode(STORE_ID, part.getId(), "TO-BE-DEMOTED", OPERATOR_ID);
+        partService.updateDefaultBarcode(part.getId(), "TO-BE-DEMOTED");
 
         PartEntity afterCreate = partService.getById(part.getId());
         assertEquals("TO-BE-DEMOTED", afterCreate.getDefaultBarcode());
@@ -473,6 +507,7 @@ class PartServiceTest {
     void updateDefaultBarcodeToNullThenCreateNewAutoPromotes() {
         PartEntity part = partService.createOfficialPart(buildOfficialCommand("刹车片", "NULL-002"));
         partService.createBarcode(STORE_ID, part.getId(), "OLD-BC", OPERATOR_ID);
+        partService.updateDefaultBarcode(part.getId(), "OLD-BC");
 
         partService.updateDefaultBarcode(part.getId(), null);
 
@@ -490,12 +525,30 @@ class PartServiceTest {
     @Test
     void updateDefaultBarcodeNullWhenNoPrimaryIsNoop() {
         PartEntity part = partService.createOfficialPart(buildOfficialCommand("刹车片", "NULL-003"));
-        assertNull(part.getDefaultBarcode());
+        assertEquals("NULL-003", part.getDefaultBarcode());
 
         partService.updateDefaultBarcode(part.getId(), null);
 
         PartEntity after = partService.getById(part.getId());
         assertNull(after.getDefaultBarcode());
+    }
+
+    @Test
+    void lookupRepairsHistoricalDefaultBarcodeFromPartCode() {
+        jdbcTemplate.update("""
+                INSERT INTO part (id, store_id, part_code, official_part_no, part_name, model, source, category_code,
+                                  reference_cost_price, default_sale_price, default_barcode, location_remark, create_source, status, remark, created_by)
+                VALUES (99001, ?, 'LEGACY-PART-001', NULL, '历史配件', 'NQi', 'THIRD_PARTY', 'BATTERY',
+                        10.00, 20.00, NULL, NULL, 'NORMAL', 'ENABLED', NULL, ?)
+                """, STORE_ID, OPERATOR_ID);
+
+        PartEntity found = partService.findVisiblePartByCode(STORE_ID, "LEGACY-PART-001");
+
+        assertNotNull(found);
+        assertEquals("LEGACY-PART-001", found.getDefaultBarcode());
+        PartBarcodeEntity primary = findBarcode(STORE_ID, "LEGACY-PART-001");
+        assertTrue(primary.getPrimaryBarcode());
+        assertEquals("SYSTEM", primary.getBarcodeType());
     }
 
     // --- updatePart cross-store rejection ---
@@ -556,6 +609,7 @@ class PartServiceTest {
                     e.setStoreId(rs.getLong("store_id"));
                     e.setPartId(rs.getLong("part_id"));
                     e.setBarcode(rs.getString("barcode"));
+                    e.setBarcodeType(rs.getString("barcode_type"));
                     e.setPrimaryBarcode(rs.getInt("is_primary") == 1);
                     return e;
                 },

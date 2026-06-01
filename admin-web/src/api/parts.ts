@@ -12,7 +12,7 @@ interface PartResp {
   categoryCode: string;
   referenceCostPrice: number;
   defaultSalePrice?: number;
-  defaultBarcode: string;
+  defaultBarcode?: string;
   locationRemark: string;
   createSource: string;
   status: string;
@@ -184,6 +184,7 @@ export function createOfficialPart(body: {
   referenceCostPrice?: number;
   defaultSalePrice?: number;
   defaultBarcode?: string;
+  externalBarcode?: string;
   locationRemark?: string;
   remark?: string;
 }) {
@@ -201,6 +202,7 @@ export function createThirdPartyPart(body: {
   referenceCostPrice?: number;
   defaultSalePrice?: number;
   defaultBarcode?: string;
+  externalBarcode?: string;
   locationRemark?: string;
   remark?: string;
 }) {
@@ -241,6 +243,7 @@ export function updatePart(partId: string | number, body: {
   referenceCostPrice?: number;
   defaultSalePrice?: number;
   defaultBarcode?: string;
+  externalBarcode?: string;
   locationRemark?: string;
   remark?: string;
 }) {

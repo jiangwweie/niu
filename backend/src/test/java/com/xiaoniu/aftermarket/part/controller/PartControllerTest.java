@@ -64,6 +64,7 @@ class PartControllerTest {
                 .andExpect(jsonPath("$.data.records[?(@.partCode=='P-TEST-001')].partName").value("测试电池"))
                 .andExpect(jsonPath("$.data.records[?(@.partCode=='P-TEST-001')].source").value("OFFICIAL"))
                 .andExpect(jsonPath("$.data.records[?(@.partCode=='P-TEST-001')].defaultSalePrice").value(168.0))
+                .andExpect(jsonPath("$.data.records[?(@.partCode=='P-TEST-001')].defaultBarcode").value("P-TEST-001"))
                 .andExpect(jsonPath("$.data.records[?(@.partCode=='P-TEST-001')].status").value("ENABLED"));
     }
 
@@ -80,6 +81,7 @@ class PartControllerTest {
                 .andExpect(jsonPath("$.data.officialPartNo").value("OFF-001"))
                 .andExpect(jsonPath("$.data.source").value("OFFICIAL"))
                 .andExpect(jsonPath("$.data.defaultSalePrice").value(168.0))
+                .andExpect(jsonPath("$.data.defaultBarcode").value("P-TEST-001"))
                 .andExpect(jsonPath("$.data.deleted").doesNotExist())
                 .andExpect(jsonPath("$.data.createdBy").doesNotExist());
     }
@@ -107,6 +109,11 @@ class PartControllerTest {
                 jdbcTemplate.queryForObject(
                         "SELECT default_sale_price FROM part WHERE official_part_no = 'NEW-OFF-001'",
                         Double.class));
+        org.junit.jupiter.api.Assertions.assertEquals(
+                "NEW-OFF-001",
+                jdbcTemplate.queryForObject(
+                        "SELECT default_barcode FROM part WHERE official_part_no = 'NEW-OFF-001'",
+                        String.class));
     }
 
     @Test
