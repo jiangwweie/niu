@@ -65,6 +65,9 @@
           <text class="money money-amber" wx:if="{{item.outstandingAmount > 0}}">¥{{item.outstandingDisplay}}</text>
         </view>
         <view class="card-time">{{item.createdAtText}}</view>
+        <view class="card-actions" wx:if="{{hasUpdateOrderPermission && item.progressKey === 'DRAFT'}}">
+          <t-button size="small" theme="primary" variant="outline" catchtap="onEditDraft" data-id="{{item.id}}">编辑草稿</t-button>
+        </view>
       </view>
     </block>
     <view wx:else class="empty">

@@ -6,6 +6,7 @@ import type {
   WorkOrderListResp,
   WorkOrderDetailResp,
   WorkOrderChargeItemResp,
+  UpdateDraftWorkOrderRequest,
 } from '@/types/workOrder';
 
 /* ── Adapters: backend → view ── */
@@ -25,6 +26,7 @@ function adaptChargeItem(resp: WorkOrderChargeItemResp) {
 }
 
 function adaptWorkOrderList(resp: WorkOrderListResp): WorkOrderRecord {
+  const draftNoCharge = resp.progressStatus === 'DRAFT' && resp.cashierStatus === 'NO_CHARGE';
   return {
     id: String(resp.id),
     orderNo: resp.workOrderNo,
@@ -36,7 +38,7 @@ function adaptWorkOrderList(resp: WorkOrderListResp): WorkOrderRecord {
     progressStatus: resp.progressStatus,
     progressStatusText: resp.progressStatusText,
     cashierStatus: resp.cashierStatus,
-    cashierStatusText: resp.cashierStatusText,
+    cashierStatusText: draftNoCharge ? '待录入费用' : resp.cashierStatusText,
     inventoryStatus: resp.inventoryStatus,
     inventoryStatusText: resp.inventoryStatusText,
     receivableAmount: resp.receivableAmount,
@@ -54,8 +56,11 @@ function adaptWorkOrderList(resp: WorkOrderListResp): WorkOrderRecord {
 }
 
 function adaptWorkOrderDetail(resp: WorkOrderDetailResp): WorkOrderRecord {
+  const draftNoCharge = resp.progressStatus === 'DRAFT' && resp.cashierStatus === 'NO_CHARGE';
   return {
     id: String(resp.id),
+    customerId: resp.customerId,
+    vehicleId: resp.vehicleId,
     orderNo: resp.workOrderNo,
     customerName: resp.customerNameSnapshot,
     phone: resp.customerPhoneSnapshot || '',
@@ -66,7 +71,9 @@ function adaptWorkOrderDetail(resp: WorkOrderDetailResp): WorkOrderRecord {
     progressStatus: resp.progressStatus,
     progressStatusText: resp.progressStatusText,
     cashierStatus: resp.cashierStatus,
-    cashierStatusText: resp.cashierStatusText,
+    cashierStatusText: draftNoCharge
+      ? ((resp.chargeItems || []).length > 0 || resp.receivableAmount > 0 ? '草稿未提交' : '待录入费用')
+      : resp.cashierStatusText,
     inventoryStatus: resp.inventoryStatus,
     inventoryStatusText: resp.inventoryStatusText,
     receivableAmount: resp.receivableAmount,
@@ -136,6 +143,14 @@ export async function getWorkOrderDetail(
     `/api/admin/work-orders/${id}`,
   );
   return adaptWorkOrderDetail(resp);
+}
+
+/** PUT /api/admin/work-orders/{id}/draft */
+export async function updateDraftWorkOrder(
+  workOrderId: string | number,
+  data: UpdateDraftWorkOrderRequest,
+) {
+  return await request.put(`/api/admin/work-orders/${workOrderId}/draft`, data);
 }
 
 /* ── Cashier APIs ── */

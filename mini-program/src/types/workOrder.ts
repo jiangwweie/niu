@@ -44,6 +44,8 @@ export interface WorkOrder {
   inventoryStatus?: InventoryStatus;
   inventoryStatusText?: string;
   // --- 客户/车辆 ---
+  customerId?: number;
+  vehicleId?: number;
   customerNameSnapshot: string;
   customerPhoneSnapshot?: string;
   vehicleModelSnapshot?: string;
@@ -87,6 +89,8 @@ export interface CreateDraftWorkOrderRequest {
 }
 
 export interface UpdateDraftWorkOrderRequest {
+  customerId?: number;
+  vehicleId?: number;
   customerNameSnapshot?: string;
   customerPhoneSnapshot?: string;
   vehicleModelSnapshot?: string;

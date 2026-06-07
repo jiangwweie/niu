@@ -14,6 +14,8 @@ export interface WorkOrderChargeItem {
 
 export interface WorkOrderRecord {
   id: string;
+  customerId?: number | null;
+  vehicleId?: number | null;
   orderNo: string;
   customerName: string;
   phone: string;
@@ -170,4 +172,16 @@ export interface WorkOrderDetailResp {
   createdAt: string;
   chargeItems: WorkOrderChargeItemResp[];
   officialAfterSales: OfficialAfterSalesResp | null;
+}
+
+export interface UpdateDraftWorkOrderRequest {
+  customerId?: number | null;
+  vehicleId?: number | null;
+  customerNameSnapshot?: string;
+  customerPhoneSnapshot?: string;
+  vehicleModelSnapshot?: string;
+  frameNoSnapshot?: string;
+  batteryNoSnapshot?: string;
+  repairItem?: string;
+  remark?: string;
 }

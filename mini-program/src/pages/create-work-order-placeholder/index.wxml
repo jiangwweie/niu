@@ -51,7 +51,9 @@
     </t-cell-group>
 
     <view class="action-bar">
-      <t-button theme="primary" block size="large" bind:tap="saveDraft" loading="{{saving}}">保存草稿</t-button>
+      <t-button wx:if="{{workOrderId}}" theme="default" block size="large" bind:tap="backToChargeItems">返回费用明细</t-button>
+      <view wx:if="{{workOrderId}}" style="height: 12px;"></view>
+      <t-button theme="primary" block size="large" bind:tap="saveDraft" loading="{{saving}}">{{workOrderId ? '保存修改' : '保存草稿'}}</t-button>
     </view>
   </view>
 
@@ -68,6 +70,9 @@
       </view>
       <text class="summary-info">客户: {{workOrder.customerNameSnapshot}}</text>
       <text class="summary-info">项目: {{workOrder.repairItem}}</text>
+      <view class="draft-summary-actions" wx:if="{{workOrder.progressStatus === 'DRAFT'}}">
+        <t-button size="small" theme="primary" variant="outline" bind:tap="editDraftInfo">编辑基础信息</t-button>
+      </view>
     </view>
 
     <view class="section-title mt">费用明细</view>

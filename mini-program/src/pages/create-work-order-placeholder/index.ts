@@ -4,6 +4,7 @@ import { searchCustomers, searchVehicles, CustomerSearchResult, VehicleSearchRes
 import { authStore } from '../../stores/auth';
 import {
   createDraftWorkOrder,
+  updateDraftWorkOrder,
   getWorkOrderDetail,
   addChargeItem,
   addTempPartCharge,
@@ -21,6 +22,7 @@ import {
   WorkOrder,
   WorkOrderItem,
   CreateDraftWorkOrderRequest,
+  UpdateDraftWorkOrderRequest,
   AddChargeItemRequest,
   UpdateChargeItemRequest,
   PaymentMethod
@@ -58,12 +60,19 @@ function resolveStatusText(d: WorkOrder | null): string {
   return getProgressStatusText(d.progressStatus || d.status, d.progressStatusText);
 }
 
+function getDraftCashierText(order: WorkOrder) {
+  const hasItems = !!order.chargeItems?.length;
+  return hasItems || Number(order.receivableAmount || 0) > 0 ? '草稿未提交' : '待录入费用';
+}
+
 Page({
   data: {
     step: 1,
     statusText: '新建中',
     workOrderId: null as string | number | null,
     workOrder: null as WorkOrder | null,
+    editMode: false,
+    canEditDraft: false,
 
     draft: {
       customerNameSnapshot: '',
@@ -177,8 +186,17 @@ Page({
     refundableAmountStr: '0.00',
   },
 
-  onLoad() {
+  onLoad(options?: { id?: string; workOrderId?: string }) {
     this.loadParts();
+    const workOrderId = options?.id || options?.workOrderId;
+    if (workOrderId) {
+      this.setData({
+        workOrderId,
+        editMode: true,
+        step: 2
+      });
+      this.refreshWorkOrder();
+    }
   },
 
   onShow() {
@@ -219,13 +237,27 @@ Page({
 
     this.setData({ saving: true });
 
-    const req: CreateDraftWorkOrderRequest = {
+    const req: CreateDraftWorkOrderRequest | UpdateDraftWorkOrderRequest = {
       ...this.data.draft,
       customerId: this.data.selectedCustomerId || undefined,
       vehicleId: this.data.selectedVehicleId || undefined
     };
 
-    createDraftWorkOrder(req).then(res => {
+    if (this.data.workOrderId) {
+      updateDraftWorkOrder(this.data.workOrderId, req as UpdateDraftWorkOrderRequest).then(() => {
+        this.setData({
+          saving: false,
+          step: 2
+        });
+        Toast({ context: this, selector: '#t-toast', message: '草稿已更新', icon: 'check-circle' });
+        this.refreshWorkOrder();
+      }).catch(() => {
+        this.setData({ saving: false });
+      });
+      return;
+    }
+
+    createDraftWorkOrder(req as CreateDraftWorkOrderRequest).then(res => {
       this.setData({
         saving: false,
         step: 2,
@@ -245,16 +277,55 @@ Page({
       const workOrder = {
         ...d,
         progressStatusText: getProgressStatusText(d?.progressStatus || d?.status, d?.progressStatusText),
-        cashierStatusText: getCashierStatusText(d?.cashierStatus, d?.cashierStatusText),
+        cashierStatusText: (d?.progressStatus || d?.status) === 'DRAFT' && d?.cashierStatus === 'NO_CHARGE'
+          ? getDraftCashierText(d)
+          : getCashierStatusText(d?.cashierStatus, d?.cashierStatusText),
         inventoryStatusText: getInventoryStatusText(d?.inventoryStatus, d?.inventoryStatusText),
         noChargeReasonText: getNoChargeReasonText(d?.noChargeReason),
       };
+      const status = d?.progressStatus || d?.status;
       this.setData({
         workOrder,
         statusText: resolveStatusText(workOrder),
+        canEditDraft: status === 'DRAFT',
+        ...this.resolveDraftState(d),
         ...this.resolveActionState(workOrder)
       });
+      if (this.data.editMode && status !== 'DRAFT') {
+        Toast({ context: this, selector: '#t-toast', message: '仅新建中工单可编辑', icon: 'close-circle' });
+      }
     }).catch(console.error);
+  },
+
+  resolveDraftState(order: WorkOrder | null) {
+    if (!order) return {};
+    return {
+      selectedCustomerId: typeof order.customerId === 'number' ? order.customerId : null,
+      selectedVehicleId: typeof order.vehicleId === 'number' ? order.vehicleId : null,
+      draft: {
+        customerNameSnapshot: order.customerNameSnapshot || '',
+        customerPhoneSnapshot: order.customerPhoneSnapshot || '',
+        vehicleModelSnapshot: order.vehicleModelSnapshot || '',
+        frameNoSnapshot: order.frameNoSnapshot || '',
+        batteryNoSnapshot: order.batteryNoSnapshot || '',
+        repairItem: order.repairItem || '',
+        remark: order.remark || ''
+      }
+    };
+  },
+
+  editDraftInfo() {
+    if (!this.data.canEditDraft) {
+      Toast({ context: this, selector: '#t-toast', message: '仅新建中工单可编辑', icon: 'close-circle' });
+      return;
+    }
+    this.setData({ step: 1 });
+  },
+
+  backToChargeItems() {
+    if (!this.data.workOrderId) return;
+    this.setData({ step: 2 });
+    this.refreshWorkOrder();
   },
 
   resolveActionState(order: WorkOrder | null) {

@@ -32,6 +32,11 @@ function getHintText(order: WorkOrder | null): string {
   return '';
 }
 
+function getDraftCashierText(order: WorkOrder) {
+  const hasItems = !!order.chargeItems?.length;
+  return hasItems || Number(order.receivableAmount || 0) > 0 ? '草稿未提交' : '待录入费用';
+}
+
 Page({
   data: {
     orderId: '',
@@ -40,6 +45,8 @@ Page({
     hasCancelPermission: false,
     hasPaymentPermission: false,
     hasRefundPermission: false,
+    hasUpdateOrderPermission: false,
+    canContinueEdit: false,
 
     // Computed display values
     outstandingAmount: 0,
@@ -95,7 +102,8 @@ Page({
     this.setData({
       hasCancelPermission: hasPermission('WORK_ORDER_CANCEL'),
       hasPaymentPermission: hasPermission('PAYMENT_RECORD'),
-      hasRefundPermission: hasPermission('REFUND_RECORD')
+      hasRefundPermission: hasPermission('REFUND_RECORD'),
+      hasUpdateOrderPermission: hasPermission('WORK_ORDER_UPDATE')
     });
     if (options.id) {
       this.setData({ orderId: options.id });
@@ -114,9 +122,13 @@ Page({
       const order = {
         ...d,
         progressStatusText: getProgressStatusText(d?.progressStatus || d?.status, d?.progressStatusText),
-        cashierStatusText: getCashierStatusText(d?.cashierStatus, d?.cashierStatusText),
+        cashierStatusText: (d?.progressStatus || d?.status) === 'DRAFT' && d?.cashierStatus === 'NO_CHARGE'
+          ? getDraftCashierText(d)
+          : getCashierStatusText(d?.cashierStatus, d?.cashierStatusText),
         inventoryStatusText: getInventoryStatusText(d?.inventoryStatus, d?.inventoryStatusText),
-        cashierText: getCashierStatusText(d?.cashierStatus, d?.cashierStatusText),
+        cashierText: (d?.progressStatus || d?.status) === 'DRAFT' && d?.cashierStatus === 'NO_CHARGE'
+          ? getDraftCashierText(d)
+          : getCashierStatusText(d?.cashierStatus, d?.cashierStatusText),
         inventoryText: getInventoryStatusText(d?.inventoryStatus, d?.inventoryStatusText),
         noChargeReasonText: getNoChargeReasonText(d?.noChargeReason),
       };
@@ -135,6 +147,7 @@ Page({
         receivedAmountStr: (d?.receivedAmount ?? 0).toFixed(2),
         netReceivedStr: netReceived.toFixed(2),
         refundableAmountStr: refundable.toFixed(2),
+        canContinueEdit: this.data.hasUpdateOrderPermission && (d?.progressStatus || d?.status) === 'DRAFT',
         ...this.resolveActionState(order, outstanding, refundable),
       });
     } catch (e) {
@@ -151,6 +164,13 @@ Page({
       showPaidInFullHint: paymentAllowedStatus && outstanding <= 0,
       refundableAmount: Math.max(refundable, 0),
     };
+  },
+
+  onContinueEdit() {
+    if (!this.data.orderId) return;
+    wx.navigateTo({
+      url: `/pages/create-work-order-placeholder/index?id=${this.data.orderId}`
+    });
   },
 
   // --- Cancel Work Order ---

@@ -81,6 +81,15 @@
   </view>
 
   <!-- 操作按钮区 -->
+  <!-- 草稿继续编辑 -->
+  <view class="section action-section" wx:if="{{canContinueEdit}}">
+    <text class="section-title">草稿操作</text>
+    <view class="action-body">
+      <t-button theme="primary" block size="large" bind:tap="onContinueEdit">继续编辑</t-button>
+      <text class="action-tip">新建中的工单可继续维护基础信息和费用明细；提交后才会预占库存。</text>
+    </view>
+  </view>
+
   <!-- 标记维修完成 -->
   <view class="section action-section" wx:if="{{order.canMarkRepairDone}}">
     <text class="section-title">维修操作</text>

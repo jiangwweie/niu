@@ -23,6 +23,11 @@ function resolveProgressText(item: WorkOrder) {
 }
 
 function resolveCashierText(item: WorkOrder) {
+  const status = item.progressStatus || item.status;
+  if (status === 'DRAFT' && item.cashierStatus === 'NO_CHARGE') {
+    const hasItems = !!item.chargeItems?.length;
+    return hasItems || Number(item.receivableAmount || 0) > 0 ? '草稿未提交' : '待录入费用';
+  }
   return getCashierStatusText(item.cashierStatus, item.cashierStatusText);
 }
 
@@ -60,6 +65,7 @@ Page({
     progressTabs: PROGRESS_TABS,
     orders: [] as WorkOrderListItem[],
     hasCreateOrderPermission: false,
+    hasUpdateOrderPermission: false,
     pageNo: 1,
     pageSize: 20,
   },
@@ -69,7 +75,8 @@ Page({
       return;
     }
     this.setData({
-      hasCreateOrderPermission: hasPermission('WORK_ORDER_CREATE')
+      hasCreateOrderPermission: hasPermission('WORK_ORDER_CREATE'),
+      hasUpdateOrderPermission: hasPermission('WORK_ORDER_UPDATE')
     });
     this.fetchData();
   },
@@ -118,6 +125,12 @@ Page({
     const id = e.currentTarget.dataset.id;
     wx.navigateTo({
       url: `/pages/work-order-detail/index?id=${id}`
+    });
+  },
+  onEditDraft(e: any) {
+    const id = e.currentTarget.dataset.id;
+    wx.navigateTo({
+      url: `/pages/create-work-order-placeholder/index?id=${id}`
     });
   }
 });

@@ -127,9 +127,15 @@
         <el-table-column label="创建时间" width="160">
           <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="140" fixed="right" align="center">
+        <el-table-column label="操作" width="190" fixed="right" align="center">
           <template #default="{ row }">
             <el-button link type="primary" @click="handleView(row)">查看</el-button>
+            <el-button
+              v-if="hasWorkOrderUpdate && (row.progressStatus === 'DRAFT' || row.status === 'DRAFT')"
+              link
+              type="primary"
+              @click="openDraftEditDialog(row)"
+            >编辑草稿</el-button>
             <el-button
               v-if="row.progressStatus === 'DRAFT' || row.status === 'DRAFT'"
               link
@@ -251,6 +257,13 @@
 
         <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
           <el-button
+            v-if="hasWorkOrderUpdate && currentOrder.progressStatus === 'DRAFT'"
+            type="primary"
+            size="small"
+            @click="openDraftEditDialog(currentOrder)"
+          >编辑草稿</el-button>
+
+          <el-button
             v-if="currentOrder.canMarkRepairDone"
             type="success"
             size="small"
@@ -363,6 +376,44 @@
         </div>
       </template>
     </el-drawer>
+
+    <!-- 编辑草稿基础信息 -->
+    <el-dialog v-model="draftEditDialogVisible" title="编辑草稿工单" width="560px" :close-on-click-modal="false">
+      <el-form :model="draftEditForm" label-width="92px" size="default">
+        <el-alert
+          title="仅新建中的草稿工单可编辑。保存不会提交工单，不会预占库存，也不会产生收款或退款记录。"
+          type="info"
+          show-icon
+          :closable="false"
+          style="margin-bottom: 16px;"
+        />
+        <el-form-item label="客户姓名" required>
+          <el-input v-model="draftEditForm.customerNameSnapshot" placeholder="必填" />
+        </el-form-item>
+        <el-form-item label="手机号">
+          <el-input v-model="draftEditForm.customerPhoneSnapshot" placeholder="选填" />
+        </el-form-item>
+        <el-form-item label="车型">
+          <el-input v-model="draftEditForm.vehicleModelSnapshot" placeholder="选填" />
+        </el-form-item>
+        <el-form-item label="车架号">
+          <el-input v-model="draftEditForm.frameNoSnapshot" placeholder="选填" />
+        </el-form-item>
+        <el-form-item label="电池号">
+          <el-input v-model="draftEditForm.batteryNoSnapshot" placeholder="选填" />
+        </el-form-item>
+        <el-form-item label="维修项目" required>
+          <el-input v-model="draftEditForm.repairItem" placeholder="必填" />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="draftEditForm.remark" type="textarea" :rows="3" placeholder="选填" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="draftEditDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="submitting" @click="submitDraftEdit">保存修改</el-button>
+      </template>
+    </el-dialog>
 
     <!-- 记录收款弹窗 -->
     <el-dialog v-model="paymentDialogVisible" title="记录收款" width="420px" :close-on-click-modal="false">
@@ -608,8 +659,10 @@ import {
   addNonInventoryCharge,
   cancelWorkOrder,
   deleteDraftWorkOrder,
+  updateDraftWorkOrder,
 } from '@/api/workOrder';
 import { useAuthStore } from '@/stores/auth';
+import { hasPermission } from '@/utils/permission';
 import {
   getCashierStatusText,
   getInventoryStatusText,
@@ -621,6 +674,7 @@ import type { WorkOrderRecord, WorkOrderQuery } from '@/types/workOrder';
 
 const authStore = useAuthStore();
 const route = useRoute();
+const hasWorkOrderUpdate = computed(() => hasPermission('WORK_ORDER_UPDATE'));
 
 // 查询参数
 const queryParams = reactive<WorkOrderQuery>({
@@ -778,6 +832,84 @@ const handleView = async (row: WorkOrderRecord) => {
     await loadCashierRecords(row.id);
   } catch {
     // request interceptor already shows error
+  }
+};
+
+// ── 编辑草稿基础信息 ──
+const draftEditDialogVisible = ref(false);
+const draftEditWorkOrderId = ref<string | null>(null);
+const draftEditForm = reactive({
+  customerId: null as number | null,
+  vehicleId: null as number | null,
+  customerNameSnapshot: '',
+  customerPhoneSnapshot: '',
+  vehicleModelSnapshot: '',
+  frameNoSnapshot: '',
+  batteryNoSnapshot: '',
+  repairItem: '',
+  remark: '',
+});
+
+const openDraftEditDialog = async (row: WorkOrderRecord) => {
+  if ((row.progressStatus || row.status) !== 'DRAFT') {
+    ElMessage.warning('仅新建中工单可编辑');
+    return;
+  }
+  try {
+    const detail = currentOrder.value?.id === row.id ? currentOrder.value : await getWorkOrderDetail(row.id);
+    if ((detail.progressStatus || detail.status) !== 'DRAFT') {
+      ElMessage.warning('仅新建中工单可编辑');
+      return;
+    }
+    draftEditWorkOrderId.value = detail.id;
+    draftEditForm.customerId = detail.customerId ?? null;
+    draftEditForm.vehicleId = detail.vehicleId ?? null;
+    draftEditForm.customerNameSnapshot = detail.customerName || '';
+    draftEditForm.customerPhoneSnapshot = detail.phone || '';
+    draftEditForm.vehicleModelSnapshot = detail.scooterModel || '';
+    draftEditForm.frameNoSnapshot = detail.vin || '';
+    draftEditForm.batteryNoSnapshot = detail.batteryNo || '';
+    draftEditForm.repairItem = detail.repairItem || '';
+    draftEditForm.remark = detail.remark || '';
+    draftEditDialogVisible.value = true;
+  } catch {
+    // request interceptor already shows error
+  }
+};
+
+const submitDraftEdit = async () => {
+  if (!draftEditWorkOrderId.value) return;
+  if (!draftEditForm.customerNameSnapshot.trim()) {
+    ElMessage.warning('请填写客户姓名');
+    return;
+  }
+  if (!draftEditForm.repairItem.trim()) {
+    ElMessage.warning('请填写维修项目');
+    return;
+  }
+  submitting.value = true;
+  try {
+    await updateDraftWorkOrder(draftEditWorkOrderId.value, {
+      customerId: draftEditForm.customerId ?? undefined,
+      vehicleId: draftEditForm.vehicleId ?? undefined,
+      customerNameSnapshot: draftEditForm.customerNameSnapshot.trim(),
+      customerPhoneSnapshot: draftEditForm.customerPhoneSnapshot.trim() || undefined,
+      vehicleModelSnapshot: draftEditForm.vehicleModelSnapshot.trim() || undefined,
+      frameNoSnapshot: draftEditForm.frameNoSnapshot.trim() || undefined,
+      batteryNoSnapshot: draftEditForm.batteryNoSnapshot.trim() || undefined,
+      repairItem: draftEditForm.repairItem.trim(),
+      remark: draftEditForm.remark.trim() || undefined,
+    });
+    ElMessage.success('草稿已更新');
+    draftEditDialogVisible.value = false;
+    if (currentOrder.value?.id === draftEditWorkOrderId.value) {
+      await refreshDetail();
+    }
+    fetchData();
+  } catch {
+    // handled by request interceptor
+  } finally {
+    submitting.value = false;
   }
 };
 

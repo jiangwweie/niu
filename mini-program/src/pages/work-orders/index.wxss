@@ -135,6 +135,12 @@ page {
   margin-top: 4rpx;
 }
 
+.card-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16rpx;
+}
+
 /* 空状态 */
 .empty {
   display: flex;
