@@ -3,7 +3,7 @@ import { ApiResponse } from '../types/common';
 
 export interface CustomerSearchResult {
   id: number;
-  customerName: string;
+  name: string;
   phone: string;
 }
 
@@ -20,8 +20,7 @@ export interface VehicleSearchResult {
 export const searchCustomers = (keyword: string) => {
   return request<CustomerSearchResult[]>({
     url: `/api/staff/customers/search?keyword=${encodeURIComponent(keyword)}`,
-    method: 'GET',
-    showLoading: true
+    method: 'GET'
   });
 };
 
@@ -29,7 +28,6 @@ export const searchVehicles = (keyword: string, customerId?: number | null) => {
   const customerParam = customerId ? `&customerId=${customerId}` : '';
   return request<VehicleSearchResult[]>({
     url: `/api/staff/vehicles/search?keyword=${encodeURIComponent(keyword)}${customerParam}`,
-    method: 'GET',
-    showLoading: true
+    method: 'GET'
   });
 };

@@ -104,13 +104,19 @@ Page({
   },
   async fetchData() {
     this.setData({ loading: true });
+    const params: any = {
+      pageNo: 1,
+      pageSize: this.data.pageSize,
+    };
+    if (this.data.keyword) {
+      params.keyword = this.data.keyword;
+    }
+    if (this.data.activeStatus) {
+      params.status = this.data.activeStatus;
+    }
+
     try {
-      const res = await getWorkOrders({
-        keyword: this.data.keyword,
-        status: this.data.activeStatus || undefined,
-        pageNo: 1,
-        pageSize: this.data.pageSize,
-      });
+      const res = await getWorkOrders(params);
       const orders = (res.data.records || []).map((item: WorkOrder) => ({
         ...item,
         progressText: resolveProgressText(item),
@@ -132,13 +138,19 @@ Page({
     if (this.data.loadingMore || !this.data.hasMore) return;
     this.setData({ loadingMore: true });
     const nextPage = this.data.pageNo + 1;
+    const params: any = {
+      pageNo: nextPage,
+      pageSize: this.data.pageSize,
+    };
+    if (this.data.keyword) {
+      params.keyword = this.data.keyword;
+    }
+    if (this.data.activeStatus) {
+      params.status = this.data.activeStatus;
+    }
+
     try {
-      const res = await getWorkOrders({
-        keyword: this.data.keyword,
-        status: this.data.activeStatus || undefined,
-        pageNo: nextPage,
-        pageSize: this.data.pageSize,
-      });
+      const res = await getWorkOrders(params);
       const newOrders = (res.data.records || []).map((item: WorkOrder) => ({
         ...item,
         progressText: resolveProgressText(item),
