@@ -1,5 +1,5 @@
 import { getParts, lookupPartByCode } from '../../api/parts';
-import { inboundInventory } from '../../api/inventory';
+import { inboundInventory, createPartAndInbound } from '../../api/inventory';
 import { Part, PartLookupResult } from '../../types/parts';
 import { InboundRequest, InboundResponse } from '../../types/inventory';
 import { authStore } from '../../stores/auth';
@@ -26,7 +26,26 @@ Page({
     // Popup state
     partSelectorVisible: false,
     partList: [] as Part[],
-    allParts: [] as Part[]
+    allParts: [] as Part[],
+
+    // Create part and inbound popup state
+    createPartVisible: false,
+    createPartFormData: {
+      source: 'THIRD_PARTY',
+      partName: '',
+      officialPartNo: '',
+      externalBarcode: '',
+      model: '',
+      categoryCode: '',
+      costPrice: '',
+      salePrice: '',
+      inboundQuantity: '1',
+      unitCost: '',
+      locationRemark: '',
+      reason: '扫码新增配件入库',
+      remark: ''
+    },
+    createPartSubmitting: false
   },
 
   onLoad() {
@@ -109,15 +128,17 @@ Page({
         this.setData({
           selectedPart: null,
           lookupResult: null,
-          'formData.barcode': scanValue
+          'formData.barcode': scanValue,
+          'createPartFormData.externalBarcode': scanValue,
+          'createPartFormData.unitCost': ''
         });
         wx.showModal({
           title: '未识别该条码',
-          content: '可手动选择已有配件，或新增配件后再入库。',
-          confirmText: '手动选择',
+          content: '可手动选择已有配件，或新增配件并入库。',
+          confirmText: '新增配件并入库',
           cancelText: '我知道了',
           success: modalRes => {
-            if (modalRes.confirm) this.showPartSelector();
+            if (modalRes.confirm) this.showCreatePartForm();
           }
         });
         return;
@@ -155,17 +176,121 @@ Page({
       this.setData({
         selectedPart: null,
         lookupResult: null,
-        'formData.barcode': scanValue
+        'formData.barcode': scanValue,
+        'createPartFormData.externalBarcode': scanValue,
+        'createPartFormData.unitCost': ''
       });
       wx.showModal({
         title: '未识别该条码',
-        content: '可手动选择已有配件，或新增配件后再入库。',
-        confirmText: '手动选择',
+        content: '可手动选择已有配件，或新增配件并入库。',
+        confirmText: '新增配件并入库',
         cancelText: '我知道了',
         success: modalRes => {
-          if (modalRes.confirm) this.showPartSelector();
+          if (modalRes.confirm) this.showCreatePartForm();
         }
       });
+    });
+  },
+
+  showCreatePartForm() {
+    this.setData({ createPartVisible: true });
+  },
+
+  onCreatePartPopupChange(e: any) {
+    this.setData({ createPartVisible: e.detail.visible });
+  },
+
+  onCreatePartSourceChange(e: any) {
+    this.setData({ 'createPartFormData.source': e.detail.value });
+  },
+
+  onCreatePartNameChange(e: any) { this.setData({ 'createPartFormData.partName': e.detail.value }); },
+  onCreatePartOfficialPartNoChange(e: any) { this.setData({ 'createPartFormData.officialPartNo': e.detail.value }); },
+  onCreatePartModelChange(e: any) { this.setData({ 'createPartFormData.model': e.detail.value }); },
+  onCreatePartCategoryChange(e: any) { this.setData({ 'createPartFormData.categoryCode': e.detail.value }); },
+  onCreatePartCostPriceChange(e: any) { this.setData({ 'createPartFormData.costPrice': e.detail.value }); },
+  onCreatePartSalePriceChange(e: any) { this.setData({ 'createPartFormData.salePrice': e.detail.value }); },
+  onCreatePartInboundQtyChange(e: any) { this.setData({ 'createPartFormData.inboundQuantity': e.detail.value }); },
+  onCreatePartUnitCostChange(e: any) { this.setData({ 'createPartFormData.unitCost': e.detail.value }); },
+  onCreatePartLocationChange(e: any) { this.setData({ 'createPartFormData.locationRemark': e.detail.value }); },
+  onCreatePartReasonChange(e: any) { this.setData({ 'createPartFormData.reason': e.detail.value }); },
+  onCreatePartRemarkChange(e: any) { this.setData({ 'createPartFormData.remark': e.detail.value }); },
+
+  cancelCreatePart() {
+    this.setData({ createPartVisible: false });
+  },
+
+  submitCreatePartAndInbound() {
+    if (this.data.createPartSubmitting) return;
+
+    const formData = this.data.createPartFormData;
+    if (!formData.partName.trim()) {
+      Toast({ context: this, selector: '#t-toast', message: '请输入配件名称', icon: 'close-circle' });
+      return;
+    }
+
+    const inboundQty = parseInt(formData.inboundQuantity, 10);
+    if (isNaN(inboundQty) || inboundQty <= 0) {
+      Toast({ context: this, selector: '#t-toast', message: '入库数量必须大于0', icon: 'close-circle' });
+      return;
+    }
+
+    const unitCost = formData.unitCost ? parseFloat(formData.unitCost) : undefined;
+    if (unitCost !== undefined && (isNaN(unitCost) || unitCost < 0)) {
+      Toast({ context: this, selector: '#t-toast', message: '入库单价不能为负数', icon: 'close-circle' });
+      return;
+    }
+
+    const costPrice = formData.costPrice ? parseFloat(formData.costPrice) : undefined;
+    const salePrice = formData.salePrice ? parseFloat(formData.salePrice) : undefined;
+
+    this.setData({ createPartSubmitting: true });
+
+    createPartAndInbound({
+      source: formData.source,
+      partName: formData.partName.trim(),
+      officialPartNo: formData.officialPartNo.trim() || undefined,
+      externalBarcode: formData.externalBarcode || undefined,
+      model: formData.model.trim() || undefined,
+      categoryCode: formData.categoryCode.trim() || undefined,
+      costPrice,
+      salePrice,
+      inboundQuantity: inboundQty,
+      unitCost,
+      locationRemark: formData.locationRemark.trim() || undefined,
+      reason: formData.reason.trim() || undefined,
+      remark: formData.remark.trim() || undefined
+    }).then(res => {
+      const result = res.data;
+      this.setData({
+        createPartSubmitting: false,
+        createPartVisible: false,
+        selectedPart: {
+          id: result.partId,
+          partCode: result.partCode || '',
+          partName: result.partName || '',
+          source: formData.source,
+          model: formData.model || '',
+          categoryCode: formData.categoryCode || '',
+          costPrice: costPrice,
+          salePrice: salePrice
+        },
+        successResult: {
+          partId: result.partId,
+          partCode: result.partCode || '',
+          partName: result.partName || '',
+          actualQty: result.actualQty,
+          availableQty: result.availableQty,
+          reservedQty: result.reservedQty,
+          flowId: result.flowId,
+          operatedAt: result.operatedAt
+        }
+      });
+      Toast({ context: this, selector: '#t-toast', message: '新增配件并入库成功', icon: 'check-circle' });
+    }).catch((err: any) => {
+      this.setData({ createPartSubmitting: false });
+      const message = err?.message || '操作失败';
+      Toast({ context: this, selector: '#t-toast', message, icon: 'close-circle' });
     });
   },
 
@@ -240,7 +365,22 @@ Page({
         reason: '',
         remark: ''
       },
-      successResult: null
+      successResult: null,
+      createPartFormData: {
+        source: 'THIRD_PARTY',
+        partName: '',
+        officialPartNo: '',
+        externalBarcode: '',
+        model: '',
+        categoryCode: '',
+        costPrice: '',
+        salePrice: '',
+        inboundQuantity: '1',
+        unitCost: '',
+        locationRemark: '',
+        reason: '扫码新增配件入库',
+        remark: ''
+      }
     });
   }
 });

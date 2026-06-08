@@ -10,6 +10,7 @@ import com.xiaoniu.aftermarket.part.dto.CreatePartCommand;
 import com.xiaoniu.aftermarket.part.dto.PartDeleteCheckResponse;
 import com.xiaoniu.aftermarket.part.dto.PartLookupResponse;
 import com.xiaoniu.aftermarket.part.dto.PartQueryRequest;
+import com.xiaoniu.aftermarket.part.dto.PartCreateResponse;
 import com.xiaoniu.aftermarket.part.dto.PartQueryResponse;
 import com.xiaoniu.aftermarket.part.dto.UpdatePartCommand;
 import com.xiaoniu.aftermarket.part.entity.PartEntity;
@@ -123,27 +124,27 @@ public class PartController {
 
     @PreAuthorize("hasAuthority('PART_MANAGE')")
     @PostMapping("/official")
-    public ApiResponse<Void> createOfficialPart(@Valid @RequestBody CreateOfficialPartRequest request) {
+    public ApiResponse<PartCreateResponse> createOfficialPart(@Valid @RequestBody CreateOfficialPartRequest request) {
         CurrentUser user = requireCurrentUser();
         CreatePartCommand command = buildCreateCommand(user, request.partName(), request.model(),
                 request.categoryCode(), request.referenceCostPrice(), request.defaultSalePrice(),
                 request.defaultBarcode(), request.externalBarcode(),
                 request.locationRemark(), request.remark());
         command.setOfficialPartNo(request.officialPartNo());
-        partService.createOfficialPart(command);
-        return ApiResponse.success(null);
+        PartEntity part = partService.createOfficialPart(command);
+        return ApiResponse.success(PartCreateResponse.from(part));
     }
 
     @PreAuthorize("hasAuthority('PART_MANAGE')")
     @PostMapping("/third-party")
-    public ApiResponse<Void> createThirdPartyPart(@Valid @RequestBody CreateThirdPartyPartRequest request) {
+    public ApiResponse<PartCreateResponse> createThirdPartyPart(@Valid @RequestBody CreateThirdPartyPartRequest request) {
         CurrentUser user = requireCurrentUser();
         CreatePartCommand command = buildCreateCommand(user, request.partName(), request.model(),
                 request.categoryCode(), request.referenceCostPrice(), request.defaultSalePrice(),
                 request.defaultBarcode(), request.externalBarcode(),
                 request.locationRemark(), request.remark());
-        partService.createThirdPartyPart(command);
-        return ApiResponse.success(null);
+        PartEntity part = partService.createThirdPartyPart(command);
+        return ApiResponse.success(PartCreateResponse.from(part));
     }
 
     @PreAuthorize("hasAuthority('PART_MANAGE')")

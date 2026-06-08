@@ -6,13 +6,20 @@ import com.xiaoniu.aftermarket.common.context.CurrentUserContext;
 import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.common.enums.CommonStatus;
+import com.xiaoniu.aftermarket.common.enums.PartSource;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
+import com.xiaoniu.aftermarket.part.dto.CreatePartCommand;
+import com.xiaoniu.aftermarket.part.dto.PartCreateResponse;
 import com.xiaoniu.aftermarket.part.dto.PartLookupResponse;
 import com.xiaoniu.aftermarket.part.dto.PartQueryRequest;
 import com.xiaoniu.aftermarket.part.dto.PartQueryResponse;
 import com.xiaoniu.aftermarket.part.entity.PartEntity;
 import com.xiaoniu.aftermarket.part.service.PartService;
+import com.xiaoniu.aftermarket.staff.dto.StaffPartCreateRequest;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -74,6 +81,42 @@ public class StaffPartController {
             throw new BusinessException(ErrorCode.PART_NOT_FOUND, "配件不存在");
         }
         return ApiResponse.success(StaffPartDetail.from(entity));
+    }
+
+    @PreAuthorize("hasAnyAuthority('PART_MANAGE', 'PART_CREATE', 'INVENTORY_INBOUND')")
+    @PostMapping("/official")
+    public ApiResponse<PartCreateResponse> createOfficialPart(
+            @Valid @RequestBody StaffPartCreateRequest request) {
+        CurrentUser user = requireCurrentUser();
+        CreatePartCommand command = buildCreateCommand(user, request);
+        command.setOfficialPartNo(request.officialPartNo());
+        PartEntity part = partService.createOfficialPart(command);
+        return ApiResponse.success(PartCreateResponse.from(part));
+    }
+
+    @PreAuthorize("hasAnyAuthority('PART_MANAGE', 'PART_CREATE', 'INVENTORY_INBOUND')")
+    @PostMapping("/third-party")
+    public ApiResponse<PartCreateResponse> createThirdPartyPart(
+            @Valid @RequestBody StaffPartCreateRequest request) {
+        CurrentUser user = requireCurrentUser();
+        CreatePartCommand command = buildCreateCommand(user, request);
+        PartEntity part = partService.createThirdPartyPart(command);
+        return ApiResponse.success(PartCreateResponse.from(part));
+    }
+
+    private CreatePartCommand buildCreateCommand(CurrentUser user, StaffPartCreateRequest request) {
+        CreatePartCommand command = new CreatePartCommand();
+        command.setStoreId(user.storeId());
+        command.setOperatorId(user.userId());
+        command.setPartName(request.partName());
+        command.setModel(request.model());
+        command.setCategoryCode(request.categoryCode());
+        command.setReferenceCostPrice(request.costPrice());
+        command.setDefaultSalePrice(request.salePrice());
+        command.setExternalBarcode(request.externalBarcode());
+        command.setLocationRemark(request.locationRemark());
+        command.setRemark(request.remark());
+        return command;
     }
 
     private CurrentUser requireCurrentUser() {

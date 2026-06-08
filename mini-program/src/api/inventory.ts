@@ -40,3 +40,26 @@ export const inboundInventory = (data: InboundRequest) => {
     showLoading: true
   });
 };
+
+export const createPartAndInbound = (data: {
+  source: string;
+  partName: string;
+  officialPartNo?: string;
+  externalBarcode?: string;
+  model?: string;
+  categoryCode?: string;
+  costPrice?: number;
+  salePrice?: number;
+  inboundQuantity: number;
+  unitCost?: number;
+  locationRemark?: string;
+  reason?: string;
+  remark?: string;
+}) => {
+  return request<InboundResponse>({
+    url: '/api/staff/inventory/inbound/create-part-and-inbound',
+    method: 'POST',
+    data,
+    showLoading: true
+  });
+};

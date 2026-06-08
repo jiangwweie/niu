@@ -7,6 +7,7 @@ import com.xiaoniu.aftermarket.common.context.CurrentUserContext;
 import com.xiaoniu.aftermarket.common.enums.CommonStatus;
 import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
+import com.xiaoniu.aftermarket.inventory.application.CreatePartAndInboundApplicationService;
 import com.xiaoniu.aftermarket.inventory.dto.InventoryInboundCommand;
 import com.xiaoniu.aftermarket.inventory.dto.InventoryStockQueryResponse;
 import com.xiaoniu.aftermarket.inventory.entity.InventoryFlowEntity;
@@ -15,6 +16,8 @@ import com.xiaoniu.aftermarket.inventory.mapper.InventoryFlowMapper;
 import com.xiaoniu.aftermarket.inventory.service.InventoryService;
 import com.xiaoniu.aftermarket.part.entity.PartEntity;
 import com.xiaoniu.aftermarket.part.mapper.PartMapper;
+import com.xiaoniu.aftermarket.staff.dto.StaffCreatePartAndInboundRequest;
+import com.xiaoniu.aftermarket.staff.dto.StaffCreatePartAndInboundResponse;
 import com.xiaoniu.aftermarket.staff.dto.StaffInventoryInboundRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffInventoryInboundResponse;
 import jakarta.validation.Valid;
@@ -28,12 +31,15 @@ public class StaffInventoryController {
     private final InventoryService inventoryService;
     private final PartMapper partMapper;
     private final InventoryFlowMapper inventoryFlowMapper;
+    private final CreatePartAndInboundApplicationService createPartAndInboundService;
 
     public StaffInventoryController(InventoryService inventoryService, PartMapper partMapper,
-                                     InventoryFlowMapper inventoryFlowMapper) {
+                                     InventoryFlowMapper inventoryFlowMapper,
+                                     CreatePartAndInboundApplicationService createPartAndInboundService) {
         this.inventoryService = inventoryService;
         this.partMapper = partMapper;
         this.inventoryFlowMapper = inventoryFlowMapper;
+        this.createPartAndInboundService = createPartAndInboundService;
     }
 
     @PreAuthorize("hasAuthority('INVENTORY_VIEW')")
@@ -93,6 +99,45 @@ public class StaffInventoryController {
                 : null;
 
         return ApiResponse.success(StaffInventoryInboundResponse.from(stock, part, flow));
+    }
+
+    @PostMapping("/inbound/create-part-and-inbound")
+    @PreAuthorize("hasAnyAuthority('PART_MANAGE', 'PART_CREATE', 'INVENTORY_INBOUND')")
+    public ApiResponse<StaffCreatePartAndInboundResponse> createPartAndInbound(
+            @Valid @RequestBody StaffCreatePartAndInboundRequest request) {
+        CurrentUser user = requireCurrentUser();
+
+        CreatePartAndInboundApplicationService.Command command =
+                new CreatePartAndInboundApplicationService.Command(
+                        user.storeId(),
+                        user.userId(),
+                        request.source(),
+                        request.partName(),
+                        request.officialPartNo(),
+                        request.externalBarcode(),
+                        request.model(),
+                        request.categoryCode(),
+                        request.costPrice(),
+                        request.salePrice(),
+                        request.inboundQuantity(),
+                        request.unitCost(),
+                        request.locationRemark(),
+                        request.reason(),
+                        request.remark()
+                );
+        CreatePartAndInboundApplicationService.Result result = createPartAndInboundService.execute(command);
+        return ApiResponse.success(new StaffCreatePartAndInboundResponse(
+                result.partId(),
+                result.partCode(),
+                result.partName(),
+                result.defaultBarcode(),
+                result.externalBarcode(),
+                result.actualQty(),
+                result.availableQty(),
+                result.reservedQty(),
+                result.flowId(),
+                result.operatedAt()
+        ));
     }
 
     private CurrentUser requireCurrentUser() {

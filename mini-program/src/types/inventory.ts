@@ -31,3 +31,19 @@ export interface InboundResponse {
   flowId: number | string;
   operatedAt: string;
 }
+
+export interface CreatePartAndInboundRequest {
+  source: string;
+  partName: string;
+  officialPartNo?: string;
+  externalBarcode?: string;
+  model?: string;
+  categoryCode?: string;
+  costPrice?: number;
+  salePrice?: number;
+  inboundQuantity: number;
+  unitCost?: number;
+  locationRemark?: string;
+  reason?: string;
+  remark?: string;
+}
