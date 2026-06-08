@@ -39,6 +39,7 @@ import {
 
 const NO_CHARGE_REASONS = ['官方售后', '免费检测', '老板免单', '质保处理', '其他'];
 let customerSearchTimer: number | undefined;
+let vehicleSearchTimer: number | undefined;
 
 function partFromLookup(result: PartLookupResult): Part {
   return {
@@ -66,6 +67,8 @@ function getDraftCashierText(order: WorkOrder) {
 }
 
 Page({
+  currentCustomerKeyword: '',
+  currentVehicleKeyword: '',
   data: {
     step: 1,
     statusText: '新建中',
@@ -96,6 +99,8 @@ Page({
     vehicleSearchKeyword: '',
     customerSearchState: 'idle',
     customerSearchError: '',
+    vehicleSearchState: 'idle',
+    vehicleSearchError: '',
 
     // Charge Item Form
     itemPopupVisible: false,
@@ -735,12 +740,13 @@ Page({
   // --- Customer Search ---
   onCustomerSearchInput(e: any) {
     const value = e.detail.value;
-    this.setData({ customerSearchKeyword: value });
+    this.currentCustomerKeyword = value;
     if (customerSearchTimer) {
       clearTimeout(customerSearchTimer);
     }
     customerSearchTimer = setTimeout(() => {
-      if (this.data.customerSearchKeyword.trim()) {
+      this.setData({ customerSearchKeyword: this.currentCustomerKeyword });
+      if (this.currentCustomerKeyword.trim()) {
         this.onCustomerSearch();
       } else {
         this.setData({ customerSearchState: 'idle', customerSearchResults: [], customerSearchError: '' });
@@ -749,7 +755,7 @@ Page({
   },
 
   onCustomerSearch() {
-    const keyword = this.data.customerSearchKeyword.trim();
+    const keyword = this.currentCustomerKeyword.trim();
     if (!keyword) {
       Toast({ context: this, selector: '#t-toast', message: '请输入客户姓名或手机号', icon: 'close-circle' });
       return;
@@ -764,6 +770,7 @@ Page({
   },
 
   openCustomerSearch() {
+    this.currentCustomerKeyword = '';
     this.setData({
       customerSearchVisible: true,
       customerSearchKeyword: '',
@@ -801,25 +808,44 @@ Page({
 
   // --- Vehicle Search ---
   onVehicleSearchInput(e: any) {
-    this.setData({ vehicleSearchKeyword: e.detail.value });
+    const value = e.detail.value;
+    this.currentVehicleKeyword = value;
+    if (vehicleSearchTimer) {
+      clearTimeout(vehicleSearchTimer);
+    }
+    vehicleSearchTimer = setTimeout(() => {
+      this.setData({ vehicleSearchKeyword: this.currentVehicleKeyword });
+      if (this.currentVehicleKeyword.trim()) {
+        this.onVehicleSearch();
+      } else {
+        this.setData({ vehicleSearchState: 'idle', vehicleSearchResults: [], vehicleSearchError: '' });
+      }
+    }, 300) as unknown as number;
   },
 
   onVehicleSearch() {
-    const keyword = this.data.vehicleSearchKeyword.trim();
+    const keyword = this.currentVehicleKeyword.trim();
     if (!keyword) {
       Toast({ context: this, selector: '#t-toast', message: '请输入车架号、车型或客户手机号', icon: 'close-circle' });
       return;
     }
+    this.setData({ vehicleSearchState: 'loading', vehicleSearchError: '' });
     searchVehicles(keyword, this.data.selectedCustomerId).then(res => {
-      this.setData({ vehicleSearchResults: res.data || [] });
-    }).catch(console.error);
+      const results = res.data || [];
+      this.setData({ vehicleSearchResults: results, vehicleSearchState: results.length > 0 ? 'success' : 'empty' });
+    }).catch((err: Error) => {
+      this.setData({ vehicleSearchState: 'error', vehicleSearchError: err.message || '搜索失败，请稍后重试' });
+    });
   },
 
   openVehicleSearch() {
+    this.currentVehicleKeyword = '';
     this.setData({
       vehicleSearchVisible: true,
       vehicleSearchKeyword: '',
-      vehicleSearchResults: []
+      vehicleSearchResults: [],
+      vehicleSearchState: 'idle',
+      vehicleSearchError: ''
     });
   },
 

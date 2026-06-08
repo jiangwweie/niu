@@ -202,7 +202,7 @@
   </t-popup>
 
   <!-- 配件选择 弹窗 -->
-  <t-popup visible="{{partSelectorVisible}}" placement="bottom" custom-style="height: 80vh; z-index: 12000;">
+  <t-popup visible="{{partSelectorVisible}}" placement="bottom" z-index="12000" custom-style="height: 80vh;">
     <view class="popup-header">
       <text class="popup-title">选择配件</text>
       <t-icon name="close" size="24" bind:tap="closePartSelector" />
@@ -397,13 +397,13 @@
   </t-dialog>
 
   <!-- Customer Search Popup -->
-  <t-popup visible="{{customerSearchVisible}}" bind:visible-change="onCustomerSearchPopupChange" placement="bottom" custom-style="height: 70vh; z-index: 11000;">
+  <t-popup visible="{{customerSearchVisible}}" bind:visible-change="onCustomerSearchPopupChange" placement="bottom" z-index="11000" custom-style="height: 70vh;">
     <view class="popup-header">
       <text class="popup-title">搜索客户</text>
       <t-icon name="close" size="24" bind:tap="closeCustomerSearch" />
     </view>
     <view style="padding: 12px 16px; display: flex; gap: 8px;">
-      <t-search placeholder="姓名或手机号" value="{{customerSearchKeyword}}" bind:change="onCustomerSearchInput" bind:submit="onCustomerSearch" />
+      <t-search style="flex: 1;" placeholder="姓名或手机号" value="{{customerSearchKeyword}}" bind:change="onCustomerSearchInput" bind:submit="onCustomerSearch" />
       <t-button size="small" theme="primary" bind:tap="onCustomerSearch">搜索</t-button>
     </view>
     <scroll-view scroll-y class="search-result-list">
@@ -412,28 +412,30 @@
         <view class="result-desc">{{item.phone || '无手机号'}}</view>
       </view>
       <view class="empty-state" wx:if="{{customerSearchState === 'loading'}}">搜索中</view>
-      <view class="empty-state" wx:if="{{customerSearchState === 'empty'}}">未找到客户，可直接填写新客户信息</view>
-      <view class="empty-state" wx:if="{{customerSearchState === 'error'}}">{{customerSearchError}}</view>
+      <view class="empty-state" wx:if="{{customerSearchState === 'empty'}}">未找到客户，可手动填写新客户信息</view>
+      <view class="empty-state" wx:if="{{customerSearchState === 'error'}}">客户搜索失败，请稍后重试</view>
       <view class="empty-state" wx:if="{{customerSearchState === 'idle'}}">输入姓名或手机号搜索客户</view>
     </scroll-view>
   </t-popup>
 
   <!-- Vehicle Search Popup -->
-  <t-popup visible="{{vehicleSearchVisible}}" bind:visible-change="onVehicleSearchPopupChange" placement="bottom" custom-style="height: 70vh; z-index: 11000;">
+  <t-popup visible="{{vehicleSearchVisible}}" bind:visible-change="onVehicleSearchPopupChange" placement="bottom" z-index="11000" custom-style="height: 70vh;">
     <view class="popup-header">
       <text class="popup-title">搜索车辆</text>
       <t-icon name="close" size="24" bind:tap="closeVehicleSearch" />
     </view>
     <view style="padding: 12px 16px; display: flex; gap: 8px;">
-      <t-search placeholder="车架号/车型/客户手机号" value="{{vehicleSearchKeyword}}" bind:change="onVehicleSearchInput" bind:submit="onVehicleSearch" />
+      <t-search style="flex: 1;" placeholder="车架号/车型/客户手机号" value="{{vehicleSearchKeyword}}" bind:change="onVehicleSearchInput" bind:submit="onVehicleSearch" />
     </view>
     <scroll-view scroll-y class="search-result-list">
       <view class="search-result-item" wx:for="{{vehicleSearchResults}}" wx:key="id" bind:tap="selectVehicle" data-item="{{item}}">
         <view class="result-name">{{item.frameNo}}</view>
         <view class="result-desc">{{item.model || '-'}} | 车主: {{item.customerName}}</view>
       </view>
-      <view class="empty-state" wx:if="{{vehicleSearchResults.length === 0 && vehicleSearchKeyword}}">未找到匹配车辆</view>
-      <view class="empty-state" wx:if="{{vehicleSearchResults.length === 0 && !vehicleSearchKeyword}}">输入车架号/车型/客户手机号搜索</view>
+      <view class="empty-state" wx:if="{{vehicleSearchState === 'loading'}}">搜索中</view>
+      <view class="empty-state" wx:if="{{vehicleSearchState === 'empty'}}">未找到车辆，可手动填写车辆信息</view>
+      <view class="empty-state" wx:if="{{vehicleSearchState === 'error'}}">车辆搜索失败，请稍后重试</view>
+      <view class="empty-state" wx:if="{{vehicleSearchState === 'idle'}}">输入车架号/车型/客户手机号搜索</view>
     </scroll-view>
   </t-popup>
 
