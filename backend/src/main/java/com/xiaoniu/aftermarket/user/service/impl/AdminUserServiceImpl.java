@@ -5,19 +5,24 @@ import static com.xiaoniu.aftermarket.common.util.SearchKeywordUtils.containsCon
 import static com.xiaoniu.aftermarket.common.util.SearchKeywordUtils.normalize;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.xiaoniu.aftermarket.auth.security.AuthenticatedUser;
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.common.enums.AccountType;
 import com.xiaoniu.aftermarket.common.enums.CommonStatus;
 import com.xiaoniu.aftermarket.common.exception.BusinessException;
+import com.xiaoniu.aftermarket.common.mapper.StoreMapper;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
+import com.xiaoniu.aftermarket.common.persistence.entity.StoreEntity;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.CreateUserRequest;
+import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.CreateUserResponse;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.PermissionResponse;
-import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.ResetPasswordRequest;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.ResetPasswordResponse;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.RoleResponse;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.UpdateUserRequest;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.UserDetailResponse;
+import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.UserRoleResponse;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.UserSummaryResponse;
 import com.xiaoniu.aftermarket.user.entity.SysPermissionEntity;
 import com.xiaoniu.aftermarket.user.entity.SysRoleEntity;
@@ -34,8 +39,10 @@ import com.xiaoniu.aftermarket.user.service.PermissionQueryService;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -47,6 +54,8 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final String TEMP_PASSWORD_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+    private static final String SUPER_ADMIN = "SUPER_ADMIN";
+    private static final String STORE_ADMIN = "STORE_ADMIN";
 
     private final SysUserMapper userMapper;
     private final SysRoleMapper roleMapper;
@@ -55,6 +64,7 @@ public class AdminUserServiceImpl implements AdminUserService {
     private final SysRolePermissionMapper rolePermissionMapper;
     private final PermissionQueryService permissionQueryService;
     private final PasswordEncoder passwordEncoder;
+    private final StoreMapper storeMapper;
 
     public AdminUserServiceImpl(SysUserMapper userMapper,
                                 SysRoleMapper roleMapper,
@@ -62,7 +72,8 @@ public class AdminUserServiceImpl implements AdminUserService {
                                 SysPermissionMapper permissionMapper,
                                 SysRolePermissionMapper rolePermissionMapper,
                                 PermissionQueryService permissionQueryService,
-                                PasswordEncoder passwordEncoder) {
+                                PasswordEncoder passwordEncoder,
+                                StoreMapper storeMapper) {
         this.userMapper = userMapper;
         this.roleMapper = roleMapper;
         this.userRoleMapper = userRoleMapper;
@@ -70,31 +81,27 @@ public class AdminUserServiceImpl implements AdminUserService {
         this.rolePermissionMapper = rolePermissionMapper;
         this.permissionQueryService = permissionQueryService;
         this.passwordEncoder = passwordEncoder;
+        this.storeMapper = storeMapper;
     }
 
     @Override
-    public PageResponse<UserSummaryResponse> listUsers(Long storeId, String username, String realName,
-                                                       String phone, Boolean enabled, String roleCode, int pageNo, int pageSize) {
+    public PageResponse<UserSummaryResponse> listUsers(AuthenticatedUser currentUser, Long requestedStoreId,
+                                                       String username, String realName, String phone,
+                                                       Boolean enabled, String roleCode, int pageNo, int pageSize) {
+        ensureUserManagementRole(currentUser);
+        Long scopedStoreId = scopedStoreIdForList(currentUser, requestedStoreId);
         Set<Long> roleUserIds = null;
         if (hasText(roleCode)) {
-            roleUserIds = userIdsByRoleCode(storeId, roleCode);
+            roleUserIds = userIdsByRoleCode(currentUser, scopedStoreId, roleCode);
             if (roleUserIds.isEmpty()) {
                 return new PageResponse<>(List.of(), pageNo, pageSize, 0);
             }
         }
-        LambdaQueryWrapper<SysUserEntity> wrapper = baseUserQuery(storeId);
-        String normalizedUsername = normalize(username);
-        if (normalizedUsername != null) {
-            wrapper.apply(containsCondition("username"), buildContainsPattern(normalizedUsername));
-        }
-        String normalizedRealName = normalize(realName);
-        if (normalizedRealName != null) {
-            wrapper.apply(containsCondition("real_name"), buildContainsPattern(normalizedRealName));
-        }
-        String normalizedPhone = normalize(phone);
-        if (normalizedPhone != null) {
-            wrapper.apply(containsCondition("phone"), buildContainsPattern(normalizedPhone));
-        }
+
+        LambdaQueryWrapper<SysUserEntity> wrapper = baseScopedUserQuery(currentUser, scopedStoreId);
+        applyContains(wrapper, username, "username");
+        applyContains(wrapper, realName, "real_name");
+        applyContains(wrapper, phone, "phone");
         if (enabled != null) {
             wrapper.eq(SysUserEntity::getStatus, enabled ? CommonStatus.ENABLED.name() : CommonStatus.DISABLED.name());
         }
@@ -102,6 +109,7 @@ public class AdminUserServiceImpl implements AdminUserService {
             wrapper.in(SysUserEntity::getId, roleUserIds);
         }
         wrapper.orderByDesc(SysUserEntity::getCreatedAt);
+
         Page<SysUserEntity> page = userMapper.selectPage(new Page<>(Math.max(pageNo, 1), Math.max(pageSize, 1)), wrapper);
         return new PageResponse<>(
                 page.getRecords().stream().map(this::toSummary).toList(),
@@ -112,120 +120,154 @@ public class AdminUserServiceImpl implements AdminUserService {
     }
 
     @Override
-    public UserDetailResponse getUser(Long storeId, Long id) {
-        return toDetail(requireUser(storeId, id));
+    public UserDetailResponse getUser(AuthenticatedUser currentUser, Long id) {
+        ensureUserManagementRole(currentUser);
+        return toDetail(requireReadableUser(currentUser, id));
     }
 
     @Override
     @Transactional
-    public UserDetailResponse createUser(Long currentUserId, Long currentStoreId, CreateUserRequest request) {
+    public CreateUserResponse createUser(AuthenticatedUser currentUser, CreateUserRequest request) {
+        ensureUserManageRole(currentUser);
         ensureUniqueUsername(request.username(), null);
         ensureUniquePhone(request.phone(), null);
-        String password = hasText(request.initialPassword()) ? request.initialPassword() : generateTemporaryPassword();
-        validatePassword(password);
-        boolean superAdmin = isSuperAdmin(currentUserId);
-        if (!superAdmin && request.storeId() != null && !request.storeId().equals(currentStoreId)) {
-            throw new BusinessException(ErrorCode.USER_OPERATION_NOT_ALLOWED, "门店管理员只能创建本门店员工账号");
-        }
-        // superAdmin 可跨门店创建用户，门店管理员只能在自己门店内创建 STORE 账号
-        Long targetStoreId = superAdmin && request.storeId() != null ? request.storeId() : currentStoreId;
+
+        List<SysRoleEntity> selectedRoles = resolveCreateRoles(currentUser, request);
+        Long targetStoreId = targetStoreIdForCreate(currentUser, request, selectedRoles);
+        validateTargetStore(targetStoreId);
+        validateAssignableRoles(currentUser, targetStoreId, selectedRoles);
+
+        String temporaryPassword = generateTemporaryPassword();
         SysUserEntity user = new SysUserEntity();
         user.setStoreId(targetStoreId);
-        user.setAccountType(AccountType.STORE_VALUE);
+        user.setAccountType(targetStoreId == null ? AccountType.PLATFORM_VALUE : AccountType.STORE_VALUE);
         user.setUsername(request.username().trim());
         user.setRealName(request.realName().trim());
         user.setPhone(blankToNull(request.phone()));
-        user.setPasswordHash(passwordEncoder.encode(password));
-        user.setPasswordMustChange(true); // 新建用户强制首次登录改密
+        user.setRemark(blankToNull(request.remark()));
+        user.setPasswordHash(passwordEncoder.encode(temporaryPassword));
+        user.setPasswordMustChange(true);
         user.setStatus(Boolean.FALSE.equals(request.enabled()) ? CommonStatus.DISABLED.name() : CommonStatus.ENABLED.name());
-        user.setCreatedBy(currentUserId);
+        user.setCreatedBy(currentUser.userId());
         user.setCreatedAt(LocalDateTime.now());
-        user.setUpdatedBy(currentUserId);
+        user.setUpdatedBy(currentUser.userId());
         user.setUpdatedAt(LocalDateTime.now());
         user.setDeleted(0);
         userMapper.insert(user);
-        replaceRoles(user.getId(), targetStoreId, currentUserId, request.roleCodes());
-        return toDetail(user);
+
+        replaceRoles(user.getId(), currentUser.userId(), selectedRoles);
+        return new CreateUserResponse(toDetail(user), temporaryPassword);
     }
 
     @Override
     @Transactional
-    public UserDetailResponse updateUser(Long currentUserId, Long currentStoreId, Long id, UpdateUserRequest request) {
-        SysUserEntity user = requireUser(currentStoreId, id);
+    public UserDetailResponse updateUser(AuthenticatedUser currentUser, Long id, UpdateUserRequest request) {
+        ensureUserManageRole(currentUser);
+        SysUserEntity user = requireManageableUser(currentUser, id);
         ensureUniquePhone(request.phone(), id);
-        if (request.roleCodes() != null && currentUserId.equals(id)) {
-            throw new BusinessException(ErrorCode.USER_OPERATION_NOT_ALLOWED, "不能修改自己的角色");
-        }
+
         if (hasText(request.realName())) {
             user.setRealName(request.realName().trim());
         }
         user.setPhone(blankToNull(request.phone()));
+        if (request.remark() != null) {
+            user.setRemark(blankToNull(request.remark()));
+        }
         if (request.enabled() != null) {
             if (!request.enabled()) {
-                validateDisableAllowed(currentUserId, user);
+                validateDisableAllowed(currentUser, user);
             }
             user.setStatus(request.enabled() ? CommonStatus.ENABLED.name() : CommonStatus.DISABLED.name());
         }
-        user.setUpdatedBy(currentUserId);
+        user.setUpdatedBy(currentUser.userId());
         user.setUpdatedAt(LocalDateTime.now());
         userMapper.updateById(user);
-        if (request.roleCodes() != null) {
-            replaceRoles(id, currentStoreId, currentUserId, request.roleCodes());
+
+        if (hasRoleSelection(request.roleIds(), request.roleCodes())) {
+            List<SysRoleEntity> selectedRoles = resolveUpdateRoles(currentUser, user, request);
+            validateSelfRoleChange(currentUser, user, selectedRoles);
+            validateSuperAdminRoleRemoval(user, selectedRoles);
+            validateAssignableRoles(currentUser, user.getStoreId(), selectedRoles);
+            replaceRoles(user.getId(), currentUser.userId(), selectedRoles);
         }
         return toDetail(user);
     }
 
     @Override
     @Transactional
-    public void enableUser(Long currentUserId, Long currentStoreId, Long id) {
-        SysUserEntity user = requireUser(currentStoreId, id);
+    public void enableUser(AuthenticatedUser currentUser, Long id) {
+        ensureUserManageRole(currentUser);
+        SysUserEntity user = requireManageableUser(currentUser, id);
         user.setStatus(CommonStatus.ENABLED.name());
-        user.setUpdatedBy(currentUserId);
+        user.setUpdatedBy(currentUser.userId());
         user.setUpdatedAt(LocalDateTime.now());
         userMapper.updateById(user);
     }
 
     @Override
     @Transactional
-    public void disableUser(Long currentUserId, Long currentStoreId, Long id) {
-        SysUserEntity user = requireUser(currentStoreId, id);
-        validateDisableAllowed(currentUserId, user);
+    public void disableUser(AuthenticatedUser currentUser, Long id) {
+        ensureUserManageRole(currentUser);
+        SysUserEntity user = requireManageableUser(currentUser, id);
+        validateDisableAllowed(currentUser, user);
         user.setStatus(CommonStatus.DISABLED.name());
-        user.setUpdatedBy(currentUserId);
+        user.setUpdatedBy(currentUser.userId());
         user.setUpdatedAt(LocalDateTime.now());
         userMapper.updateById(user);
     }
 
     @Override
     @Transactional
-    public ResetPasswordResponse resetPassword(Long currentUserId, Long currentStoreId, Long id, ResetPasswordRequest request) {
-        SysUserEntity user = requireUser(currentStoreId, id);
-        if (isSuperAdmin(user.getId()) && !isSuperAdmin(currentUserId)) {
-            throw new BusinessException(ErrorCode.USER_OPERATION_NOT_ALLOWED);
-        }
-        String temporaryPassword = hasText(request == null ? null : request.temporaryPassword())
-                ? request.temporaryPassword()
-                : generateTemporaryPassword();
-        validatePassword(temporaryPassword);
+    public ResetPasswordResponse resetPassword(AuthenticatedUser currentUser, Long id) {
+        ensureUserManageRole(currentUser);
+        SysUserEntity user = requireManageableUser(currentUser, id);
+        String temporaryPassword = generateTemporaryPassword();
         user.setPasswordHash(passwordEncoder.encode(temporaryPassword));
         user.setPasswordMustChange(true);
         user.setPasswordChangedAt(null);
-        user.setUpdatedBy(currentUserId);
+        user.setUpdatedBy(currentUser.userId());
         user.setUpdatedAt(LocalDateTime.now());
         userMapper.updateById(user);
         return new ResetPasswordResponse(temporaryPassword);
     }
 
     @Override
-    public List<RoleResponse> listRoles(Long storeId, Long currentUserId) {
-        return roleMapper.selectList(new LambdaQueryWrapper<SysRoleEntity>()
-                        .and(w -> w.isNull(SysRoleEntity::getStoreId).or().eq(SysRoleEntity::getStoreId, storeId))
-                        .eq(SysRoleEntity::getStatus, CommonStatus.ENABLED.name())
-                        .eq(SysRoleEntity::getDeleted, 0)
-                        .orderByAsc(SysRoleEntity::getSortOrder, SysRoleEntity::getId))
+    @Transactional
+    public void unbindWechat(AuthenticatedUser currentUser, Long id) {
+        ensureUserManageRole(currentUser);
+        SysUserEntity user = requireManageableUser(currentUser, id);
+        userMapper.update(null, new LambdaUpdateWrapper<SysUserEntity>()
+                .eq(SysUserEntity::getId, user.getId())
+                .set(SysUserEntity::getWechatOpenid, null)
+                .set(SysUserEntity::getWechatUnionid, null)
+                .set(SysUserEntity::getWechatBoundAt, null)
+                .set(SysUserEntity::getUpdatedBy, currentUser.userId())
+                .set(SysUserEntity::getUpdatedAt, LocalDateTime.now()));
+    }
+
+    @Override
+    public List<RoleResponse> listRoles(AuthenticatedUser currentUser) {
+        ensureUserManagementRole(currentUser);
+        LambdaQueryWrapper<SysRoleEntity> wrapper = new LambdaQueryWrapper<SysRoleEntity>()
+                .eq(SysRoleEntity::getStatus, CommonStatus.ENABLED.name())
+                .eq(SysRoleEntity::getDeleted, 0);
+        if (!isSuperAdmin(currentUser)) {
+            requireStoreAdmin(currentUser);
+            wrapper.eq(SysRoleEntity::getStoreId, currentUser.storeId())
+                    .ne(SysRoleEntity::getRoleCode, STORE_ADMIN);
+        }
+        wrapper.orderByAsc(SysRoleEntity::getStoreId, SysRoleEntity::getSortOrder, SysRoleEntity::getId);
+        return roleMapper.selectList(wrapper)
                 .stream()
-                .filter(role -> isSuperAdmin(currentUserId) || !"SUPER_ADMIN".equals(role.getRoleCode()))
-                .map(role -> new RoleResponse(role.getRoleCode(), role.getRoleName(), role.getRemark(), permissionCodesByRole(role.getId())))
+                .filter(role -> isSuperAdmin(currentUser) || !SUPER_ADMIN.equals(role.getRoleCode()))
+                .map(role -> new RoleResponse(
+                        role.getId(),
+                        role.getStoreId(),
+                        storeName(role.getStoreId()),
+                        role.getRoleCode(),
+                        role.getRoleName(),
+                        role.getRemark(),
+                        permissionCodesByRole(role.getId())))
                 .toList();
     }
 
@@ -240,115 +282,145 @@ public class AdminUserServiceImpl implements AdminUserService {
                 .toList();
     }
 
-    private SysUserEntity requireUser(Long storeId, Long id) {
-        SysUserEntity user = userMapper.selectOne(baseUserQuery(storeId).eq(SysUserEntity::getId, id).last("LIMIT 1"));
+    private LambdaQueryWrapper<SysUserEntity> baseScopedUserQuery(AuthenticatedUser currentUser, Long scopedStoreId) {
+        LambdaQueryWrapper<SysUserEntity> wrapper = new LambdaQueryWrapper<SysUserEntity>()
+                .eq(SysUserEntity::getDeleted, 0);
+        if (isSuperAdmin(currentUser)) {
+            if (scopedStoreId != null) {
+                wrapper.eq(SysUserEntity::getStoreId, scopedStoreId);
+            }
+        } else {
+            wrapper.eq(SysUserEntity::getStoreId, currentUser.storeId());
+        }
+        return wrapper;
+    }
+
+    private SysUserEntity requireReadableUser(AuthenticatedUser currentUser, Long id) {
+        SysUserEntity user = userMapper.selectOne(baseScopedUserQuery(currentUser, null)
+                .eq(SysUserEntity::getId, id)
+                .last("LIMIT 1"));
         if (user == null) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
         return user;
     }
 
-    private LambdaQueryWrapper<SysUserEntity> baseUserQuery(Long storeId) {
-        return new LambdaQueryWrapper<SysUserEntity>()
-                .eq(SysUserEntity::getStoreId, storeId)
-                .eq(SysUserEntity::getDeleted, 0);
-    }
-
-    private UserSummaryResponse toSummary(SysUserEntity user) {
-        return new UserSummaryResponse(
-                user.getId(),
-                user.getStoreId(),
-                user.getUsername(),
-                user.getRealName(),
-                user.getPhone(),
-                CommonStatus.ENABLED.name().equals(user.getStatus()),
-                Boolean.TRUE.equals(user.getPasswordMustChange()),
-                roleCodesByUser(user.getId()),
-                user.getWechatOpenid() != null,
-                user.getWechatBoundAt(),
-                user.getLastLoginAt(),
-                user.getCreatedAt(),
-                user.getUpdatedAt()
-        );
-    }
-
-    private UserDetailResponse toDetail(SysUserEntity user) {
-        return new UserDetailResponse(
-                user.getId(),
-                user.getStoreId(),
-                user.getUsername(),
-                user.getRealName(),
-                user.getPhone(),
-                CommonStatus.ENABLED.name().equals(user.getStatus()),
-                Boolean.TRUE.equals(user.getPasswordMustChange()),
-                user.getPasswordChangedAt(),
-                user.getLastLoginAt(),
-                roleCodesByUser(user.getId()),
-                new LinkedHashSet<>(permissionQueryService.listPermissionCodesByUserId(user.getId())),
-                user.getWechatOpenid() != null,
-                user.getWechatBoundAt(),
-                user.getCreatedAt(),
-                user.getUpdatedAt()
-        );
-    }
-
-    private Set<String> roleCodesByUser(Long userId) {
-        List<Long> roleIds = userRoleMapper.selectList(new LambdaQueryWrapper<SysUserRoleEntity>()
-                        .eq(SysUserRoleEntity::getUserId, userId))
-                .stream().map(SysUserRoleEntity::getRoleId).toList();
-        if (roleIds.isEmpty()) {
-            return Set.of();
+    private SysUserEntity requireManageableUser(AuthenticatedUser currentUser, Long id) {
+        SysUserEntity user = requireReadableUser(currentUser, id);
+        if (isSuperAdmin(currentUser)) {
+            return user;
         }
-        return roleMapper.selectList(new LambdaQueryWrapper<SysRoleEntity>()
-                        .in(SysRoleEntity::getId, roleIds)
-                        .eq(SysRoleEntity::getDeleted, 0))
-                .stream()
-                .map(SysRoleEntity::getRoleCode)
-                .collect(Collectors.toCollection(LinkedHashSet::new));
-    }
-
-    private List<String> permissionCodesByRole(Long roleId) {
-        List<Long> permissionIds = rolePermissionMapper.selectList(new LambdaQueryWrapper<SysRolePermissionEntity>()
-                        .eq(SysRolePermissionEntity::getRoleId, roleId))
-                .stream().map(SysRolePermissionEntity::getPermissionId).toList();
-        if (permissionIds.isEmpty()) {
-            return List.of();
-        }
-        return permissionMapper.selectList(new LambdaQueryWrapper<SysPermissionEntity>()
-                        .in(SysPermissionEntity::getId, permissionIds)
-                        .eq(SysPermissionEntity::getStatus, CommonStatus.ENABLED.name())
-                        .eq(SysPermissionEntity::getDeleted, 0))
-                .stream().map(SysPermissionEntity::getPermissionCode).sorted().toList();
-    }
-
-    private void replaceRoles(Long userId, Long storeId, Long operatorId, List<String> roleCodes) {
-        Set<String> oldRoleCodes = roleCodesByUser(userId);
-        Set<String> newRoleCodes = roleCodes == null
-                ? Set.of()
-                : roleCodes.stream().filter(this::hasText).map(String::trim).collect(Collectors.toCollection(LinkedHashSet::new));
-
-        // SUPER_ADMIN 角色变更只允许 superAdmin 操作，防止权限提升
-        if ((oldRoleCodes.contains("SUPER_ADMIN") || newRoleCodes.contains("SUPER_ADMIN")) && !isSuperAdmin(operatorId)) {
+        requireStoreAdmin(currentUser);
+        Set<String> targetRoles = roleCodesByUser(user.getId());
+        if (targetRoles.contains(SUPER_ADMIN) || targetRoles.contains(STORE_ADMIN)) {
             throw new BusinessException(ErrorCode.USER_OPERATION_NOT_ALLOWED);
         }
-        // 不能移除自己的 SUPER_ADMIN 角色，防止系统无管理员
-        if (oldRoleCodes.contains("SUPER_ADMIN") && !newRoleCodes.contains("SUPER_ADMIN")) {
-            if (operatorId.equals(userId)) {
-                throw new BusinessException(ErrorCode.USER_OPERATION_NOT_ALLOWED);
+        return user;
+    }
+
+    private Long scopedStoreIdForList(AuthenticatedUser currentUser, Long requestedStoreId) {
+        if (isSuperAdmin(currentUser)) {
+            return requestedStoreId;
+        }
+        requireStoreAdmin(currentUser);
+        if (requestedStoreId != null && !requestedStoreId.equals(currentUser.storeId())) {
+            throw new BusinessException(ErrorCode.USER_OPERATION_NOT_ALLOWED, "门店管理员只能查看本门店用户");
+        }
+        return currentUser.storeId();
+    }
+
+    private List<SysRoleEntity> resolveCreateRoles(AuthenticatedUser currentUser, CreateUserRequest request) {
+        List<Long> roleIds = normalizeRoleIds(request.roleIds());
+        if (!roleIds.isEmpty()) {
+            return rolesByIds(roleIds);
+        }
+        Long targetStoreId = isSuperAdmin(currentUser) ? request.storeId() : currentUser.storeId();
+        if (!isSuperAdmin(currentUser) && containsAdminRoleCode(request.roleCodes())) {
+            throw new BusinessException(ErrorCode.USER_OPERATION_NOT_ALLOWED);
+        }
+        if (targetStoreId == null && currentUser.storeId() != null) {
+            targetStoreId = currentUser.storeId();
+        }
+        return rolesByCodes(targetStoreId, request.roleCodes());
+    }
+
+    private List<SysRoleEntity> resolveUpdateRoles(AuthenticatedUser currentUser, SysUserEntity targetUser,
+                                                   UpdateUserRequest request) {
+        List<Long> roleIds = normalizeRoleIds(request.roleIds());
+        if (!roleIds.isEmpty()) {
+            return rolesByIds(roleIds);
+        }
+        if (!isSuperAdmin(currentUser) && containsAdminRoleCode(request.roleCodes())) {
+            throw new BusinessException(ErrorCode.USER_OPERATION_NOT_ALLOWED);
+        }
+        return rolesByCodes(targetUser.getStoreId(), request.roleCodes());
+    }
+
+    private Long targetStoreIdForCreate(AuthenticatedUser currentUser, CreateUserRequest request,
+                                        List<SysRoleEntity> selectedRoles) {
+        if (!isSuperAdmin(currentUser)) {
+            requireStoreAdmin(currentUser);
+            if (request.storeId() != null && !request.storeId().equals(currentUser.storeId())) {
+                throw new BusinessException(ErrorCode.USER_OPERATION_NOT_ALLOWED, "门店管理员只能创建本门店员工账号");
             }
-            SysUserEntity targetUser = userMapper.selectById(userId);
-            if (targetUser != null && enabledSuperAdminCount(targetUser.getStoreId()) <= 1) {
-                throw new BusinessException(ErrorCode.USER_DISABLE_NOT_ALLOWED);
-            }
+            return currentUser.storeId();
         }
 
-        userRoleMapper.delete(new LambdaQueryWrapper<SysUserRoleEntity>().eq(SysUserRoleEntity::getUserId, userId));
-        if (newRoleCodes.isEmpty()) {
+        if (request.storeId() != null) {
+            return request.storeId();
+        }
+        Set<Long> selectedRoleStoreIds = selectedRoles.stream()
+                .map(SysRoleEntity::getStoreId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        boolean hasPlatformRole = selectedRoles.stream().anyMatch(role -> role.getStoreId() == null);
+        if (selectedRoleStoreIds.size() == 1 && !hasPlatformRole) {
+            return selectedRoleStoreIds.iterator().next();
+        }
+        if (selectedRoles.isEmpty() && currentUser.storeId() != null) {
+            return currentUser.storeId();
+        }
+        if (hasPlatformRole && selectedRoleStoreIds.isEmpty()) {
+            return null;
+        }
+        return null;
+    }
+
+    private void validateAssignableRoles(AuthenticatedUser currentUser, Long targetStoreId, List<SysRoleEntity> roles) {
+        if (roles == null || roles.isEmpty()) {
             return;
         }
-        List<SysRoleEntity> roles = rolesByCodes(storeId, newRoleCodes.stream().toList());
-        if (roles.size() != newRoleCodes.size()) {
-            throw new BusinessException(ErrorCode.ROLE_NOT_FOUND);
+        if (isSuperAdmin(currentUser)) {
+            if (targetStoreId == null) {
+                boolean allPlatformRoles = roles.stream().allMatch(role -> role.getStoreId() == null);
+                if (!allPlatformRoles) {
+                    throw new BusinessException(ErrorCode.USER_OPERATION_NOT_ALLOWED, "平台账号只能分配平台级角色");
+                }
+            } else {
+                boolean allStoreRoles = roles.stream()
+                        .allMatch(role -> targetStoreId.equals(role.getStoreId()));
+                if (!allStoreRoles) {
+                    throw new BusinessException(ErrorCode.USER_OPERATION_NOT_ALLOWED, "门店账号只能分配所属门店角色");
+                }
+            }
+            return;
+        }
+
+        requireStoreAdmin(currentUser);
+        for (SysRoleEntity role : roles) {
+            if (role.getStoreId() == null
+                    || !currentUser.storeId().equals(role.getStoreId())
+                    || SUPER_ADMIN.equals(role.getRoleCode())
+                    || STORE_ADMIN.equals(role.getRoleCode())) {
+                throw new BusinessException(ErrorCode.USER_OPERATION_NOT_ALLOWED);
+            }
+        }
+    }
+
+    private void replaceRoles(Long userId, Long operatorId, List<SysRoleEntity> roles) {
+        userRoleMapper.delete(new LambdaQueryWrapper<SysUserRoleEntity>().eq(SysUserRoleEntity::getUserId, userId));
+        if (roles == null || roles.isEmpty()) {
+            return;
         }
         for (SysRoleEntity role : roles) {
             SysUserRoleEntity relation = new SysUserRoleEntity();
@@ -360,57 +432,238 @@ public class AdminUserServiceImpl implements AdminUserService {
         }
     }
 
-    private List<SysRoleEntity> rolesByCodes(Long storeId, List<String> roleCodes) {
-        List<String> normalized = roleCodes.stream().filter(this::hasText).map(String::trim).distinct().toList();
-        if (normalized.isEmpty()) {
-            return List.of();
+    private void validateSelfRoleChange(AuthenticatedUser currentUser, SysUserEntity target,
+                                        List<SysRoleEntity> selectedRoles) {
+        if (!currentUser.userId().equals(target.getId())) {
+            return;
         }
-        return roleMapper.selectList(new LambdaQueryWrapper<SysRoleEntity>()
-                .in(SysRoleEntity::getRoleCode, normalized)
-                .and(w -> w.isNull(SysRoleEntity::getStoreId).or().eq(SysRoleEntity::getStoreId, storeId))
-                .eq(SysRoleEntity::getStatus, CommonStatus.ENABLED.name())
-                .eq(SysRoleEntity::getDeleted, 0));
+        Set<String> newRoleCodes = selectedRoles.stream()
+                .map(SysRoleEntity::getRoleCode)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        if (isStoreAdmin(currentUser)) {
+            throw new BusinessException(ErrorCode.USER_OPERATION_NOT_ALLOWED, "门店管理员不能修改自己的角色");
+        }
+        if (newRoleCodes.isEmpty() || !newRoleCodes.contains(SUPER_ADMIN)) {
+            throw new BusinessException(ErrorCode.USER_OPERATION_NOT_ALLOWED, "不能移除自己的超级管理员角色");
+        }
     }
 
-    private Set<Long> userIdsByRoleCode(Long storeId, String roleCode) {
-        List<SysRoleEntity> roles = rolesByCodes(storeId, List.of(roleCode));
-        if (roles.isEmpty()) {
-            return Set.of();
+    private void validateSuperAdminRoleRemoval(SysUserEntity target, List<SysRoleEntity> selectedRoles) {
+        Set<String> oldRoleCodes = roleCodesByUser(target.getId());
+        if (!oldRoleCodes.contains(SUPER_ADMIN)) {
+            return;
         }
-        return userRoleMapper.selectList(new LambdaQueryWrapper<SysUserRoleEntity>()
-                        .in(SysUserRoleEntity::getRoleId, roles.stream().map(SysRoleEntity::getId).toList()))
-                .stream().map(SysUserRoleEntity::getUserId).collect(Collectors.toSet());
-    }
-
-    // 非 superAdmin 不能操作 superAdmin 用户；最后一个启用的 superAdmin 不能被禁用
-    private void validateDisableAllowed(Long currentUserId, SysUserEntity target) {
-        if (currentUserId.equals(target.getId())) {
+        boolean keepsSuperAdmin = selectedRoles.stream().anyMatch(role -> SUPER_ADMIN.equals(role.getRoleCode()));
+        if (!keepsSuperAdmin && CommonStatus.ENABLED.name().equals(target.getStatus()) && enabledSuperAdminCount() <= 1) {
             throw new BusinessException(ErrorCode.USER_DISABLE_NOT_ALLOWED);
         }
-        if (isSuperAdmin(target.getId())) {
-            if (!isSuperAdmin(currentUserId)) {
-                throw new BusinessException(ErrorCode.USER_OPERATION_NOT_ALLOWED);
-            }
-            if (enabledSuperAdminCount(target.getStoreId()) <= 1) {
-                throw new BusinessException(ErrorCode.USER_DISABLE_NOT_ALLOWED);
-            }
+    }
+
+    private void validateDisableAllowed(AuthenticatedUser currentUser, SysUserEntity target) {
+        if (currentUser.userId().equals(target.getId())) {
+            throw new BusinessException(ErrorCode.USER_DISABLE_NOT_ALLOWED);
+        }
+        if (roleCodesByUser(target.getId()).contains(SUPER_ADMIN) && enabledSuperAdminCount() <= 1) {
+            throw new BusinessException(ErrorCode.USER_DISABLE_NOT_ALLOWED);
         }
     }
 
-    private boolean isSuperAdmin(Long userId) {
-        return roleCodesByUser(userId).contains("SUPER_ADMIN");
-    }
-
-    private long enabledSuperAdminCount(Long storeId) {
-        Set<Long> superAdminIds = userIdsByRoleCode(storeId, "SUPER_ADMIN");
+    private long enabledSuperAdminCount() {
+        Set<Long> superAdminIds = userIdsByRoleCode(null, null, SUPER_ADMIN);
         if (superAdminIds.isEmpty()) {
             return 0;
         }
         return userMapper.selectCount(new LambdaQueryWrapper<SysUserEntity>()
                 .in(SysUserEntity::getId, superAdminIds)
-                .eq(SysUserEntity::getStoreId, storeId)
                 .eq(SysUserEntity::getStatus, CommonStatus.ENABLED.name())
                 .eq(SysUserEntity::getDeleted, 0));
+    }
+
+    private UserSummaryResponse toSummary(SysUserEntity user) {
+        List<UserRoleResponse> roles = userRolesByUser(user.getId());
+        return new UserSummaryResponse(
+                user.getId(),
+                user.getStoreId(),
+                storeName(user.getStoreId()),
+                user.getAccountType(),
+                user.getUsername(),
+                user.getRealName(),
+                user.getPhone(),
+                CommonStatus.ENABLED.name().equals(user.getStatus()),
+                Boolean.TRUE.equals(user.getPasswordMustChange()),
+                roleCodes(roles),
+                roles,
+                user.getWechatOpenid() != null,
+                user.getWechatBoundAt(),
+                user.getLastLoginAt(),
+                user.getCreatedAt(),
+                user.getUpdatedAt()
+        );
+    }
+
+    private UserDetailResponse toDetail(SysUserEntity user) {
+        List<UserRoleResponse> roles = userRolesByUser(user.getId());
+        return new UserDetailResponse(
+                user.getId(),
+                user.getStoreId(),
+                storeName(user.getStoreId()),
+                user.getAccountType(),
+                user.getUsername(),
+                user.getRealName(),
+                user.getPhone(),
+                CommonStatus.ENABLED.name().equals(user.getStatus()),
+                Boolean.TRUE.equals(user.getPasswordMustChange()),
+                user.getPasswordChangedAt(),
+                user.getLastLoginAt(),
+                roleCodes(roles),
+                roles,
+                new LinkedHashSet<>(permissionQueryService.listPermissionCodesByUserId(user.getId())),
+                user.getWechatOpenid() != null,
+                user.getWechatBoundAt(),
+                user.getCreatedAt(),
+                user.getUpdatedAt()
+        );
+    }
+
+    private List<UserRoleResponse> userRolesByUser(Long userId) {
+        List<Long> roleIds = userRoleMapper.selectList(new LambdaQueryWrapper<SysUserRoleEntity>()
+                        .eq(SysUserRoleEntity::getUserId, userId))
+                .stream()
+                .map(SysUserRoleEntity::getRoleId)
+                .toList();
+        if (roleIds.isEmpty()) {
+            return List.of();
+        }
+        return roleMapper.selectList(new LambdaQueryWrapper<SysRoleEntity>()
+                        .in(SysRoleEntity::getId, roleIds)
+                        .eq(SysRoleEntity::getDeleted, 0)
+                        .orderByAsc(SysRoleEntity::getSortOrder, SysRoleEntity::getId))
+                .stream()
+                .map(role -> new UserRoleResponse(
+                        role.getId(),
+                        role.getStoreId(),
+                        storeName(role.getStoreId()),
+                        role.getRoleCode(),
+                        role.getRoleName()))
+                .toList();
+    }
+
+    private Set<String> roleCodes(List<UserRoleResponse> roles) {
+        return roles.stream()
+                .map(UserRoleResponse::roleCode)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    private Set<String> roleCodesByUser(Long userId) {
+        return roleCodes(userRolesByUser(userId));
+    }
+
+    private List<String> permissionCodesByRole(Long roleId) {
+        List<Long> permissionIds = rolePermissionMapper.selectList(new LambdaQueryWrapper<SysRolePermissionEntity>()
+                        .eq(SysRolePermissionEntity::getRoleId, roleId))
+                .stream()
+                .map(SysRolePermissionEntity::getPermissionId)
+                .toList();
+        if (permissionIds.isEmpty()) {
+            return List.of();
+        }
+        return permissionMapper.selectList(new LambdaQueryWrapper<SysPermissionEntity>()
+                        .in(SysPermissionEntity::getId, permissionIds)
+                        .eq(SysPermissionEntity::getStatus, CommonStatus.ENABLED.name())
+                        .eq(SysPermissionEntity::getDeleted, 0))
+                .stream()
+                .map(SysPermissionEntity::getPermissionCode)
+                .sorted()
+                .toList();
+    }
+
+    private List<SysRoleEntity> rolesByIds(List<Long> roleIds) {
+        List<Long> normalized = roleIds.stream().filter(Objects::nonNull).distinct().toList();
+        if (normalized.isEmpty()) {
+            return List.of();
+        }
+        List<SysRoleEntity> roles = roleMapper.selectList(new LambdaQueryWrapper<SysRoleEntity>()
+                .in(SysRoleEntity::getId, normalized)
+                .eq(SysRoleEntity::getStatus, CommonStatus.ENABLED.name())
+                .eq(SysRoleEntity::getDeleted, 0));
+        if (roles.size() != normalized.size()) {
+            throw new BusinessException(ErrorCode.ROLE_NOT_FOUND);
+        }
+        return sortRolesByRequestOrder(normalized, roles);
+    }
+
+    private List<SysRoleEntity> rolesByCodes(Long storeId, List<String> roleCodes) {
+        List<String> normalized = roleCodes == null
+                ? List.of()
+                : roleCodes.stream().filter(this::hasText).map(String::trim).distinct().toList();
+        if (normalized.isEmpty()) {
+            return List.of();
+        }
+        LambdaQueryWrapper<SysRoleEntity> wrapper = new LambdaQueryWrapper<SysRoleEntity>()
+                .in(SysRoleEntity::getRoleCode, normalized)
+                .eq(SysRoleEntity::getStatus, CommonStatus.ENABLED.name())
+                .eq(SysRoleEntity::getDeleted, 0);
+        if (storeId == null) {
+            wrapper.isNull(SysRoleEntity::getStoreId);
+        } else {
+            wrapper.eq(SysRoleEntity::getStoreId, storeId);
+        }
+        List<SysRoleEntity> roles = roleMapper.selectList(wrapper);
+        if (roles.size() != normalized.size()) {
+            throw new BusinessException(ErrorCode.ROLE_NOT_FOUND);
+        }
+        return sortRolesByCodeOrder(normalized, roles);
+    }
+
+    private List<SysRoleEntity> sortRolesByRequestOrder(List<Long> roleIds, List<SysRoleEntity> roles) {
+        List<SysRoleEntity> sorted = new ArrayList<>(roles);
+        sorted.sort((a, b) -> Integer.compare(roleIds.indexOf(a.getId()), roleIds.indexOf(b.getId())));
+        return sorted;
+    }
+
+    private List<SysRoleEntity> sortRolesByCodeOrder(List<String> roleCodes, List<SysRoleEntity> roles) {
+        List<SysRoleEntity> sorted = new ArrayList<>(roles);
+        sorted.sort((a, b) -> Integer.compare(roleCodes.indexOf(a.getRoleCode()), roleCodes.indexOf(b.getRoleCode())));
+        return sorted;
+    }
+
+    private Set<Long> userIdsByRoleCode(AuthenticatedUser currentUser, Long scopedStoreId, String roleCode) {
+        LambdaQueryWrapper<SysRoleEntity> wrapper = new LambdaQueryWrapper<SysRoleEntity>()
+                .eq(SysRoleEntity::getRoleCode, roleCode.trim())
+                .eq(SysRoleEntity::getStatus, CommonStatus.ENABLED.name())
+                .eq(SysRoleEntity::getDeleted, 0);
+        if (currentUser != null && !isSuperAdmin(currentUser)) {
+            wrapper.eq(SysRoleEntity::getStoreId, currentUser.storeId());
+        } else if (scopedStoreId != null) {
+            wrapper.eq(SysRoleEntity::getStoreId, scopedStoreId);
+        }
+        List<SysRoleEntity> roles = roleMapper.selectList(wrapper);
+        if (roles.isEmpty()) {
+            return Set.of();
+        }
+        return userRoleMapper.selectList(new LambdaQueryWrapper<SysUserRoleEntity>()
+                        .in(SysUserRoleEntity::getRoleId, roles.stream().map(SysRoleEntity::getId).toList()))
+                .stream()
+                .map(SysUserRoleEntity::getUserId)
+                .collect(Collectors.toSet());
+    }
+
+    private List<Long> normalizeRoleIds(List<Long> roleIds) {
+        if (roleIds == null || roleIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return roleIds.stream().filter(Objects::nonNull).distinct().toList();
+    }
+
+    private boolean hasRoleSelection(List<Long> roleIds, List<String> roleCodes) {
+        return roleIds != null || roleCodes != null;
+    }
+
+    private boolean containsAdminRoleCode(List<String> roleCodes) {
+        return roleCodes != null && roleCodes.stream()
+                .filter(this::hasText)
+                .map(String::trim)
+                .anyMatch(code -> SUPER_ADMIN.equals(code) || STORE_ADMIN.equals(code));
     }
 
     private void ensureUniqueUsername(String username, Long excludeId) {
@@ -443,12 +696,62 @@ public class AdminUserServiceImpl implements AdminUserService {
         }
     }
 
-    private void validatePassword(String password) {
-        if (password == null || password.length() < 8
-                || !password.matches(".*[A-Za-z].*")
-                || !password.matches(".*\\d.*")) {
-            throw new BusinessException(ErrorCode.PASSWORD_INVALID);
+    private void validateTargetStore(Long storeId) {
+        if (storeId == null) {
+            return;
         }
+        StoreEntity store = storeMapper.selectById(storeId);
+        if (store == null || (store.getDeleted() != null && store.getDeleted() != 0)) {
+            throw new BusinessException(ErrorCode.STORE_NOT_FOUND);
+        }
+    }
+
+    private String storeName(Long storeId) {
+        if (storeId == null) {
+            return null;
+        }
+        StoreEntity store = storeMapper.selectById(storeId);
+        return store == null || (store.getDeleted() != null && store.getDeleted() != 0) ? null : store.getStoreName();
+    }
+
+    private void applyContains(LambdaQueryWrapper<SysUserEntity> wrapper, String value, String column) {
+        String normalized = normalize(value);
+        if (normalized != null) {
+            wrapper.apply(containsCondition(column), buildContainsPattern(normalized));
+        }
+    }
+
+    private void ensureUserManagementRole(AuthenticatedUser currentUser) {
+        if (isSuperAdmin(currentUser) || isStoreAdmin(currentUser)) {
+            return;
+        }
+        throw new BusinessException(ErrorCode.USER_OPERATION_NOT_ALLOWED);
+    }
+
+    private void ensureUserManageRole(AuthenticatedUser currentUser) {
+        ensureUserManagementRole(currentUser);
+        if (currentUser.permissionCodes() == null || !currentUser.permissionCodes().contains("USER_MANAGE")) {
+            throw new BusinessException(ErrorCode.USER_OPERATION_NOT_ALLOWED);
+        }
+    }
+
+    private void requireStoreAdmin(AuthenticatedUser currentUser) {
+        if (!isStoreAdmin(currentUser) || currentUser.storeId() == null) {
+            throw new BusinessException(ErrorCode.USER_OPERATION_NOT_ALLOWED);
+        }
+    }
+
+    private boolean isSuperAdmin(AuthenticatedUser currentUser) {
+        return currentUser != null
+                && currentUser.roleCodes() != null
+                && currentUser.roleCodes().contains(SUPER_ADMIN);
+    }
+
+    private boolean isStoreAdmin(AuthenticatedUser currentUser) {
+        return currentUser != null
+                && AccountType.STORE_VALUE.equals(currentUser.accountType())
+                && currentUser.roleCodes() != null
+                && currentUser.roleCodes().contains(STORE_ADMIN);
     }
 
     private String generateTemporaryPassword() {
@@ -460,7 +763,7 @@ public class AdminUserServiceImpl implements AdminUserService {
         while (chars.size() < 12) {
             chars.add(TEMP_PASSWORD_CHARS.charAt(RANDOM.nextInt(TEMP_PASSWORD_CHARS.length())));
         }
-        java.util.Collections.shuffle(chars, RANDOM);
+        Collections.shuffle(chars, RANDOM);
         StringBuilder builder = new StringBuilder();
         chars.forEach(builder::append);
         return builder.toString();

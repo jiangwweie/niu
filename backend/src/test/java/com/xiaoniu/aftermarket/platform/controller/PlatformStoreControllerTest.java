@@ -145,12 +145,17 @@ class PlatformStoreControllerTest {
                 .andExpect(status().isForbidden());
     }
 
-    // --- Test 8: Platform admin accessing /api/admin/** gets blocked ---
+    // --- Test 8: Platform admin can use user management but is still blocked from store admin business APIs ---
     @Test
-    void platformAdminCannotAccessAdminApi() throws Exception {
+    void platformAdminCanAccessUserManagementButCannotAccessStoreAdminBusinessApi() throws Exception {
         String token = loginAndGetToken("platform_admin", "dev123");
 
         mockMvc.perform(get("/api/admin/users")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"));
+
+        mockMvc.perform(get("/api/admin/inventory/stocks")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("PLATFORM_ACCESS_DENIED"));

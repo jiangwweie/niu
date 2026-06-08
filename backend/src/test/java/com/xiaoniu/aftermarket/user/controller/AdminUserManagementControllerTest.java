@@ -1,6 +1,7 @@
 package com.xiaoniu.aftermarket.user.controller;
 
-import static org.hamcrest.Matchers.startsWith;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -75,33 +76,35 @@ class AdminUserManagementControllerTest {
                                   "username": "m17a_new_user",
                                   "realName": "交付员工",
                                   "phone": "13910000001",
-                                  "roleCodes": ["TECHNICIAN"],
-                                  "initialPassword": "Niu12345"
+                                  "roleCodes": ["TECHNICIAN"]
                                 }
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.passwordMustChange").value(true))
+                .andExpect(jsonPath("$.data.user.passwordMustChange").value(true))
+                .andExpect(jsonPath("$.data.temporaryPassword").value(notNullValue()))
                 .andReturn();
 
         JsonNode response = objectMapper.readTree(result.getResponse().getContentAsString());
-        Long userId = response.path("data").path("id").asLong();
+        Long userId = response.path("data").path("user").path("id").asLong();
+        String temporaryPassword = response.path("data").path("temporaryPassword").asText();
         SysUserEntity user = userMapper.selectById(userId);
         assertTrue(user.getPasswordHash().startsWith("{bcrypt}"));
-        assertTrue(passwordEncoder.matches("Niu12345", user.getPasswordHash()));
+        assertTrue(passwordEncoder.matches(temporaryPassword, user.getPasswordHash()));
     }
 
     @Test
     void resetPasswordMarksMustChangeAndReturnsTemporaryPassword() throws Exception {
-        mockMvc.perform(post("/api/admin/users/2/reset-password")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(1L, Set.of("USER_MANAGE")))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"temporaryPassword\":\"Reset12345\"}"))
+        MvcResult result = mockMvc.perform(post("/api/admin/users/2/reset-password")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(1L, Set.of("USER_MANAGE"))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.temporaryPassword").value("Reset12345"));
+                .andExpect(jsonPath("$.data.temporaryPassword").value(notNullValue()))
+                .andReturn();
 
+        String temporaryPassword = objectMapper.readTree(result.getResponse().getContentAsString())
+                .path("data").path("temporaryPassword").asText();
         SysUserEntity user = userMapper.selectById(2L);
         assertTrue(Boolean.TRUE.equals(user.getPasswordMustChange()));
-        assertTrue(passwordEncoder.matches("Reset12345", user.getPasswordHash()));
+        assertTrue(passwordEncoder.matches(temporaryPassword, user.getPasswordHash()));
     }
 
     @Test
@@ -142,7 +145,101 @@ class AdminUserManagementControllerTest {
         mockMvc.perform(get("/api/admin/users/1")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(1L, Set.of("USER_MANAGE"))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.permissionCodes").isArray());
+                .andExpect(jsonPath("$.data.permissionCodes").isArray())
+                .andExpect(jsonPath("$.data.storeName").exists())
+                .andExpect(jsonPath("$.data.roles").isArray());
+    }
+
+    @Test
+    void superAdminCanListAllUsersAndFilterByStore() throws Exception {
+        mockMvc.perform(get("/api/admin/users")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(1L, Set.of("USER_MANAGE"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.records[0].id").exists());
+
+        mockMvc.perform(get("/api/admin/users?storeId=2")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(1L, Set.of("USER_MANAGE"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.records[0].storeId").value(2));
+    }
+
+    @Test
+    void storeAdminCanCreateCurrentStoreStaffWithAllowedRole() throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/admin/users")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(10L, Set.of("USER_MANAGE")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username": "store2_new_staff",
+                                  "realName": "二店新员工",
+                                  "phone": "13910000012",
+                                  "storeId": 2,
+                                  "roleIds": [6]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.user.storeId").value(2))
+                .andExpect(jsonPath("$.data.user.roleCodes[0]").value("TECHNICIAN_FRONT_DESK"))
+                .andExpect(jsonPath("$.data.user.passwordMustChange").value(true))
+                .andExpect(jsonPath("$.data.temporaryPassword").value(notNullValue()))
+                .andReturn();
+
+        JsonNode response = objectMapper.readTree(result.getResponse().getContentAsString());
+        Long userId = response.path("data").path("user").path("id").asLong();
+        String temporaryPassword = response.path("data").path("temporaryPassword").asText();
+        SysUserEntity user = userMapper.selectById(userId);
+        assertTrue(passwordEncoder.matches(temporaryPassword, user.getPasswordHash()));
+    }
+
+    @Test
+    void storeAdminCannotAssignStoreAdminRoleToStaff() throws Exception {
+        mockMvc.perform(put("/api/admin/users/12")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(10L, Set.of("USER_MANAGE")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "realName": "二店员工",
+                                  "roleIds": [5]
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("USER_OPERATION_NOT_ALLOWED"));
+    }
+
+    @Test
+    void storeAdminCannotOperatePeerStoreAdmin() throws Exception {
+        mockMvc.perform(post("/api/admin/users/11/reset-password")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(10L, Set.of("USER_MANAGE"))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("USER_OPERATION_NOT_ALLOWED"));
+    }
+
+    @Test
+    void storeAdminCanResetCurrentStoreStaffPassword() throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/admin/users/12/reset-password")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(10L, Set.of("USER_MANAGE"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.temporaryPassword").value(notNullValue()))
+                .andReturn();
+
+        String temporaryPassword = objectMapper.readTree(result.getResponse().getContentAsString())
+                .path("data").path("temporaryPassword").asText();
+        SysUserEntity user = userMapper.selectById(12L);
+        assertTrue(Boolean.TRUE.equals(user.getPasswordMustChange()));
+        assertTrue(passwordEncoder.matches(temporaryPassword, user.getPasswordHash()));
+    }
+
+    @Test
+    void unbindWechatOnlyClearsWechatBindingFields() throws Exception {
+        mockMvc.perform(post("/api/admin/users/12/wechat/unbind")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(10L, Set.of("USER_MANAGE"))))
+                .andExpect(status().isOk());
+
+        SysUserEntity user = userMapper.selectById(12L);
+        assertNull(user.getWechatOpenid());
+        assertNull(user.getWechatUnionid());
+        assertNull(user.getWechatBoundAt());
+        assertTrue(user.getDeleted() == 0);
     }
 
     private String token(Long userId, Set<String> permissions) {

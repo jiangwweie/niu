@@ -13,12 +13,15 @@ public final class AdminUserDtos {
     public record UserSummaryResponse(
             Long id,
             Long storeId,
+            String storeName,
+            String accountType,
             String username,
             String realName,
             String phone,
             Boolean enabled,
             Boolean passwordMustChange,
             Set<String> roleCodes,
+            List<UserRoleResponse> roles,
             Boolean wechatBound,
             LocalDateTime wechatBoundAt,
             LocalDateTime lastLoginAt,
@@ -30,6 +33,8 @@ public final class AdminUserDtos {
     public record UserDetailResponse(
             Long id,
             Long storeId,
+            String storeName,
+            String accountType,
             String username,
             String realName,
             String phone,
@@ -38,6 +43,7 @@ public final class AdminUserDtos {
             LocalDateTime passwordChangedAt,
             LocalDateTime lastLoginAt,
             Set<String> roleCodes,
+            List<UserRoleResponse> roles,
             Set<String> permissionCodes,
             Boolean wechatBound,
             LocalDateTime wechatBoundAt,
@@ -51,8 +57,9 @@ public final class AdminUserDtos {
             @NotBlank String realName,
             String phone,
             Long storeId,
+            String remark,
+            List<Long> roleIds,
             List<String> roleCodes,
-            String initialPassword,
             Boolean enabled
     ) {
     }
@@ -60,22 +67,39 @@ public final class AdminUserDtos {
     public record UpdateUserRequest(
             String realName,
             String phone,
+            String remark,
+            List<Long> roleIds,
             Boolean enabled,
             List<String> roleCodes
     ) {
     }
 
-    public record ResetPasswordRequest(String temporaryPassword) {
+    public record CreateUserResponse(
+            UserDetailResponse user,
+            String temporaryPassword
+    ) {
     }
 
     public record ResetPasswordResponse(String temporaryPassword) {
     }
 
     public record RoleResponse(
+            Long roleId,
+            Long storeId,
+            String storeName,
             String roleCode,
             String roleName,
             String description,
             List<String> permissionCodes
+    ) {
+    }
+
+    public record UserRoleResponse(
+            Long roleId,
+            Long storeId,
+            String storeName,
+            String roleCode,
+            String roleName
     ) {
     }
 

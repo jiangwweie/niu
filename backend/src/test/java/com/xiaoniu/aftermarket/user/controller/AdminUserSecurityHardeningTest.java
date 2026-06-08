@@ -98,8 +98,7 @@ class AdminUserSecurityHardeningTest {
                                   "username": "evil_superadmin",
                                   "realName": "恶意超管",
                                   "phone": "13900009999",
-                                  "roleCodes": ["SUPER_ADMIN"],
-                                  "initialPassword": "Niu12345"
+                                  "roleCodes": ["SUPER_ADMIN"]
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
@@ -128,9 +127,7 @@ class AdminUserSecurityHardeningTest {
         // Note: This also tests cross-store boundary (requireUser checks storeId)
         // user 10 is in store 2, user 1 is in store 1 -> USER_NOT_FOUND
         mockMvc.perform(post("/api/admin/users/1/reset-password")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(10L, 2L, Set.of("USER_MANAGE")))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"temporaryPassword\":\"Reset12345\"}"))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(10L, 2L, Set.of("USER_MANAGE"))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("USER_NOT_FOUND"));
     }
@@ -204,8 +201,7 @@ class AdminUserSecurityHardeningTest {
                                   "username": "cross_store_user",
                                   "realName": "跨店用户",
                                   "phone": "13900008888",
-                                  "storeId": 1,
-                                  "initialPassword": "Niu12345"
+                                  "storeId": 1
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
@@ -223,13 +219,12 @@ class AdminUserSecurityHardeningTest {
                                   "realName": "跨店超管创建",
                                   "phone": "13900007777",
                                   "storeId": 2,
-                                  "roleCodes": ["STORE_ADMIN"],
-                                  "initialPassword": "Niu12345"
+                                  "roleCodes": ["STORE_ADMIN"]
                                 }
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.storeId").value(2))
-                .andExpect(jsonPath("$.data.roleCodes[0]").value("STORE_ADMIN"));
+                .andExpect(jsonPath("$.data.user.storeId").value(2))
+                .andExpect(jsonPath("$.data.user.roleCodes[0]").value("STORE_ADMIN"));
     }
 
     @Test

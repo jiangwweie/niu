@@ -111,16 +111,20 @@ MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permis
 MERGE INTO sys_user_role (id, user_id, role_id) KEY (user_id, role_id) VALUES (301, 20, 4);
 MERGE INTO store (id, store_code, store_name, contact_name, contact_phone, address, status, deleted) KEY (id) VALUES (2, 'STORE2', '第二门店', '李店长', '13800000010', '第二门店地址', 'ENABLED', 0);
 MERGE INTO sys_role (id, store_id, role_code, role_name, status) KEY (store_id, role_code) VALUES (5, 2, 'STORE_ADMIN', '门店管理员', 'ENABLED');
+MERGE INTO sys_role (id, store_id, role_code, role_name, status) KEY (store_id, role_code) VALUES (6, 2, 'TECHNICIAN_FRONT_DESK', '前台员工', 'ENABLED');
 MERGE INTO sys_user (id, store_id, username, password_hash, real_name, phone, account_type, status, password_must_change, deleted) KEY (phone) VALUES (10, 2, 'store_admin01', '{noop}dev123', '王二', '13800000010', 'STORE', 'ENABLED', FALSE, 0);
 MERGE INTO sys_user (id, store_id, username, password_hash, real_name, phone, account_type, status, password_must_change, deleted) KEY (phone) VALUES (11, 2, 'test02', '{noop}dev123', '测试用户2', '13800000011', 'STORE', 'ENABLED', FALSE, 0);
+MERGE INTO sys_user (id, store_id, username, password_hash, real_name, phone, account_type, status, password_must_change, deleted, wechat_openid, wechat_unionid, wechat_bound_at) KEY (phone) VALUES (12, 2, 'store2_staff01', '{noop}dev123', '二店员工', '13800000012', 'STORE', 'ENABLED', FALSE, 0, 'test_bound_openid_002', 'test_unionid_002', TIMESTAMP '2026-05-21 10:00:00');
 MERGE INTO sys_user_role (id, user_id, role_id) KEY (user_id, role_id) VALUES (201, 10, 5);
 MERGE INTO sys_user_role (id, user_id, role_id) KEY (user_id, role_id) VALUES (202, 11, 5);
+MERGE INTO sys_user_role (id, user_id, role_id) KEY (user_id, role_id) VALUES (203, 12, 6);
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (2001, 5, 1029);
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (2002, 5, 1023);
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (2003, 5, 1024);
 -- M18 customer/vehicle permissions for store2 admin role (via V10 migration auto-assign)
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1042, 5, 1021);
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1043, 5, 1022);
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1047, 6, 1020);
 -- M19 template roles for store_id=1 (used by createBaseRolesForStore)
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1050, 100, 1004);
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1051, 100, 1010);

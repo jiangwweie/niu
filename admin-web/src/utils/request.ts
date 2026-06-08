@@ -57,7 +57,8 @@ request.interceptors.response.use(
       return Promise.reject(error);
     }
     if (error.response?.status === 403) {
-      const msg = getFriendlyErrorMessage('FORBIDDEN');
+      const data = error.response?.data as any;
+      const msg = data?.message || getFriendlyErrorMessage(data?.code || 'FORBIDDEN');
       ElMessage.error(msg);
       error.message = msg;
       return Promise.reject(error);

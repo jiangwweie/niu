@@ -20,6 +20,11 @@ public class PlatformAccessGuard extends OncePerRequestFilter {
     // PLATFORM 账户是全局运营角色，/api/admin/** 和 /api/staff/** 是门店内部管理接口
     // 禁止 PLATFORM 访问以实现门店数据隔离，防止跨店操作
     private static final List<String> BLOCKED_PREFIXES = List.of("/api/admin/", "/api/staff/");
+    private static final List<String> ADMIN_USER_MANAGEMENT_PATHS = List.of(
+            "/api/admin/users",
+            "/api/admin/roles",
+            "/api/admin/permissions"
+    );
 
     private final SecurityApiResponseWriter responseWriter;
 
@@ -37,7 +42,7 @@ public class PlatformAccessGuard extends OncePerRequestFilter {
 
         String path = request.getRequestURI();
 
-        if (isBlockedPath(path)) {
+        if (isBlockedPath(path) && !isAdminUserManagementPath(path)) {
             CurrentUser currentUser = CurrentUserContext.get().orElse(null);
             if (currentUser != null && AccountType.PLATFORM_VALUE.equals(currentUser.accountType())) {
                 responseWriter.write(response, HttpServletResponse.SC_FORBIDDEN, ErrorCode.PLATFORM_ACCESS_DENIED);
@@ -50,5 +55,10 @@ public class PlatformAccessGuard extends OncePerRequestFilter {
 
     private boolean isBlockedPath(String path) {
         return BLOCKED_PREFIXES.stream().anyMatch(path::startsWith);
+    }
+
+    private boolean isAdminUserManagementPath(String path) {
+        return ADMIN_USER_MANAGEMENT_PATHS.stream()
+                .anyMatch(allowed -> path.equals(allowed) || path.startsWith(allowed + "/"));
     }
 }

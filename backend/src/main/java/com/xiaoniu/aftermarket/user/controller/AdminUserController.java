@@ -1,13 +1,11 @@
 package com.xiaoniu.aftermarket.user.controller;
 
 import com.xiaoniu.aftermarket.auth.security.AuthenticatedUser;
-import com.xiaoniu.aftermarket.auth.service.WechatService;
 import com.xiaoniu.aftermarket.common.api.ApiResponse;
-import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.CreateUserRequest;
+import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.CreateUserResponse;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.PermissionResponse;
-import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.ResetPasswordRequest;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.ResetPasswordResponse;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.RoleResponse;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.UpdateUserRequest;
@@ -16,8 +14,6 @@ import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.UserSummaryResp
 import com.xiaoniu.aftermarket.user.service.AdminUserService;
 import jakarta.validation.Valid;
 import java.util.List;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -35,11 +31,9 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminUserController {
 
     private final AdminUserService adminUserService;
-    private final WechatService wechatService;
 
-    public AdminUserController(AdminUserService adminUserService, WechatService wechatService) {
+    public AdminUserController(AdminUserService adminUserService) {
         this.adminUserService = adminUserService;
-        this.wechatService = wechatService;
     }
 
     @PreAuthorize("hasAnyAuthority('USER_MANAGE', 'ROLE_MANAGE')")
@@ -49,24 +43,25 @@ public class AdminUserController {
                                                                     @RequestParam(required = false) String phone,
                                                                     @RequestParam(required = false) Boolean enabled,
                                                                     @RequestParam(required = false) String roleCode,
+                                                                    @RequestParam(required = false) Long storeId,
                                                                     @RequestParam(defaultValue = "1") int pageNo,
                                                                     @RequestParam(defaultValue = "10") int pageSize) {
         AuthenticatedUser user = requireCurrentUser();
-        return ApiResponse.success(adminUserService.listUsers(user.storeId(), username, realName, phone, enabled, roleCode, pageNo, pageSize));
+        return ApiResponse.success(adminUserService.listUsers(user, storeId, username, realName, phone, enabled, roleCode, pageNo, pageSize));
     }
 
     @PreAuthorize("hasAnyAuthority('USER_MANAGE', 'ROLE_MANAGE')")
     @GetMapping("/users/{id}")
     public ApiResponse<UserDetailResponse> getUser(@PathVariable Long id) {
         AuthenticatedUser user = requireCurrentUser();
-        return ApiResponse.success(adminUserService.getUser(user.storeId(), id));
+        return ApiResponse.success(adminUserService.getUser(user, id));
     }
 
     @PreAuthorize("hasAuthority('USER_MANAGE')")
     @PostMapping("/users")
-    public ApiResponse<UserDetailResponse> createUser(@Valid @RequestBody CreateUserRequest request) {
+    public ApiResponse<CreateUserResponse> createUser(@Valid @RequestBody CreateUserRequest request) {
         AuthenticatedUser user = requireCurrentUser();
-        return ApiResponse.success(adminUserService.createUser(user.userId(), user.storeId(), request));
+        return ApiResponse.success(adminUserService.createUser(user, request));
     }
 
     @PreAuthorize("hasAuthority('USER_MANAGE')")
@@ -74,14 +69,14 @@ public class AdminUserController {
     public ApiResponse<UserDetailResponse> updateUser(@PathVariable Long id,
                                                       @Valid @RequestBody UpdateUserRequest request) {
         AuthenticatedUser user = requireCurrentUser();
-        return ApiResponse.success(adminUserService.updateUser(user.userId(), user.storeId(), id, request));
+        return ApiResponse.success(adminUserService.updateUser(user, id, request));
     }
 
     @PreAuthorize("hasAuthority('USER_MANAGE')")
     @PostMapping("/users/{id}/enable")
     public ApiResponse<Void> enableUser(@PathVariable Long id) {
         AuthenticatedUser user = requireCurrentUser();
-        adminUserService.enableUser(user.userId(), user.storeId(), id);
+        adminUserService.enableUser(user, id);
         return ApiResponse.success(null);
     }
 
@@ -89,23 +84,22 @@ public class AdminUserController {
     @PostMapping("/users/{id}/disable")
     public ApiResponse<Void> disableUser(@PathVariable Long id) {
         AuthenticatedUser user = requireCurrentUser();
-        adminUserService.disableUser(user.userId(), user.storeId(), id);
+        adminUserService.disableUser(user, id);
         return ApiResponse.success(null);
     }
 
     @PreAuthorize("hasAuthority('USER_MANAGE')")
     @PostMapping("/users/{id}/reset-password")
-    public ApiResponse<ResetPasswordResponse> resetPassword(@PathVariable Long id,
-                                                            @RequestBody(required = false) ResetPasswordRequest request) {
+    public ApiResponse<ResetPasswordResponse> resetPassword(@PathVariable Long id) {
         AuthenticatedUser user = requireCurrentUser();
-        return ApiResponse.success(adminUserService.resetPassword(user.userId(), user.storeId(), id, request));
+        return ApiResponse.success(adminUserService.resetPassword(user, id));
     }
 
     @PreAuthorize("hasAuthority('USER_MANAGE')")
     @PostMapping("/users/{id}/wechat/unbind")
     public ApiResponse<Void> unbindWechat(@PathVariable Long id) {
         AuthenticatedUser user = requireCurrentUser();
-        wechatService.unbindWechat(user.storeId(), id, user.userId());
+        adminUserService.unbindWechat(user, id);
         return ApiResponse.success(null);
     }
 
@@ -113,7 +107,7 @@ public class AdminUserController {
     @GetMapping("/roles")
     public ApiResponse<List<RoleResponse>> listRoles() {
         AuthenticatedUser user = requireCurrentUser();
-        return ApiResponse.success(adminUserService.listRoles(user.storeId(), user.userId()));
+        return ApiResponse.success(adminUserService.listRoles(user));
     }
 
     @PreAuthorize("hasAnyAuthority('USER_MANAGE', 'ROLE_MANAGE')")

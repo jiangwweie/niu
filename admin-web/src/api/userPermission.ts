@@ -3,8 +3,8 @@ import { setSearchParam } from '@/utils/searchParams';
 import type { PaginatedResult } from '@/types';
 import type {
   CreateUserRequest,
+  CreateUserResponse,
   PermissionNode,
-  ResetPasswordRequest,
   ResetPasswordResponse,
   RoleInfo,
   SystemUser,
@@ -21,6 +21,9 @@ export async function getUserList(params: UserQuery): Promise<PaginatedResult<Sy
   setSearchParam(backendParams, 'realName', params.realName);
   setSearchParam(backendParams, 'phone', params.phone);
   setSearchParam(backendParams, 'roleCode', params.roleCode);
+  if (params.storeId !== undefined && params.storeId !== '') {
+    backendParams.storeId = params.storeId;
+  }
   if (params.enabled !== undefined && params.enabled !== '') {
     backendParams.enabled = params.enabled;
   }
@@ -31,7 +34,7 @@ export async function getUserDetail(id: number): Promise<SystemUser> {
   return await request.get(`/api/admin/users/${id}`);
 }
 
-export async function createUser(data: CreateUserRequest): Promise<SystemUser> {
+export async function createUser(data: CreateUserRequest): Promise<CreateUserResponse> {
   return await request.post('/api/admin/users', data);
 }
 
@@ -47,8 +50,8 @@ export async function disableUser(id: number): Promise<void> {
   return await request.post(`/api/admin/users/${id}/disable`);
 }
 
-export async function resetUserPassword(id: number, data: ResetPasswordRequest): Promise<ResetPasswordResponse> {
-  return await request.post(`/api/admin/users/${id}/reset-password`, data);
+export async function resetUserPassword(id: number): Promise<ResetPasswordResponse> {
+  return await request.post(`/api/admin/users/${id}/reset-password`);
 }
 
 export async function unbindWechat(id: number): Promise<void> {

@@ -183,7 +183,7 @@ router.beforeEach(async (to, from, next) => {
       if (user.passwordMustChange && to.path !== '/change-password') {
         return next({ path: '/change-password' });
       }
-      if (user.accountType === 'PLATFORM' && !to.path.startsWith('/platform') && to.path !== '/change-password') {
+      if (user.accountType === 'PLATFORM' && !to.path.startsWith('/platform') && to.path !== '/change-password' && to.path !== '/user') {
         return next({ path: '/platform/stores' });
       }
       if (user.accountType === 'STORE' && to.path.startsWith('/platform')) {
@@ -202,7 +202,7 @@ router.beforeEach(async (to, from, next) => {
     if (authStore.user.passwordMustChange && to.path !== '/change-password') {
       return next({ path: '/change-password' });
     }
-    if (authStore.user.accountType === 'PLATFORM' && !to.path.startsWith('/platform') && to.path !== '/change-password') {
+    if (authStore.user.accountType === 'PLATFORM' && !to.path.startsWith('/platform') && to.path !== '/change-password' && to.path !== '/user') {
       return next({ path: '/platform/stores' });
     }
     if (authStore.user.accountType === 'STORE' && to.path.startsWith('/platform')) {

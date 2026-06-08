@@ -174,28 +174,17 @@ class WechatAuthTest {
 
     @Test
     void adminUnbindWechatSuccess() throws Exception {
-        // First bind store_admin01 (id=10, storeId=2) so we can unbind without affecting tech01
+        // store_admin01 can unbind same-store ordinary staff (id=12), not administrator accounts.
         String storeAdminToken = loginAndGetToken("store_admin01", "dev123");
-        when(wxMaUserService.getSessionInfo("bind_for_unbind"))
-                .thenReturn(mockSessionResult("openid_store_admin_temp"));
 
-        mockMvc.perform(post("/api/auth/wechat/bind")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + storeAdminToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"code\":\"bind_for_unbind\"}"))
-                .andExpect(status().isOk());
-
-        // Now unbind store_admin01 via platform admin — but platform admin can't access /api/admin/**
-        // Use store_admin01 itself as the admin (it has USER_MANAGE via role 5)
-        // Actually store_admin01 (storeId=2) unbinding their own user (id=10)
-        mockMvc.perform(post("/api/admin/users/10/wechat/unbind")
+        mockMvc.perform(post("/api/admin/users/12/wechat/unbind")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + storeAdminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("SUCCESS"));
 
         // Verify: login with old openid should now fail
         when(wxMaUserService.getSessionInfo("verify_code"))
-                .thenReturn(mockSessionResult("openid_store_admin_temp"));
+                .thenReturn(mockSessionResult("test_bound_openid_002"));
 
         mockMvc.perform(post("/api/auth/login/wechat")
                         .contentType(MediaType.APPLICATION_JSON)

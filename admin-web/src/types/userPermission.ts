@@ -1,10 +1,21 @@
+export interface UserRoleInfo {
+  roleId: number;
+  storeId?: number | null;
+  storeName?: string | null;
+  roleCode: string;
+  roleName: string;
+}
+
 export interface SystemUser {
   id: number;
-  storeId: number;
+  storeId?: number | null;
+  storeName?: string | null;
+  accountType?: string;
   username: string;
   realName: string;
   phone?: string;
   roleCodes: string[];
+  roles?: UserRoleInfo[];
   enabled: boolean;
   passwordMustChange: boolean;
   lastLoginAt?: string;
@@ -22,6 +33,7 @@ export interface UserQuery {
   phone?: string;
   roleCode?: string;
   enabled?: boolean | string;
+  storeId?: number | string;
   pageNo: number;
   pageSize: number;
 }
@@ -30,20 +42,23 @@ export interface CreateUserRequest {
   username: string;
   realName: string;
   phone?: string;
-  roleCodes: string[];
-  initialPassword?: string;
+  storeId?: number | null;
+  remark?: string;
+  roleIds: number[];
   enabled?: boolean;
+}
+
+export interface CreateUserResponse {
+  user: SystemUser;
+  temporaryPassword: string;
 }
 
 export interface UpdateUserRequest {
   realName?: string;
   phone?: string;
-  roleCodes?: string[];
+  remark?: string;
+  roleIds?: number[];
   enabled?: boolean;
-}
-
-export interface ResetPasswordRequest {
-  temporaryPassword?: string;
 }
 
 export interface ResetPasswordResponse {
@@ -51,6 +66,9 @@ export interface ResetPasswordResponse {
 }
 
 export interface RoleInfo {
+  roleId: number;
+  storeId?: number | null;
+  storeName?: string | null;
   roleCode: string;
   roleName: string;
   description?: string;

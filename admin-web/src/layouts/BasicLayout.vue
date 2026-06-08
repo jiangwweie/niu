@@ -16,6 +16,9 @@
         <el-menu-item v-if="isPlatform" index="/platform/stores">
           <template #title>门店管理</template>
         </el-menu-item>
+        <el-menu-item v-if="isPlatform && hasAnyPermission(['USER_MANAGE', 'ROLE_MANAGE'])" index="/user">
+          <template #title>员工与权限</template>
+        </el-menu-item>
 
         <template v-if="!isPlatform">
           <!-- 首页 -->

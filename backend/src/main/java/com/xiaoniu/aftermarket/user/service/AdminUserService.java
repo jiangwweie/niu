@@ -1,9 +1,10 @@
 package com.xiaoniu.aftermarket.user.service;
 
+import com.xiaoniu.aftermarket.auth.security.AuthenticatedUser;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
+import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.CreateUserResponse;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.CreateUserRequest;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.PermissionResponse;
-import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.ResetPasswordRequest;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.ResetPasswordResponse;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.RoleResponse;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.UpdateUserRequest;
@@ -13,22 +14,25 @@ import java.util.List;
 
 public interface AdminUserService {
 
-    PageResponse<UserSummaryResponse> listUsers(Long storeId, String username, String realName,
-                                                String phone, Boolean enabled, String roleCode, int pageNo, int pageSize);
+    PageResponse<UserSummaryResponse> listUsers(AuthenticatedUser currentUser, Long storeId, String username,
+                                                String realName, String phone, Boolean enabled, String roleCode,
+                                                int pageNo, int pageSize);
 
-    UserDetailResponse getUser(Long storeId, Long id);
+    UserDetailResponse getUser(AuthenticatedUser currentUser, Long id);
 
-    UserDetailResponse createUser(Long currentUserId, Long currentStoreId, CreateUserRequest request);
+    CreateUserResponse createUser(AuthenticatedUser currentUser, CreateUserRequest request);
 
-    UserDetailResponse updateUser(Long currentUserId, Long currentStoreId, Long id, UpdateUserRequest request);
+    UserDetailResponse updateUser(AuthenticatedUser currentUser, Long id, UpdateUserRequest request);
 
-    void enableUser(Long currentUserId, Long currentStoreId, Long id);
+    void enableUser(AuthenticatedUser currentUser, Long id);
 
-    void disableUser(Long currentUserId, Long currentStoreId, Long id);
+    void disableUser(AuthenticatedUser currentUser, Long id);
 
-    ResetPasswordResponse resetPassword(Long currentUserId, Long currentStoreId, Long id, ResetPasswordRequest request);
+    ResetPasswordResponse resetPassword(AuthenticatedUser currentUser, Long id);
 
-    List<RoleResponse> listRoles(Long storeId, Long currentUserId);
+    void unbindWechat(AuthenticatedUser currentUser, Long id);
+
+    List<RoleResponse> listRoles(AuthenticatedUser currentUser);
 
     List<PermissionResponse> listPermissions();
 }
