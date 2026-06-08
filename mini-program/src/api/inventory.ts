@@ -1,6 +1,6 @@
 import { request } from '../utils/request';
 import { PageResponse } from '../types/common';
-import { InventoryStock, InboundRequest, InboundResponse } from '../types/inventory';
+import { InventoryStock, InboundRequest, InboundResponse, CreatePartAndInboundResponse } from '../types/inventory';
 import { mockInventory } from '../mock/inventory';
 
 export const getInventoryStocks = (params?: any) => {
@@ -56,7 +56,7 @@ export const createPartAndInbound = (data: {
   reason?: string;
   remark?: string;
 }) => {
-  return request<InboundResponse>({
+  return request<CreatePartAndInboundResponse>({
     url: '/api/staff/inventory/inbound/create-part-and-inbound',
     method: 'POST',
     data,

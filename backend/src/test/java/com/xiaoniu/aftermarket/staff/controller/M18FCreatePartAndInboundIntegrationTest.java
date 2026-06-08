@@ -314,10 +314,13 @@ class M18FCreatePartAndInboundIntegrationTest {
                 Integer.class);
         assertEquals(0, partCount);
 
-        // Verify no extra inventory flows
+        // Verify no extra inventory flows for the first test part only (avoid global count pollution)
+        Long firstPartId = jdbcTemplate.queryForObject(
+                "SELECT id FROM part WHERE store_id = 1 AND part_name = 'M18F-事务测试1'",
+                Long.class);
         Integer flowCount = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM inventory_flow WHERE store_id = 1 AND flow_type = 'INBOUND'",
-                Integer.class);
+                "SELECT COUNT(*) FROM inventory_flow WHERE store_id = 1 AND part_id = ? AND flow_type = 'INBOUND'",
+                Integer.class, firstPartId);
         assertEquals(1, flowCount);
     }
 

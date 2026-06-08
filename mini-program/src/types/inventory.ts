@@ -32,6 +32,19 @@ export interface InboundResponse {
   operatedAt: string;
 }
 
+export interface CreatePartAndInboundResponse {
+  partId: number | string;
+  partCode: string;
+  partName: string;
+  defaultBarcode?: string;
+  externalBarcode?: string;
+  actualQty: number;
+  availableQty: number;
+  reservedQty: number;
+  flowId: number | string;
+  operatedAt: string;
+}
+
 export interface CreatePartAndInboundRequest {
   source: string;
   partName: string;

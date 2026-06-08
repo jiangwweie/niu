@@ -102,10 +102,11 @@ public class StaffInventoryController {
     }
 
     @PostMapping("/inbound/create-part-and-inbound")
-    @PreAuthorize("hasAnyAuthority('PART_MANAGE', 'PART_CREATE', 'INVENTORY_INBOUND')")
+    @PreAuthorize("hasAuthority('INVENTORY_INBOUND')")
     public ApiResponse<StaffCreatePartAndInboundResponse> createPartAndInbound(
             @Valid @RequestBody StaffCreatePartAndInboundRequest request) {
         CurrentUser user = requireCurrentUser();
+        requirePartCreatePermission(user);
 
         CreatePartAndInboundApplicationService.Command command =
                 new CreatePartAndInboundApplicationService.Command(
@@ -143,5 +144,18 @@ public class StaffInventoryController {
     private CurrentUser requireCurrentUser() {
         return CurrentUserContext.get()
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "缺少用户上下文"));
+    }
+
+    /**
+     * create-part-and-inbound 是原子操作：创建配件 + 入库。
+     * 仅 INVENTORY_INBOUND 不足以创建配件，还必须具备 PART_CREATE 或 PART_MANAGE。
+     */
+    private void requirePartCreatePermission(CurrentUser user) {
+        boolean canCreatePart = user.permissions().contains("PART_MANAGE")
+                || user.permissions().contains("PART_CREATE");
+        if (!canCreatePart) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST,
+                    "创建配件需要 PART_CREATE 或 PART_MANAGE 权限");
+        }
     }
 }

@@ -6,7 +6,6 @@ import com.xiaoniu.aftermarket.common.context.CurrentUserContext;
 import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.common.enums.CommonStatus;
-import com.xiaoniu.aftermarket.common.enums.PartSource;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
 import com.xiaoniu.aftermarket.part.dto.CreatePartCommand;
 import com.xiaoniu.aftermarket.part.dto.PartCreateResponse;
@@ -83,10 +82,11 @@ public class StaffPartController {
         return ApiResponse.success(StaffPartDetail.from(entity));
     }
 
-    @PreAuthorize("hasAnyAuthority('PART_MANAGE', 'PART_CREATE', 'INVENTORY_INBOUND')")
+    @PreAuthorize("hasAnyAuthority('PART_MANAGE', 'PART_CREATE')")
     @PostMapping("/official")
     public ApiResponse<PartCreateResponse> createOfficialPart(
             @Valid @RequestBody StaffPartCreateRequest request) {
+        validateSourceConsistency(request.source(), "OFFICIAL");
         CurrentUser user = requireCurrentUser();
         CreatePartCommand command = buildCreateCommand(user, request);
         command.setOfficialPartNo(request.officialPartNo());
@@ -94,14 +94,26 @@ public class StaffPartController {
         return ApiResponse.success(PartCreateResponse.from(part));
     }
 
-    @PreAuthorize("hasAnyAuthority('PART_MANAGE', 'PART_CREATE', 'INVENTORY_INBOUND')")
+    @PreAuthorize("hasAnyAuthority('PART_MANAGE', 'PART_CREATE')")
     @PostMapping("/third-party")
     public ApiResponse<PartCreateResponse> createThirdPartyPart(
             @Valid @RequestBody StaffPartCreateRequest request) {
+        validateSourceConsistency(request.source(), "THIRD_PARTY");
         CurrentUser user = requireCurrentUser();
         CreatePartCommand command = buildCreateCommand(user, request);
         PartEntity part = partService.createThirdPartyPart(command);
         return ApiResponse.success(PartCreateResponse.from(part));
+    }
+
+    /**
+     * source 可选；如果传了，必须与 URL 语义一致，否则返回 400。
+     */
+    private void validateSourceConsistency(String source, String expected) {
+        if (source != null && !source.isBlank()
+                && !source.trim().equalsIgnoreCase(expected)) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST,
+                    "source 与接口语义不一致，应为 " + expected);
+        }
     }
 
     private CreatePartCommand buildCreateCommand(CurrentUser user, StaffPartCreateRequest request) {

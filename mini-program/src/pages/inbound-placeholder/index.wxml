@@ -53,6 +53,8 @@
       <text class="info">入库单号: {{successResult.flowId}}</text>
       <text class="info">配件名称: {{successResult.partName}}</text>
       <text class="info">配件编码: {{successResult.partCode}}</text>
+      <text class="info" wx:if="{{successResult.defaultBarcode}}">系统条码: {{successResult.defaultBarcode}}</text>
+      <text class="info" wx:if="{{successResult.externalBarcode}}">外部条码: {{successResult.externalBarcode}}</text>
       <text class="info highlight">可用库存: {{successResult.availableQty}}</text>
       <text class="info">实际库存: {{successResult.actualQty}}</text>
       <text class="info">预占库存: {{successResult.reservedQty}}</text>

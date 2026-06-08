@@ -178,7 +178,7 @@ export async function getPartDetail(partId: string | number): Promise<PartViewRe
 
 /**
  * POST /api/admin/parts/official
- * Creates an official part. Returns the backend response directly (Void).
+ * Creates an official part. Returns ApiResponse&lt;PartCreateResponse&gt; (partId, partCode, defaultBarcode, source, name, enabled).
  */
 export function createOfficialPart(body: {
   partName: string;
@@ -197,7 +197,7 @@ export function createOfficialPart(body: {
 
 /**
  * POST /api/admin/parts/third-party
- * Creates a third-party part. Returns the backend response directly (Void).
+ * Creates a third-party part. Returns ApiResponse&lt;PartCreateResponse&gt; (partId, partCode, defaultBarcode, source, name, enabled).
  */
 export function createThirdPartyPart(body: {
   partName: string;

@@ -136,3 +136,20 @@ MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permis
 -- bindtest01: dedicated user for bindWechatThenAuthMeShowsWechatBoundTrue (no wechat binding)
 MERGE INTO sys_user (id, store_id, username, password_hash, real_name, phone, account_type, status, password_must_change, deleted) KEY (phone) VALUES (30, 1, 'bindtest01', '{noop}dev123', '绑定测试员', '13800000030', 'STORE', 'ENABLED', FALSE, 0);
 MERGE INTO sys_user_role (id, user_id, role_id) KEY (user_id, role_id) VALUES (401, 30, 1);
+
+-- M18G: permission test data
+-- PART_CREATE permission (used in @PreAuthorize for part creation)
+MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1033, 'PART_CREATE', '配件新增', 'PART', 'ENABLED');
+-- INVENTORY_STAFF role: only INVENTORY_INBOUND (no part create/manage)
+MERGE INTO sys_role (id, store_id, role_code, role_name, status) KEY (store_id, role_code) VALUES (103, 1, 'INVENTORY_STAFF', '入库专员', 'ENABLED');
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (3001, 103, 1006);
+-- PART_CREATOR role: only PART_CREATE (no inventory)
+MERGE INTO sys_role (id, store_id, role_code, role_name, status) KEY (store_id, role_code) VALUES (104, 1, 'PART_CREATOR', '配件创建员', 'ENABLED');
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (3002, 104, 1033);
+-- Test users for permission tests
+MERGE INTO sys_user (id, store_id, username, password_hash, real_name, phone, account_type, status, password_must_change, deleted) KEY (phone) VALUES (50, 1, 'inv_staff', '{noop}dev123', '入库专员', '13800000050', 'STORE', 'ENABLED', FALSE, 0);
+MERGE INTO sys_user_role (id, user_id, role_id) KEY (user_id, role_id) VALUES (501, 50, 103);
+MERGE INTO sys_user (id, store_id, username, password_hash, real_name, phone, account_type, status, password_must_change, deleted) KEY (phone) VALUES (51, 1, 'part_creator', '{noop}dev123', '配件创建员', '13800000051', 'STORE', 'ENABLED', FALSE, 0);
+MERGE INTO sys_user_role (id, user_id, role_id) KEY (user_id, role_id) VALUES (502, 51, 104);
+-- PART_CREATE also assigned to role 100 (STORE_ADMIN template) for testing
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (3003, 100, 1033);

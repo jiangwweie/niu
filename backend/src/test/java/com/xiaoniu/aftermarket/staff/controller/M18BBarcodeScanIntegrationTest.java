@@ -706,13 +706,14 @@ class M18BBarcodeScanIntegrationTest {
     }
 
     private void clean() {
+        // 按 FK 依赖顺序清理；使用子查询定位 API 创建的自增 part_id，避免硬编码 ID 范围遗漏
         jdbcTemplate.execute("DELETE FROM work_order_status_log WHERE store_id IN (1, 2) AND work_order_id BETWEEN 92000 AND 92099");
-        jdbcTemplate.execute("DELETE FROM work_order_charge_item WHERE store_id IN (1, 2) AND (work_order_id BETWEEN 92000 AND 92099 OR part_id BETWEEN 91000 AND 91999)");
-        jdbcTemplate.execute("DELETE FROM inventory_flow WHERE store_id IN (1, 2) AND part_id BETWEEN 91000 AND 91999");
-        jdbcTemplate.execute("DELETE FROM inventory_stock WHERE store_id IN (1, 2) AND part_id BETWEEN 91000 AND 91999");
+        jdbcTemplate.execute("DELETE FROM work_order_charge_item WHERE store_id IN (1, 2) AND (work_order_id BETWEEN 92000 AND 92099 OR part_id IN (SELECT id FROM part WHERE store_id IN (1, 2) AND (part_code LIKE 'M18B-%' OR part_name LIKE '%扫码%' OR part_name LIKE '%外部条码%' OR part_name LIKE '%Admin%' OR part_name LIKE '%员工%' OR part_name LIKE '%先占%' OR part_name LIKE '%冲突%' OR part_name LIKE '%事务%')))");
+        jdbcTemplate.execute("DELETE FROM inventory_flow WHERE store_id IN (1, 2) AND part_id IN (SELECT id FROM part WHERE store_id IN (1, 2) AND (part_code LIKE 'M18B-%' OR part_name LIKE '%扫码%' OR part_name LIKE '%外部条码%' OR part_name LIKE '%Admin%' OR part_name LIKE '%员工%' OR part_name LIKE '%先占%' OR part_name LIKE '%冲突%' OR part_name LIKE '%事务%'))");
+        jdbcTemplate.execute("DELETE FROM inventory_stock WHERE store_id IN (1, 2) AND part_id IN (SELECT id FROM part WHERE store_id IN (1, 2) AND (part_code LIKE 'M18B-%' OR part_name LIKE '%扫码%' OR part_name LIKE '%外部条码%' OR part_name LIKE '%Admin%' OR part_name LIKE '%员工%' OR part_name LIKE '%先占%' OR part_name LIKE '%冲突%' OR part_name LIKE '%事务%'))");
         jdbcTemplate.execute("DELETE FROM work_order WHERE store_id IN (1, 2) AND id BETWEEN 92000 AND 92099");
-        jdbcTemplate.execute("DELETE FROM part_barcode WHERE store_id IN (1, 2) AND (part_id BETWEEN 91000 AND 91999 OR barcode LIKE 'M18B-%')");
-        jdbcTemplate.execute("DELETE FROM part WHERE store_id IN (1, 2) AND (id BETWEEN 91000 AND 91999 OR part_code LIKE 'M18B-%' OR default_barcode LIKE 'M18B-%' OR part_name LIKE '%扫码%' OR part_name LIKE '%外部条码%' OR part_name LIKE '%Admin%' OR part_name LIKE '%员工%' OR part_name LIKE '%先占%' OR part_name LIKE '%冲突%' OR part_name LIKE '%事务%')");
+        jdbcTemplate.execute("DELETE FROM part_barcode WHERE store_id IN (1, 2) AND (barcode LIKE 'M18B-%' OR part_id IN (SELECT id FROM part WHERE store_id IN (1, 2) AND (part_code LIKE 'M18B-%' OR part_name LIKE '%扫码%' OR part_name LIKE '%外部条码%' OR part_name LIKE '%Admin%' OR part_name LIKE '%员工%' OR part_name LIKE '%先占%' OR part_name LIKE '%冲突%' OR part_name LIKE '%事务%')))");
+        jdbcTemplate.execute("DELETE FROM part WHERE store_id IN (1, 2) AND (part_code LIKE 'M18B-%' OR default_barcode LIKE 'M18B-%' OR part_name LIKE '%扫码%' OR part_name LIKE '%外部条码%' OR part_name LIKE '%Admin%' OR part_name LIKE '%员工%' OR part_name LIKE '%先占%' OR part_name LIKE '%冲突%' OR part_name LIKE '%事务%')");
     }
 
     private record MapRow(int actualQty, int availableQty, int reservedQty) {
