@@ -3,7 +3,7 @@ import { ApiResponse } from '../types/common';
 
 export interface CustomerSearchResult {
   id: number;
-  name: string;
+  customerName: string;
   phone: string;
 }
 

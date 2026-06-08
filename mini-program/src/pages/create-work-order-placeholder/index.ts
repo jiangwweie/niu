@@ -792,7 +792,7 @@ Page({
     const customer: CustomerSearchResult = e.currentTarget.dataset.item;
     this.setData({
       selectedCustomerId: customer.id,
-      'draft.customerNameSnapshot': customer.name,
+      'draft.customerNameSnapshot': customer.customerName,
       'draft.customerPhoneSnapshot': customer.phone || '',
       customerSearchVisible: false
     });
