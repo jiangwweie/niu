@@ -115,6 +115,19 @@ Page({
   },
 
   async handleLogout() {
+    // P0-02 fix: 退出前增加二次确认，防止误触
+    const confirmed = await new Promise<boolean>((resolve) => {
+      wx.showModal({
+        title: '退出登录',
+        content: '确定退出登录？退出后需重新输入账号密码。',
+        confirmText: '退出',
+        cancelText: '取消',
+        success: (res) => resolve(res.confirm),
+        fail: () => resolve(false),
+      });
+    });
+    if (!confirmed) return;
+
     try {
       await authApi.logout();
     } catch (e) {

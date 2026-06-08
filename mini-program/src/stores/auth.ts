@@ -46,9 +46,8 @@ class AuthStore {
     this.currentUser = null;
     this.accessToken = '';
     wx.removeStorageSync('accessToken');
-    // keep other storage, or remove user if user storage is separate
-    // assuming storage.setUser(null) isn't standard, we'll just remove it:
-    wx.removeStorageSync('user');
+    // P0-03 fix: 使用 storage.clearUser() 清理 auth_user，与 storage.setUser 的键一致
+    storage.clearUser();
   }
 
   switchUser(userId: string) {

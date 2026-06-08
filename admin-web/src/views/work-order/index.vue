@@ -1292,12 +1292,23 @@ const submitCancel = async () => {
   }
 };
 
-onMounted(() => {
+onMounted(async () => {
   if (typeof route.query.partId === 'string') {
     const partId = Number(route.query.partId);
     queryParams.partId = Number.isNaN(partId) ? undefined : partId;
   }
-  fetchData();
+  await fetchData();
+
+  // P0-04 fix: 从客户/车辆详情跳转过来时，自动打开对应工单详情抽屉
+  if (typeof route.query.id === 'string' && route.query.id) {
+    const targetId = route.query.id; // WorkOrderRecord.id 是 string，直接比较
+    const found = tableData.value.find((row) => row.id === targetId);
+    if (found) {
+      handleView(found);
+    } else {
+      ElMessage.warning('未找到该工单，可能已超出当前筛选范围，请手动搜索');
+    }
+  }
 });
 </script>
 

@@ -46,5 +46,9 @@ Page({
   },
   goToInventory() {
     wx.switchTab({ url: '/pages/inventory/index' });
+  },
+  // P0-01 fix: 工单提醒区入口跳转
+  goToWorkOrders() {
+    wx.switchTab({ url: '/pages/work-orders/index' });
   }
 });
