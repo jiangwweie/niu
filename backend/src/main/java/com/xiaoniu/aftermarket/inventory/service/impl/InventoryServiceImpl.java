@@ -26,6 +26,7 @@ import com.xiaoniu.aftermarket.workorder.entity.WorkOrderChargeItemEntity;
 import com.xiaoniu.aftermarket.workorder.mapper.WorkOrderChargeItemMapper;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -234,6 +235,94 @@ public class InventoryServiceImpl implements InventoryService {
         QueryWrapper<InventoryStockEntity> wrapper = new QueryWrapper<>();
         wrapper.eq("store_id", storeId)
                .eq("deleted", 0);
+
+        if (partIds != null) {
+            if (partIds.isEmpty()) {
+                return new PageResponse<>(List.of(), pn, ps, 0);
+            }
+            wrapper.in("part_id", partIds);
+        }
+
+        wrapper.last("ORDER BY id DESC");
+        List<InventoryStockEntity> entities = inventoryStockMapper.selectList(wrapper);
+        if (entities.isEmpty()) {
+            return new PageResponse<>(List.of(), pn, ps, 0);
+        }
+
+        Set<Long> stockPartIds = entities.stream()
+                .map(InventoryStockEntity::getPartId)
+                .collect(Collectors.toSet());
+        Map<Long, PartEntity> partMap = loadPartsMap(stockPartIds);
+        Map<Long, Long> inventoryFlowCountMap = loadInventoryFlowCountMap(storeId, stockPartIds);
+        Map<Long, Long> workOrderReferenceCountMap = loadWorkOrderReferenceCountMap(stockPartIds);
+
+        List<InventoryStockQueryResponse> filtered = entities.stream()
+                .map(stock -> toStockQueryResponse(
+                        stock,
+                        partMap.get(stock.getPartId()),
+                        inventoryFlowCountMap.getOrDefault(stock.getPartId(), 0L),
+                        workOrderReferenceCountMap.getOrDefault(stock.getPartId(), 0L)))
+                .filter(response -> matchesInventoryView(response, viewType))
+                .toList();
+
+        long total = filtered.size();
+        if (total == 0) {
+            return new PageResponse<>(List.of(), pn, ps, 0);
+        }
+
+        int fromIndex = Math.min((pn - 1) * ps, filtered.size());
+        int toIndex = Math.min(fromIndex + ps, filtered.size());
+        return new PageResponse<>(filtered.subList(fromIndex, toIndex), pn, ps, total);
+    }
+
+    @Override
+    public PageResponse<InventoryStockQueryResponse> pageQuery(Long storeId, String keyword,
+                                                                String partCode, String partName,
+                                                                String source, String view,
+                                                                Integer pageNo, Integer pageSize) {
+        // If keyword is present, use multi-field keyword search for parts
+        if (StringUtils.hasText(keyword)) {
+            String kw = keyword.trim();
+            List<Long> keywordPartIds = findPartIdsByKeyword(storeId, kw);
+            // Also apply partCode/partName/source filters if present
+            List<Long> filterPartIds = findPartIdsByFilters(storeId, partCode, partName, source);
+            List<Long> partIds = intersectPartIds(keywordPartIds, filterPartIds);
+            return pageQueryWithPartIds(storeId, partIds, view, pageNo, pageSize);
+        }
+        return pageQuery(storeId, partCode, partName, source, view, pageNo, pageSize);
+    }
+
+    private List<Long> findPartIdsByKeyword(Long storeId, String keyword) {
+        QueryWrapper<PartEntity> pw = new QueryWrapper<>();
+        pw.eq("store_id", storeId).eq("deleted", 0);
+        pw.and(g -> g
+                .like("part_code", keyword)
+                .or().like("part_name", keyword)
+                .or().like("official_part_no", keyword)
+                .or().like("default_barcode", keyword)
+                .or().like("model", keyword)
+                .or().like("location_remark", keyword));
+        return partMapper.selectList(pw).stream().map(PartEntity::getId).toList();
+    }
+
+    private List<Long> intersectPartIds(List<Long> keywordIds, List<Long> filterIds) {
+        if (filterIds == null) return keywordIds;
+        if (keywordIds.isEmpty()) return List.of();
+        Set<Long> filterSet = new HashSet<>(filterIds);
+        return keywordIds.stream().filter(filterSet::contains).toList();
+    }
+
+    private PageResponse<InventoryStockQueryResponse> pageQueryWithPartIds(Long storeId,
+                                                                           List<Long> partIds,
+                                                                           String view,
+                                                                           Integer pageNo,
+                                                                           Integer pageSize) {
+        int pn = pageNo == null ? 1 : pageNo;
+        int ps = pageSize == null ? 20 : pageSize;
+        InventoryViewType viewType = InventoryViewType.from(view);
+
+        QueryWrapper<InventoryStockEntity> wrapper = new QueryWrapper<>();
+        wrapper.eq("store_id", storeId).eq("deleted", 0);
 
         if (partIds != null) {
             if (partIds.isEmpty()) {

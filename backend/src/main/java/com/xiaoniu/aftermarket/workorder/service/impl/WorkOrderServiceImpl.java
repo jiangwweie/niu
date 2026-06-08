@@ -264,6 +264,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
                     .or().like("customer_phone_snapshot", keyword)
                     .or().like("frame_no_snapshot", keyword)
                     .or().like("vehicle_model_snapshot", keyword)
+                    .or().like("battery_no_snapshot", keyword)
                     .or(sub -> {
                         if (officialWorkOrderIds.isEmpty()) {
                             sub.apply("1 = 0");

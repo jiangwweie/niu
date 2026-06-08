@@ -66,7 +66,7 @@
     <view class="popup-header">
       <text class="popup-title">选择配件</text>
     </view>
-    <t-search placeholder="搜索配件编码/名称" bind:change="onSearchPart" />
+    <t-search placeholder="搜索配件编码、名称、官方品号" bind:change="onSearchPart" />
     <scroll-view scroll-y class="part-list">
       <view class="part-item" wx:for="{{partList}}" wx:key="id" bind:tap="selectPart" data-item="{{item}}">
         <view class="part-item-header">

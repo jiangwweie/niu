@@ -50,10 +50,13 @@ public class CustomerServiceImpl implements CustomerService {
         wrapper.eq(CustomerEntity::getDeleted, 0);
 
         if (StringUtils.hasText(query.getKeyword())) {
+            String kw = query.getKeyword().trim();
             wrapper.and(w -> w
-                .like(CustomerEntity::getCustomerName, query.getKeyword())
+                .like(CustomerEntity::getCustomerName, kw)
                 .or()
-                .like(CustomerEntity::getPhone, query.getKeyword()));
+                .like(CustomerEntity::getPhone, kw)
+                .or()
+                .like(CustomerEntity::getRemark, kw));
         }
         if (StringUtils.hasText(query.getPhone())) {
             wrapper.eq(CustomerEntity::getPhone, query.getPhone());

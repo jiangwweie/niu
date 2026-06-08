@@ -2,7 +2,7 @@
   <!-- 顶部搜索 + 入库按钮 -->
   <view class="toolbar">
     <view class="search-wrap">
-      <t-search value="{{keyword}}" placeholder="搜索配件编码 / 名称" bind:change="onSearch" bind:clear="onClear" />
+      <t-search value="{{keyword}}" placeholder="搜索配件编码、名称、官方品号" bind:change="onSearch" bind:clear="onClear" />
     </view>
     <t-button
       wx:if="{{hasInboundPermission}}"

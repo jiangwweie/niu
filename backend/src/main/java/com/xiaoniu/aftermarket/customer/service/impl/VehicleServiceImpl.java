@@ -54,14 +54,26 @@ public class VehicleServiceImpl implements VehicleService {
             wrapper.eq(VehicleEntity::getCustomerId, query.getCustomerId());
         }
 
-        // keyword search: frameNo LIKE, model LIKE, batteryNo LIKE
+        // keyword search: frameNo, model, batteryNo LIKE + customer name sub-query
         if (StringUtils.hasText(query.getKeyword())) {
-            wrapper.and(w -> w
-                .like(VehicleEntity::getFrameNo, query.getKeyword())
-                .or()
-                .like(VehicleEntity::getModel, query.getKeyword())
-                .or()
-                .like(VehicleEntity::getBatteryNo, query.getKeyword()));
+            String kw = query.getKeyword().trim();
+            List<Long> nameCustomerIds = customerMapper.selectList(
+                    new LambdaQueryWrapper<CustomerEntity>()
+                            .eq(CustomerEntity::getStoreId, query.getStoreId())
+                            .like(CustomerEntity::getCustomerName, kw)
+                            .eq(CustomerEntity::getDeleted, 0)
+                            .select(CustomerEntity::getId))
+                    .stream().map(CustomerEntity::getId).toList();
+            wrapper.and(w -> {
+                w.like(VehicleEntity::getFrameNo, kw)
+                 .or()
+                 .like(VehicleEntity::getModel, kw)
+                 .or()
+                 .like(VehicleEntity::getBatteryNo, kw);
+                if (!nameCustomerIds.isEmpty()) {
+                    w.or().in(VehicleEntity::getCustomerId, nameCustomerIds);
+                }
+            });
         }
         if (StringUtils.hasText(query.getVin())) {
             wrapper.like(VehicleEntity::getFrameNo, query.getVin());

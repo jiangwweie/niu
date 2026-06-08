@@ -727,6 +727,16 @@ public class PartServiceImpl implements PartService {
         wrapper.eq("store_id", request.getStoreId())
                .eq("deleted", 0);
 
+        if (StringUtils.hasText(request.getKeyword())) {
+            String kw = request.getKeyword().trim();
+            wrapper.and(g -> g
+                    .like("part_code", kw)
+                    .or().like("part_name", kw)
+                    .or().like("official_part_no", kw)
+                    .or().like("default_barcode", kw)
+                    .or().like("model", kw)
+                    .or().like("location_remark", kw));
+        }
         if (StringUtils.hasText(request.getPartCode())) {
             wrapper.eq("part_code", request.getPartCode());
         }

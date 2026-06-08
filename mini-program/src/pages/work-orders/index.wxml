@@ -4,7 +4,7 @@
     <view class="search-wrap">
       <t-search
         value="{{keyword}}"
-        placeholder="搜索工单号 / 客户名 / 手机号 / 车架号"
+        placeholder="搜索工单号、客户名、手机号、车架号"
         bind:change="onSearch"
         bind:clear="onClear"
         bind:submit="onSubmitSearch"

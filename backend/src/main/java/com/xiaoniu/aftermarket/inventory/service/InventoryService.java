@@ -21,5 +21,10 @@ public interface InventoryService {
                                                         String view, Integer pageNo,
                                                         Integer pageSize);
 
+    PageResponse<InventoryStockQueryResponse> pageQuery(Long storeId, String keyword,
+                                                        String partCode, String partName,
+                                                        String source, String view,
+                                                        Integer pageNo, Integer pageSize);
+
     PageResponse<InventoryFlowQueryResponse> pageFlowQuery(InventoryFlowQueryRequest request);
 }

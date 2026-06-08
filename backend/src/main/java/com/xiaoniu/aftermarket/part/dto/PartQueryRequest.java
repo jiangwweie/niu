@@ -12,6 +12,7 @@ public class PartQueryRequest {
     private String model;
     private String categoryCode;
     private String source;
+    private String keyword;
     private String status;
     private Integer pageNo;
     private Integer pageSize;

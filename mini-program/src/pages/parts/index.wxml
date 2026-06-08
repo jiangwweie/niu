@@ -1,5 +1,5 @@
 <view class="container">
-  <t-search value="{{keyword}}" placeholder="搜索配件编码 / 名称" bind:change="onSearch" bind:clear="onClear" />
+  <t-search value="{{keyword}}" placeholder="搜索配件编码、名称、官方品号" bind:change="onSearch" bind:clear="onClear" />
   
   <view class="list">
     <block wx:if="{{parts.length > 0}}">

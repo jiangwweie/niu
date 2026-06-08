@@ -39,6 +39,7 @@ public class StaffInventoryController {
     @PreAuthorize("hasAuthority('INVENTORY_VIEW')")
     @GetMapping("/stocks")
     public ApiResponse<PageResponse<StaffInventoryStockItem>> listStocks(
+            @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String partCode,
             @RequestParam(required = false) String partName,
             @RequestParam(required = false) Integer pageNo,
@@ -46,7 +47,7 @@ public class StaffInventoryController {
 
         CurrentUser user = requireCurrentUser();
         PageResponse<InventoryStockQueryResponse> result =
-                inventoryService.pageQuery(user.storeId(), partCode, partName, null, "ALL", pageNo, pageSize);
+                inventoryService.pageQuery(user.storeId(), keyword, partCode, partName, null, "ALL", pageNo, pageSize);
         return ApiResponse.success(result.map(StaffInventoryStockItem::from));
     }
 

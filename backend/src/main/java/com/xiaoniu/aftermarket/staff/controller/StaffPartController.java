@@ -31,6 +31,7 @@ public class StaffPartController {
 
     @GetMapping
     public ApiResponse<PageResponse<StaffPartListItem>> listParts(
+            @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String partCode,
             @RequestParam(required = false) String partName,
             @RequestParam(required = false) String officialPartNo,
@@ -43,6 +44,7 @@ public class StaffPartController {
         CurrentUser user = requireCurrentUser();
         PartQueryRequest request = new PartQueryRequest();
         request.setStoreId(user.storeId());
+        request.setKeyword(keyword);
         request.setPartCode(partCode);
         request.setPartName(partName);
         request.setOfficialPartNo(officialPartNo);

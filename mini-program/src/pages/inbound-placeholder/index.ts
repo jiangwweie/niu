@@ -63,9 +63,12 @@ Page({
 
   onSearchPart(e: any) {
     const keyword = e.detail.value.toLowerCase();
-    const filtered = this.data.allParts.filter(p => 
-      p.partName.toLowerCase().includes(keyword) || 
-      p.partCode.toLowerCase().includes(keyword)
+    const filtered = this.data.allParts.filter(p =>
+      p.partName.toLowerCase().includes(keyword) ||
+      p.partCode.toLowerCase().includes(keyword) ||
+      (p.officialPartNo || '').toLowerCase().includes(keyword) ||
+      (p.defaultBarcode || '').toLowerCase().includes(keyword) ||
+      (p.model || '').toLowerCase().includes(keyword)
     );
     this.setData({ partList: filtered });
   },
