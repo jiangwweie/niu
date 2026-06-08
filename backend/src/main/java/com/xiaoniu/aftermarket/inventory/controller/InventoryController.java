@@ -34,6 +34,7 @@ public class InventoryController {
     @PreAuthorize("hasAuthority('INVENTORY_VIEW')")
     @GetMapping("/stocks")
     public ApiResponse<PageResponse<InventoryStockQueryResponse>> listStocks(
+            @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String partCode,
             @RequestParam(required = false) String partName,
             @RequestParam(required = false) String source,
@@ -42,6 +43,10 @@ public class InventoryController {
             @RequestParam(required = false) Integer pageSize) {
 
         CurrentUser user = requireCurrentUser();
+        if (org.springframework.util.StringUtils.hasText(keyword)) {
+            return ApiResponse.success(
+                    inventoryService.pageQuery(user.storeId(), keyword.trim(), partCode, partName, source, view, pageNo, pageSize));
+        }
         PageResponse<InventoryStockQueryResponse> result =
                 inventoryService.pageQuery(user.storeId(), partCode, partName, source, view, pageNo, pageSize);
         return ApiResponse.success(result);

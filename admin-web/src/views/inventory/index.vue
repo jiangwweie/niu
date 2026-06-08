@@ -4,6 +4,9 @@
     <!-- 查询过滤区 -->
     <el-card shadow="never" class="search-card">
       <el-form :model="queryParams" label-width="80px" class="search-form-flex" size="default">
+        <el-form-item label="搜索">
+          <el-input v-model="queryParams.keyword" placeholder="配件编码、名称、官方品号、条码" clearable style="width: 280px;" />
+        </el-form-item>
         <el-form-item label="视图">
           <el-select v-model="queryParams.view" style="width: 220px;">
             <el-option label="默认" value="DEFAULT" />
@@ -299,6 +302,7 @@ const route = useRoute();
 const queryParams = reactive<InventoryQuery>({
   pageNo: 1,
   pageSize: 10,
+  keyword: '',
   view: 'DEFAULT',
   partCode: '',
   partName: '',
@@ -344,6 +348,7 @@ const handleSearch = () => {
 };
 
 const handleReset = () => {
+  queryParams.keyword = '';
   queryParams.partCode = '';
   queryParams.partName = '';
   queryParams.source = '';

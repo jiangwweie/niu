@@ -15,7 +15,7 @@
           <el-input v-model="queryParams.reimbursementNo" placeholder="请输入报销编号" clearable style="width: 220px;" />
         </el-form-item>
         <el-form-item label="报销人">
-          <el-input v-model="queryParams.applicantIdStr" placeholder="请输入报销人ID" clearable style="width: 220px;" />
+          <el-input v-model="queryParams.applicantName" placeholder="请输入姓名（支持模糊）" clearable style="width: 220px;" />
         </el-form-item>
         <el-form-item label="报销状态">
           <el-select v-model="queryParams.status" placeholder="请选择" clearable style="width: 220px;">
@@ -213,11 +213,11 @@ import type { ReimbursementQuery, ReimbursementRecord } from '@/types/reimbursem
 
 const dateRange = ref<[string, string] | null>(null);
 
-const queryParams = reactive<ReimbursementQuery & { applicantIdStr?: string }>({
+const queryParams = reactive<ReimbursementQuery>({
   pageNo: 1,
   pageSize: 10,
   reimbursementNo: '',
-  applicantIdStr: '',
+  applicantName: '',
   status: '',
 });
 
@@ -231,15 +231,13 @@ const formatPerson = (name?: string, id?: string | number | null) => name || (id
 const fetchData = async () => {
   loading.value = true;
   try {
-    const params: ReimbursementQuery = { 
+    const params: ReimbursementQuery = {
       pageNo: queryParams.pageNo,
       pageSize: queryParams.pageSize,
       reimbursementNo: queryParams.reimbursementNo,
+      applicantName: queryParams.applicantName,
       status: queryParams.status
     };
-    if (queryParams.applicantIdStr) {
-      params.applicantId = Number(queryParams.applicantIdStr);
-    }
     if (dateRange.value && dateRange.value.length === 2) {
       params.dateFrom = dateRange.value[0];
       params.dateTo = dateRange.value[1];
@@ -261,7 +259,7 @@ const handleSearch = () => {
 
 const handleReset = () => {
   queryParams.reimbursementNo = '';
-  queryParams.applicantIdStr = '';
+  queryParams.applicantName = '';
   queryParams.status = '';
   dateRange.value = null;
   handleSearch();
@@ -270,15 +268,13 @@ const handleReset = () => {
 const handleExport = async () => {
   exportLoading.value = true;
   try {
-    const params: ReimbursementQuery = { 
+    const params: ReimbursementQuery = {
       pageNo: queryParams.pageNo,
       pageSize: queryParams.pageSize,
       reimbursementNo: queryParams.reimbursementNo,
+      applicantName: queryParams.applicantName,
       status: queryParams.status
     };
-    if (queryParams.applicantIdStr) {
-      params.applicantId = Number(queryParams.applicantIdStr);
-    }
     if (dateRange.value && dateRange.value.length === 2) {
       params.dateFrom = dateRange.value[0];
       params.dateTo = dateRange.value[1];

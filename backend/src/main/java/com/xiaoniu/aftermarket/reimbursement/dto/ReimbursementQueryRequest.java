@@ -9,6 +9,7 @@ public class ReimbursementQueryRequest {
     private Long storeId;
     private String reimbursementNo;
     private Long applicantId;
+    private String applicantName;
     private String status;
     private LocalDateTime dateFrom;
     private LocalDateTime dateTo;

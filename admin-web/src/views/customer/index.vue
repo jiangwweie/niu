@@ -7,7 +7,7 @@
           <el-input v-model="queryParams.customerName" placeholder="请输入" clearable />
         </el-form-item>
         <el-form-item label="手机号">
-          <el-input v-model="queryParams.phone" placeholder="请输入" clearable />
+          <el-input v-model="queryParams.phone" placeholder="请输入（支持后4位）" clearable />
         </el-form-item>
         <el-form-item class="search-actions">
           <el-button type="primary" @click="handleSearch" :loading="loading">查询</el-button>

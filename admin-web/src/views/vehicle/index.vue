@@ -4,13 +4,13 @@
     <el-card shadow="never" class="search-card">
       <el-form :inline="true" :model="queryParams" class="search-form" size="default">
         <el-form-item label="车架号">
-          <el-input v-model="queryParams.vin" placeholder="请输入" clearable />
+          <el-input v-model="queryParams.vin" placeholder="请输入（支持后6位）" clearable />
         </el-form-item>
         <el-form-item label="车型">
           <el-input v-model="queryParams.model" placeholder="请输入" clearable />
         </el-form-item>
         <el-form-item label="客户手机号">
-          <el-input v-model="queryParams.customerPhone" placeholder="请输入" clearable />
+          <el-input v-model="queryParams.customerPhone" placeholder="请输入（支持后4位）" clearable />
         </el-form-item>
         <el-form-item class="search-actions">
           <el-button type="primary" @click="handleSearch" :loading="loading">查询</el-button>

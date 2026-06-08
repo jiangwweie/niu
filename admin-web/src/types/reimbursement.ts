@@ -24,6 +24,7 @@ export interface ReimbursementRecord {
 export interface ReimbursementQuery {
   reimbursementNo?: string;
   applicantId?: number;
+  applicantName?: string;
   status?: string;
   dateFrom?: string;
   dateTo?: string;

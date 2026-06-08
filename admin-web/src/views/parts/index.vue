@@ -5,13 +5,13 @@
     <el-card shadow="never" class="search-card">
       <el-form :model="queryParams" label-width="80px" class="search-form-flex" size="default">
         <el-form-item label="配件编码">
-          <el-input v-model="queryParams.partCode" placeholder="请输入配件编码" clearable style="width: 220px;" />
+          <el-input v-model="queryParams.partCode" placeholder="支持模糊匹配" clearable style="width: 220px;" />
         </el-form-item>
         <el-form-item label="配件名称">
           <el-input v-model="queryParams.partName" placeholder="请输入配件名称" clearable style="width: 220px;" />
         </el-form-item>
         <el-form-item label="官方品号">
-          <el-input v-model="queryParams.officialCode" placeholder="请输入官方品号" clearable style="width: 220px;" />
+          <el-input v-model="queryParams.officialCode" placeholder="支持模糊匹配" clearable style="width: 220px;" />
         </el-form-item>
         <el-form-item label="型号">
           <el-input v-model="queryParams.model" placeholder="请输入型号" clearable style="width: 220px;" />

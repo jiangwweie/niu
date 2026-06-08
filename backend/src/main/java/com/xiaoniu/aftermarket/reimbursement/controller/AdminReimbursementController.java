@@ -39,6 +39,7 @@ public class AdminReimbursementController {
             @RequestParam(required = false) String reimbursementNo,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Long applicantId,
+            @RequestParam(required = false) String applicantName,
             @RequestParam(required = false) String dateFrom,
             @RequestParam(required = false) String dateTo,
             @RequestParam(required = false) Integer pageNo,
@@ -58,6 +59,7 @@ public class AdminReimbursementController {
         request.setReimbursementNo(reimbursementNo);
         request.setStatus(status);
         request.setApplicantId(applicantId);
+        request.setApplicantName(applicantName);
         request.setDateFrom(parsedFrom);
         request.setDateTo(parsedTo);
         request.setPageNo(pageNo);

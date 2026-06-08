@@ -435,7 +435,7 @@ public class InventoryServiceImpl implements InventoryService {
         QueryWrapper<PartEntity> pw = new QueryWrapper<>();
         pw.eq("store_id", storeId).eq("deleted", 0);
         if (StringUtils.hasText(partCode)) {
-            pw.eq("part_code", partCode);
+            pw.like("part_code", partCode.trim());
         }
         if (StringUtils.hasText(partName)) {
             pw.like("part_name", partName);

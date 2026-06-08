@@ -79,6 +79,20 @@ public class ReimbursementServiceImpl implements ReimbursementService {
         if (request.getApplicantId() != null) {
             wrapper.eq("applicant_id", request.getApplicantId());
         }
+        if (StringUtils.hasText(request.getApplicantName())) {
+            String name = request.getApplicantName().trim();
+            List<Long> userIds = userMapper.selectList(
+                    new QueryWrapper<SysUserEntity>()
+                            .eq("store_id", request.getStoreId())
+                            .eq("deleted", 0)
+                            .like("real_name", name)
+                            .select("id"))
+                    .stream().map(SysUserEntity::getId).toList();
+            if (userIds.isEmpty()) {
+                return new PageResponse<>(List.of(), pageNo, pageSize, 0);
+            }
+            wrapper.in("applicant_id", userIds);
+        }
         if (request.getDateFrom() != null) {
             wrapper.ge("submitted_at", request.getDateFrom());
         }

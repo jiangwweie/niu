@@ -59,7 +59,7 @@ public class CustomerServiceImpl implements CustomerService {
                 .like(CustomerEntity::getRemark, kw));
         }
         if (StringUtils.hasText(query.getPhone())) {
-            wrapper.eq(CustomerEntity::getPhone, query.getPhone());
+            wrapper.like(CustomerEntity::getPhone, query.getPhone().trim());
         }
         if (StringUtils.hasText(query.getCustomerName())) {
             wrapper.like(CustomerEntity::getCustomerName, query.getCustomerName());

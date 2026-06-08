@@ -19,6 +19,7 @@ export interface InventoryRecord {
 }
 
 export interface InventoryQuery {
+  keyword?: string;
   partCode?: string;
   partName?: string;
   source?: string;

@@ -65,6 +65,7 @@ export async function getInventoryList(
     pageNo: params.pageNo,
     pageSize: params.pageSize,
   };
+  if (params.keyword) backendParams.keyword = params.keyword;
   if (params.partCode) backendParams.partCode = params.partCode;
   if (params.partName) backendParams.partName = params.partName;
   if (params.source) backendParams.source = params.source;

@@ -12,16 +12,16 @@
     <el-card shadow="never" class="search-card">
       <el-form :model="queryParams" label-width="80px" class="search-form-flex" size="default">
         <el-form-item label="工单号">
-          <el-input v-model="queryParams.orderNo" placeholder="请输入工单号" clearable style="width: 220px;" />
+          <el-input v-model="queryParams.orderNo" placeholder="请输入工单号（支持模糊）" clearable style="width: 220px;" />
         </el-form-item>
         <el-form-item label="客户姓名">
           <el-input v-model="queryParams.customerName" placeholder="请输入客户姓名" clearable style="width: 220px;" />
         </el-form-item>
         <el-form-item label="手机号">
-          <el-input v-model="queryParams.phone" placeholder="请输入手机号" clearable style="width: 220px;" />
+          <el-input v-model="queryParams.phone" placeholder="请输入手机号（支持后4位）" clearable style="width: 220px;" />
         </el-form-item>
         <el-form-item label="车架号">
-          <el-input v-model="queryParams.vin" placeholder="请输入车架号" clearable style="width: 220px;" />
+          <el-input v-model="queryParams.vin" placeholder="请输入车架号（支持后6位）" clearable style="width: 220px;" />
         </el-form-item>
         <el-form-item label="进度状态">
           <el-select v-model="queryParams.status" placeholder="请选择" clearable style="width: 220px;">

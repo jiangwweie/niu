@@ -738,13 +738,13 @@ public class PartServiceImpl implements PartService {
                     .or().like("location_remark", kw));
         }
         if (StringUtils.hasText(request.getPartCode())) {
-            wrapper.eq("part_code", request.getPartCode());
+            wrapper.like("part_code", request.getPartCode().trim());
         }
         if (StringUtils.hasText(request.getPartName())) {
             wrapper.like("part_name", request.getPartName());
         }
         if (StringUtils.hasText(request.getOfficialPartNo())) {
-            wrapper.eq("official_part_no", request.getOfficialPartNo());
+            wrapper.eq("official_part_no", request.getOfficialPartNo().trim());
         }
         if (StringUtils.hasText(request.getModel())) {
             wrapper.like("model", request.getModel());

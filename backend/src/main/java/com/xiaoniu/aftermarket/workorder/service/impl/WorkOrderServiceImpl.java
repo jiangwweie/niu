@@ -278,7 +278,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
             wrapper.eq("status", request.getStatus());
         }
         if (StringUtils.hasText(request.getWorkOrderNo())) {
-            wrapper.eq("work_order_no", request.getWorkOrderNo());
+            wrapper.like("work_order_no", request.getWorkOrderNo().trim());
         }
         if (StringUtils.hasText(request.getCustomerName())) {
             wrapper.like("customer_name_snapshot", request.getCustomerName());
