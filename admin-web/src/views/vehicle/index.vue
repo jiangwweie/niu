@@ -12,6 +12,9 @@
         <el-form-item label="客户手机号">
           <el-input v-model="queryParams.customerPhone" placeholder="请输入（支持后4位）" clearable />
         </el-form-item>
+        <el-form-item label="客户姓名">
+          <el-input v-model="queryParams.customerName" placeholder="请输入客户姓名" clearable />
+        </el-form-item>
         <el-form-item class="search-actions">
           <el-button type="primary" @click="handleSearch" :loading="loading">查询</el-button>
           <el-button @click="handleReset">重置</el-button>
@@ -57,8 +60,8 @@
           :total="total"
           :page-sizes="[10, 20, 50]"
           layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSearch"
-          @current-change="handleSearch"
+          @size-change="handleSizeChange"
+          @current-change="handlePageChange"
         />
       </div>
     </el-card>
@@ -144,7 +147,7 @@ const route = useRoute();
 const loading = ref(false);
 const total = ref(0);
 const tableData = ref<VehicleListItem[]>([]);
-const queryParams = reactive({ vin: '', model: '', customerPhone: '', pageNo: 1, pageSize: 20 });
+const queryParams = reactive({ vin: '', model: '', customerPhone: '', customerName: '', pageNo: 1, pageSize: 20 });
 
 // Dialog
 const dialogVisible = ref(false);
@@ -184,10 +187,20 @@ function handleSearch() {
   fetchData();
 }
 
+function handlePageChange() {
+  fetchData();
+}
+
+function handleSizeChange() {
+  queryParams.pageNo = 1;
+  fetchData();
+}
+
 function handleReset() {
   queryParams.vin = '';
   queryParams.model = '';
   queryParams.customerPhone = '';
+  queryParams.customerName = '';
   queryParams.pageNo = 1;
   fetchData();
 }

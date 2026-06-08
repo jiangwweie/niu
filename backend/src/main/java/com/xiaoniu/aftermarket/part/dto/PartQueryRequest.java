@@ -13,6 +13,7 @@ public class PartQueryRequest {
     private String categoryCode;
     private String source;
     private String keyword;
+    private String barcode;
     private String status;
     private Integer pageNo;
     private Integer pageSize;

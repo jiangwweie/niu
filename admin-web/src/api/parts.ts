@@ -76,6 +76,7 @@ export interface PartListParams {
   partCode?: string;
   partName?: string;
   officialPartNo?: string;
+  barcode?: string;
   model?: string;
   categoryCode?: string;
   source?: string;
@@ -90,6 +91,7 @@ export interface PartViewQuery {
   partName?: string;
   source?: string;
   officialCode?: string;
+  barcode?: string;
   model?: string;
   category?: string;
   status?: boolean | string;
@@ -149,6 +151,7 @@ export async function getPartsList(params: PartViewQuery): Promise<{
   if (params.partCode) backendParams.partCode = params.partCode;
   if (params.partName) backendParams.partName = params.partName;
   if (params.officialCode) backendParams.officialPartNo = params.officialCode;
+  if (params.barcode) backendParams.barcode = params.barcode;
   if (params.model) backendParams.model = params.model;
   if (params.category) backendParams.categoryCode = params.category;
   if (params.source) backendParams.source = params.source.toUpperCase();

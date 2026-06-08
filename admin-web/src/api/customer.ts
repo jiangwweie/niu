@@ -81,6 +81,7 @@ export interface VehicleQuery {
   vin?: string;
   model?: string;
   customerPhone?: string;
+  customerName?: string;
   pageNo: number;
   pageSize: number;
 }

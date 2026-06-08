@@ -70,7 +70,7 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     @Override
     public PageResponse<UserSummaryResponse> listUsers(Long storeId, String username, String realName,
-                                                       Boolean enabled, String roleCode, int pageNo, int pageSize) {
+                                                       String phone, Boolean enabled, String roleCode, int pageNo, int pageSize) {
         Set<Long> roleUserIds = null;
         if (hasText(roleCode)) {
             roleUserIds = userIdsByRoleCode(storeId, roleCode);
@@ -84,6 +84,9 @@ public class AdminUserServiceImpl implements AdminUserService {
         }
         if (hasText(realName)) {
             wrapper.like(SysUserEntity::getRealName, realName.trim());
+        }
+        if (hasText(phone)) {
+            wrapper.like(SysUserEntity::getPhone, phone.trim());
         }
         if (enabled != null) {
             wrapper.eq(SysUserEntity::getStatus, enabled ? CommonStatus.ENABLED.name() : CommonStatus.DISABLED.name());

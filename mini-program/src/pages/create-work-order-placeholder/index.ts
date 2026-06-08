@@ -40,6 +40,7 @@ import {
 const NO_CHARGE_REASONS = ['官方售后', '免费检测', '老板免单', '质保处理', '其他'];
 let customerSearchTimer: number | undefined;
 let vehicleSearchTimer: number | undefined;
+let partSearchTimer: number | undefined;
 
 function partFromLookup(result: PartLookupResult): Part {
   return {
@@ -526,14 +527,20 @@ Page({
 
   onSearchPart(e: any) {
     const keyword = e.detail.value.toLowerCase();
-    const filtered = this.data.allParts.filter(p =>
-      p.partName.toLowerCase().includes(keyword) ||
-      p.partCode.toLowerCase().includes(keyword) ||
-      (p.officialPartNo || '').toLowerCase().includes(keyword) ||
-      (p.defaultBarcode || '').toLowerCase().includes(keyword) ||
-      (p.model || '').toLowerCase().includes(keyword)
-    );
-    this.setData({ partList: filtered });
+    if (partSearchTimer) {
+      clearTimeout(partSearchTimer);
+    }
+    partSearchTimer = setTimeout(() => {
+      const filtered = this.data.allParts.filter(p =>
+        p.partName.toLowerCase().includes(keyword) ||
+        p.partCode.toLowerCase().includes(keyword) ||
+        (p.officialPartNo || '').toLowerCase().includes(keyword) ||
+        (p.defaultBarcode || '').toLowerCase().includes(keyword) ||
+        (p.model || '').toLowerCase().includes(keyword) ||
+        (p.locationRemark || '').toLowerCase().includes(keyword)
+      );
+      this.setData({ partList: filtered });
+    }, 300) as unknown as number;
   },
 
   selectPart(e: any) {

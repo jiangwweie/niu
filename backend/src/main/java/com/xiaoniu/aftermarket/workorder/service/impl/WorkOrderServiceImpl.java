@@ -281,13 +281,16 @@ public class WorkOrderServiceImpl implements WorkOrderService {
             wrapper.like("work_order_no", request.getWorkOrderNo().trim());
         }
         if (StringUtils.hasText(request.getCustomerName())) {
-            wrapper.like("customer_name_snapshot", request.getCustomerName());
+            wrapper.like("customer_name_snapshot", request.getCustomerName().trim());
         }
         if (StringUtils.hasText(request.getCustomerPhone())) {
             wrapper.like("customer_phone_snapshot", request.getCustomerPhone().trim());
         }
         if (StringUtils.hasText(request.getVehicleFrameNo())) {
             wrapper.like("frame_no_snapshot", request.getVehicleFrameNo().trim());
+        }
+        if (StringUtils.hasText(request.getScooterModel())) {
+            wrapper.like("vehicle_model_snapshot", request.getScooterModel().trim());
         }
         if (request.getPartId() != null) {
             List<Long> workOrderIds = chargeItemMapper.selectWorkOrderIdsByPartId(request.getPartId());

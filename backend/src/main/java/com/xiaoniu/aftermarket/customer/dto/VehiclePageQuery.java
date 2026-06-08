@@ -10,6 +10,7 @@ public class VehiclePageQuery {
     private String model;
     private String batteryNo;
     private String customerPhone;
+    private String customerName;
     private Long customerId;
     private Integer pageNo;
     private Integer pageSize;

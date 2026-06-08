@@ -19,6 +19,7 @@ export interface SystemUser {
 export interface UserQuery {
   username?: string;
   realName?: string;
+  phone?: string;
   roleCode?: string;
   enabled?: boolean | string;
   pageNo: number;

@@ -5,6 +5,8 @@ import { InboundRequest, InboundResponse } from '../../types/inventory';
 import { authStore } from '../../stores/auth';
 import Toast from 'tdesign-miniprogram/toast/index';
 
+let partSearchTimer: number | undefined;
+
 Page({
   data: {
     selectedPart: null as Part | null,
@@ -63,14 +65,20 @@ Page({
 
   onSearchPart(e: any) {
     const keyword = e.detail.value.toLowerCase();
-    const filtered = this.data.allParts.filter(p =>
-      p.partName.toLowerCase().includes(keyword) ||
-      p.partCode.toLowerCase().includes(keyword) ||
-      (p.officialPartNo || '').toLowerCase().includes(keyword) ||
-      (p.defaultBarcode || '').toLowerCase().includes(keyword) ||
-      (p.model || '').toLowerCase().includes(keyword)
-    );
-    this.setData({ partList: filtered });
+    if (partSearchTimer) {
+      clearTimeout(partSearchTimer);
+    }
+    partSearchTimer = setTimeout(() => {
+      const filtered = this.data.allParts.filter(p =>
+        p.partName.toLowerCase().includes(keyword) ||
+        p.partCode.toLowerCase().includes(keyword) ||
+        (p.officialPartNo || '').toLowerCase().includes(keyword) ||
+        (p.defaultBarcode || '').toLowerCase().includes(keyword) ||
+        (p.model || '').toLowerCase().includes(keyword) ||
+        (p.locationRemark || '').toLowerCase().includes(keyword)
+      );
+      this.setData({ partList: filtered });
+    }, 300) as unknown as number;
   },
 
   selectPart(e: any) {

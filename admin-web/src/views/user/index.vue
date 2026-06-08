@@ -13,6 +13,9 @@
         <el-form-item label="姓名">
           <el-input v-model="query.realName" placeholder="请输入姓名" clearable style="width: 220px;" />
         </el-form-item>
+        <el-form-item label="手机号">
+          <el-input v-model="query.phone" placeholder="请输入手机号" clearable style="width: 220px;" />
+        </el-form-item>
         <el-form-item label="角色">
           <el-select v-model="query.roleCode" placeholder="请选择" clearable style="width: 220px;">
             <el-option v-for="role in roles" :key="role.roleCode" :label="role.roleName" :value="role.roleCode" />
@@ -203,6 +206,7 @@ const loadReadonly = async () => {
 const resetQuery = () => {
   query.username = '';
   query.realName = '';
+  query.phone = '';
   query.roleCode = '';
   query.enabled = '';
   query.pageNo = 1;

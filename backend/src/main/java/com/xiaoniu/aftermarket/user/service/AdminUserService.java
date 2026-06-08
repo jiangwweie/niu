@@ -14,7 +14,7 @@ import java.util.List;
 public interface AdminUserService {
 
     PageResponse<UserSummaryResponse> listUsers(Long storeId, String username, String realName,
-                                                Boolean enabled, String roleCode, int pageNo, int pageSize);
+                                                String phone, Boolean enabled, String roleCode, int pageNo, int pageSize);
 
     UserDetailResponse getUser(Long storeId, Long id);
 

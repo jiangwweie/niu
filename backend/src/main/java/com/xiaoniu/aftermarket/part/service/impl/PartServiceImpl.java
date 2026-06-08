@@ -746,6 +746,9 @@ public class PartServiceImpl implements PartService {
         if (StringUtils.hasText(request.getOfficialPartNo())) {
             wrapper.eq("official_part_no", request.getOfficialPartNo().trim());
         }
+        if (StringUtils.hasText(request.getBarcode())) {
+            wrapper.like("default_barcode", request.getBarcode().trim());
+        }
         if (StringUtils.hasText(request.getModel())) {
             wrapper.like("model", request.getModel());
         }

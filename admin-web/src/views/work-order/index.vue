@@ -23,6 +23,9 @@
         <el-form-item label="车架号">
           <el-input v-model="queryParams.vin" placeholder="请输入车架号（支持后6位）" clearable style="width: 220px;" />
         </el-form-item>
+        <el-form-item label="车型">
+          <el-input v-model="queryParams.scooterModel" placeholder="请输入车型" clearable style="width: 220px;" />
+        </el-form-item>
         <el-form-item label="进度状态">
           <el-select v-model="queryParams.status" placeholder="请选择" clearable style="width: 220px;">
             <el-option label="新建中" value="DRAFT" />
@@ -684,6 +687,7 @@ const queryParams = reactive<WorkOrderQuery>({
   customerName: '',
   phone: '',
   vin: '',
+  scooterModel: '',
   partId: undefined,
   status: '',
   progressStatus: '',
@@ -750,6 +754,7 @@ const handleReset = () => {
   queryParams.customerName = '';
   queryParams.phone = '';
   queryParams.vin = '';
+  queryParams.scooterModel = '';
   queryParams.partId = undefined;
   queryParams.status = '';
   queryParams.progressStatus = '';

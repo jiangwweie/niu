@@ -13,6 +13,9 @@
         <el-form-item label="官方品号">
           <el-input v-model="queryParams.officialCode" placeholder="支持模糊匹配" clearable style="width: 220px;" />
         </el-form-item>
+        <el-form-item label="条码">
+          <el-input v-model="queryParams.barcode" placeholder="请输入条码" clearable style="width: 220px;" />
+        </el-form-item>
         <el-form-item label="型号">
           <el-input v-model="queryParams.model" placeholder="请输入型号" clearable style="width: 220px;" />
         </el-form-item>
@@ -298,6 +301,7 @@ const queryParams = reactive({
   partCode: '',
   partName: '',
   officialCode: '',
+  barcode: '',
   model: '',
   category: '',
   source: '' as string,
@@ -334,6 +338,7 @@ const handleReset = () => {
   queryParams.partCode = '';
   queryParams.partName = '';
   queryParams.officialCode = '';
+  queryParams.barcode = '';
   queryParams.model = '';
   queryParams.category = '';
   queryParams.source = '';

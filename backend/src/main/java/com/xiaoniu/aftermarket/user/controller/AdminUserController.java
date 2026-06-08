@@ -46,12 +46,13 @@ public class AdminUserController {
     @GetMapping("/users")
     public ApiResponse<PageResponse<UserSummaryResponse>> listUsers(@RequestParam(required = false) String username,
                                                                     @RequestParam(required = false) String realName,
+                                                                    @RequestParam(required = false) String phone,
                                                                     @RequestParam(required = false) Boolean enabled,
                                                                     @RequestParam(required = false) String roleCode,
                                                                     @RequestParam(defaultValue = "1") int pageNo,
                                                                     @RequestParam(defaultValue = "10") int pageSize) {
         AuthenticatedUser user = requireCurrentUser();
-        return ApiResponse.success(adminUserService.listUsers(user.storeId(), username, realName, enabled, roleCode, pageNo, pageSize));
+        return ApiResponse.success(adminUserService.listUsers(user.storeId(), username, realName, phone, enabled, roleCode, pageNo, pageSize));
     }
 
     @PreAuthorize("hasAnyAuthority('USER_MANAGE', 'ROLE_MANAGE')")

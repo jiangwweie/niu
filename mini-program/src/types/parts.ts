@@ -9,6 +9,7 @@ export interface Part {
   categoryCode: string;
   costPrice?: number;
   salePrice?: number;
+  locationRemark?: string;
 }
 
 export interface PartLookupResult {

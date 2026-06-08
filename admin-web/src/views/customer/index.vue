@@ -54,8 +54,8 @@
           :total="total"
           :page-sizes="[10, 20, 50]"
           layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSearch"
-          @current-change="handleSearch"
+          @size-change="handleSizeChange"
+          @current-change="handlePageChange"
         />
       </div>
     </el-card>
@@ -184,6 +184,15 @@ async function fetchData() {
 }
 
 function handleSearch() {
+  queryParams.pageNo = 1;
+  fetchData();
+}
+
+function handlePageChange() {
+  fetchData();
+}
+
+function handleSizeChange() {
   queryParams.pageNo = 1;
   fetchData();
 }

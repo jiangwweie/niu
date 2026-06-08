@@ -59,6 +59,7 @@ export interface WorkOrderQuery {
   customerName?: string;
   phone?: string;
   vin?: string;
+  scooterModel?: string;
   partId?: number;
   status?: string;
   progressStatus?: string;

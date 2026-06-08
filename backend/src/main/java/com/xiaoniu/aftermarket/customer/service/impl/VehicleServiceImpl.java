@@ -100,6 +100,21 @@ public class VehicleServiceImpl implements VehicleService {
             wrapper.in(VehicleEntity::getCustomerId, customerIds);
         }
 
+        // customer name search: find matching customer IDs first
+        if (StringUtils.hasText(query.getCustomerName())) {
+            List<Long> nameCustomerIds = customerMapper.selectList(
+                    new LambdaQueryWrapper<CustomerEntity>()
+                            .eq(CustomerEntity::getStoreId, query.getStoreId())
+                            .like(CustomerEntity::getCustomerName, query.getCustomerName().trim())
+                            .eq(CustomerEntity::getDeleted, 0)
+                            .select(CustomerEntity::getId))
+                    .stream().map(CustomerEntity::getId).toList();
+            if (nameCustomerIds.isEmpty()) {
+                return new PageResponse<>(List.of(), pageNo, pageSize, 0);
+            }
+            wrapper.in(VehicleEntity::getCustomerId, nameCustomerIds);
+        }
+
         List<Long> activeCustomerIds = customerMapper.selectList(
                         new LambdaQueryWrapper<CustomerEntity>()
                                 .eq(CustomerEntity::getStoreId, query.getStoreId())
