@@ -13,6 +13,7 @@ public interface ExportService {
     ExportFile exportFinanceRange(Long storeId, LocalDate startDate, LocalDate endDate);
 
     ExportFile exportReimbursements(Long storeId, String status, Long applicantId,
+                                    String reimbursementNo, String applicantName,
                                     java.time.LocalDateTime dateFrom,
                                     java.time.LocalDateTime dateTo);
 }

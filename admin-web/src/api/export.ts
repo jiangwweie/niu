@@ -1,5 +1,6 @@
 import request from '@/utils/request';
 import { parseFilenameFromContentDisposition, downloadBlob } from '@/utils/download';
+import { setSearchParam } from '@/utils/searchParams';
 import type { FinanceQuery } from '@/types/finance';
 import type { ReimbursementQuery } from '@/types/reimbursement';
 
@@ -40,6 +41,8 @@ export async function exportFinance(params: FinanceQuery) {
 
 export async function exportReimbursements(params: ReimbursementQuery) {
   const query: Record<string, any> = {};
+  setSearchParam(query, 'reimbursementNo', params.reimbursementNo);
+  setSearchParam(query, 'applicantName', params.applicantName);
   if (params.status) query.status = params.status;
   if (params.applicantId) query.applicantId = params.applicantId;
   if (params.dateFrom) query.dateFrom = params.dateFrom;

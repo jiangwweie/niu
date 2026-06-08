@@ -1,4 +1,5 @@
 import request from '@/utils/request';
+import { setSearchParam } from '@/utils/searchParams';
 import type { PaginatedResult } from '@/types';
 import type {
   InventoryQuery,
@@ -65,9 +66,9 @@ export async function getInventoryList(
     pageNo: params.pageNo,
     pageSize: params.pageSize,
   };
-  if (params.keyword) backendParams.keyword = params.keyword;
-  if (params.partCode) backendParams.partCode = params.partCode;
-  if (params.partName) backendParams.partName = params.partName;
+  setSearchParam(backendParams, 'keyword', params.keyword);
+  setSearchParam(backendParams, 'partCode', params.partCode);
+  setSearchParam(backendParams, 'partName', params.partName);
   if (params.source) backendParams.source = params.source;
   if (params.view) backendParams.view = params.view;
 

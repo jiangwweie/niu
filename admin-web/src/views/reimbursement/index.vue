@@ -209,6 +209,7 @@ import {
 import { exportReimbursements } from '@/api/export';
 import { hasPermission } from '@/utils/permission';
 import { formatDateTime } from '@/utils/formatDateTime';
+import { trimSearchFields } from '@/utils/searchParams';
 import type { ReimbursementQuery, ReimbursementRecord } from '@/types/reimbursement';
 
 const dateRange = ref<[string, string] | null>(null);
@@ -228,7 +229,12 @@ const total = ref(0);
 
 const formatPerson = (name?: string, id?: string | number | null) => name || (id ? `员工 #${id}` : '-');
 
+const normalizeQueryParams = () => {
+  trimSearchFields(queryParams, ['reimbursementNo', 'applicantName']);
+};
+
 const fetchData = async () => {
+  normalizeQueryParams();
   loading.value = true;
   try {
     const params: ReimbursementQuery = {
@@ -266,6 +272,7 @@ const handleReset = () => {
 };
 
 const handleExport = async () => {
+  normalizeQueryParams();
   exportLoading.value = true;
   try {
     const params: ReimbursementQuery = {

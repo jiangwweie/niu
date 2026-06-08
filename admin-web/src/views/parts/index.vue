@@ -281,6 +281,7 @@ import { useRouter } from 'vue-router';
 import PageContainer from '@/components/PageContainer.vue';
 import MoneyText from '@/components/MoneyText.vue';
 import { hasPermission } from '@/utils/permission';
+import { trimSearchFields } from '@/utils/searchParams';
 import {
   getPartsList,
   getPartDetail,
@@ -316,7 +317,12 @@ const total = ref(0);
 
 const isOfficialSource = (source?: string) => String(source || '').toUpperCase() === 'OFFICIAL';
 
+const normalizeQueryParams = () => {
+  trimSearchFields(queryParams, ['partCode', 'partName', 'officialCode', 'barcode', 'model', 'category']);
+};
+
 const fetchData = async () => {
+  normalizeQueryParams();
   loading.value = true;
   try {
     const res = await getPartsList(queryParams);

@@ -1,5 +1,9 @@
 package com.xiaoniu.aftermarket.reimbursement.service.impl;
 
+import static com.xiaoniu.aftermarket.common.util.SearchKeywordUtils.buildContainsPattern;
+import static com.xiaoniu.aftermarket.common.util.SearchKeywordUtils.containsCondition;
+import static com.xiaoniu.aftermarket.common.util.SearchKeywordUtils.normalize;
+
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.common.enums.ReimbursementStatus;
@@ -70,22 +74,25 @@ public class ReimbursementServiceImpl implements ReimbursementService {
 
         QueryWrapper<ReimbursementEntity> wrapper = new QueryWrapper<>();
         wrapper.eq("store_id", request.getStoreId()).eq("deleted", 0);
-        if (StringUtils.hasText(request.getReimbursementNo())) {
-            wrapper.like("reimbursement_no", request.getReimbursementNo().trim());
+        String reimbursementNo = normalize(request.getReimbursementNo());
+        if (reimbursementNo != null) {
+            wrapper.apply(containsCondition("reimbursement_no"), buildContainsPattern(reimbursementNo));
         }
-        if (StringUtils.hasText(request.getStatus())) {
-            wrapper.eq("status", request.getStatus().trim());
+        String status = normalize(request.getStatus());
+        if (status != null) {
+            wrapper.eq("status", status);
         }
         if (request.getApplicantId() != null) {
             wrapper.eq("applicant_id", request.getApplicantId());
         }
-        if (StringUtils.hasText(request.getApplicantName())) {
-            String name = request.getApplicantName().trim();
+        String applicantName = normalize(request.getApplicantName());
+        if (applicantName != null) {
+            String pattern = buildContainsPattern(applicantName);
             List<Long> userIds = userMapper.selectList(
                     new QueryWrapper<SysUserEntity>()
                             .eq("store_id", request.getStoreId())
                             .eq("deleted", 0)
-                            .like("real_name", name)
+                            .apply(containsCondition("real_name"), pattern)
                             .select("id"))
                     .stream().map(SysUserEntity::getId).toList();
             if (userIds.isEmpty()) {

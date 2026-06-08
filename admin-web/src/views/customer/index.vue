@@ -136,6 +136,7 @@ import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'elem
 import PageContainer from '@/components/PageContainer.vue';
 import MoneyText from '@/components/MoneyText.vue';
 import { hasPermission } from '@/utils/permission';
+import { trimSearchFields } from '@/utils/searchParams';
 import {
   getCustomerList, getCustomerDetail, createCustomer, updateCustomer, deleteCustomer,
   type CustomerListItem, type CustomerDetail,
@@ -172,7 +173,12 @@ function statusTagType(s: string) {
 }
 
 
+function normalizeQueryParams() {
+  trimSearchFields(queryParams, ['customerName', 'phone']);
+}
+
 async function fetchData() {
+  normalizeQueryParams();
   loading.value = true;
   try {
     const res = await getCustomerList(queryParams);

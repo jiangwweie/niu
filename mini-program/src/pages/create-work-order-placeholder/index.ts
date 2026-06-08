@@ -36,6 +36,7 @@ import {
   getNoChargeReasonText,
   getProgressStatusText,
 } from '../../utils/statusText';
+import { normalizeSearchParam } from '../../utils/searchParams';
 
 const NO_CHARGE_REASONS = ['官方售后', '免费检测', '老板免单', '质保处理', '其他'];
 let customerSearchTimer: number | undefined;
@@ -215,11 +216,13 @@ Page({
     }
   },
 
-  loadParts() {
-    getParts().then(res => {
+  loadParts(keyword?: string) {
+    const normalizedKeyword = normalizeSearchParam(keyword);
+    getParts(normalizedKeyword ? { keyword: normalizedKeyword } : undefined).then(res => {
+      const parts = res.data.records || [];
       this.setData({
-        allParts: res.data.records,
-        partList: res.data.records
+        allParts: parts,
+        partList: parts
       });
     }).catch(console.error);
   },
@@ -526,20 +529,12 @@ Page({
   },
 
   onSearchPart(e: any) {
-    const keyword = e.detail.value.toLowerCase();
+    const keyword = normalizeSearchParam(e.detail.value);
     if (partSearchTimer) {
       clearTimeout(partSearchTimer);
     }
     partSearchTimer = setTimeout(() => {
-      const filtered = this.data.allParts.filter(p =>
-        p.partName.toLowerCase().includes(keyword) ||
-        p.partCode.toLowerCase().includes(keyword) ||
-        (p.officialPartNo || '').toLowerCase().includes(keyword) ||
-        (p.defaultBarcode || '').toLowerCase().includes(keyword) ||
-        (p.model || '').toLowerCase().includes(keyword) ||
-        (p.locationRemark || '').toLowerCase().includes(keyword)
-      );
-      this.setData({ partList: filtered });
+      this.loadParts(keyword);
     }, 300) as unknown as number;
   },
 

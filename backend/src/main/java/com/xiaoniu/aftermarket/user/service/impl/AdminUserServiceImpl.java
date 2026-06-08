@@ -1,5 +1,9 @@
 package com.xiaoniu.aftermarket.user.service.impl;
 
+import static com.xiaoniu.aftermarket.common.util.SearchKeywordUtils.buildContainsPattern;
+import static com.xiaoniu.aftermarket.common.util.SearchKeywordUtils.containsCondition;
+import static com.xiaoniu.aftermarket.common.util.SearchKeywordUtils.normalize;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
@@ -79,14 +83,17 @@ public class AdminUserServiceImpl implements AdminUserService {
             }
         }
         LambdaQueryWrapper<SysUserEntity> wrapper = baseUserQuery(storeId);
-        if (hasText(username)) {
-            wrapper.like(SysUserEntity::getUsername, username.trim());
+        String normalizedUsername = normalize(username);
+        if (normalizedUsername != null) {
+            wrapper.apply(containsCondition("username"), buildContainsPattern(normalizedUsername));
         }
-        if (hasText(realName)) {
-            wrapper.like(SysUserEntity::getRealName, realName.trim());
+        String normalizedRealName = normalize(realName);
+        if (normalizedRealName != null) {
+            wrapper.apply(containsCondition("real_name"), buildContainsPattern(normalizedRealName));
         }
-        if (hasText(phone)) {
-            wrapper.like(SysUserEntity::getPhone, phone.trim());
+        String normalizedPhone = normalize(phone);
+        if (normalizedPhone != null) {
+            wrapper.apply(containsCondition("phone"), buildContainsPattern(normalizedPhone));
         }
         if (enabled != null) {
             wrapper.eq(SysUserEntity::getStatus, enabled ? CommonStatus.ENABLED.name() : CommonStatus.DISABLED.name());

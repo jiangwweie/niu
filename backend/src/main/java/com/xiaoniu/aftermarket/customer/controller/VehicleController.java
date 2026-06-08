@@ -30,6 +30,7 @@ public class VehicleController {
             @RequestParam(required = false) String model,
             @RequestParam(required = false) String batteryNo,
             @RequestParam(required = false) String customerPhone,
+            @RequestParam(required = false) String customerName,
             @RequestParam(required = false) Long customerId,
             @RequestParam(required = false) Integer pageNo,
             @RequestParam(required = false) Integer pageSize) {
@@ -41,6 +42,7 @@ public class VehicleController {
         query.setModel(model);
         query.setBatteryNo(batteryNo);
         query.setCustomerPhone(customerPhone);
+        query.setCustomerName(customerName);
         query.setCustomerId(customerId);
         query.setPageNo(pageNo);
         query.setPageSize(pageSize);

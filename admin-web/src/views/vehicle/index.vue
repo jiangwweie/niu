@@ -134,6 +134,7 @@ import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'elem
 import PageContainer from '@/components/PageContainer.vue';
 import MoneyText from '@/components/MoneyText.vue';
 import { hasPermission } from '@/utils/permission';
+import { trimSearchFields } from '@/utils/searchParams';
 import {
   getVehicleList, getVehicleDetail, updateVehicle, deleteVehicle,
   type VehicleListItem, type VehicleDetail,
@@ -171,7 +172,12 @@ function statusTagType(s: string) {
 }
 
 
+function normalizeQueryParams() {
+  trimSearchFields(queryParams, ['vin', 'model', 'customerPhone', 'customerName']);
+}
+
 async function fetchData() {
+  normalizeQueryParams();
   loading.value = true;
   try {
     const res = await getVehicleList(queryParams);

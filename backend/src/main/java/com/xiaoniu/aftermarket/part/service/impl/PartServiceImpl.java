@@ -1,5 +1,9 @@
 package com.xiaoniu.aftermarket.part.service.impl;
 
+import static com.xiaoniu.aftermarket.common.util.SearchKeywordUtils.buildContainsPattern;
+import static com.xiaoniu.aftermarket.common.util.SearchKeywordUtils.containsCondition;
+import static com.xiaoniu.aftermarket.common.util.SearchKeywordUtils.normalize;
+
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
@@ -727,39 +731,48 @@ public class PartServiceImpl implements PartService {
         wrapper.eq("store_id", request.getStoreId())
                .eq("deleted", 0);
 
-        if (StringUtils.hasText(request.getKeyword())) {
-            String kw = request.getKeyword().trim();
+        String keyword = normalize(request.getKeyword());
+        if (keyword != null) {
+            String pattern = buildContainsPattern(keyword);
             wrapper.and(g -> g
-                    .like("part_code", kw)
-                    .or().like("part_name", kw)
-                    .or().like("official_part_no", kw)
-                    .or().like("default_barcode", kw)
-                    .or().like("model", kw)
-                    .or().like("location_remark", kw));
+                    .apply(containsCondition("part_code"), pattern)
+                    .or().apply(containsCondition("part_name"), pattern)
+                    .or().apply(containsCondition("official_part_no"), pattern)
+                    .or().apply(containsCondition("default_barcode"), pattern)
+                    .or().apply(containsCondition("model"), pattern)
+                    .or().apply(containsCondition("location_remark"), pattern));
         }
-        if (StringUtils.hasText(request.getPartCode())) {
-            wrapper.like("part_code", request.getPartCode().trim());
+        String partCode = normalize(request.getPartCode());
+        if (partCode != null) {
+            wrapper.apply(containsCondition("part_code"), buildContainsPattern(partCode));
         }
-        if (StringUtils.hasText(request.getPartName())) {
-            wrapper.like("part_name", request.getPartName());
+        String partName = normalize(request.getPartName());
+        if (partName != null) {
+            wrapper.apply(containsCondition("part_name"), buildContainsPattern(partName));
         }
-        if (StringUtils.hasText(request.getOfficialPartNo())) {
-            wrapper.eq("official_part_no", request.getOfficialPartNo().trim());
+        String officialPartNo = normalize(request.getOfficialPartNo());
+        if (officialPartNo != null) {
+            wrapper.apply(containsCondition("official_part_no"), buildContainsPattern(officialPartNo));
         }
-        if (StringUtils.hasText(request.getBarcode())) {
-            wrapper.like("default_barcode", request.getBarcode().trim());
+        String barcode = normalize(request.getBarcode());
+        if (barcode != null) {
+            wrapper.apply(containsCondition("default_barcode"), buildContainsPattern(barcode));
         }
-        if (StringUtils.hasText(request.getModel())) {
-            wrapper.like("model", request.getModel());
+        String model = normalize(request.getModel());
+        if (model != null) {
+            wrapper.apply(containsCondition("model"), buildContainsPattern(model));
         }
-        if (StringUtils.hasText(request.getCategoryCode())) {
-            wrapper.eq("category_code", request.getCategoryCode());
+        String categoryCode = normalize(request.getCategoryCode());
+        if (categoryCode != null) {
+            wrapper.eq("category_code", categoryCode);
         }
-        if (StringUtils.hasText(request.getSource())) {
-            wrapper.eq("source", request.getSource());
+        String source = normalize(request.getSource());
+        if (source != null) {
+            wrapper.eq("source", source);
         }
-        if (StringUtils.hasText(request.getStatus())) {
-            wrapper.eq("status", request.getStatus());
+        String status = normalize(request.getStatus());
+        if (status != null) {
+            wrapper.eq("status", status);
         }
         return wrapper;
     }

@@ -1,4 +1,5 @@
 import request from '@/utils/request';
+import { setSearchParam } from '@/utils/searchParams';
 import type { PaginatedResult } from '@/types';
 
 export interface CustomerListItem {
@@ -87,7 +88,14 @@ export interface VehicleQuery {
 }
 
 export async function getCustomerList(params: CustomerQuery): Promise<PaginatedResult<CustomerListItem>> {
-  return request.get('/api/admin/customers', { params });
+  const backendParams: Record<string, unknown> = {
+    pageNo: params.pageNo,
+    pageSize: params.pageSize,
+  };
+  setSearchParam(backendParams, 'keyword', params.keyword);
+  setSearchParam(backendParams, 'phone', params.phone);
+  setSearchParam(backendParams, 'customerName', params.customerName);
+  return request.get('/api/admin/customers', { params: backendParams });
 }
 
 export async function getCustomerDetail(id: number): Promise<CustomerDetail> {
@@ -107,7 +115,16 @@ export async function deleteCustomer(id: number): Promise<void> {
 }
 
 export async function getVehicleList(params: VehicleQuery): Promise<PaginatedResult<VehicleListItem>> {
-  return request.get('/api/admin/vehicles', { params });
+  const backendParams: Record<string, unknown> = {
+    pageNo: params.pageNo,
+    pageSize: params.pageSize,
+  };
+  setSearchParam(backendParams, 'keyword', params.keyword);
+  setSearchParam(backendParams, 'vin', params.vin);
+  setSearchParam(backendParams, 'model', params.model);
+  setSearchParam(backendParams, 'customerPhone', params.customerPhone);
+  setSearchParam(backendParams, 'customerName', params.customerName);
+  return request.get('/api/admin/vehicles', { params: backendParams });
 }
 
 export async function getVehicleDetail(id: number): Promise<VehicleDetail> {

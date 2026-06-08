@@ -1,6 +1,7 @@
 import { getParts } from '../../api/parts';
 import { Part } from '../../types/parts';
 import { authStore } from '../../stores/auth';
+import { normalizeSearchParam } from '../../utils/searchParams';
 
 let partSearchTimer: number | undefined;
 
@@ -35,7 +36,8 @@ Page({
   async fetchData() {
     this.setData({ loading: true });
     try {
-      const res = await getParts({ keyword: this.data.keyword });
+      const keyword = normalizeSearchParam(this.data.keyword);
+      const res = await getParts(keyword ? { keyword } : undefined);
       this.setData({ parts: res.data.records, loading: false });
     } catch (e) {
       this.setData({ loading: false });

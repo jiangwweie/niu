@@ -1,6 +1,7 @@
 package com.xiaoniu.aftermarket.part.controller;
 
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
@@ -243,8 +244,9 @@ class PartControllerTest {
                         .param("officialPartNo", "OFF-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("SUCCESS"))
-                .andExpect(jsonPath("$.data.records", hasSize(1)))
-                .andExpect(jsonPath("$.data.records[0].officialPartNo").value("OFF-001"));
+                .andExpect(jsonPath("$.data.records", hasSize(2)))
+                .andExpect(jsonPath("$.data.records[*].officialPartNo", hasItem("OFF-001")))
+                .andExpect(jsonPath("$.data.records[*].officialPartNo", hasItem("NEW-OFF-001")));
     }
 
     @Test

@@ -13,6 +13,7 @@ public record StaffPartListItem(
         String categoryCode,
         BigDecimal costPrice,
         BigDecimal salePrice,
+        String locationRemark,
         String status
 ) {
 
@@ -27,6 +28,7 @@ public record StaffPartListItem(
                 r.getCategoryCode(),
                 r.getReferenceCostPrice(),
                 r.getDefaultSalePrice(),
+                r.getLocationRemark(),
                 r.getStatus()
         );
     }

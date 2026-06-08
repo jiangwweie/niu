@@ -1,5 +1,9 @@
 package com.xiaoniu.aftermarket.export.service.impl;
 
+import static com.xiaoniu.aftermarket.common.util.SearchKeywordUtils.buildContainsPattern;
+import static com.xiaoniu.aftermarket.common.util.SearchKeywordUtils.containsCondition;
+import static com.xiaoniu.aftermarket.common.util.SearchKeywordUtils.normalize;
+
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.common.enums.ReimbursementStatus;
@@ -10,6 +14,8 @@ import com.xiaoniu.aftermarket.finance.dto.FinanceReportResponse;
 import com.xiaoniu.aftermarket.finance.service.FinanceService;
 import com.xiaoniu.aftermarket.reimbursement.entity.ReimbursementEntity;
 import com.xiaoniu.aftermarket.reimbursement.mapper.ReimbursementMapper;
+import com.xiaoniu.aftermarket.user.entity.SysUserEntity;
+import com.xiaoniu.aftermarket.user.mapper.SysUserMapper;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -42,10 +48,14 @@ public class ExportServiceImpl implements ExportService {
 
     private final FinanceService financeService;
     private final ReimbursementMapper reimbursementMapper;
+    private final SysUserMapper userMapper;
 
-    public ExportServiceImpl(FinanceService financeService, ReimbursementMapper reimbursementMapper) {
+    public ExportServiceImpl(FinanceService financeService,
+                             ReimbursementMapper reimbursementMapper,
+                             SysUserMapper userMapper) {
         this.financeService = financeService;
         this.reimbursementMapper = reimbursementMapper;
+        this.userMapper = userMapper;
     }
 
     /**
@@ -73,6 +83,7 @@ public class ExportServiceImpl implements ExportService {
 
     @Override
     public ExportFile exportReimbursements(Long storeId, String status, Long applicantId,
+                                           String reimbursementNo, String applicantName,
                                            LocalDateTime dateFrom, LocalDateTime dateTo) {
         if (storeId == null) {
             throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST);
@@ -89,6 +100,26 @@ public class ExportServiceImpl implements ExportService {
         }
         if (applicantId != null) {
             wrapper.eq("applicant_id", applicantId);
+        }
+        String normalizedReimbursementNo = normalize(reimbursementNo);
+        if (normalizedReimbursementNo != null) {
+            wrapper.apply(containsCondition("reimbursement_no"), buildContainsPattern(normalizedReimbursementNo));
+        }
+        String normalizedApplicantName = normalize(applicantName);
+        if (normalizedApplicantName != null) {
+            List<Long> userIds = userMapper.selectList(
+                    new QueryWrapper<SysUserEntity>()
+                            .eq("store_id", storeId)
+                            .eq("deleted", 0)
+                            .apply(containsCondition("real_name"), buildContainsPattern(normalizedApplicantName))
+                            .select("id"))
+                    .stream()
+                    .map(SysUserEntity::getId)
+                    .toList();
+            if (userIds.isEmpty()) {
+                return exportReimbursementLedger(List.of(), "reimbursements_" + buildRangeForFilename(dateFrom, dateTo) + ".xlsx");
+            }
+            wrapper.in("applicant_id", userIds);
         }
         if (dateFrom != null) {
             wrapper.ge("submitted_at", dateFrom);

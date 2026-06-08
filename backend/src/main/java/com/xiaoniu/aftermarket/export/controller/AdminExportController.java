@@ -73,12 +73,15 @@ public class AdminExportController {
     public ResponseEntity<byte[]> exportReimbursements(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Long applicantId,
+            @RequestParam(required = false) String reimbursementNo,
+            @RequestParam(required = false) String applicantName,
             @RequestParam(required = false) String dateFrom,
             @RequestParam(required = false) String dateTo) {
         CurrentUser user = requireCurrentUser();
         LocalDateTime parsedFrom = DateParamParser.parseStartDateTime(dateFrom);
         LocalDateTime parsedTo = DateParamParser.parseEndDateTime(dateTo);
-        ExportFile file = exportService.exportReimbursements(user.storeId(), status, applicantId, parsedFrom, parsedTo);
+        ExportFile file = exportService.exportReimbursements(
+                user.storeId(), status, applicantId, reimbursementNo, applicantName, parsedFrom, parsedTo);
         return toDownloadResponse(file);
     }
 

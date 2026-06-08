@@ -1,5 +1,9 @@
 package com.xiaoniu.aftermarket.workorder.service.impl;
 
+import static com.xiaoniu.aftermarket.common.util.SearchKeywordUtils.buildContainsPattern;
+import static com.xiaoniu.aftermarket.common.util.SearchKeywordUtils.containsCondition;
+import static com.xiaoniu.aftermarket.common.util.SearchKeywordUtils.normalize;
+
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
@@ -255,16 +259,17 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         QueryWrapper<WorkOrderEntity> wrapper = new QueryWrapper<>();
         wrapper.eq("store_id", request.getStoreId()).eq("deleted", 0);
 
-        if (StringUtils.hasText(request.getKeyword())) {
-            String keyword = request.getKeyword().trim();
+        String keyword = normalize(request.getKeyword());
+        if (keyword != null) {
+            String pattern = buildContainsPattern(keyword);
             List<Long> officialWorkOrderIds = findOfficialWorkOrderIdsByKeyword(request.getStoreId(), keyword);
             wrapper.and(group -> group
-                    .like("work_order_no", keyword)
-                    .or().like("customer_name_snapshot", keyword)
-                    .or().like("customer_phone_snapshot", keyword)
-                    .or().like("frame_no_snapshot", keyword)
-                    .or().like("vehicle_model_snapshot", keyword)
-                    .or().like("battery_no_snapshot", keyword)
+                    .apply(containsCondition("work_order_no"), pattern)
+                    .or().apply(containsCondition("customer_name_snapshot"), pattern)
+                    .or().apply(containsCondition("customer_phone_snapshot"), pattern)
+                    .or().apply(containsCondition("frame_no_snapshot"), pattern)
+                    .or().apply(containsCondition("vehicle_model_snapshot"), pattern)
+                    .or().apply(containsCondition("battery_no_snapshot"), pattern)
                     .or(sub -> {
                         if (officialWorkOrderIds.isEmpty()) {
                             sub.apply("1 = 0");
@@ -277,20 +282,25 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         if (StringUtils.hasText(request.getStatus())) {
             wrapper.eq("status", request.getStatus());
         }
-        if (StringUtils.hasText(request.getWorkOrderNo())) {
-            wrapper.like("work_order_no", request.getWorkOrderNo().trim());
+        String workOrderNo = normalize(request.getWorkOrderNo());
+        if (workOrderNo != null) {
+            wrapper.apply(containsCondition("work_order_no"), buildContainsPattern(workOrderNo));
         }
-        if (StringUtils.hasText(request.getCustomerName())) {
-            wrapper.like("customer_name_snapshot", request.getCustomerName().trim());
+        String customerName = normalize(request.getCustomerName());
+        if (customerName != null) {
+            wrapper.apply(containsCondition("customer_name_snapshot"), buildContainsPattern(customerName));
         }
-        if (StringUtils.hasText(request.getCustomerPhone())) {
-            wrapper.like("customer_phone_snapshot", request.getCustomerPhone().trim());
+        String customerPhone = normalize(request.getCustomerPhone());
+        if (customerPhone != null) {
+            wrapper.apply(containsCondition("customer_phone_snapshot"), buildContainsPattern(customerPhone));
         }
-        if (StringUtils.hasText(request.getVehicleFrameNo())) {
-            wrapper.like("frame_no_snapshot", request.getVehicleFrameNo().trim());
+        String vehicleFrameNo = normalize(request.getVehicleFrameNo());
+        if (vehicleFrameNo != null) {
+            wrapper.apply(containsCondition("frame_no_snapshot"), buildContainsPattern(vehicleFrameNo));
         }
-        if (StringUtils.hasText(request.getScooterModel())) {
-            wrapper.like("vehicle_model_snapshot", request.getScooterModel().trim());
+        String scooterModel = normalize(request.getScooterModel());
+        if (scooterModel != null) {
+            wrapper.apply(containsCondition("vehicle_model_snapshot"), buildContainsPattern(scooterModel));
         }
         if (request.getPartId() != null) {
             List<Long> workOrderIds = chargeItemMapper.selectWorkOrderIdsByPartId(request.getPartId());
@@ -1139,7 +1149,8 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     }
 
     private List<Long> findOfficialWorkOrderIdsByKeyword(Long storeId, String keyword) {
-        if (!StringUtils.hasText(keyword)) {
+        String normalizedKeyword = normalize(keyword);
+        if (normalizedKeyword == null) {
             return List.of();
         }
         QueryWrapper<OfficialAfterSalesEntity> wrapper = new QueryWrapper<>();
@@ -1147,7 +1158,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
                 .eq("store_id", storeId)
                 .eq("deleted", 0)
                 .eq("is_official_after_sales", true)
-                .like("official_order_no", keyword.trim());
+                .apply(containsCondition("official_order_no"), buildContainsPattern(normalizedKeyword));
         return officialAfterSalesMapper.selectList(wrapper).stream()
                 .map(OfficialAfterSalesEntity::getWorkOrderId)
                 .distinct()

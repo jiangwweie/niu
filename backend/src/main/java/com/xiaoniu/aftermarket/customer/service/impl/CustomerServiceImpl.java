@@ -1,5 +1,9 @@
 package com.xiaoniu.aftermarket.customer.service.impl;
 
+import static com.xiaoniu.aftermarket.common.util.SearchKeywordUtils.buildContainsPattern;
+import static com.xiaoniu.aftermarket.common.util.SearchKeywordUtils.containsCondition;
+import static com.xiaoniu.aftermarket.common.util.SearchKeywordUtils.normalize;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.common.exception.BusinessException;
@@ -49,20 +53,23 @@ public class CustomerServiceImpl implements CustomerService {
         wrapper.eq(CustomerEntity::getStoreId, query.getStoreId());
         wrapper.eq(CustomerEntity::getDeleted, 0);
 
-        if (StringUtils.hasText(query.getKeyword())) {
-            String kw = query.getKeyword().trim();
+        String keyword = normalize(query.getKeyword());
+        if (keyword != null) {
+            String pattern = buildContainsPattern(keyword);
             wrapper.and(w -> w
-                .like(CustomerEntity::getCustomerName, kw)
+                .apply(containsCondition("customer_name"), pattern)
                 .or()
-                .like(CustomerEntity::getPhone, kw)
+                .apply(containsCondition("phone"), pattern)
                 .or()
-                .like(CustomerEntity::getRemark, kw));
+                .apply(containsCondition("remark"), pattern));
         }
-        if (StringUtils.hasText(query.getPhone())) {
-            wrapper.like(CustomerEntity::getPhone, query.getPhone().trim());
+        String phone = normalize(query.getPhone());
+        if (phone != null) {
+            wrapper.apply(containsCondition("phone"), buildContainsPattern(phone));
         }
-        if (StringUtils.hasText(query.getCustomerName())) {
-            wrapper.like(CustomerEntity::getCustomerName, query.getCustomerName());
+        String customerName = normalize(query.getCustomerName());
+        if (customerName != null) {
+            wrapper.apply(containsCondition("customer_name"), buildContainsPattern(customerName));
         }
 
         long total = customerMapper.selectCount(wrapper);

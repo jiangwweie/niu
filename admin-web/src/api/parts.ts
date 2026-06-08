@@ -1,4 +1,5 @@
 import request from '@/utils/request';
+import { setSearchParam } from '@/utils/searchParams';
 
 /** Backend PartQueryResponse / PartDetailResponse shape */
 interface PartResp {
@@ -148,12 +149,12 @@ export async function getPartsList(params: PartViewQuery): Promise<{
     pageNo: params.pageNo,
     pageSize: params.pageSize,
   };
-  if (params.partCode) backendParams.partCode = params.partCode;
-  if (params.partName) backendParams.partName = params.partName;
-  if (params.officialCode) backendParams.officialPartNo = params.officialCode;
-  if (params.barcode) backendParams.barcode = params.barcode;
-  if (params.model) backendParams.model = params.model;
-  if (params.category) backendParams.categoryCode = params.category;
+  setSearchParam(backendParams, 'partCode', params.partCode);
+  setSearchParam(backendParams, 'partName', params.partName);
+  setSearchParam(backendParams, 'officialPartNo', params.officialCode);
+  setSearchParam(backendParams, 'barcode', params.barcode);
+  setSearchParam(backendParams, 'model', params.model);
+  setSearchParam(backendParams, 'categoryCode', params.category);
   if (params.source) backendParams.source = params.source.toUpperCase();
   if (params.status !== undefined && params.status !== '') {
     backendParams.enabled = params.status === true || params.status === 'true';

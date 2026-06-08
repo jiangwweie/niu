@@ -4,6 +4,7 @@ import { Part, PartLookupResult } from '../../types/parts';
 import { InboundRequest, InboundResponse } from '../../types/inventory';
 import { authStore } from '../../stores/auth';
 import Toast from 'tdesign-miniprogram/toast/index';
+import { normalizeSearchParam } from '../../utils/searchParams';
 
 let partSearchTimer: number | undefined;
 
@@ -38,10 +39,11 @@ Page({
     }
   },
 
-  loadParts() {
-    getParts().then(res => {
+  loadParts(keyword?: string) {
+    const normalizedKeyword = normalizeSearchParam(keyword);
+    getParts(normalizedKeyword ? { keyword: normalizedKeyword } : undefined).then(res => {
       // 真实后端已过滤 DISABLED
-      const parts = res.data.records;
+      const parts = res.data.records || [];
       this.setData({
         allParts: parts,
         partList: parts
@@ -64,20 +66,12 @@ Page({
   },
 
   onSearchPart(e: any) {
-    const keyword = e.detail.value.toLowerCase();
+    const keyword = normalizeSearchParam(e.detail.value);
     if (partSearchTimer) {
       clearTimeout(partSearchTimer);
     }
     partSearchTimer = setTimeout(() => {
-      const filtered = this.data.allParts.filter(p =>
-        p.partName.toLowerCase().includes(keyword) ||
-        p.partCode.toLowerCase().includes(keyword) ||
-        (p.officialPartNo || '').toLowerCase().includes(keyword) ||
-        (p.defaultBarcode || '').toLowerCase().includes(keyword) ||
-        (p.model || '').toLowerCase().includes(keyword) ||
-        (p.locationRemark || '').toLowerCase().includes(keyword)
-      );
-      this.setData({ partList: filtered });
+      this.loadParts(keyword);
     }, 300) as unknown as number;
   },
 

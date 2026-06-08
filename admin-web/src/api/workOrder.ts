@@ -1,4 +1,5 @@
 import request from '@/utils/request';
+import { setSearchParam } from '@/utils/searchParams';
 import type { PaginatedResult } from '@/types';
 import type {
   WorkOrderQuery,
@@ -112,11 +113,11 @@ export async function getWorkOrderList(
     pageNo: params.pageNo,
     pageSize: params.pageSize,
   };
-  if (params.orderNo) backendParams.workOrderNo = params.orderNo;
-  if (params.customerName) backendParams.customerName = params.customerName;
-  if (params.phone) backendParams.customerPhone = params.phone;
-  if (params.vin) backendParams.vehicleFrameNo = params.vin;
-  if (params.scooterModel) backendParams.scooterModel = params.scooterModel;
+  setSearchParam(backendParams, 'workOrderNo', params.orderNo);
+  setSearchParam(backendParams, 'customerName', params.customerName);
+  setSearchParam(backendParams, 'customerPhone', params.phone);
+  setSearchParam(backendParams, 'vehicleFrameNo', params.vin);
+  setSearchParam(backendParams, 'scooterModel', params.scooterModel);
   if (params.partId) backendParams.partId = params.partId;
   if (params.status) backendParams.status = params.status;
   if (params.progressStatus) backendParams.status = params.progressStatus;

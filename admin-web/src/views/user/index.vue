@@ -28,7 +28,7 @@
           </el-select>
         </el-form-item>
         <el-form-item class="search-actions">
-          <el-button type="primary" @click="loadUsers">查询</el-button>
+          <el-button type="primary" @click="searchUsers">查询</el-button>
           <el-button @click="resetQuery">重置</el-button>
         </el-form-item>
       </el-form>
@@ -79,7 +79,7 @@
         :total="total"
         layout="total, sizes, prev, pager, next"
         @current-change="loadUsers"
-        @size-change="loadUsers"
+        @size-change="handleUserSizeChange"
       />
     </el-card>
 
@@ -162,6 +162,7 @@ import {
   updateUser,
 } from '@/api/userPermission';
 import { hasPermission } from '@/utils/permission';
+import { trimSearchFields } from '@/utils/searchParams';
 import type { PermissionNode, RoleInfo, SystemUser, UserQuery } from '@/types/userPermission';
 
 const query = reactive<UserQuery>({ pageNo: 1, pageSize: 10 });
@@ -173,6 +174,10 @@ const permissions = ref<PermissionNode[]>([]);
 const hasUserManage = computed(() => hasPermission('USER_MANAGE'));
 const userDialogSubmitting = ref(false);
 const resetSubmitting = ref(false);
+
+const normalizeQueryParams = () => {
+  trimSearchFields(query, ['username', 'realName', 'phone']);
+};
 
 const userDialog = reactive({
   visible: false,
@@ -188,6 +193,7 @@ const resetDialog = reactive({
 });
 
 const loadUsers = async () => {
+  normalizeQueryParams();
   loading.value = true;
   try {
     const page = await getUserList(query);
@@ -196,6 +202,17 @@ const loadUsers = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+const searchUsers = () => {
+  normalizeQueryParams();
+  query.pageNo = 1;
+  loadUsers();
+};
+
+const handleUserSizeChange = () => {
+  query.pageNo = 1;
+  loadUsers();
 };
 
 const loadReadonly = async () => {

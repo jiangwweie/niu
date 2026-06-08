@@ -1,4 +1,5 @@
 import request from '@/utils/request';
+import { setSearchParam } from '@/utils/searchParams';
 import type { PaginatedResult } from '@/types';
 import type {
   CreateUserRequest,
@@ -12,7 +13,18 @@ import type {
 } from '@/types/userPermission';
 
 export async function getUserList(params: UserQuery): Promise<PaginatedResult<SystemUser>> {
-  return await request.get('/api/admin/users', { params });
+  const backendParams: Record<string, unknown> = {
+    pageNo: params.pageNo,
+    pageSize: params.pageSize,
+  };
+  setSearchParam(backendParams, 'username', params.username);
+  setSearchParam(backendParams, 'realName', params.realName);
+  setSearchParam(backendParams, 'phone', params.phone);
+  setSearchParam(backendParams, 'roleCode', params.roleCode);
+  if (params.enabled !== undefined && params.enabled !== '') {
+    backendParams.enabled = params.enabled;
+  }
+  return await request.get('/api/admin/users', { params: backendParams });
 }
 
 export async function getUserDetail(id: number): Promise<SystemUser> {

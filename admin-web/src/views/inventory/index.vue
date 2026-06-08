@@ -292,6 +292,7 @@ import { getPartsList } from '@/api/parts';
 import type { PartViewRecord } from '@/api/parts';
 import { hasPermission } from '@/utils/permission';
 import { formatDateTime } from '@/utils/formatDateTime';
+import { trimSearchFields } from '@/utils/searchParams';
 import type { InventoryQuery, InventoryRecord, InventoryLogRecord } from '@/types/inventory';
 
 const router = useRouter();
@@ -329,7 +330,12 @@ const getInventoryStateTagType = (code?: string) => {
   }
 };
 
+const normalizeQueryParams = () => {
+  trimSearchFields(queryParams, ['keyword', 'partCode', 'partName']);
+};
+
 const fetchData = async () => {
+  normalizeQueryParams();
   loading.value = true;
   try {
     const res = await getInventoryList(queryParams);

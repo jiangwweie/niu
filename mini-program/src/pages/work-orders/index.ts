@@ -2,6 +2,7 @@ import { authStore } from '../../stores/auth';
 import { getWorkOrders } from '../../api/workOrder';
 import { WorkOrder } from '../../types/workOrder';
 import { hasPermission } from '../../utils/permission';
+import { normalizeSearchParam } from '../../utils/searchParams';
 import {
   getCashierStatusText,
   getInventoryStatusText,
@@ -88,7 +89,8 @@ Page({
     this.setData({ keyword: e.detail.value });
   },
   onSubmitSearch() {
-    this.setData({ pageNo: 1 });
+    const keyword = normalizeSearchParam(this.data.keyword) || '';
+    this.setData({ keyword, pageNo: 1 });
     this.fetchData();
   },
   onClear() {
@@ -106,8 +108,9 @@ Page({
       pageNo: 1,
       pageSize: this.data.pageSize,
     };
-    if (this.data.keyword) {
-      params.keyword = this.data.keyword;
+    const keyword = normalizeSearchParam(this.data.keyword);
+    if (keyword) {
+      params.keyword = keyword;
     }
     if (this.data.activeStatus) {
       params.status = this.data.activeStatus;
@@ -140,8 +143,9 @@ Page({
       pageNo: nextPage,
       pageSize: this.data.pageSize,
     };
-    if (this.data.keyword) {
-      params.keyword = this.data.keyword;
+    const keyword = normalizeSearchParam(this.data.keyword);
+    if (keyword) {
+      params.keyword = keyword;
     }
     if (this.data.activeStatus) {
       params.status = this.data.activeStatus;

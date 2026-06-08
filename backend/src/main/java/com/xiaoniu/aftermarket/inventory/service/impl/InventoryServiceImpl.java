@@ -1,5 +1,9 @@
 package com.xiaoniu.aftermarket.inventory.service.impl;
 
+import static com.xiaoniu.aftermarket.common.util.SearchKeywordUtils.buildContainsPattern;
+import static com.xiaoniu.aftermarket.common.util.SearchKeywordUtils.containsCondition;
+import static com.xiaoniu.aftermarket.common.util.SearchKeywordUtils.normalize;
+
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.common.enums.CommonStatus;
@@ -280,10 +284,9 @@ public class InventoryServiceImpl implements InventoryService {
                                                                 String partCode, String partName,
                                                                 String source, String view,
                                                                 Integer pageNo, Integer pageSize) {
-        // If keyword is present, use multi-field keyword search for parts
-        if (StringUtils.hasText(keyword)) {
-            String kw = keyword.trim();
-            List<Long> keywordPartIds = findPartIdsByKeyword(storeId, kw);
+        String normalizedKeyword = normalize(keyword);
+        if (normalizedKeyword != null) {
+            List<Long> keywordPartIds = findPartIdsByKeyword(storeId, normalizedKeyword);
             // Also apply partCode/partName/source filters if present
             List<Long> filterPartIds = findPartIdsByFilters(storeId, partCode, partName, source);
             List<Long> partIds = intersectPartIds(keywordPartIds, filterPartIds);
@@ -295,13 +298,14 @@ public class InventoryServiceImpl implements InventoryService {
     private List<Long> findPartIdsByKeyword(Long storeId, String keyword) {
         QueryWrapper<PartEntity> pw = new QueryWrapper<>();
         pw.eq("store_id", storeId).eq("deleted", 0);
+        String pattern = buildContainsPattern(keyword);
         pw.and(g -> g
-                .like("part_code", keyword)
-                .or().like("part_name", keyword)
-                .or().like("official_part_no", keyword)
-                .or().like("default_barcode", keyword)
-                .or().like("model", keyword)
-                .or().like("location_remark", keyword));
+                .apply(containsCondition("part_code"), pattern)
+                .or().apply(containsCondition("part_name"), pattern)
+                .or().apply(containsCondition("official_part_no"), pattern)
+                .or().apply(containsCondition("default_barcode"), pattern)
+                .or().apply(containsCondition("model"), pattern)
+                .or().apply(containsCondition("location_remark"), pattern));
         return partMapper.selectList(pw).stream().map(PartEntity::getId).toList();
     }
 
@@ -429,19 +433,22 @@ public class InventoryServiceImpl implements InventoryService {
     }
 
     private List<Long> findPartIdsByFilters(Long storeId, String partCode, String partName, String source) {
-        if (!StringUtils.hasText(partCode) && !StringUtils.hasText(partName) && !StringUtils.hasText(source)) {
+        String normalizedPartCode = normalize(partCode);
+        String normalizedPartName = normalize(partName);
+        String normalizedSource = normalize(source);
+        if (normalizedPartCode == null && normalizedPartName == null && normalizedSource == null) {
             return null;
         }
         QueryWrapper<PartEntity> pw = new QueryWrapper<>();
         pw.eq("store_id", storeId).eq("deleted", 0);
-        if (StringUtils.hasText(partCode)) {
-            pw.like("part_code", partCode.trim());
+        if (normalizedPartCode != null) {
+            pw.apply(containsCondition("part_code"), buildContainsPattern(normalizedPartCode));
         }
-        if (StringUtils.hasText(partName)) {
-            pw.like("part_name", partName);
+        if (normalizedPartName != null) {
+            pw.apply(containsCondition("part_name"), buildContainsPattern(normalizedPartName));
         }
-        if (StringUtils.hasText(source)) {
-            pw.eq("source", source);
+        if (normalizedSource != null) {
+            pw.eq("source", normalizedSource);
         }
         List<PartEntity> parts = partMapper.selectList(pw);
         return parts.stream().map(PartEntity::getId).toList();

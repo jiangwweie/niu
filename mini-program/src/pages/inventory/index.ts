@@ -2,6 +2,7 @@ import { authStore } from '../../stores/auth';
 import { getInventoryStocks } from '../../api/inventory';
 import { InventoryStock } from '../../types/inventory';
 import { hasPermission } from '../../utils/permission';
+import { normalizeSearchParam } from '../../utils/searchParams';
 
 let inventorySearchTimer: number | undefined;
 
@@ -69,7 +70,8 @@ Page({
   async fetchData() {
     this.setData({ loading: true });
     try {
-      const res = await getInventoryStocks({ keyword: this.data.keyword });
+      const keyword = normalizeSearchParam(this.data.keyword);
+      const res = await getInventoryStocks(keyword ? { keyword } : undefined);
       const stocks = (res.data.records || []).map((item: InventoryStock) => {
         const avail = Number(item.availableQty || 0);
         // 兼容 partSource / source 两种字段名

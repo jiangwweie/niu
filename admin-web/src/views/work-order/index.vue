@@ -666,6 +666,7 @@ import {
 } from '@/api/workOrder';
 import { useAuthStore } from '@/stores/auth';
 import { hasPermission } from '@/utils/permission';
+import { trimSearchFields } from '@/utils/searchParams';
 import {
   getCashierStatusText,
   getInventoryStatusText,
@@ -700,6 +701,10 @@ const loading = ref(false);
 const tableData = ref<WorkOrderRecord[]>([]);
 const total = ref(0);
 
+const normalizeQueryParams = () => {
+  trimSearchFields(queryParams, ['orderNo', 'customerName', 'phone', 'vin', 'scooterModel']);
+};
+
 const getFeeTypeLabel = (type: string) => {
   const map: Record<string, string> = {
     PART: '配件费',
@@ -732,6 +737,7 @@ const getPaymentMethodLabel = (method: string) => {
 
 // 获取列表数据
 const fetchData = async () => {
+  normalizeQueryParams();
   loading.value = true;
   try {
     const res = await getWorkOrderList(queryParams);

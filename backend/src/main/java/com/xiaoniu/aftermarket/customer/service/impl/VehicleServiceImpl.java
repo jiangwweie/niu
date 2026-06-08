@@ -1,5 +1,9 @@
 package com.xiaoniu.aftermarket.customer.service.impl;
 
+import static com.xiaoniu.aftermarket.common.util.SearchKeywordUtils.buildContainsPattern;
+import static com.xiaoniu.aftermarket.common.util.SearchKeywordUtils.containsCondition;
+import static com.xiaoniu.aftermarket.common.util.SearchKeywordUtils.normalize;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.common.enums.WorkOrderStatus;
@@ -18,7 +22,6 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 @Service
 public class VehicleServiceImpl implements VehicleService {
@@ -55,42 +58,47 @@ public class VehicleServiceImpl implements VehicleService {
         }
 
         // keyword search: frameNo, model, batteryNo LIKE + customer name sub-query
-        if (StringUtils.hasText(query.getKeyword())) {
-            String kw = query.getKeyword().trim();
+        String keyword = normalize(query.getKeyword());
+        if (keyword != null) {
+            String pattern = buildContainsPattern(keyword);
             List<Long> nameCustomerIds = customerMapper.selectList(
                     new LambdaQueryWrapper<CustomerEntity>()
                             .eq(CustomerEntity::getStoreId, query.getStoreId())
-                            .like(CustomerEntity::getCustomerName, kw)
+                            .apply(containsCondition("customer_name"), pattern)
                             .eq(CustomerEntity::getDeleted, 0)
                             .select(CustomerEntity::getId))
                     .stream().map(CustomerEntity::getId).toList();
             wrapper.and(w -> {
-                w.like(VehicleEntity::getFrameNo, kw)
+                w.apply(containsCondition("frame_no"), pattern)
                  .or()
-                 .like(VehicleEntity::getModel, kw)
+                 .apply(containsCondition("model"), pattern)
                  .or()
-                 .like(VehicleEntity::getBatteryNo, kw);
+                 .apply(containsCondition("battery_no"), pattern);
                 if (!nameCustomerIds.isEmpty()) {
                     w.or().in(VehicleEntity::getCustomerId, nameCustomerIds);
                 }
             });
         }
-        if (StringUtils.hasText(query.getVin())) {
-            wrapper.like(VehicleEntity::getFrameNo, query.getVin());
+        String vin = normalize(query.getVin());
+        if (vin != null) {
+            wrapper.apply(containsCondition("frame_no"), buildContainsPattern(vin));
         }
-        if (StringUtils.hasText(query.getModel())) {
-            wrapper.like(VehicleEntity::getModel, query.getModel());
+        String model = normalize(query.getModel());
+        if (model != null) {
+            wrapper.apply(containsCondition("model"), buildContainsPattern(model));
         }
-        if (StringUtils.hasText(query.getBatteryNo())) {
-            wrapper.like(VehicleEntity::getBatteryNo, query.getBatteryNo());
+        String batteryNo = normalize(query.getBatteryNo());
+        if (batteryNo != null) {
+            wrapper.apply(containsCondition("battery_no"), buildContainsPattern(batteryNo));
         }
 
         // customer phone search: find matching customer IDs first
-        if (StringUtils.hasText(query.getCustomerPhone())) {
+        String customerPhone = normalize(query.getCustomerPhone());
+        if (customerPhone != null) {
             List<Long> customerIds = customerMapper.selectList(
                     new LambdaQueryWrapper<CustomerEntity>()
                             .eq(CustomerEntity::getStoreId, query.getStoreId())
-                            .like(CustomerEntity::getPhone, query.getCustomerPhone())
+                            .apply(containsCondition("phone"), buildContainsPattern(customerPhone))
                             .eq(CustomerEntity::getDeleted, 0)
                             .select(CustomerEntity::getId))
                     .stream().map(CustomerEntity::getId).toList();
@@ -101,11 +109,12 @@ public class VehicleServiceImpl implements VehicleService {
         }
 
         // customer name search: find matching customer IDs first
-        if (StringUtils.hasText(query.getCustomerName())) {
+        String customerName = normalize(query.getCustomerName());
+        if (customerName != null) {
             List<Long> nameCustomerIds = customerMapper.selectList(
                     new LambdaQueryWrapper<CustomerEntity>()
                             .eq(CustomerEntity::getStoreId, query.getStoreId())
-                            .like(CustomerEntity::getCustomerName, query.getCustomerName().trim())
+                            .apply(containsCondition("customer_name"), buildContainsPattern(customerName))
                             .eq(CustomerEntity::getDeleted, 0)
                             .select(CustomerEntity::getId))
                     .stream().map(CustomerEntity::getId).toList();
