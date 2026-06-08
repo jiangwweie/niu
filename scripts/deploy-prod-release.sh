@@ -86,7 +86,11 @@ run_remote() {
   local remote_cmd="$1"
   echo "+ ssh ${ssh_opts[*]:-} ${ssh_target} ${remote_cmd}"
   if [[ "$dry_run" -eq 0 ]]; then
-    ssh "${ssh_opts[@]}" "$ssh_target" "$remote_cmd"
+    if [[ ${#ssh_opts[@]} -gt 0 ]]; then
+      ssh "${ssh_opts[@]}" "$ssh_target" "$remote_cmd"
+    else
+      ssh "$ssh_target" "$remote_cmd"
+    fi
   fi
 }
 
@@ -132,7 +136,11 @@ EOF
 )
 run_remote "$remote_prepare"
 
-run scp "${ssh_opts[@]}" "$backend_jar" "${ssh_target}:${release_dir}/backend/app.jar"
+if [[ ${#ssh_opts[@]} -gt 0 ]]; then
+  run scp "${ssh_opts[@]}" "$backend_jar" "${ssh_target}:${release_dir}/backend/app.jar"
+else
+  run scp "$backend_jar" "${ssh_target}:${release_dir}/backend/app.jar"
+fi
 run rsync -az -e "ssh ${ssh_opts[*]:-}" admin-web/dist/ "${ssh_target}:${release_dir}/admin-web/dist/"
 
 revision_content=$(cat <<EOF
