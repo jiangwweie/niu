@@ -126,7 +126,7 @@
       </el-form>
       <template #footer>
         <el-button @click="userDialog.visible = false">取消</el-button>
-        <el-button type="primary" @click="submitUser">保存</el-button>
+        <el-button type="primary" :loading="userDialogSubmitting" @click="submitUser">保存</el-button>
       </template>
     </el-dialog>
 
@@ -136,7 +136,7 @@
       <el-alert v-if="resetDialog.result" :title="`临时密码：${resetDialog.result}`" type="success" show-icon :closable="false" style="margin-top: 16px" />
       <template #footer>
         <el-button @click="resetDialog.visible = false">关闭</el-button>
-        <el-button type="primary" @click="submitReset">确认重置</el-button>
+        <el-button type="primary" :loading="resetSubmitting" @click="submitReset">确认重置</el-button>
       </template>
     </el-dialog>
   </PageContainer>
@@ -168,6 +168,8 @@ const total = ref(0);
 const roles = ref<RoleInfo[]>([]);
 const permissions = ref<PermissionNode[]>([]);
 const hasUserManage = computed(() => hasPermission('USER_MANAGE'));
+const userDialogSubmitting = ref(false);
+const resetSubmitting = ref(false);
 
 const userDialog = reactive({
   visible: false,
@@ -229,23 +231,41 @@ const openEdit = (row: SystemUser) => {
 };
 
 const submitUser = async () => {
-  if (userDialog.editingId) {
-    await updateUser(userDialog.editingId, {
-      realName: userDialog.form.realName,
-      phone: userDialog.form.phone,
-      roleCodes: userDialog.form.roleCodes,
-      enabled: userDialog.form.enabled,
-    });
-  } else {
-    await createUser(userDialog.form);
+  if (!userDialog.form.username || !userDialog.form.realName) {
+    ElMessage.warning('账号和姓名为必填项');
+    return;
   }
-  ElMessage.success('保存成功');
-  userDialog.visible = false;
-  loadUsers();
+  userDialogSubmitting.value = true;
+  try {
+    if (userDialog.editingId) {
+      await updateUser(userDialog.editingId, {
+        realName: userDialog.form.realName,
+        phone: userDialog.form.phone,
+        roleCodes: userDialog.form.roleCodes,
+        enabled: userDialog.form.enabled,
+      });
+    } else {
+      await createUser(userDialog.form);
+    }
+    ElMessage.success('保存成功');
+    userDialog.visible = false;
+    loadUsers();
+  } finally {
+    userDialogSubmitting.value = false;
+  }
 };
 
 const toggleUser = async (row: SystemUser, enabled: boolean) => {
-  await ElMessageBox.confirm(`确认${enabled ? '启用' : '停用'}员工 ${row.username}？`, '确认操作', { type: 'warning' });
+  const actionText = enabled ? '启用' : '停用';
+  const confirmText = enabled
+    ? `启用后该员工将恢复系统访问权限，是否确认启用员工 ${row.username}？`
+    : `停用后该员工将无法登录系统，是否确认停用员工 ${row.username}？`;
+
+  await ElMessageBox.confirm(confirmText, '确认操作', {
+    type: 'warning',
+    confirmButtonText: `确认${actionText}`,
+    cancelButtonText: '取消'
+  });
   if (enabled) {
     await enableUser(row.id);
   } else {
@@ -274,10 +294,15 @@ const openReset = (row: SystemUser) => {
 };
 
 const submitReset = async () => {
-  const res = await resetUserPassword(resetDialog.userId, { temporaryPassword: resetDialog.temporaryPassword || undefined });
-  resetDialog.result = res.temporaryPassword;
-  ElMessage.success('密码已重置');
-  loadUsers();
+  resetSubmitting.value = true;
+  try {
+    const res = await resetUserPassword(resetDialog.userId, { temporaryPassword: resetDialog.temporaryPassword || undefined });
+    resetDialog.result = res.temporaryPassword;
+    ElMessage.success('密码已重置');
+    loadUsers();
+  } finally {
+    resetSubmitting.value = false;
+  }
 };
 
 onMounted(() => {

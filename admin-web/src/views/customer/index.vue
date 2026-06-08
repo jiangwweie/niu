@@ -41,6 +41,9 @@
               <el-button v-if="hasPermission('CUSTOMER_MANAGE')" link type="danger" @click="handleDelete(row)">删除</el-button>
             </template>
           </el-table-column>
+          <template #empty>
+            <div style="padding: 40px 0; color: #999;">暂无数据</div>
+          </template>
         </el-table>
       </div>
 

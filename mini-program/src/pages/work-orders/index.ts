@@ -68,6 +68,9 @@ Page({
     hasUpdateOrderPermission: false,
     pageNo: 1,
     pageSize: 20,
+    loading: false,
+    hasMore: true,
+    loadingMore: false,
   },
   onShow() {
     if (!authStore.isLoggedIn) {
@@ -100,11 +103,12 @@ Page({
     this.fetchData();
   },
   async fetchData() {
+    this.setData({ loading: true });
     try {
       const res = await getWorkOrders({
         keyword: this.data.keyword,
         status: this.data.activeStatus || undefined,
-        pageNo: this.data.pageNo,
+        pageNo: 1,
         pageSize: this.data.pageSize,
       });
       const orders = (res.data.records || []).map((item: WorkOrder) => ({
@@ -116,10 +120,50 @@ Page({
         createdAtText: formatDateTime(item.createdAt),
         outstandingDisplay: (item.outstandingAmount != null ? item.outstandingAmount : Math.max(0, (item.receivableAmount || 0) - (item.receivedAmount || 0))).toFixed(2),
       }));
-      this.setData({ orders });
+      const total = res.data.total;
+      const hasMore = total != null ? orders.length < total : orders.length === this.data.pageSize;
+      this.setData({ orders, hasMore, loading: false, pageNo: 1 });
     } catch (e) {
-      wx.showToast({ title: '加载失败', icon: 'none' });
+      this.setData({ loading: false });
+      wx.showToast({ title: '网络异常，请下拉刷新重试', icon: 'none', duration: 2000 });
     }
+  },
+  async loadMore() {
+    if (this.data.loadingMore || !this.data.hasMore) return;
+    this.setData({ loadingMore: true });
+    const nextPage = this.data.pageNo + 1;
+    try {
+      const res = await getWorkOrders({
+        keyword: this.data.keyword,
+        status: this.data.activeStatus || undefined,
+        pageNo: nextPage,
+        pageSize: this.data.pageSize,
+      });
+      const newOrders = (res.data.records || []).map((item: WorkOrder) => ({
+        ...item,
+        progressText: resolveProgressText(item),
+        cashierText: resolveCashierText(item),
+        inventoryText: resolveInventoryText(item),
+        progressKey: resolveProgressKey(item),
+        createdAtText: formatDateTime(item.createdAt),
+        outstandingDisplay: (item.outstandingAmount != null ? item.outstandingAmount : Math.max(0, (item.receivableAmount || 0) - (item.receivedAmount || 0))).toFixed(2),
+      }));
+      const combined = [...this.data.orders, ...newOrders];
+      const total = res.data.total;
+      const hasMore = total != null ? combined.length < total : newOrders.length === this.data.pageSize;
+      this.setData({ orders: combined, hasMore, loadingMore: false, pageNo: nextPage });
+    } catch (e) {
+      this.setData({ loadingMore: false });
+      wx.showToast({ title: '网络异常，请稍后重试', icon: 'none', duration: 2000 });
+    }
+  },
+  onReachBottom() {
+    this.loadMore();
+  },
+  onPullDownRefresh() {
+    this.fetchData().finally(() => {
+      wx.stopPullDownRefresh();
+    });
   },
   onTapDetail(e: any) {
     const id = e.currentTarget.dataset.id;

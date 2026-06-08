@@ -3,6 +3,8 @@ import { getInventoryStocks } from '../../api/inventory';
 import { InventoryStock } from '../../types/inventory';
 import { hasPermission } from '../../utils/permission';
 
+let inventorySearchTimer: number | undefined;
+
 const SOURCE_TEXT_MAP: Record<string, string> = {
   OFFICIAL: '官方',
   THIRD_PARTY: '第三方',
@@ -36,6 +38,7 @@ Page({
     keyword: '',
     stocks: [] as InventoryListItem[],
     hasInboundPermission: false,
+    loading: false,
   },
   onShow() {
     if (!authStore.isLoggedIn) {
@@ -52,13 +55,19 @@ Page({
   },
   onSearch(e: any) {
     this.setData({ keyword: e.detail.value });
-    this.fetchData();
+    if (inventorySearchTimer) {
+      clearTimeout(inventorySearchTimer);
+    }
+    inventorySearchTimer = setTimeout(() => {
+      this.fetchData();
+    }, 300) as unknown as number;
   },
   onClear() {
     this.setData({ keyword: '' });
     this.fetchData();
   },
   async fetchData() {
+    this.setData({ loading: true });
     try {
       const res = await getInventoryStocks({ keyword: this.data.keyword });
       const stocks = (res.data.records || []).map((item: InventoryStock) => {
@@ -73,9 +82,10 @@ Page({
           partSource: sourceKey,
         };
       });
-      this.setData({ stocks });
+      this.setData({ stocks, loading: false });
     } catch (e) {
-      wx.showToast({ title: '加载失败', icon: 'none' });
+      this.setData({ loading: false });
+      wx.showToast({ title: '网络异常，请稍后重试', icon: 'none', duration: 2000 });
     }
   },
   onTapDetail(e: any) {

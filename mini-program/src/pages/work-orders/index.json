@@ -4,5 +4,6 @@
     "t-search": "tdesign-miniprogram/search/search",
     "t-tag": "tdesign-miniprogram/tag/tag",
     "t-button": "tdesign-miniprogram/button/button"
-  }
+  },
+  "enablePullDownRefresh": true
 }

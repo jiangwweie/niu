@@ -156,3 +156,10 @@ page {
   font-size: 28rpx;
   color: #999;
 }
+
+.load-more-tip {
+  padding: 32rpx 0;
+  text-align: center;
+  font-size: 24rpx;
+  color: #bbb;
+}

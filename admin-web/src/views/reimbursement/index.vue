@@ -50,7 +50,9 @@
           <span class="table-title">报销台账列表</span>
         </div>
         <div class="toolbar-right">
-          <el-button v-if="hasPermission('EXCEL_EXPORT')" type="success" @click="handleExport" :loading="exportLoading">数据导出</el-button>
+          <el-tooltip content="导出当前筛选条件下的报销记录" placement="top">
+            <el-button v-if="hasPermission('EXCEL_EXPORT')" type="success" @click="handleExport" :loading="exportLoading">导出筛选结果</el-button>
+          </el-tooltip>
         </div>
       </div>
 

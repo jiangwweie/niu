@@ -1115,7 +1115,9 @@ const submitRepairDone = async () => {
   }
 
   try {
-    await ElMessageBox.confirm('确认将工单标记为维修完成？', '确认操作');
+    await ElMessageBox.confirm('确认将工单标记为维修完成？标记后将正式扣减配件库存，此操作不可撤销。', '确认操作', {
+      type: 'warning'
+    });
   } catch {
     return;
   }
@@ -1267,7 +1269,7 @@ const submitCancel = async () => {
   }
 
   try {
-    await ElMessageBox.confirm('工单取消后将自动释放预占库存，是否确认取消工单？', '警示确认', {
+    await ElMessageBox.confirm(`取消后将自动释放已预占的配件库存，此操作不可撤销。取消原因：${cancelForm.reason.trim()}`, '警示确认', {
       type: 'warning',
       confirmButtonText: '确认取消',
       cancelButtonText: '放弃'

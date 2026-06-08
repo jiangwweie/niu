@@ -53,7 +53,12 @@
         <text class="card-time" wx:if="{{item.lastChangedAtText}}">{{item.lastChangedAtText}}</text>
       </view>
     </block>
-    <view wx:else class="empty">
+    <view wx:if="{{loading && stocks.length === 0}}" class="loading-tip">加载中...</view>
+    <view wx:elif="{{!loading && stocks.length === 0 && keyword}}" class="empty">
+      <view class="empty-icon">🔍</view>
+      <text class="empty-text">没有找到相关配件，请更换关键词</text>
+    </view>
+    <view wx:elif="{{!loading && stocks.length === 0}}" class="empty">
       <view class="empty-icon">📦</view>
       <text class="empty-text">暂无库存数据。请库管前往‘配件管理’中录入基本信息并进行入库操作</text>
     </view>

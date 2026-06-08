@@ -69,10 +69,22 @@
           <t-button size="small" theme="primary" variant="outline" catchtap="onEditDraft" data-id="{{item.id}}">编辑草稿</t-button>
         </view>
       </view>
+      <view wx:if="{{loadingMore}}" class="load-more-tip">加载中...</view>
+      <view wx:elif="{{!hasMore && orders.length > 0}}" class="load-more-tip">没有更多工单了</view>
     </block>
-    <view wx:else class="empty">
-      <view class="empty-icon">📋</view>
-      <text class="empty-text">暂无工单，可从快捷操作新建工单</text>
+    <view wx:elif="{{!loading}}" class="empty">
+      <block wx:if="{{keyword}}">
+        <view class="empty-icon">🔍</view>
+        <text class="empty-text">没有找到相关工单，请更换关键词</text>
+      </block>
+      <block wx:elif="{{activeStatus}}">
+        <view class="empty-icon">📋</view>
+        <text class="empty-text">该状态暂无工单</text>
+      </block>
+      <block wx:else>
+        <view class="empty-icon">📋</view>
+        <text class="empty-text">暂无工单，可从工作台新建工单</text>
+      </block>
     </view>
   </view>
 </view>
