@@ -113,7 +113,8 @@ public class AdminUserController {
     @PreAuthorize("hasAnyAuthority('USER_MANAGE', 'ROLE_MANAGE')")
     @GetMapping("/permissions")
     public ApiResponse<List<PermissionResponse>> listPermissions() {
-        return ApiResponse.success(adminUserService.listPermissions());
+        AuthenticatedUser user = requireCurrentUser();
+        return ApiResponse.success(adminUserService.listPermissions(user));
     }
 
     private AuthenticatedUser requireCurrentUser() {

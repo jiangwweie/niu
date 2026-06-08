@@ -272,7 +272,8 @@ public class AdminUserServiceImpl implements AdminUserService {
     }
 
     @Override
-    public List<PermissionResponse> listPermissions() {
+    public List<PermissionResponse> listPermissions(AuthenticatedUser currentUser) {
+        ensureUserManagementRole(currentUser);
         return permissionMapper.selectList(new LambdaQueryWrapper<SysPermissionEntity>()
                         .eq(SysPermissionEntity::getStatus, CommonStatus.ENABLED.name())
                         .eq(SysPermissionEntity::getDeleted, 0)
@@ -391,6 +392,10 @@ public class AdminUserServiceImpl implements AdminUserService {
             return;
         }
         if (isSuperAdmin(currentUser)) {
+            boolean hasSuperAdminRole = roles.stream().anyMatch(role -> SUPER_ADMIN.equals(role.getRoleCode()));
+            if (hasSuperAdminRole && targetStoreId != null) {
+                throw new BusinessException(ErrorCode.USER_OPERATION_NOT_ALLOWED, "超级管理员角色只能分配给平台账号");
+            }
             if (targetStoreId == null) {
                 boolean allPlatformRoles = roles.stream().allMatch(role -> role.getStoreId() == null);
                 if (!allPlatformRoles) {

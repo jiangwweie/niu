@@ -421,6 +421,7 @@ const openEdit = (row: SystemUser) => {
 };
 
 const submitUser = async () => {
+  if (userDialogSubmitting.value) return;
   if (!userDialog.form.username.trim() || !userDialog.form.realName.trim()) {
     ElMessage.warning('账号和姓名为必填项');
     return;
@@ -432,23 +433,22 @@ const submitUser = async () => {
 
   const roleChanged = userDialog.editingId > 0 && !sameIds(userDialog.form.roleIds, userDialog.form.originalRoleIds);
   const disabling = userDialog.editingId > 0 && userDialog.form.originalEnabled && !userDialog.form.enabled;
-  if (roleChanged) {
-    await ElMessageBox.confirm('确认修改该员工的角色？', '修改角色', {
-      type: 'warning',
-      confirmButtonText: '确认修改',
-      cancelButtonText: '取消',
-    });
-  }
-  if (disabling) {
-    await ElMessageBox.confirm(`停用后员工 ${userDialog.form.username} 将无法登录系统，是否确认停用？`, '停用员工', {
-      type: 'warning',
-      confirmButtonText: '确认停用',
-      cancelButtonText: '取消',
-    });
-  }
-
   userDialogSubmitting.value = true;
   try {
+    if (roleChanged) {
+      await ElMessageBox.confirm('确认修改该员工的角色？', '修改角色', {
+        type: 'warning',
+        confirmButtonText: '确认修改',
+        cancelButtonText: '取消',
+      });
+    }
+    if (disabling) {
+      await ElMessageBox.confirm(`停用后员工 ${userDialog.form.username} 将无法登录系统，是否确认停用？`, '停用员工', {
+        type: 'warning',
+        confirmButtonText: '确认停用',
+        cancelButtonText: '取消',
+      });
+    }
     if (userDialog.editingId) {
       await updateUser(userDialog.editingId, {
         realName: userDialog.form.realName,
@@ -479,18 +479,19 @@ const submitUser = async () => {
 };
 
 const toggleUser = async (row: SystemUser, enabled: boolean) => {
+  if (operationSubmitting.value) return;
   const actionText = enabled ? '启用' : '停用';
   const confirmText = enabled
     ? `启用后员工 ${row.username} 将恢复系统访问权限，是否确认启用？`
     : `停用后员工 ${row.username} 将无法登录系统，是否确认停用？`;
 
-  await ElMessageBox.confirm(confirmText, '确认操作', {
-    type: 'warning',
-    confirmButtonText: `确认${actionText}`,
-    cancelButtonText: '取消',
-  });
   operationSubmitting.value = true;
   try {
+    await ElMessageBox.confirm(confirmText, '确认操作', {
+      type: 'warning',
+      confirmButtonText: `确认${actionText}`,
+      cancelButtonText: '取消',
+    });
     if (enabled) {
       await enableUser(row.id);
     } else {
@@ -504,13 +505,14 @@ const toggleUser = async (row: SystemUser, enabled: boolean) => {
 };
 
 const handleUnbindWechat = async (row: SystemUser) => {
-  await ElMessageBox.confirm(
-    `确认解绑员工 ${row.username} 的微信账号？解绑后该员工将无法使用微信快捷登录。`,
-    '解绑微信',
-    { type: 'warning', confirmButtonText: '确认解绑', cancelButtonText: '取消' }
-  );
+  if (operationSubmitting.value) return;
   operationSubmitting.value = true;
   try {
+    await ElMessageBox.confirm(
+      `确认解绑员工 ${row.username} 的微信账号？解绑后该员工将无法使用微信快捷登录。`,
+      '解绑微信',
+      { type: 'warning', confirmButtonText: '确认解绑', cancelButtonText: '取消' }
+    );
     await unbindWechat(row.id);
     ElMessage.success('微信已解绑');
     await loadUsers();
@@ -520,13 +522,14 @@ const handleUnbindWechat = async (row: SystemUser) => {
 };
 
 const openReset = async (row: SystemUser) => {
-  await ElMessageBox.confirm(
-    `确认重置员工 ${row.username} 的密码？重置后该员工下次登录必须修改密码。`,
-    '重置密码',
-    { type: 'warning', confirmButtonText: '确认重置', cancelButtonText: '取消' }
-  );
+  if (operationSubmitting.value) return;
   operationSubmitting.value = true;
   try {
+    await ElMessageBox.confirm(
+      `确认重置员工 ${row.username} 的密码？重置后该员工下次登录必须修改密码。`,
+      '重置密码',
+      { type: 'warning', confirmButtonText: '确认重置', cancelButtonText: '取消' }
+    );
     const result = await resetUserPassword(row.id);
     showPasswordDialog('密码已重置', row.username, result.temporaryPassword);
     await loadUsers();

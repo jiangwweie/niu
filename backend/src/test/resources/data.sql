@@ -25,7 +25,7 @@ MERGE INTO sys_user (id, store_id, username, password_hash, real_name, phone, ac
 MERGE INTO sys_role (id, store_id, role_code, role_name, status) KEY (store_id, role_code) VALUES (1, 1, 'ADMIN', '管理员', 'ENABLED');
 MERGE INTO sys_role (id, store_id, role_code, role_name, status) KEY (store_id, role_code) VALUES (2, 1, 'TECHNICIAN', '技术员', 'ENABLED');
 MERGE INTO sys_role (id, store_id, role_code, role_name, status) KEY (store_id, role_code) VALUES (3, 1, 'DISCOUNT_STAFF', '折扣员', 'DISABLED');
-MERGE INTO sys_role (id, store_id, role_code, role_name, status) KEY (store_id, role_code) VALUES (4, 1, 'SUPER_ADMIN', '超级管理员', 'ENABLED');
+MERGE INTO sys_role (id, store_id, role_code, role_name, status) KEY (id) VALUES (4, NULL, 'SUPER_ADMIN', '超级管理员', 'ENABLED');
 MERGE INTO sys_role (id, store_id, role_code, role_name, status) KEY (store_id, role_code) VALUES (100, 1, 'STORE_ADMIN', '门店管理员', 'ENABLED');
 MERGE INTO sys_role (id, store_id, role_code, role_name, status) KEY (store_id, role_code) VALUES (101, 1, 'FINANCE', '财务', 'ENABLED');
 MERGE INTO sys_role (id, store_id, role_code, role_name, status) KEY (store_id, role_code) VALUES (102, 1, 'TECHNICIAN_FRONT_DESK', '前台员工', 'ENABLED');

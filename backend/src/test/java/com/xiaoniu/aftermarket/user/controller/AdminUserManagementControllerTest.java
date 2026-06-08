@@ -25,6 +25,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestExecutionListeners;
@@ -52,6 +53,9 @@ class AdminUserManagementControllerTest {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Test
     void normalUserCannotAccessUserManagement() throws Exception {
@@ -141,6 +145,31 @@ class AdminUserManagementControllerTest {
     }
 
     @Test
+    void ordinaryUserWithRoleManagePermissionStillCannotReadPermissions() throws Exception {
+        jdbcTemplate.update("""
+                INSERT INTO sys_user (id, store_id, username, password_hash, real_name, phone, account_type, status, password_must_change, deleted)
+                VALUES (900, 1, 'role_manage_only', '{noop}dev123', '权限点用户', '13910000900', 'STORE', 'ENABLED', FALSE, 0)
+                """);
+        jdbcTemplate.update("""
+                INSERT INTO sys_role (id, store_id, role_code, role_name, status, deleted)
+                VALUES (900, 1, 'ROLE_MANAGE_ONLY', '仅角色权限', 'ENABLED', 0)
+                """);
+        jdbcTemplate.update("INSERT INTO sys_user_role (user_id, role_id) VALUES (?, ?)", 900L, 900L);
+        jdbcTemplate.update("INSERT INTO sys_role_permission (role_id, permission_id) VALUES (?, ?)", 900L, 1023L);
+        try {
+            mockMvc.perform(get("/api/admin/permissions")
+                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(900L, Set.of("ROLE_MANAGE"))))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("USER_OPERATION_NOT_ALLOWED"));
+        } finally {
+            jdbcTemplate.update("DELETE FROM sys_role_permission WHERE role_id = ?", 900L);
+            jdbcTemplate.update("DELETE FROM sys_user_role WHERE user_id = ?", 900L);
+            jdbcTemplate.update("DELETE FROM sys_role WHERE id = ?", 900L);
+            jdbcTemplate.update("DELETE FROM sys_user WHERE id = ?", 900L);
+        }
+    }
+
+    @Test
     void userDetailContainsPermissionSummary() throws Exception {
         mockMvc.perform(get("/api/admin/users/1")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(1L, Set.of("USER_MANAGE"))))
@@ -189,6 +218,44 @@ class AdminUserManagementControllerTest {
         String temporaryPassword = response.path("data").path("temporaryPassword").asText();
         SysUserEntity user = userMapper.selectById(userId);
         assertTrue(passwordEncoder.matches(temporaryPassword, user.getPasswordHash()));
+    }
+
+    @Test
+    void superAdminCanCreatePlatformSuperAdminWithPlatformRoleId() throws Exception {
+        mockMvc.perform(post("/api/admin/users")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(20L, Set.of("USER_MANAGE")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username": "platform_super_created",
+                                  "realName": "新增平台超管",
+                                  "phone": "13910000020",
+                                  "roleIds": [4]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.user.accountType").value("PLATFORM"))
+                .andExpect(jsonPath("$.data.user.storeId").isEmpty())
+                .andExpect(jsonPath("$.data.user.roleCodes[0]").value("SUPER_ADMIN"))
+                .andExpect(jsonPath("$.data.temporaryPassword").value(notNullValue()));
+    }
+
+    @Test
+    void superAdminCannotAssignSuperAdminRoleToStoreUser() throws Exception {
+        mockMvc.perform(post("/api/admin/users")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(20L, Set.of("USER_MANAGE")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username": "store_super_forbidden",
+                                  "realName": "门店超管",
+                                  "phone": "13910000021",
+                                  "storeId": 2,
+                                  "roleIds": [4]
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("USER_OPERATION_NOT_ALLOWED"));
     }
 
     @Test

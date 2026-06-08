@@ -34,5 +34,5 @@ public interface AdminUserService {
 
     List<RoleResponse> listRoles(AuthenticatedUser currentUser);
 
-    List<PermissionResponse> listPermissions();
+    List<PermissionResponse> listPermissions(AuthenticatedUser currentUser);
 }
