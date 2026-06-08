@@ -397,7 +397,7 @@
   </t-dialog>
 
   <!-- Customer Search Popup -->
-  <t-popup visible="{{customerSearchVisible}}" bind:visible-change="onCustomerSearchPopupChange" placement="bottom" z-index="11000" custom-style="height: 70vh;">
+  <t-popup visible="{{customerSearchVisible}}" bind:visible-change="onCustomerSearchPopupChange" placement="bottom" custom-style="height: 70vh;">
     <view class="popup-header">
       <text class="popup-title">搜索客户</text>
       <t-icon name="close" size="24" bind:tap="closeCustomerSearch" />
@@ -419,7 +419,7 @@
   </t-popup>
 
   <!-- Vehicle Search Popup -->
-  <t-popup visible="{{vehicleSearchVisible}}" bind:visible-change="onVehicleSearchPopupChange" placement="bottom" z-index="11000" custom-style="height: 70vh;">
+  <t-popup visible="{{vehicleSearchVisible}}" bind:visible-change="onVehicleSearchPopupChange" placement="bottom" custom-style="height: 70vh;">
     <view class="popup-header">
       <text class="popup-title">搜索车辆</text>
       <t-icon name="close" size="24" bind:tap="closeVehicleSearch" />
