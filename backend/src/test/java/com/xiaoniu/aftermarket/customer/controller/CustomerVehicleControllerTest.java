@@ -174,6 +174,17 @@ class CustomerVehicleControllerTest {
     }
 
     @Test
+    void customerList_percentKeywordDoesNotMatchAllRows() throws Exception {
+        mockMvc.perform(get("/api/admin/customers")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithCustomerView())
+                        .param("keyword", "%"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.records", hasSize(0)))
+                .andExpect(jsonPath("$.data.total").value(0));
+    }
+
+    @Test
     void customerDetail_returnsVehiclesAndWorkOrders() throws Exception {
         mockMvc.perform(get("/api/admin/customers/9001")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithCustomerView()))
@@ -403,6 +414,16 @@ class CustomerVehicleControllerTest {
     }
 
     @Test
+    void staffSearchCustomers_blankKeywordReturnsEmptyResults() throws Exception {
+        mockMvc.perform(get("/api/staff/customers/search")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithCustomerView())
+                        .param("keyword", "   "))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data", hasSize(0)));
+    }
+
+    @Test
     void staffSearchCustomers_isolatedByStore() throws Exception {
         mockMvc.perform(get("/api/staff/customers/search")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenStore2())
@@ -428,6 +449,16 @@ class CustomerVehicleControllerTest {
                 .andExpect(jsonPath("$.code").value("SUCCESS"))
                 .andExpect(jsonPath("$.data", hasSize(1)))
                 .andExpect(jsonPath("$.data[0].frameNo").value("VIN-ZHANG-001"));
+    }
+
+    @Test
+    void staffSearchVehicles_blankKeywordReturnsEmptyResults() throws Exception {
+        mockMvc.perform(get("/api/staff/vehicles/search")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithCustomerView())
+                        .param("keyword", "   "))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data", hasSize(0)));
     }
 
     @Test

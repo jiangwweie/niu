@@ -6,6 +6,7 @@ import com.xiaoniu.aftermarket.common.context.CurrentUser;
 import com.xiaoniu.aftermarket.common.context.CurrentUserContext;
 import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
+import com.xiaoniu.aftermarket.common.util.SearchKeywordUtils;
 import com.xiaoniu.aftermarket.customer.dto.CustomerPageQuery;
 import com.xiaoniu.aftermarket.customer.dto.CustomerResponse;
 import com.xiaoniu.aftermarket.customer.service.CustomerService;
@@ -28,9 +29,13 @@ public class StaffCustomerController {
     public ApiResponse<List<CustomerSearchResult>> search(
             @RequestParam String keyword) {
         CurrentUser user = requireCurrentUser();
+        String normalizedKeyword = SearchKeywordUtils.normalize(keyword);
+        if (normalizedKeyword == null) {
+            return ApiResponse.success(List.of());
+        }
         CustomerPageQuery query = new CustomerPageQuery();
         query.setStoreId(user.storeId());
-        query.setKeyword(keyword);
+        query.setKeyword(normalizedKeyword);
         query.setPageNo(1);
         query.setPageSize(20);
         PageResponse<CustomerResponse> page = customerService.pageQuery(query);

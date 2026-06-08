@@ -384,6 +384,21 @@ class OfficialAfterSalesServiceTest {
         assertEquals(WorkOrderStatus.DELIVERED.getCode(), response.getWorkOrderStatus());
     }
 
+    @Test
+    void pageQueryOfficialAfterSales_percentWildcardDoesNotMatchAllOrders() {
+        Long workOrderId = createDraftWorkOrder(STORE_ID, new BigDecimal("100.00"));
+        officialAfterSalesService.saveOfficialOrderInfo(buildSaveCommand(STORE_ID, workOrderId, "OFF-PAGE-PENDING"));
+
+        OfficialAfterSalesQueryRequest request = new OfficialAfterSalesQueryRequest();
+        request.setStoreId(STORE_ID);
+        request.setOfficialOrderNo("%");
+
+        PageResponse<OfficialAfterSalesQueryResponse> page = officialAfterSalesService.pageQuery(request);
+
+        assertEquals(0, page.total());
+        assertTrue(page.records().isEmpty());
+    }
+
     private Long createDraftWorkOrder(Long storeId, BigDecimal amount) {
         CreateDraftWorkOrderCommand create = new CreateDraftWorkOrderCommand();
         create.setStoreId(storeId);

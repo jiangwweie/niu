@@ -1,14 +1,12 @@
 # M27B-3 搜索输入规范与 LIKE 通配符安全治理
 
-## 1. 修复背景
+## 1. 背景
 
-M27B-1、M27B-2、M27B-2A 逐步扩大了小程序和管理端的模糊搜索范围，覆盖客户、车辆、工单、配件、库存、报销、员工等列表。审查发现新增或修改的 LIKE 查询缺少统一输入规范，用户输入 `%`、`_`、`\` 时可能被数据库当作 LIKE 通配符或转义字符处理。
+M27B-1、M27B-2、M27B-2A 已完成小程序和管理端的模糊搜索增强，并随 M28 一起部署生产。剩余技术债集中在搜索输入规范和 LIKE 通配符安全：用户输入 `%`、`_`、`\` 时不能被数据库当作通配符或转义字符处理，空字符串和纯空格也不应参与搜索过滤。
 
-## 2. 为什么 M27B-3 单独治理
+本轮只治理搜索输入和 LIKE 查询安全，不新增搜索字段，不调整接口返回结构，不修改库存、工单状态机、支付、退款、结算、官方售后结算、财务规则，不处理 `cashierStatus`。
 
-本轮只做搜索输入规范和 LIKE 安全收口，不新增业务搜索字段，不引入全文搜索、ES、Redis、MQ，不改变库存、工单状态机、支付、退款、结算、财务规则。
-
-## 3. normalize 规则
+## 2. Normalize 规则
 
 - `null -> null`
 - `"" -> null`
@@ -16,17 +14,16 @@ M27B-1、M27B-2、M27B-2A 逐步扩大了小程序和管理端的模糊搜索范
 - `" abc " -> "abc"`
 - 中文、手机号、车架号、编码、条码、混合大小写文本保留原内容，仅去除前后空格。
 
-## 4. 空字符串不查询规则
+## 3. LIKE 转义策略
 
-后端所有本轮覆盖的文本搜索字段先 normalize，结果为 `null` 时不追加查询条件。前端提交前 trim 文本字段，API 层兜底把空字符串或纯空格转为不传。
+后端复用既有 `SearchKeywordUtils`，统一处理文本搜索：
 
-## 5. LIKE 通配符处理方式
+- `normalize(String value)`：空值和 blank 转为 `null`，非空文本 trim。
+- `escapeLike(String value)`：对 `%`、`_`、`\` 和 escape 字符 `!` 前置 `!`。
+- `buildContainsPattern(String value)`：生成包含匹配 pattern。
+- `containsCondition(String columnName)`：生成固定列名条件 `column LIKE {0} ESCAPE '!'`。
 
-后端新增统一工具方法，对 `%`、`_`、`\` 和 escape 字符 `!` 做转义，并使用参数绑定构造包含匹配：
-
-```text
-column LIKE {0} ESCAPE '!'
-```
+用户输入通过 MyBatis-Plus 参数绑定传递，列名由代码固定传入，不拼接用户输入。
 
 示例：
 
@@ -35,69 +32,64 @@ column LIKE {0} ESCAPE '!'
 - `_ -> %!_%`
 - `\ -> %!\%`
 
-## 6. 后端工具方法说明
+## 4. 后端覆盖范围
 
-新增 `SearchKeywordUtils`：
+- 客户列表：`keyword`、`phone`、`customerName`。
+- 车辆列表：`keyword`、`vin`、`model`、`batteryNo`、`customerPhone`、`customerName`。
+- 工单列表：`keyword`、`workOrderNo`、`customerName`、`customerPhone`、`vehicleFrameNo`、`scooterModel`、官方订单号子查询。
+- 配件列表：`keyword`、`partCode`、`partName`、`officialPartNo`、`barcode`、`model`。
+- 库存列表和库存流水：`keyword`、`partCode`、`partName`。
+- 报销列表和报销导出：`reimbursementNo`、`applicantName`。
+- 员工与权限用户列表：`username`、`realName`、`phone`。
+- 支付记录列表：`workOrderNo`、`customerName`。
+- 退款记录列表：`workOrderNo`、`customerName`。
+- 官方售后结算列表：`workOrderNo`、`officialOrderNo`。
+- 小程序 staff 客户/车辆搜索：blank keyword 直接返回空列表，非空 keyword 进入统一后端搜索。
+- 小程序 staff 配件/库存/工单搜索：页面和 API 参数层已 trim，blank 不作为查询条件传递。
 
-- `normalize(String value)`
-- `escapeLike(String value)`
-- `buildContainsPattern(String value)`
-- `containsCondition(String columnName)`
-
-工具方法只处理搜索输入和 LIKE pattern，不拼接用户输入。列名在代码中固定传入，用户输入通过 MyBatis-Plus 参数绑定传递。
-
-## 7. 覆盖的查询接口
-
-- 管理端客户列表：客户姓名、手机号、keyword。
-- 管理端车辆列表：车架号、车型、电池号、客户手机号、客户姓名、keyword。
-- 管理端工单列表：工单号、客户姓名、手机号、车架号、车型、keyword、官方单号子查询。
-- 管理端配件列表：配件编码、配件名称、官方品号、条码、型号、keyword。
-- 管理端库存列表：keyword、配件编码、配件名称。
-- 管理端报销列表：报销编号、报销人姓名。
-- 管理端报销导出：报销编号、报销人姓名与列表筛选保持一致。
-- 管理端员工列表：账号、姓名、手机号。
-- 小程序 staff 配件列表：keyword。
-- 小程序 staff 库存列表：keyword、配件编码、配件名称。
-- 小程序 staff 工单列表：keyword。
-
-## 8. 前端参数规范
+## 5. 前端覆盖范围
 
 Admin-web：
 
-- 搜索提交前 trim 文本字段。
-- API 层空文本不传。
-- 搜索按钮重置 `pageNo = 1`。
-- 翻页保留当前筛选条件。
-- 重置按钮清空条件并刷新。
-- 状态、日期、来源、角色等结构化筛选不改变语义。
+- 客户、车辆、工单、配件、库存、报销、导出、员工与权限列表已通过 `trimSearchFields` 或 `setSearchParam` 规范文本搜索参数。
+- 支付、退款、官方售后结算列表补齐 `setSearchParam`，空字符串不传。
+- 库存流水 `partCode`、`partName` 补齐 `setSearchParam`，避免纯空格透传。
+- 翻页保留当前筛选条件，搜索按钮重置 `pageNo = 1`。
 
 Mini-program：
 
-- keyword 发送前 trim。
-- 空 keyword 不传。
-- 搜索 debounce 保留。
-- status / keyword / pageNo / pageSize 组合保留。
-- 配件选择弹窗改为后端搜索，不再只过滤本地默认第一页。
+- 客户/车辆搜索输入在 debounce 和实际请求前统一 normalize。
+- `searchCustomers`、`searchVehicles` 对 blank keyword 直接返回空结果，不再发送 `keyword=`。
+- 配件、库存、工单搜索继续使用 `normalizeSearchParam`，blank 不传查询条件。
+- `tsconfig.json` 补齐小程序类型检查所需的 ES lib、第三方声明跳过和 TDesign 生成目录路径映射；不改变运行时代码。
 
-## 9. locationRemark 结论
+## 6. 测试覆盖
 
-审查确认 `PartQueryResponse` 已有 `locationRemark`，但 `StaffPartListItem` 原先未返回该字段，导致小程序类型和本地过滤里的 `locationRemark` 没有真实数据来源。
+新增或补充后端测试：
 
-本轮在 Owner 同意修复建议后，低风险补充 `StaffPartListItem.locationRemark` 映射，使小程序配件搜索可实际按后端已覆盖的库位备注命中。该变更为响应字段追加，不涉及数据库结构。
+- 客户列表输入 `%` 不匹配全部记录。
+- 小程序 staff 客户搜索 blank 返回空列表。
+- 小程序 staff 车辆搜索 blank 返回空列表。
+- 支付记录按客户名搜索 `%` 不匹配全部工单。
+- 退款记录按客户名搜索 `%` 不匹配全部工单。
+- 官方售后结算按官方订单号搜索 `%` 不匹配全部记录。
 
-## 10. 未改数据库说明
+既有测试继续覆盖 `SearchKeywordUtils.normalize`、`escapeLike`、`buildContainsPattern`、`containsCondition`。
 
-本轮未新增、删除或修改数据库表结构，未新增 migration，未修改生产数据库。
+## 7. 边界说明
 
-## 11. 未删除历史数据说明
+- 未新增数据库 migration。
+- 未修改生产数据库。
+- 未删除历史数据。
+- 未修改接口返回结构。
+- 未新增搜索字段。
+- 未修改库存预占、正式扣减、释放逻辑。
+- 未修改工单状态机。
+- 未修改支付、退款、结算、官方售后结算、财务利润计算口径。
+- 未修改微信登录主链路。
+- 未输出 DB、JWT、微信、token、hash 等敏感信息。
 
-本轮未删除任何历史数据，也未执行数据清理脚本。
-
-## 12. 未改核心业务规则说明
-
-本轮未修改库存预占、正式扣减、释放逻辑，未修改工单状态机，未修改支付、退款、结算、官方售后结算、财务利润计算口径。
-
-## 13. 验证命令
+## 8. 验证命令
 
 ```bash
 cd backend && JAVA_HOME=/opt/homebrew/opt/openjdk@17 PATH=/opt/homebrew/opt/openjdk@17/bin:$PATH mvn test
@@ -108,6 +100,14 @@ git diff --check
 git status --short
 ```
 
-## 14. 后续统一部署建议
+## 9. 验证结果
 
-本轮只做本地修复、测试和提交，不部署、不 push。建议后续由 Owner 统一评估 M27B-1、M27B-2、M27B-2A、M27B-3 后再决定部署窗口。
+- `backend`：`mvn test` 通过，736 tests，0 failures，0 errors，0 skipped。
+- `admin-web`：`npx vue-tsc --noEmit` 通过。
+- `admin-web`：`npm run build` 通过；仅保留既有 Rollup 注释和大 chunk warning。
+- `mini-program`：`npx tsc --noEmit` 通过。
+- `git diff --check`：通过。
+
+## 10. 后续部署建议
+
+本轮只做本地修复、测试和提交，不部署、不 push。建议后续由 Owner 确认小程序真机搜索 smoke 后，再统一评估部署窗口。

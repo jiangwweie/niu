@@ -1,4 +1,5 @@
 import request from '@/utils/request';
+import { setSearchParam } from '@/utils/searchParams';
 import type { PaymentQuery, PaymentRecord } from '@/types/payment';
 
 /** Backend PaymentQueryResponse shape */
@@ -54,8 +55,8 @@ export async function getPaymentList(params: PaymentQuery): Promise<{
     pageNo: params.pageNo,
     pageSize: params.pageSize,
   };
-  if (params.workOrderNo) backendParams.workOrderNo = params.workOrderNo;
-  if (params.customerName) backendParams.customerName = params.customerName;
+  setSearchParam(backendParams, 'workOrderNo', params.workOrderNo);
+  setSearchParam(backendParams, 'customerName', params.customerName);
   if (params.paymentMethod) backendParams.paymentMethod = params.paymentMethod;
   if (params.startTime) backendParams.startTime = params.startTime;
   if (params.endTime) backendParams.endTime = params.endTime;

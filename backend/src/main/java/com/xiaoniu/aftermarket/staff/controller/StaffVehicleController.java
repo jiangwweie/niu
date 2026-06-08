@@ -6,6 +6,7 @@ import com.xiaoniu.aftermarket.common.context.CurrentUser;
 import com.xiaoniu.aftermarket.common.context.CurrentUserContext;
 import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
+import com.xiaoniu.aftermarket.common.util.SearchKeywordUtils;
 import com.xiaoniu.aftermarket.customer.dto.VehiclePageQuery;
 import com.xiaoniu.aftermarket.customer.dto.VehicleResponse;
 import com.xiaoniu.aftermarket.customer.service.VehicleService;
@@ -31,9 +32,13 @@ public class StaffVehicleController {
             @RequestParam String keyword,
             @RequestParam(required = false) Long customerId) {
         CurrentUser user = requireCurrentUser();
+        String normalizedKeyword = SearchKeywordUtils.normalize(keyword);
+        if (normalizedKeyword == null) {
+            return ApiResponse.success(List.of());
+        }
         VehiclePageQuery query = new VehiclePageQuery();
         query.setStoreId(user.storeId());
-        query.setKeyword(keyword);
+        query.setKeyword(normalizedKeyword);
         query.setCustomerId(customerId);
         query.setPageNo(1);
         query.setPageSize(20);
@@ -43,7 +48,7 @@ public class StaffVehicleController {
 
         VehiclePageQuery phoneQuery = new VehiclePageQuery();
         phoneQuery.setStoreId(user.storeId());
-        phoneQuery.setCustomerPhone(keyword);
+        phoneQuery.setCustomerPhone(normalizedKeyword);
         phoneQuery.setPageNo(1);
         phoneQuery.setPageSize(20);
         vehicleService.pageQuery(phoneQuery).records()

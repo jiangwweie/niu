@@ -1,5 +1,9 @@
 package com.xiaoniu.aftermarket.payment.service.impl;
 
+import static com.xiaoniu.aftermarket.common.util.SearchKeywordUtils.buildContainsPattern;
+import static com.xiaoniu.aftermarket.common.util.SearchKeywordUtils.containsCondition;
+import static com.xiaoniu.aftermarket.common.util.SearchKeywordUtils.normalize;
+
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.common.enums.PaymentMethod;
@@ -273,16 +277,18 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     private List<Long> findWorkOrderIds(Long storeId, String workOrderNo, String customerName) {
-        if (!StringUtils.hasText(workOrderNo) && !StringUtils.hasText(customerName)) {
+        String normalizedWorkOrderNo = normalize(workOrderNo);
+        String normalizedCustomerName = normalize(customerName);
+        if (normalizedWorkOrderNo == null && normalizedCustomerName == null) {
             return null;
         }
         QueryWrapper<WorkOrderEntity> wrapper = new QueryWrapper<>();
         wrapper.eq("store_id", storeId).eq("deleted", 0);
-        if (StringUtils.hasText(workOrderNo)) {
-            wrapper.like("work_order_no", workOrderNo.trim());
+        if (normalizedWorkOrderNo != null) {
+            wrapper.apply(containsCondition("work_order_no"), buildContainsPattern(normalizedWorkOrderNo));
         }
-        if (StringUtils.hasText(customerName)) {
-            wrapper.like("customer_name_snapshot", customerName.trim());
+        if (normalizedCustomerName != null) {
+            wrapper.apply(containsCondition("customer_name_snapshot"), buildContainsPattern(normalizedCustomerName));
         }
         return workOrderMapper.selectList(wrapper).stream()
                 .map(WorkOrderEntity::getId)

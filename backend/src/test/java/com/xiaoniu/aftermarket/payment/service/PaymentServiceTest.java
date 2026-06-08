@@ -472,6 +472,21 @@ class PaymentServiceTest {
     }
 
     @Test
+    void pageQueryPayments_percentWildcardDoesNotMatchAllWorkOrders() {
+        Long firstWorkOrderId = createSubmittedWorkOrder(new BigDecimal("300.00"));
+        renameWorkOrderCustomer(firstWorkOrderId, "支付查询客户A");
+        paymentService.recordPayment(buildPaymentCommand(firstWorkOrderId, new BigDecimal("120.00"), "WECHAT"));
+
+        PaymentQueryRequest request = new PaymentQueryRequest();
+        request.setStoreId(STORE_ID);
+        request.setCustomerName("%");
+        PageResponse<PaymentQueryResponse> page = paymentService.pageQuery(request);
+
+        assertEquals(0, page.total());
+        assertTrue(page.records().isEmpty());
+    }
+
+    @Test
     void pageQueryRefundsGloballyAndByWorkOrderNoCustomerNameAndMethod() {
         Long firstWorkOrderId = createSubmittedWorkOrder(new BigDecimal("300.00"));
         renameWorkOrderCustomer(firstWorkOrderId, "退款查询客户A");
@@ -511,6 +526,22 @@ class PaymentServiceTest {
         assertEquals(1, methodPage.total());
         assertEquals(firstWorkOrderId, methodPage.records().get(0).getWorkOrderId());
         assertEquals("WECHAT", methodPage.records().get(0).getRefundMethod());
+    }
+
+    @Test
+    void pageQueryRefunds_percentWildcardDoesNotMatchAllWorkOrders() {
+        Long workOrderId = createSubmittedWorkOrder(new BigDecimal("300.00"));
+        renameWorkOrderCustomer(workOrderId, "退款查询客户A");
+        paymentService.recordPayment(buildPaymentCommand(workOrderId, new BigDecimal("120.00"), "WECHAT"));
+        refundService.recordRefund(buildRefundCommand(workOrderId, new BigDecimal("20.00"), "WECHAT", "退款A"));
+
+        RefundQueryRequest request = new RefundQueryRequest();
+        request.setStoreId(STORE_ID);
+        request.setCustomerName("%");
+        PageResponse<RefundQueryResponse> page = refundService.pageQuery(request);
+
+        assertEquals(0, page.total());
+        assertTrue(page.records().isEmpty());
     }
 
     private Long createSubmittedWorkOrder(BigDecimal receivableAmount) {

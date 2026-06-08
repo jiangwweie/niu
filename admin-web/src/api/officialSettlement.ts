@@ -1,4 +1,5 @@
 import request from '@/utils/request';
+import { setSearchParam } from '@/utils/searchParams';
 import type { OfficialSettlementQuery, OfficialSettlementRecord } from '@/types/officialSettlement';
 
 interface OfficialAfterSalesListResp {
@@ -72,8 +73,8 @@ export async function getOfficialAfterSalesList(params: OfficialSettlementQuery)
     pageNo: params.pageNo,
     pageSize: params.pageSize,
   };
-  if (params.workOrderNo) backendParams.workOrderNo = params.workOrderNo;
-  if (params.officialOrderNo) backendParams.officialOrderNo = params.officialOrderNo;
+  setSearchParam(backendParams, 'workOrderNo', params.workOrderNo);
+  setSearchParam(backendParams, 'officialOrderNo', params.officialOrderNo);
   if (params.settlementStatus) backendParams.settlementStatus = params.settlementStatus;
   if (params.startTime) backendParams.startTime = params.startTime;
   if (params.endTime) backendParams.endTime = params.endTime;

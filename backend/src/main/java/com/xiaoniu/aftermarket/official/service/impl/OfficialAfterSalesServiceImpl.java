@@ -1,5 +1,9 @@
 package com.xiaoniu.aftermarket.official.service.impl;
 
+import static com.xiaoniu.aftermarket.common.util.SearchKeywordUtils.buildContainsPattern;
+import static com.xiaoniu.aftermarket.common.util.SearchKeywordUtils.containsCondition;
+import static com.xiaoniu.aftermarket.common.util.SearchKeywordUtils.normalize;
+
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.common.enums.OfficialSettlementStatus;
@@ -295,13 +299,14 @@ public class OfficialAfterSalesServiceImpl implements OfficialAfterSalesService 
     }
 
     private List<Long> findWorkOrderIds(OfficialAfterSalesQueryRequest request) {
-        if (!StringUtils.hasText(request.getWorkOrderNo())) {
+        String workOrderNo = normalize(request.getWorkOrderNo());
+        if (workOrderNo == null) {
             return null;
         }
         QueryWrapper<WorkOrderEntity> wrapper = new QueryWrapper<>();
         wrapper.eq("store_id", request.getStoreId())
                 .eq("deleted", 0)
-                .like("work_order_no", request.getWorkOrderNo().trim());
+                .apply(containsCondition("work_order_no"), buildContainsPattern(workOrderNo));
         return workOrderMapper.selectList(wrapper).stream()
                 .map(WorkOrderEntity::getId)
                 .toList();
@@ -311,8 +316,9 @@ public class OfficialAfterSalesServiceImpl implements OfficialAfterSalesService 
                                                                          List<Long> workOrderIds) {
         QueryWrapper<OfficialAfterSalesEntity> wrapper = new QueryWrapper<>();
         wrapper.eq("store_id", request.getStoreId()).eq("deleted", 0);
-        if (StringUtils.hasText(request.getOfficialOrderNo())) {
-            wrapper.like("official_order_no", request.getOfficialOrderNo().trim());
+        String officialOrderNo = normalize(request.getOfficialOrderNo());
+        if (officialOrderNo != null) {
+            wrapper.apply(containsCondition("official_order_no"), buildContainsPattern(officialOrderNo));
         }
         if (StringUtils.hasText(request.getSettlementStatus())) {
             wrapper.eq("official_settlement_status", request.getSettlementStatus().trim());

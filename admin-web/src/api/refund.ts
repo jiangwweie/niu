@@ -1,4 +1,5 @@
 import request from '@/utils/request';
+import { setSearchParam } from '@/utils/searchParams';
 import type { RefundQuery, RefundRecord } from '@/types/refund';
 
 /** Backend RefundQueryResponse shape */
@@ -52,8 +53,8 @@ export async function getRefundList(params: RefundQuery): Promise<{
     pageNo: params.pageNo,
     pageSize: params.pageSize,
   };
-  if (params.workOrderNo) backendParams.workOrderNo = params.workOrderNo;
-  if (params.customerName) backendParams.customerName = params.customerName;
+  setSearchParam(backendParams, 'workOrderNo', params.workOrderNo);
+  setSearchParam(backendParams, 'customerName', params.customerName);
   if (params.refundMethod) backendParams.refundMethod = params.refundMethod;
   if (params.startTime) backendParams.startTime = params.startTime;
   if (params.endTime) backendParams.endTime = params.endTime;

@@ -6,6 +6,7 @@ import com.xiaoniu.aftermarket.common.context.CurrentUserContext;
 import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
+import com.xiaoniu.aftermarket.common.util.SearchKeywordUtils;
 import com.xiaoniu.aftermarket.inventory.dto.InventoryAdjustCommand;
 import com.xiaoniu.aftermarket.inventory.dto.InventoryFlowQueryRequest;
 import com.xiaoniu.aftermarket.inventory.dto.InventoryFlowQueryResponse;
@@ -43,9 +44,9 @@ public class InventoryController {
             @RequestParam(required = false) Integer pageSize) {
 
         CurrentUser user = requireCurrentUser();
-        if (org.springframework.util.StringUtils.hasText(keyword)) {
+        if (SearchKeywordUtils.normalize(keyword) != null) {
             return ApiResponse.success(
-                    inventoryService.pageQuery(user.storeId(), keyword.trim(), partCode, partName, source, view, pageNo, pageSize));
+                    inventoryService.pageQuery(user.storeId(), keyword, partCode, partName, source, view, pageNo, pageSize));
         }
         PageResponse<InventoryStockQueryResponse> result =
                 inventoryService.pageQuery(user.storeId(), partCode, partName, source, view, pageNo, pageSize);

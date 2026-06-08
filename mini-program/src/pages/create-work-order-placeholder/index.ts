@@ -751,7 +751,7 @@ Page({
     }
     customerSearchTimer = setTimeout(() => {
       this.setData({ customerSearchKeyword: this.currentCustomerKeyword });
-      if (this.currentCustomerKeyword.trim()) {
+      if (normalizeSearchParam(this.currentCustomerKeyword)) {
         this.onCustomerSearch();
       } else {
         this.setData({ customerSearchState: 'idle', customerSearchResults: [], customerSearchError: '' });
@@ -760,7 +760,7 @@ Page({
   },
 
   onCustomerSearch() {
-    const keyword = this.currentCustomerKeyword.trim();
+    const keyword = normalizeSearchParam(this.currentCustomerKeyword);
     if (!keyword) {
       Toast({ context: this, selector: '#t-toast', message: '请输入客户姓名或手机号', icon: 'close-circle' });
       return;
@@ -820,7 +820,7 @@ Page({
     }
     vehicleSearchTimer = setTimeout(() => {
       this.setData({ vehicleSearchKeyword: this.currentVehicleKeyword });
-      if (this.currentVehicleKeyword.trim()) {
+      if (normalizeSearchParam(this.currentVehicleKeyword)) {
         this.onVehicleSearch();
       } else {
         this.setData({ vehicleSearchState: 'idle', vehicleSearchResults: [], vehicleSearchError: '' });
@@ -829,7 +829,7 @@ Page({
   },
 
   onVehicleSearch() {
-    const keyword = this.currentVehicleKeyword.trim();
+    const keyword = normalizeSearchParam(this.currentVehicleKeyword);
     if (!keyword) {
       Toast({ context: this, selector: '#t-toast', message: '请输入车架号、车型或客户手机号', icon: 'close-circle' });
       return;

@@ -93,7 +93,8 @@ export async function getInventoryFlows(
     pageSize: params.pageSize,
   };
   if (params.partId) backendParams.partId = params.partId;
-  if (params.partCode) backendParams.partCode = params.partCode;
+  setSearchParam(backendParams, 'partCode', params.partCode);
+  setSearchParam(backendParams, 'partName', params.partName);
   if (params.flowType) backendParams.flowType = params.flowType;
 
   const page: PaginatedResult<InventoryFlowResp> = await request.get(
