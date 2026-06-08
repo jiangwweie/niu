@@ -6,7 +6,6 @@ import {
   getInventoryStatusText,
   getNoChargeReasonText,
   getProgressStatusText,
-  isLegacyWorkOrderStatus,
 } from '../../utils/statusText';
 import Toast from 'tdesign-miniprogram/toast/index';
 
@@ -28,7 +27,6 @@ function getHintText(order: WorkOrder | null): string {
   if (ps === 'DELIVERED') return '工单已交付关闭。';
   if (ps === 'CANCELLED' && cs === 'REFUND_PENDING') return '工单已取消，请处理客户退款。';
   if (ps === 'CANCELLED') return '工单已取消。';
-  if (isLegacyWorkOrderStatus(order.status)) return '旧状态，请先清理试运行数据。';
   return '';
 }
 

@@ -43,7 +43,9 @@ request.interceptors.response.use(
     // Backend returned a business error inside 200
     const msg = body?.message || getFriendlyErrorMessage(body?.code);
     ElMessage.error(msg);
-    return Promise.reject(new Error(msg));
+    const err = new Error(msg) as any;
+    err.response = response;
+    return Promise.reject(err);
   },
   async (error: AxiosError<{ code?: string; message?: string }>) => {
     if (error.response?.status === 401) {
@@ -51,12 +53,14 @@ request.interceptors.response.use(
       if (window.location.pathname !== '/login') {
         window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
       }
-      return Promise.reject(new Error(getFriendlyErrorMessage('UNAUTHORIZED')));
+      error.message = getFriendlyErrorMessage('UNAUTHORIZED');
+      return Promise.reject(error);
     }
     if (error.response?.status === 403) {
       const msg = getFriendlyErrorMessage('FORBIDDEN');
       ElMessage.error(msg);
-      return Promise.reject(new Error(msg));
+      error.message = msg;
+      return Promise.reject(error);
     }
 
     const data = error.response?.data as any;
@@ -70,7 +74,8 @@ request.interceptors.response.use(
       }
     }
     ElMessage.error(msg);
-    return Promise.reject(new Error(msg));
+    error.message = msg;
+    return Promise.reject(error);
   },
 );
 

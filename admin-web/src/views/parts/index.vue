@@ -527,11 +527,15 @@ const handleToggleStatus = async (row: PartViewRecord) => {
 };
 
 const handleDelete = async (row: PartViewRecord) => {
-  const deleteCheck = await showDeleteCheck(row);
+  const deleteCheck = await showDeleteCheck(row, false);
   if (!deleteCheck) {
     return;
   }
-  if (!deleteCheck.canDelete) return;
+  if (!deleteCheck.canDelete) {
+    // If it cannot be deleted, show the check dialog to explain why
+    deleteCheckDialog.visible = true;
+    return;
+  }
   try {
     await ElMessageBox.confirm(
       [
@@ -553,18 +557,23 @@ const handleDelete = async (row: PartViewRecord) => {
     await deletePart(row.id);
     ElMessage.success('配件已删除');
     fetchData();
-  } catch {
-    // User cancelled or API error.
+  } catch (err: any) {
+    if (err !== 'cancel' && err !== 'close') {
+      const msg = err?.response?.data?.message || err?.message || '删除失败';
+      ElMessage.error(msg);
+    }
   }
 };
 
-const showDeleteCheck = async (row: PartViewRecord) => {
+const showDeleteCheck = async (row: PartViewRecord, showDialog = true) => {
   try {
     deleteCheckDialog.loading = true;
     deleteCheckDialog.partName = row.partName;
     const data = await getPartDeleteCheck(row.id);
     deleteCheckDialog.data = data;
-    deleteCheckDialog.visible = true;
+    if (showDialog) {
+      deleteCheckDialog.visible = true;
+    }
     return data;
   } catch {
     return null;

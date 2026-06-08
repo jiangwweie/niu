@@ -1,5 +1,5 @@
 <template>
-  <PageContainer title="试运行数据清理" description="清理试运行数据，执行 Clean Start 状态模型适配">
+  <PageContainer title="未兼容业务数据清理" description="清理未兼容业务数据，执行 Clean Start 状态模型适配">
     <!-- 加载中 -->
     <div v-if="loading" class="loading-state">
       <el-icon class="is-loading" :size="24"><Loading /></el-icon>
@@ -13,9 +13,9 @@
           <span class="section-header">Clean Start 状态预检</span>
         </template>
         <el-descriptions :column="2" border size="small">
-          <el-descriptions-item label="是否存在旧状态工单">
+          <el-descriptions-item label="是否存在未兼容版本工单">
             <el-tag :type="hasLegacyWorkOrders ? 'danger' : 'success'" size="small">
-              {{ hasLegacyWorkOrders ? '是 (检测到旧试运行业务数据)' : '否 (无旧状态数据)' }}
+              {{ hasLegacyWorkOrders ? '是 (检测到未兼容数据)' : '否 (无未兼容数据)' }}
             </el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="是否可以 clean-start">
@@ -41,7 +41,7 @@
         </template>
         <template #default>
           <div class="risk-content">
-            <p>此操作将<strong>永久删除</strong>所有试运行业务数据，包括工单、支付、退款、报销、官方结算、库存流水、客户、车辆等。</p>
+            <p>此操作将<strong>永久删除</strong>所有未兼容阶段产生的业务数据，包括工单、支付、退款、报销、官方结算、库存流水、客户、车辆等。</p>
             <p>清理后<strong>不可恢复</strong>，除非有数据库备份。</p>
             <p><strong>强烈建议在操作前备份数据库！</strong></p>
           </div>
@@ -65,7 +65,7 @@
           <el-descriptions-item label="库存记录数">{{ summary.inventoryStockCount }}</el-descriptions-item>
           <el-descriptions-item label="车辆资料">{{ summary.vehicleCount }}</el-descriptions-item>
           <el-descriptions-item label="客户资料">{{ summary.customerCount }}</el-descriptions-item>
-          <el-descriptions-item label="旧状态工单数">
+          <el-descriptions-item label="未兼容工单数">
             <span :style="{ color: summary.legacyWorkOrderStatusCount > 0 ? '#F56C6C' : 'inherit', fontWeight: summary.legacyWorkOrderStatusCount > 0 ? 'bold' : 'normal' }">
               {{ summary.legacyWorkOrderStatusCount }}
             </span>

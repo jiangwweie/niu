@@ -82,9 +82,8 @@ const getMethodLabel = (method: string) => {
     ALIPAY: '支付宝',
     UNIONPAY: '银联',
     CASH: '现金',
-    OTHER: '其他',
   };
-  return map[method] || '其他';
+  return map[method] || `其他（${method}）`;
 };
 
 const fetchReport = async () => {

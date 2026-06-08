@@ -5,8 +5,7 @@ import { hasPermission } from '../../utils/permission';
 import {
   getCashierStatusText,
   getInventoryStatusText,
-  getProgressStatusText,
-  isLegacyWorkOrderStatus,
+  getProgressStatusText
 } from '../../utils/statusText';
 
 const PROGRESS_TABS = [
@@ -37,7 +36,6 @@ function resolveInventoryText(item: WorkOrder) {
 
 function resolveProgressKey(item: WorkOrder) {
   if (item.progressStatus) return item.progressStatus;
-  if (isLegacyWorkOrderStatus(item.status)) return 'LEGACY';
   return 'UNKNOWN';
 }
 

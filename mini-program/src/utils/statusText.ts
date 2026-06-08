@@ -1,15 +1,6 @@
-const LEGACY_WORK_ORDER_STATUSES = ['PENDING_ACCEPT', 'ACCEPTED', 'PART_ORDERED', 'PART_ARRIVED', 'SETTLED'];
-
-export const LEGACY_WORK_ORDER_STATUS_TEXT = '旧状态，请先清理试运行数据';
-
-export function isLegacyWorkOrderStatus(status?: string) {
-  return !!status && LEGACY_WORK_ORDER_STATUSES.indexOf(status) >= 0;
-}
-
 export function getProgressStatusText(status?: string, text?: string) {
   if (text) return text;
-  if (!status) return '未知';
-  if (isLegacyWorkOrderStatus(status)) return LEGACY_WORK_ORDER_STATUS_TEXT;
+  if (!status) return '未知状态';
   const map: Record<string, string> = {
     DRAFT: '新建中',
     REPAIRING: '维修中',
@@ -17,7 +8,7 @@ export function getProgressStatusText(status?: string, text?: string) {
     DELIVERED: '已交付',
     CANCELLED: '已取消',
   };
-  return map[status] || LEGACY_WORK_ORDER_STATUS_TEXT;
+  return map[status] || `未知状态（${status}）`;
 }
 
 export function getCashierStatusText(status?: string, text?: string) {
@@ -32,7 +23,7 @@ export function getCashierStatusText(status?: string, text?: string) {
     PARTIAL_REFUNDED: '部分退款',
     REFUNDED: '已退清',
   };
-  return map[status] || '';
+  return map[status] || `未知状态（${status}）`;
 }
 
 export function getInventoryStatusText(status?: string, text?: string) {
@@ -44,7 +35,7 @@ export function getInventoryStatusText(status?: string, text?: string) {
     CONSUMED: '已扣减',
     RELEASED: '已释放',
   };
-  return map[status] || '';
+  return map[status] || `未知状态（${status}）`;
 }
 
 export function getNoChargeReasonText(reason?: string) {
@@ -57,17 +48,17 @@ export function getNoChargeReasonText(reason?: string) {
     WARRANTY: '质保处理',
     WARRANTY_FREE: '质保处理',
     FIRST_MAINTENANCE_FREE: '免费检测',
-    CUSTOMER_OWN_PARTS: '其他',
+    CUSTOMER_OWN_PARTS: '自带配件',
     NO_CHARGE_ITEM: '其他',
     OTHER: '其他',
   };
-  return map[reason] || '其他';
+  return map[reason] || `其他（${reason}）`;
 }
 
 export function getFriendlyErrorMessage(code?: string | number, message?: string) {
   const map: Record<string, string> = {
-    WORK_ORDER_LEGACY_SETTLE_DISABLED: '状态模型已升级，请使用交付关闭。',
-    WORK_ORDER_LEGACY_STATUS_EXISTS: '存在旧状态工单，请先清理试运行数据。',
+    WORK_ORDER_LEGACY_SETTLE_DISABLED: '状态模型已升级，该工单当前状态无法执行此操作。',
+    WORK_ORDER_LEGACY_STATUS_EXISTS: '存在未兼容的业务数据，请联系系统管理员。',
     PAYMENT_EXCEEDS_RECEIVABLE: '收款金额超过待收金额。',
     REFUND_EXCEEDS_PAID_AMOUNT: '退款金额超过可退金额。',
     FORBIDDEN: '当前账号无权操作。',

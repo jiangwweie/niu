@@ -9,8 +9,6 @@
       <view class="status-pill progress-{{order.progressStatus || 'UNKNOWN'}}" wx:if="{{order.progressStatusText}}">{{order.progressStatusText}}</view>
       <view class="status-pill cashier-{{order.cashierStatus || 'UNKNOWN'}}" wx:if="{{order.cashierText}}">{{order.cashierText}}</view>
       <view class="status-pill inventory-{{order.inventoryStatus || 'UNKNOWN'}}" wx:if="{{order.inventoryText}}">{{order.inventoryText}}</view>
-      <!-- 旧状态兼容 -->
-      <view class="status-pill progress-LEGACY" wx:if="{{!order.progressStatus && order.status}}">旧状态，请先清理试运行数据</view>
     </view>
     <view class="customer-info">
       <text class="name">{{order.customerNameSnapshot}}</text>

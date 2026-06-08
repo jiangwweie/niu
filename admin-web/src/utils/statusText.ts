@@ -1,12 +1,3 @@
-const LEGACY_WORK_ORDER_STATUSES = new Set([
-  'PENDING_ACCEPT',
-  'ACCEPTED',
-  'PART_ORDERED',
-  'PART_ARRIVED',
-  'SETTLED',
-]);
-
-export const LEGACY_WORK_ORDER_STATUS_TEXT = '旧状态，请先清理试运行数据';
 
 const PROGRESS_STATUS_MAP: Record<string, string> = {
   DRAFT: '新建中',
@@ -14,21 +5,12 @@ const PROGRESS_STATUS_MAP: Record<string, string> = {
   REPAIR_DONE: '维修完成',
   DELIVERED: '已交付',
   CANCELLED: '已取消',
-  // Legacy statuses — kept for display so old data is readable
-  PENDING_ACCEPT: '待接单',
-  ACCEPTED: '已接单',
-  PART_ORDERED: '配件已订',
-  PART_ARRIVED: '配件已到',
-  SETTLED: '已结算',
 };
 
 export const getProgressStatusText = (status?: string | null, text?: string | null) => {
   if (!status) return '-';
-  // Frontend map takes priority to ensure consistent Chinese display
   if (PROGRESS_STATUS_MAP[status]) return PROGRESS_STATUS_MAP[status];
-  // Fall back to backend-provided text for any future statuses
-  if (text) return text;
-  return '-';
+  return `未知状态（${status}）`;
 };
 
 export const getCashierStatusText = (status?: string | null, text?: string | null) => {
@@ -43,7 +25,7 @@ export const getCashierStatusText = (status?: string | null, text?: string | nul
     PARTIAL_REFUNDED: '部分退款',
     REFUNDED: '已退清',
   };
-  return map[status] || '-';
+  return map[status] || `未知状态（${status}）`;
 };
 
 export const getInventoryStatusText = (status?: string | null, text?: string | null) => {
@@ -55,11 +37,11 @@ export const getInventoryStatusText = (status?: string | null, text?: string | n
     CONSUMED: '已扣减',
     RELEASED: '已释放',
   };
-  return map[status] || '-';
+  return map[status] || `未知状态（${status}）`;
 };
 
 export const getNoChargeReasonText = (reason?: string | null) => {
-  if (!reason) return '-';
+  if (!reason) return '未填写';
   const map: Record<string, string> = {
     OFFICIAL_AFTER_SALES: '官方售后',
     OFFICIAL: '官方售后',
@@ -68,17 +50,17 @@ export const getNoChargeReasonText = (reason?: string | null) => {
     WARRANTY: '质保处理',
     WARRANTY_FREE: '质保处理',
     FIRST_MAINTENANCE_FREE: '免费检测',
-    CUSTOMER_OWN_PARTS: '其他',
+    CUSTOMER_OWN_PARTS: '自带配件',
     NO_CHARGE_ITEM: '其他',
     OTHER: '其他',
   };
-  return map[reason] || '其他';
+  return map[reason] || `其他（${reason}）`;
 };
 
 export const getFriendlyErrorMessage = (code?: string, message?: string) => {
   const map: Record<string, string> = {
-    WORK_ORDER_LEGACY_SETTLE_DISABLED: '状态模型已升级，请使用交付关闭。',
-    WORK_ORDER_LEGACY_STATUS_EXISTS: '存在旧状态工单，请先清理试运行数据。',
+    WORK_ORDER_LEGACY_SETTLE_DISABLED: '状态模型已升级，该工单无法执行此操作。',
+    WORK_ORDER_LEGACY_STATUS_EXISTS: '存在未兼容的业务数据，请联系系统管理员。',
     PAYMENT_EXCEEDS_RECEIVABLE: '收款金额超过待收金额。',
     REFUND_EXCEEDS_PAID_AMOUNT: '退款金额超过可退金额。',
     FORBIDDEN: '当前账号无权操作。',

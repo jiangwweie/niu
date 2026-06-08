@@ -42,7 +42,7 @@ function adaptFlow(resp: InventoryFlowResp): InventoryLogRecord {
     operatorId: resp.operatorId,
     operatorName: resp.operatorName || (resp.operatorId ? `员工 #${resp.operatorId}` : ''),
     remark: resp.remark || '',
-    createdAt: resp.operatedAt || resp.createdAt,
+    createdAt: resp.operatedAt ?? resp.createdAt,
     actualBefore: resp.actualBefore ?? 0,
     actualAfter: resp.actualAfter ?? 0,
     availableBefore: resp.availableBefore ?? 0,

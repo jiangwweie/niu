@@ -543,13 +543,13 @@
           <el-descriptions-item label="应收金额"><MoneyText :amount="currentOrder.receivableAmount" bold /></el-descriptions-item>
           <el-descriptions-item label="实收净额"><MoneyText :amount="currentOrder.netReceived ?? currentOrder.actualAmount" bold type="success" /></el-descriptions-item>
           <el-descriptions-item v-if="currentOrder.cashierStatus === 'NO_CHARGE'" label="无需收款原因">
-            <span style="font-weight: 600; color: #e6a23c;">{{ getNoChargeReasonText(currentOrder.noChargeReason) || '未填写' }}</span>
+            <span style="font-weight: 600; color: #e6a23c;">{{ getNoChargeReasonText(currentOrder.noChargeReason) }}</span>
           </el-descriptions-item>
         </el-descriptions>
         
         <el-alert
           v-if="currentOrder.cashierStatus === 'NO_CHARGE'"
-          :title="`无需收款工单（原因：${getNoChargeReasonText(currentOrder.noChargeReason) || '未填写'}）。确认交付关闭后，工单将进入已交付状态；库存已在标记维修完成时扣减，本操作不再改变库存。`"
+          :title="`无需收款工单（原因：${getNoChargeReasonText(currentOrder.noChargeReason)}）。确认交付关闭后，工单将进入已交付状态；库存已在标记维修完成时扣减，本操作不再改变库存。`"
           type="warning"
           show-icon
           :closable="false"
@@ -914,14 +914,21 @@ const submitDraftEdit = async () => {
 };
 
 const handleDeleteDraft = async (row: WorkOrderRecord) => {
-  await ElMessageBox.confirm(
-    '删除草稿后将不再显示，该操作不会影响库存和财务记录。',
-    `删除草稿工单「${row.orderNo}」`,
-    { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' },
-  );
-  await deleteDraftWorkOrder(row.id);
-  ElMessage.success('草稿工单已删除');
-  fetchData();
+  try {
+    await ElMessageBox.confirm(
+      '删除草稿后将不再显示，该操作不会影响库存和财务记录。',
+      `删除草稿工单「${row.orderNo}」`,
+      { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' },
+    );
+    await deleteDraftWorkOrder(row.id);
+    ElMessage.success('草稿工单已删除');
+    fetchData();
+  } catch (err: any) {
+    if (err !== 'cancel' && err !== 'close') {
+      const msg = err?.response?.data?.message || err?.message || '删除失败';
+      ElMessage.error(msg);
+    }
+  }
 };
 
 const loadCashierRecords = async (workOrderId: string) => {
