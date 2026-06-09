@@ -44,7 +44,11 @@ Page({
     hasPaymentPermission: false,
     hasRefundPermission: false,
     hasUpdateOrderPermission: false,
+    hasSettlePermission: false,
     canContinueEdit: false,
+    canShowCancel: false,
+    canShowMarkRepairDone: false,
+    canShowDeliver: false,
 
     // Computed display values
     outstandingAmount: 0,
@@ -101,7 +105,8 @@ Page({
       hasCancelPermission: hasPermission('WORK_ORDER_CANCEL'),
       hasPaymentPermission: hasPermission('PAYMENT_RECORD'),
       hasRefundPermission: hasPermission('REFUND_RECORD'),
-      hasUpdateOrderPermission: hasPermission('WORK_ORDER_UPDATE')
+      hasUpdateOrderPermission: hasPermission('WORK_ORDER_UPDATE'),
+      hasSettlePermission: hasPermission('WORK_ORDER_SETTLE')
     });
     if (options.id) {
       this.setData({ orderId: options.id });
@@ -157,8 +162,11 @@ Page({
     const status = order?.progressStatus || order?.status;
     const paymentAllowedStatus = status === 'REPAIRING' || status === 'REPAIR_DONE';
     return {
-      canShowRecordPayment: !!order?.canRecordPayment && paymentAllowedStatus && outstanding > 0,
-      canShowRecordRefund: !!order?.canRecordRefund && status !== 'DRAFT',
+      canShowRecordPayment: !!order?.canRecordPayment && paymentAllowedStatus && outstanding > 0 && this.data.hasPaymentPermission,
+      canShowRecordRefund: !!order?.canRecordRefund && status !== 'DRAFT' && this.data.hasRefundPermission,
+      canShowCancel: !!order?.canCancel && this.data.hasCancelPermission,
+      canShowMarkRepairDone: !!order?.canMarkRepairDone && this.data.hasSettlePermission,
+      canShowDeliver: !!order?.canDeliver && this.data.hasSettlePermission,
       showPaidInFullHint: paymentAllowedStatus && outstanding <= 0,
       refundableAmount: Math.max(refundable, 0),
     };
@@ -173,6 +181,10 @@ Page({
 
   // --- Cancel Work Order ---
   onCancel() {
+    if (!this.data.canShowCancel) {
+      Toast({ context: this, selector: '#t-toast', message: '当前无权限或状态不允许取消工单', icon: 'close-circle' });
+      return;
+    }
     this.setData({
       cancelDialogVisible: true,
       cancelReason: '',
@@ -302,9 +314,8 @@ Page({
 
   // --- Record Refund ---
   openRefundPopup() {
-    const order = this.data.order;
-    if (!order?.canRecordRefund) {
-      Toast({ context: this, selector: '#t-toast', message: '当前状态不允许记录退款', icon: 'close-circle' });
+    if (!this.data.canShowRecordRefund) {
+      Toast({ context: this, selector: '#t-toast', message: '当前无权限或状态不允许记录退款', icon: 'close-circle' });
       return;
     }
 
@@ -390,9 +401,8 @@ Page({
 
   // --- Mark Repair Done ---
   openMarkRepairDoneDialog() {
-    const order = this.data.order;
-    if (!order?.canMarkRepairDone) {
-      Toast({ context: this, selector: '#t-toast', message: '当前状态不允许标记维修完成', icon: 'close-circle' });
+    if (!this.data.canShowMarkRepairDone) {
+      Toast({ context: this, selector: '#t-toast', message: '当前无权限或状态不允许标记维修完成', icon: 'close-circle' });
       return;
     }
 
@@ -450,9 +460,8 @@ Page({
 
   // --- Deliver ---
   openDeliverDialog() {
-    const order = this.data.order;
-    if (!order?.canDeliver) {
-      Toast({ context: this, selector: '#t-toast', message: '请先收齐尾款后再交付关闭', icon: 'close-circle' });
+    if (!this.data.canShowDeliver) {
+      Toast({ context: this, selector: '#t-toast', message: '当前无权限，或需先收齐尾款后再交付关闭', icon: 'close-circle' });
       return;
     }
 

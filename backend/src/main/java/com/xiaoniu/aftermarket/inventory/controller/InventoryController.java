@@ -58,6 +58,9 @@ public class InventoryController {
     public ApiResponse<InventoryStockDetailResponse> getStockByPartId(@PathVariable Long partId) {
         CurrentUser user = requireCurrentUser();
         InventoryStockEntity entity = inventoryService.getByPartId(user.storeId(), partId);
+        if (entity == null) {
+            throw new BusinessException(ErrorCode.PART_STOCK_NOT_FOUND, "库存记录不存在");
+        }
         PartEntity part = partMapper.selectById(entity.getPartId());
         InventoryStockQueryResponse qr = new InventoryStockQueryResponse();
         qr.setId(entity.getId());

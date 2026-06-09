@@ -224,6 +224,15 @@ class InventoryControllerTest {
     }
 
     @Test
+    void getStockByPartIdWithoutStockReturnsBusinessError() throws Exception {
+        mockMvc.perform(get("/api/admin/inventory/stocks/2002")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("PART_STOCK_NOT_FOUND"));
+    }
+
+    @Test
     void listStocksSupportsLifecycleViewFilter() throws Exception {
         jdbcTemplate.execute("UPDATE part SET status = 'DISABLED' WHERE id = 2001");
 

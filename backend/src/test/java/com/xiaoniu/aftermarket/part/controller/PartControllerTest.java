@@ -33,16 +33,20 @@ class PartControllerTest {
 
     @BeforeEach
     void cleanAndSeed() {
-        jdbcTemplate.execute("DELETE FROM part WHERE id IN (1001, 1002)");
+        jdbcTemplate.execute("DELETE FROM work_order_charge_item WHERE part_id IN (1001, 1002, 2001, 2002)");
+        jdbcTemplate.execute("DELETE FROM inventory_flow WHERE part_id IN (1001, 1002, 2001, 2002)");
+        jdbcTemplate.execute("DELETE FROM inventory_stock WHERE part_id IN (1001, 1002, 2001, 2002)");
+        jdbcTemplate.execute("DELETE FROM part_barcode WHERE part_id IN (1001, 1002, 2001, 2002)");
+        jdbcTemplate.execute("DELETE FROM part WHERE id IN (1001, 1002, 2001, 2002)");
         jdbcTemplate.execute("""
             INSERT INTO part (id, store_id, part_code, official_part_no, part_name, model, source, category_code,
                               reference_cost_price, default_sale_price, default_barcode, location_remark, create_source, status, remark)
-            VALUES (1001, 1, 'P-TEST-001', 'OFF-001', '测试电池', 'NQi', 'OFFICIAL', 'BATTERY', 120.50, 168.00, NULL, NULL, 'OFFICIAL', 'ENABLED', '测试备注')
+            VALUES (1001, 1, 'P-TEST-001', 'OFF-001', '测试电池', 'NQi', 'OFFICIAL', 'BATTERY', 120.50, 168.00, 'P-TEST-001', NULL, 'OFFICIAL', 'ENABLED', '测试备注')
             """);
         jdbcTemplate.execute("""
             INSERT INTO part (id, store_id, part_code, official_part_no, part_name, model, source, category_code,
                               reference_cost_price, default_sale_price, default_barcode, location_remark, create_source, status, remark)
-            VALUES (1002, 1, 'P-TEST-002', NULL, '测试电机', 'MQi', 'THIRD_PARTY', 'MOTOR', 80.00, NULL, NULL, NULL, 'THIRD_PARTY', 'ENABLED', NULL)
+            VALUES (1002, 1, 'P-TEST-002', NULL, '测试电机', 'MQi', 'THIRD_PARTY', 'MOTOR', 80.00, NULL, 'P-TEST-002', NULL, 'THIRD_PARTY', 'ENABLED', NULL)
             """);
     }
 
@@ -234,6 +238,19 @@ class PartControllerTest {
                 .andExpect(jsonPath("$.code").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.records", hasSize(1)))
                 .andExpect(jsonPath("$.data.records[0].partCode").value("P-TEST-001"));
+    }
+
+    @Test
+    void listPartsFilterByBarcode() throws Exception {
+        mockMvc.perform(get("/api/admin/parts")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .param("barcode", "P-TEST-002"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.records", hasSize(1)))
+                .andExpect(jsonPath("$.data.records[0].partCode").value("P-TEST-002"))
+                .andExpect(jsonPath("$.data.records[0].defaultBarcode").value("P-TEST-002"));
     }
 
     @Test

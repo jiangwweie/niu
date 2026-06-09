@@ -34,6 +34,7 @@ public class PartController {
             @RequestParam(required = false) String partCode,
             @RequestParam(required = false) String partName,
             @RequestParam(required = false) String officialPartNo,
+            @RequestParam(required = false) String barcode,
             @RequestParam(required = false) String model,
             @RequestParam(required = false) String categoryCode,
             @RequestParam(required = false) String source,
@@ -47,6 +48,7 @@ public class PartController {
         request.setPartCode(partCode);
         request.setPartName(partName);
         request.setOfficialPartNo(officialPartNo);
+        request.setBarcode(barcode);
         request.setModel(model);
         request.setCategoryCode(categoryCode);
         request.setSource(source);

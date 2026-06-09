@@ -89,7 +89,7 @@
   </view>
 
   <!-- 标记维修完成 -->
-  <view class="section action-section" wx:if="{{order.canMarkRepairDone}}">
+  <view class="section action-section" wx:if="{{canShowMarkRepairDone}}">
     <text class="section-title">维修操作</text>
     <view class="action-body">
       <t-button theme="primary" block size="large" bind:tap="openMarkRepairDoneDialog" loading="{{markRepairDoneLoading}}">标记维修完成</t-button>
@@ -98,7 +98,7 @@
   </view>
 
   <!-- 交付关闭 -->
-  <view class="section action-section" wx:if="{{order.canDeliver}}">
+  <view class="section action-section" wx:if="{{canShowDeliver}}">
     <text class="section-title">交付操作</text>
     <view class="action-body">
       <t-button theme="primary" block size="large" bind:tap="openDeliverDialog" loading="{{deliverLoading}}">交付关闭</t-button>
@@ -116,7 +116,7 @@
   </view>
 
   <!-- 取消工单 -->
-  <view class="section other-actions-card" wx:if="{{order.canCancel}}">
+  <view class="section other-actions-card" wx:if="{{canShowCancel}}">
     <text class="section-title">其他操作</text>
     <view class="other-actions-body">
       <t-button theme="danger" variant="outline" block size="medium" bind:tap="onCancel" loading="{{cancelLoading}}">取消工单</t-button>
