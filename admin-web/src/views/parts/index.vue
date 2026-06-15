@@ -184,10 +184,10 @@
     <!-- 新增配件弹窗 -->
     <el-dialog v-model="editDialog.visible" :title="editDialog.isEdit ? '编辑配件' : '新增配件'" width="600px">
       <el-form :model="editDialog.form" label-width="100px" size="default">
-        <el-form-item label="配件分类" v-if="!editDialog.isEdit">
+        <el-form-item label="配件分类">
           <el-radio-group v-model="editDialog.form.source">
-            <el-radio label="official">官方配件</el-radio>
-            <el-radio label="third_party">第三方配件</el-radio>
+            <el-radio value="official">官方配件</el-radio>
+            <el-radio value="third_party">第三方配件</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="配件名称" required>
@@ -468,7 +468,8 @@ const submitEdit = async () => {
       }
       await updatePart(editDialog.editPartId, {
         partName: editDialog.form.partName,
-        officialPartNo: editDialog.form.officialPartNo || undefined,
+        source: editDialog.form.source,
+        officialPartNo: editDialog.form.officialPartNo,
         model: editDialog.form.model || undefined,
         categoryCode: editDialog.form.categoryCode || undefined,
         referenceCostPrice: editDialog.form.referenceCostPrice || undefined,

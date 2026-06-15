@@ -206,11 +206,20 @@ public class PartServiceImpl implements PartService {
             throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "配件不属于当前门店");
         }
 
+        boolean officialPartNoProvided = command.getOfficialPartNo() != null;
+
         if (StringUtils.hasText(command.getPartName())) {
             existing.setPartName(command.getPartName());
         }
+        if (command.getSource() != null) {
+            existing.setSource(resolvePartSource(command.getSource()));
+        }
         if (command.getOfficialPartNo() != null) {
-            existing.setOfficialPartNo(command.getOfficialPartNo());
+            existing.setOfficialPartNo(normalizeBarcode(command.getOfficialPartNo()));
+        }
+        if (PartSource.OFFICIAL.getCode().equals(existing.getSource())
+                && !StringUtils.hasText(existing.getOfficialPartNo())) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "官方配件必须填写官方品号");
         }
         if (command.getModel() != null) {
             existing.setModel(command.getModel());
@@ -238,7 +247,28 @@ public class PartServiceImpl implements PartService {
             syncExternalBarcode(existing, command.getExternalBarcode(), command.getOperatorId());
         }
 
+        existing.setUpdatedBy(command.getOperatorId());
+        existing.setUpdatedAt(LocalDateTime.now());
         partMapper.updateById(existing);
+        if (officialPartNoProvided) {
+            UpdateWrapper<PartEntity> wrapper = new UpdateWrapper<>();
+            wrapper.eq("id", existing.getId())
+                    .set("official_part_no", existing.getOfficialPartNo())
+                    .set("updated_by", existing.getUpdatedBy())
+                    .set("updated_at", existing.getUpdatedAt());
+            partMapper.update(null, wrapper);
+        }
+    }
+
+    private String resolvePartSource(String source) {
+        String normalized = source.trim().toUpperCase();
+        if (PartSource.OFFICIAL.getCode().equals(normalized)) {
+            return PartSource.OFFICIAL.getCode();
+        }
+        if (PartSource.THIRD_PARTY.getCode().equals(normalized)) {
+            return PartSource.THIRD_PARTY.getCode();
+        }
+        throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "配件分类不正确");
     }
 
     @Override

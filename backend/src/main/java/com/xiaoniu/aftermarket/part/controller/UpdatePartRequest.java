@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 
 public record UpdatePartRequest(
         String partName,
+        String source,
         String officialPartNo,
         String model,
         String categoryCode,

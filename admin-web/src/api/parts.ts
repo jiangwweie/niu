@@ -242,6 +242,7 @@ export function getPartDeleteCheck(partId: string | number): Promise<PartDeleteC
  */
 export function updatePart(partId: string | number, body: {
   partName: string;
+  source?: string;
   officialPartNo?: string;
   model?: string;
   categoryCode?: string;

@@ -10,6 +10,7 @@ public class UpdatePartCommand {
     private Long storeId;
     private Long operatorId;
     private String partName;
+    private String source;
     private String officialPartNo;
     private String model;
     private String categoryCode;

@@ -161,6 +161,7 @@ public class PartController {
         command.setStoreId(user.storeId());
         command.setOperatorId(user.userId());
         command.setPartName(request.partName());
+        command.setSource(request.source());
         command.setOfficialPartNo(request.officialPartNo());
         command.setModel(request.model());
         command.setCategoryCode(request.categoryCode());

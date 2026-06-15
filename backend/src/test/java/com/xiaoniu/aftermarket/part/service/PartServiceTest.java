@@ -305,6 +305,56 @@ class PartServiceTest {
     }
 
     @Test
+    void updatePartSourceFromOfficialToThirdPartyAllowsClearingOfficialPartNo() {
+        PartEntity part = partService.createOfficialPart(buildOfficialCommand("官方误录配件", "UPD-SRC-001"));
+
+        UpdatePartCommand command = new UpdatePartCommand();
+        command.setPartId(part.getId());
+        command.setStoreId(STORE_ID);
+        command.setSource(PartSource.THIRD_PARTY.getCode());
+        command.setOfficialPartNo("");
+
+        partService.updatePart(command);
+
+        PartEntity updated = partService.getById(part.getId());
+        assertEquals(PartSource.THIRD_PARTY.getCode(), updated.getSource());
+        assertNull(updated.getOfficialPartNo());
+    }
+
+    @Test
+    void updatePartSourceFromThirdPartyToOfficialRequiresOfficialPartNo() {
+        PartEntity part = partService.createThirdPartyPart(buildThirdPartyCommand("三方待纠错配件"));
+
+        UpdatePartCommand command = new UpdatePartCommand();
+        command.setPartId(part.getId());
+        command.setStoreId(STORE_ID);
+        command.setSource(PartSource.OFFICIAL.getCode());
+
+        BusinessException exception = assertThrows(BusinessException.class, () -> partService.updatePart(command));
+        assertEquals(ErrorCode.COMMON_BAD_REQUEST, exception.getErrorCode());
+
+        PartEntity unchanged = partService.getById(part.getId());
+        assertEquals(PartSource.THIRD_PARTY.getCode(), unchanged.getSource());
+    }
+
+    @Test
+    void updatePartSourceFromThirdPartyToOfficialSucceedsWithOfficialPartNo() {
+        PartEntity part = partService.createThirdPartyPart(buildThirdPartyCommand("三方改官方配件"));
+
+        UpdatePartCommand command = new UpdatePartCommand();
+        command.setPartId(part.getId());
+        command.setStoreId(STORE_ID);
+        command.setSource("official");
+        command.setOfficialPartNo("UPD-SRC-002");
+
+        partService.updatePart(command);
+
+        PartEntity updated = partService.getById(part.getId());
+        assertEquals(PartSource.OFFICIAL.getCode(), updated.getSource());
+        assertEquals("UPD-SRC-002", updated.getOfficialPartNo());
+    }
+
+    @Test
     void getByPartCodeSuccessfully() {
         partService.createOfficialPart(buildOfficialCommand("刹车片", "FIND-001"));
 
