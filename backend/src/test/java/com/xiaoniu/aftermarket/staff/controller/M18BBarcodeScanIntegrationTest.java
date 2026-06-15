@@ -71,6 +71,19 @@ class M18BBarcodeScanIntegrationTest {
     }
 
     @Test
+    void lookupAcceptsBarcodeParameterAlias() throws Exception {
+        mockMvc.perform(get("/api/staff/parts/lookup")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .param("barcode", "M18B-BC-PRIMARY"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.matched").value(true))
+                .andExpect(jsonPath("$.data.partId").value(91001))
+                .andExpect(jsonPath("$.data.matchType").value("EXTERNAL_BARCODE"))
+                .andExpect(jsonPath("$.data.scannedCode").value("M18B-BC-PRIMARY"));
+    }
+
+    @Test
     void adminLookupByPartBarcodeSucceeds() throws Exception {
         mockMvc.perform(get("/api/admin/parts/lookup")
                         .header("X-User-Id", "1")
@@ -79,6 +92,27 @@ class M18BBarcodeScanIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.matched").value(true))
                 .andExpect(jsonPath("$.data.partId").value(91001));
+    }
+
+    @Test
+    void adminLookupAcceptsBarcodeParameterAlias() throws Exception {
+        mockMvc.perform(get("/api/admin/parts/lookup")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .param("barcode", "M18B-BC-PRIMARY"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.matched").value(true))
+                .andExpect(jsonPath("$.data.partId").value(91001));
+    }
+
+    @Test
+    void lookupWithoutCodeOrBarcodeReturnsBadRequest() throws Exception {
+        mockMvc.perform(get("/api/staff/parts/lookup")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_BAD_REQUEST"))
+                .andExpect(jsonPath("$.message").value("请提供扫码编码"));
     }
 
     @Test

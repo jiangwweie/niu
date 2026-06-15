@@ -66,9 +66,10 @@ public class StaffPartController {
 
     @PreAuthorize("hasAnyAuthority('INVENTORY_VIEW', 'WORK_ORDER_CREATE', 'WORK_ORDER_UPDATE')")
     @GetMapping("/lookup")
-    public ApiResponse<PartLookupResponse> lookup(@RequestParam String code) {
+    public ApiResponse<PartLookupResponse> lookup(@RequestParam(required = false) String code,
+                                                  @RequestParam(required = false) String barcode) {
         CurrentUser user = requireCurrentUser();
-        return ApiResponse.success(partService.lookup(user.storeId(), code));
+        return ApiResponse.success(partService.lookup(user.storeId(), resolveLookupCode(code, barcode)));
     }
 
     @GetMapping("/{partId}")
@@ -115,6 +116,16 @@ public class StaffPartController {
             throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST,
                     "source 与接口语义不一致，应为 " + expected);
         }
+    }
+
+    private String resolveLookupCode(String code, String barcode) {
+        if (code != null) {
+            return code;
+        }
+        if (barcode != null) {
+            return barcode;
+        }
+        throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "请提供扫码编码");
     }
 
     private CreatePartCommand buildCreateCommand(CurrentUser user, StaffPartCreateRequest request) {

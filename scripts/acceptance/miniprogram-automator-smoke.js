@@ -14,6 +14,9 @@ const automatorModule =
   '/tmp/niu-qa-tools/node_modules/miniprogram-automator';
 const wsEndpoint = process.env.MINIPROGRAM_WS_ENDPOINT || 'ws://127.0.0.1:19420';
 const pageTimeoutMs = Number(process.env.MINI_ACCEPTANCE_PAGE_TIMEOUT_MS || 10000);
+const accessTokenFile = process.env.MINI_ACCESS_TOKEN_FILE || '';
+const authUserFile = process.env.MINI_AUTH_USER_FILE || '';
+const roleLabel = process.env.MINI_ACCEPTANCE_ROLE || 'current-session';
 
 const pages = [
   { name: 'dashboard', route: '/pages/dashboard/index', tab: true },
@@ -90,11 +93,21 @@ async function main() {
   const automator = require(automatorModule);
   const miniProgram = await automator.connect({ wsEndpoint });
 
+  if (accessTokenFile) {
+    const token = fs.readFileSync(accessTokenFile, 'utf8').trim();
+    await miniProgram.callWxMethod('setStorageSync', 'accessToken', token);
+  }
+  if (authUserFile) {
+    const user = fs.readFileSync(authUserFile, 'utf8').trim();
+    await miniProgram.callWxMethod('setStorageSync', 'auth_user', user);
+  }
+
   const authUser = await miniProgram.callWxMethod('getStorageSync', 'auth_user');
   const authToken = await miniProgram.callWxMethod('getStorageSync', 'accessToken');
   const summary = {
     generatedAt: new Date().toISOString(),
     wsEndpoint,
+    roleLabel,
     auth: {
       hasAccessToken: Boolean(authToken),
       user: authUser ? JSON.parse(authUser) : null,

@@ -60,9 +60,10 @@ public class PartController {
 
     @PreAuthorize("hasAnyAuthority('PART_MANAGE', 'INVENTORY_VIEW')")
     @GetMapping("/lookup")
-    public ApiResponse<PartLookupResponse> lookup(@RequestParam String code) {
+    public ApiResponse<PartLookupResponse> lookup(@RequestParam(required = false) String code,
+                                                  @RequestParam(required = false) String barcode) {
         CurrentUser user = requireCurrentUser();
-        return ApiResponse.success(partService.lookup(user.storeId(), code));
+        return ApiResponse.success(partService.lookup(user.storeId(), resolveLookupCode(code, barcode)));
     }
 
     @GetMapping("/{partId}")
@@ -200,6 +201,16 @@ public class PartController {
     private CurrentUser requireCurrentUser() {
         return CurrentUserContext.get()
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "缺少用户上下文"));
+    }
+
+    private String resolveLookupCode(String code, String barcode) {
+        if (code != null) {
+            return code;
+        }
+        if (barcode != null) {
+            return barcode;
+        }
+        throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "请提供扫码编码");
     }
 
     private CreatePartCommand buildCreateCommand(CurrentUser user, String partName, String model,
