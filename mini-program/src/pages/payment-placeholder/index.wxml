@@ -1,5 +1,42 @@
-<view class="container" style="padding: 40px; text-align: center;">
-  <view style="font-size: 48px; margin-bottom: 16px;">💳</view>
-  <view style="font-size: 16px; color: #333; margin-bottom: 8px;">收款功能</view>
-  <view style="font-size: 14px; color: #999;">收款操作在工单详情页完成</view>
+<view class="container">
+  <view class="summary">
+    <view>
+      <view class="title">收银工作台</view>
+      <view class="desc">处理待收款、可退款工单</view>
+    </view>
+    <t-button size="small" theme="default" variant="outline" bind:tap="fetchData">刷新</t-button>
+  </view>
+
+  <view wx:if="{{orders.length > 0}}" class="list">
+    <view class="card" wx:for="{{orders}}" wx:key="id" bind:tap="onTapOrder" data-id="{{item.id}}">
+      <view class="card-head">
+        <view>
+          <view class="order-no">{{item.workOrderNo || item.id}}</view>
+          <view class="customer">{{item.customerNameText}}</view>
+        </view>
+        <t-tag size="small" theme="primary" variant="light">{{item.statusText}}</t-tag>
+      </view>
+      <view class="amount-grid">
+        <view class="amount-item">
+          <text class="label">应收</text>
+          <text class="value">{{item.receivableText}}</text>
+        </view>
+        <view class="amount-item">
+          <text class="label">待收</text>
+          <text class="value emphasis">{{item.outstandingText}}</text>
+        </view>
+        <view class="amount-item">
+          <text class="label">可退</text>
+          <text class="value">{{item.refundableText}}</text>
+        </view>
+      </view>
+      <view class="card-foot">进入工单详情记录收款或退款</view>
+    </view>
+  </view>
+
+  <view wx:elif="{{loading}}" class="empty">加载中...</view>
+  <view wx:else class="empty">
+    <t-icon name="check-circle" size="72rpx" color="#7D8B99" />
+    <text>暂无待收款或可退款工单</text>
+  </view>
 </view>

@@ -1,7 +1,6 @@
-import { authStore } from '../../stores/auth';
 import { getInventoryStocks } from '../../api/inventory';
 import { InventoryStock } from '../../types/inventory';
-import { hasPermission } from '../../utils/permission';
+import { hasPermission, requireAnyPermission, requireLogin } from '../../utils/permission';
 import { normalizeSearchParam } from '../../utils/searchParams';
 
 let inventorySearchTimer: number | undefined;
@@ -42,10 +41,8 @@ Page({
     loading: false,
   },
   onShow() {
-    if (!authStore.isLoggedIn) {
-      wx.redirectTo({ url: '/pages/login/index?redirect=' + encodeURIComponent('/pages/inventory/index') });
-      return;
-    }
+    if (!requireLogin('/pages/inventory/index')) return;
+    if (!requireAnyPermission(['INVENTORY_VIEW', 'INVENTORY_INBOUND', 'INVENTORY_ADJUST'], '当前账号无权查看库存')) return;
     this.setData({
       hasInboundPermission: hasPermission('INVENTORY_INBOUND')
     });

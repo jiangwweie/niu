@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 
 public record CreateThirdPartyPartRequest(
         @NotBlank(message = "配件名称不能为空") String partName,
+        String officialPartNo,
         String model,
         String categoryCode,
         BigDecimal referenceCostPrice,

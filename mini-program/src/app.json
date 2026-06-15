@@ -6,6 +6,7 @@
     "pages/work-order-detail/index",
     "pages/inventory/index",
     "pages/parts/index",
+    "pages/part-detail/index",
     "pages/inbound-placeholder/index",
     "pages/create-work-order-placeholder/index",
     "pages/payment-placeholder/index",

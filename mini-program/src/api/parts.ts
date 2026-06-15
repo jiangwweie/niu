@@ -39,6 +39,8 @@ export const lookupPartByCode = (code: string) => {
       officialPartNo: matched.officialPartNo,
       defaultBarcode: matched.defaultBarcode,
       source: matched.source,
+      matchType: matched.defaultBarcode === code ? 'SYSTEM_BARCODE' : 'PART_CODE',
+      scannedCode: code,
       name: matched.partName,
       model: matched.model,
       category: matched.categoryCode,
@@ -47,7 +49,7 @@ export const lookupPartByCode = (code: string) => {
       actualQty: 0,
       availableQty: 0,
       reservedQty: 0
-    } : { matched: false },
+    } : { matched: false, scannedCode: code },
     showLoading: true
   });
 };

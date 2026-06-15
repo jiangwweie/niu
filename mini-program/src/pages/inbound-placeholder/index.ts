@@ -2,9 +2,9 @@ import { getParts, lookupPartByCode } from '../../api/parts';
 import { inboundInventory, createPartAndInbound } from '../../api/inventory';
 import { Part, PartLookupResult } from '../../types/parts';
 import { InboundRequest, InboundResponse, CreatePartAndInboundResponse } from '../../types/inventory';
-import { authStore } from '../../stores/auth';
 import Toast from 'tdesign-miniprogram/toast/index';
 import { normalizeSearchParam } from '../../utils/searchParams';
+import { requireAnyPermission, requireLogin } from '../../utils/permission';
 
 let partSearchTimer: number | undefined;
 
@@ -49,13 +49,14 @@ Page({
   },
 
   onLoad() {
+    if (!requireLogin('/pages/inbound-placeholder/index')) return;
+    if (!requireAnyPermission(['INVENTORY_INBOUND'], '当前账号无权进行配件入库')) return;
     this.loadParts();
   },
 
   onShow() {
-    if (!authStore.isLoggedIn) {
-      wx.redirectTo({ url: '/pages/login/index?redirect=' + encodeURIComponent('/pages/inbound-placeholder/index') });
-    }
+    if (!requireLogin('/pages/inbound-placeholder/index')) return;
+    requireAnyPermission(['INVENTORY_INBOUND'], '当前账号无权进行配件入库');
   },
 
   loadParts(keyword?: string) {
@@ -126,7 +127,10 @@ Page({
           lookupResult: null,
           'formData.barcode': scanValue,
           'createPartFormData.externalBarcode': scanValue,
-          'createPartFormData.unitCost': ''
+          'createPartFormData.unitCost': '',
+          'createPartFormData.officialPartNo': this.data.createPartFormData.source === 'OFFICIAL'
+            ? (this.data.createPartFormData.officialPartNo || scanValue)
+            : this.data.createPartFormData.officialPartNo
         });
         wx.showModal({
           title: '未识别该条码',
@@ -153,7 +157,10 @@ Page({
       };
       this.setData({
         selectedPart: part,
-        lookupResult: result,
+        lookupResult: {
+          ...result,
+          matchTypeText: this.getMatchTypeText(result.matchType)
+        } as any,
         'formData.barcode': scanValue,
         'formData.unitCost': part.costPrice != null ? String(part.costPrice) : ''
       });
@@ -170,12 +177,15 @@ Page({
         return;
       }
       this.setData({
-        selectedPart: null,
-        lookupResult: null,
-        'formData.barcode': scanValue,
-        'createPartFormData.externalBarcode': scanValue,
-        'createPartFormData.unitCost': ''
-      });
+          selectedPart: null,
+          lookupResult: null,
+          'formData.barcode': scanValue,
+          'createPartFormData.externalBarcode': scanValue,
+          'createPartFormData.unitCost': '',
+          'createPartFormData.officialPartNo': this.data.createPartFormData.source === 'OFFICIAL'
+            ? (this.data.createPartFormData.officialPartNo || scanValue)
+            : this.data.createPartFormData.officialPartNo
+        });
       wx.showModal({
         title: '未识别该条码',
         content: '可手动选择已有配件，或新增配件并入库。',
@@ -188,6 +198,17 @@ Page({
     });
   },
 
+  getMatchTypeText(matchType?: string) {
+    const map: Record<string, string> = {
+      SYSTEM_BARCODE: '系统条码命中',
+      EXTERNAL_BARCODE: '外部条码命中',
+      PART_CODE: '配件编码命中',
+      OFFICIAL_PART_NO: '官方品号命中',
+      DEFAULT_BARCODE: '默认条码命中'
+    };
+    return matchType ? (map[matchType] || '扫码命中') : '扫码命中';
+  },
+
   showCreatePartForm() {
     this.setData({ createPartVisible: true });
   },
@@ -197,7 +218,25 @@ Page({
   },
 
   onCreatePartSourceChange(e: any) {
-    this.setData({ 'createPartFormData.source': e.detail.value });
+    this.updateCreatePartSource(e.detail.value);
+  },
+
+  onTapCreatePartSource(e: any) {
+    this.updateCreatePartSource(e.currentTarget.dataset.source);
+  },
+
+  updateCreatePartSource(source: string) {
+    if (source === 'OFFICIAL') {
+      this.setData({
+        'createPartFormData.source': source,
+        'createPartFormData.officialPartNo': this.data.createPartFormData.officialPartNo || this.data.createPartFormData.externalBarcode || ''
+      });
+      return;
+    }
+
+    this.setData({
+      'createPartFormData.source': 'THIRD_PARTY'
+    });
   },
 
   onCreatePartNameChange(e: any) { this.setData({ 'createPartFormData.partName': e.detail.value }); },
@@ -222,6 +261,11 @@ Page({
     const formData = this.data.createPartFormData;
     if (!formData.partName.trim()) {
       Toast({ context: this, selector: '#t-toast', message: '请输入配件名称', icon: 'close-circle' });
+      return;
+    }
+
+    if (formData.source === 'OFFICIAL' && !formData.officialPartNo.trim()) {
+      Toast({ context: this, selector: '#t-toast', message: '官方配件必须填写官方品号', icon: 'close-circle' });
       return;
     }
 
@@ -266,6 +310,8 @@ Page({
           partCode: result.partCode || '',
           partName: result.partName || '',
           source: formData.source,
+          officialPartNo: formData.officialPartNo.trim() || undefined,
+          defaultBarcode: result.defaultBarcode,
           model: formData.model || '',
           categoryCode: formData.categoryCode || '',
           costPrice: costPrice,

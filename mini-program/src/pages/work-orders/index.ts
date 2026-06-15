@@ -1,7 +1,6 @@
-import { authStore } from '../../stores/auth';
 import { getWorkOrders } from '../../api/workOrder';
 import { WorkOrder } from '../../types/workOrder';
-import { hasPermission } from '../../utils/permission';
+import { hasPermission, requireAnyPermission, requireLogin } from '../../utils/permission';
 import { normalizeSearchParam } from '../../utils/searchParams';
 import {
   getCashierStatusText,
@@ -72,10 +71,8 @@ Page({
     loadingMore: false,
   },
   onShow() {
-    if (!authStore.isLoggedIn) {
-      wx.redirectTo({ url: '/pages/login/index?redirect=' + encodeURIComponent('/pages/work-orders/index') });
-      return;
-    }
+    if (!requireLogin('/pages/work-orders/index')) return;
+    if (!requireAnyPermission(['WORK_ORDER_VIEW', 'WORK_ORDER_CREATE', 'WORK_ORDER_UPDATE', 'WORK_ORDER_SETTLE'], '当前账号无权查看工单')) return;
     this.setData({
       hasCreateOrderPermission: hasPermission('WORK_ORDER_CREATE'),
       hasUpdateOrderPermission: hasPermission('WORK_ORDER_UPDATE')

@@ -1,7 +1,7 @@
 export const mockDictionaryTypes = [
   { code: 'WORK_ORDER_STATUS', label: '工单状态' },
   { code: 'PAYMENT_METHOD', label: '收款方式' },
-  { code: 'PART_SOURCE', label: '配件来源' },
+  { code: 'PART_SOURCE', label: '配件分类' },
   { code: 'PART_CATEGORY', label: '配件分类' },
   { code: 'REIMBURSEMENT_STATUS', label: '报销状态' },
   { code: 'INVENTORY_FLOW_TYPE', label: '库存流水类型' },
@@ -34,10 +34,10 @@ export const mockDictionaryData: MockDictItem[] = [
   { id: '7', typeCode: 'PAYMENT_METHOD', typeLabel: '收款方式', dictCode: 'CASH', dictLabel: '现金', sort: 3, enabled: true, isSystem: false },
   { id: '8', typeCode: 'PAYMENT_METHOD', typeLabel: '收款方式', dictCode: 'POS', dictLabel: 'POS机刷卡', sort: 4, enabled: false, isSystem: false, remark: '使用较少，已停用' },
 
-  // 配件来源
-  { id: '9', typeCode: 'PART_SOURCE', typeLabel: '配件来源', dictCode: 'OFFICIAL', dictLabel: '官方商城供货', sort: 1, enabled: true, isSystem: true },
-  { id: '10', typeCode: 'PART_SOURCE', typeLabel: '配件来源', dictCode: 'THIRD_PARTY', dictLabel: '第三方采购', sort: 2, enabled: true, isSystem: false },
-  { id: '11', typeCode: 'PART_SOURCE', typeLabel: '配件来源', dictCode: 'SECOND_HAND', dictLabel: '二手拆车件', sort: 3, enabled: true, isSystem: false },
+  // 配件分类
+  { id: '9', typeCode: 'PART_SOURCE', typeLabel: '配件分类', dictCode: 'OFFICIAL', dictLabel: '官方商城供货', sort: 1, enabled: true, isSystem: true },
+  { id: '10', typeCode: 'PART_SOURCE', typeLabel: '配件分类', dictCode: 'THIRD_PARTY', dictLabel: '第三方采购', sort: 2, enabled: true, isSystem: false },
+  { id: '11', typeCode: 'PART_SOURCE', typeLabel: '配件分类', dictCode: 'SECOND_HAND', dictLabel: '二手拆车件', sort: 3, enabled: true, isSystem: false },
 
   // 配件分类
   { id: '12', typeCode: 'PART_CATEGORY', typeLabel: '配件分类', dictCode: 'BATTERY', dictLabel: '电池类', sort: 1, enabled: true, isSystem: true },

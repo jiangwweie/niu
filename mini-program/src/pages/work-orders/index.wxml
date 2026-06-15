@@ -74,15 +74,15 @@
     </block>
     <view wx:elif="{{!loading}}" class="empty">
       <block wx:if="{{keyword}}">
-        <view class="empty-icon">🔍</view>
+        <t-icon name="search" size="64rpx" color="#B8C1CC" />
         <text class="empty-text">没有找到相关工单，请更换关键词</text>
       </block>
       <block wx:elif="{{activeStatus}}">
-        <view class="empty-icon">📋</view>
+        <t-icon name="assignment" size="64rpx" color="#B8C1CC" />
         <text class="empty-text">该状态暂无工单</text>
       </block>
       <block wx:else>
-        <view class="empty-icon">📋</view>
+        <t-icon name="assignment" size="64rpx" color="#B8C1CC" />
         <text class="empty-text">暂无工单，可从工作台新建工单</text>
       </block>
     </view>

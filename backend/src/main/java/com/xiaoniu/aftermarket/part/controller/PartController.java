@@ -145,6 +145,7 @@ public class PartController {
                 request.categoryCode(), request.referenceCostPrice(), request.defaultSalePrice(),
                 request.defaultBarcode(), request.externalBarcode(),
                 request.locationRemark(), request.remark());
+        command.setOfficialPartNo(request.officialPartNo());
         PartEntity part = partService.createThirdPartyPart(command);
         return ApiResponse.success(PartCreateResponse.from(part));
     }

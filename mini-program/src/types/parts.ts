@@ -20,6 +20,8 @@ export interface PartLookupResult {
   officialPartNo?: string;
   defaultBarcode?: string;
   source?: string;
+  matchType?: string;
+  scannedCode?: string;
   name?: string;
   model?: string;
   categoryCode?: string;

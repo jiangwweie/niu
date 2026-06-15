@@ -10,7 +10,7 @@
         <el-form-item label="配件名称">
           <el-input v-model="queryParams.partName" placeholder="请输入配件名称" clearable style="width: 220px;" />
         </el-form-item>
-        <el-form-item label="官方品号">
+        <el-form-item label="官方/参考品号">
           <el-input v-model="queryParams.officialCode" placeholder="支持模糊匹配" clearable style="width: 220px;" />
         </el-form-item>
         <el-form-item label="条码">
@@ -22,7 +22,7 @@
         <el-form-item label="分类">
           <el-input v-model="queryParams.category" placeholder="请输入分类" clearable style="width: 220px;" />
         </el-form-item>
-        <el-form-item label="来源">
+        <el-form-item label="配件分类">
           <el-select v-model="queryParams.source" placeholder="请选择" clearable style="width: 220px;">
             <el-option label="官方" value="OFFICIAL" />
             <el-option label="第三方" value="THIRD_PARTY" />
@@ -61,14 +61,14 @@
         >
           <el-table-column prop="partCode" label="配件编码" width="140" />
           <el-table-column prop="partName" label="配件名称" min-width="150" show-overflow-tooltip />
-          <el-table-column label="来源" width="90" align="center">
+          <el-table-column label="配件分类" width="100" align="center">
             <template #default="{ row }">
               <el-tag :type="isOfficialSource(row.source) ? 'danger' : 'info'" size="small">
                 {{ isOfficialSource(row.source) ? '官方' : '第三方' }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="官方品号" width="130">
+          <el-table-column label="官方/参考品号" width="150">
             <template #default="{ row }">
               {{ row.officialCode || '-' }}
             </template>
@@ -138,12 +138,14 @@
         <el-descriptions :column="2" border size="small">
           <el-descriptions-item label="配件编码">{{ detailDrawer.data.partCode }}</el-descriptions-item>
           <el-descriptions-item label="配件名称">{{ detailDrawer.data.partName }}</el-descriptions-item>
-          <el-descriptions-item label="来源">
+          <el-descriptions-item label="配件分类">
             <el-tag :type="isOfficialSource(detailDrawer.data.source) ? 'danger' : 'info'" size="small">
               {{ isOfficialSource(detailDrawer.data.source) ? '官方' : '第三方' }}
             </el-tag>
           </el-descriptions-item>
-          <el-descriptions-item label="官方品号">{{ detailDrawer.data.officialCode || '-' }}</el-descriptions-item>
+          <el-descriptions-item :label="isOfficialSource(detailDrawer.data.source) ? '官方品号' : '参考官方品号'">
+            {{ detailDrawer.data.officialCode || '-' }}
+          </el-descriptions-item>
           <el-descriptions-item label="型号">{{ detailDrawer.data.model || '-' }}</el-descriptions-item>
           <el-descriptions-item label="分类">{{ detailDrawer.data.category || '-' }}</el-descriptions-item>
           <el-descriptions-item label="成本价"><MoneyText :amount="detailDrawer.data.costPrice" /></el-descriptions-item>
@@ -182,7 +184,7 @@
     <!-- 新增配件弹窗 -->
     <el-dialog v-model="editDialog.visible" :title="editDialog.isEdit ? '编辑配件' : '新增配件'" width="600px">
       <el-form :model="editDialog.form" label-width="100px" size="default">
-        <el-form-item label="配件来源" v-if="!editDialog.isEdit">
+        <el-form-item label="配件分类" v-if="!editDialog.isEdit">
           <el-radio-group v-model="editDialog.form.source">
             <el-radio label="official">官方配件</el-radio>
             <el-radio label="third_party">第三方配件</el-radio>
@@ -191,8 +193,11 @@
         <el-form-item label="配件名称" required>
           <el-input v-model="editDialog.form.partName" placeholder="请输入配件名称" />
         </el-form-item>
-        <el-form-item label="官方品号" v-if="editDialog.form.source === 'official'" required>
-          <el-input v-model="editDialog.form.officialPartNo" placeholder="请输入官方品号" />
+        <el-form-item :label="editDialog.form.source === 'official' ? '官方品号' : '参考官方品号'" :required="editDialog.form.source === 'official'">
+          <el-input
+            v-model="editDialog.form.officialPartNo"
+            :placeholder="editDialog.form.source === 'official' ? '官方配件必填' : '选填，用于兼容/替代关系'"
+          />
         </el-form-item>
         <el-form-item label="型号">
           <el-input v-model="editDialog.form.model" placeholder="请输入适用型号，如 NQi, 通用" />
@@ -496,6 +501,7 @@ const submitEdit = async () => {
       } else {
         await createThirdPartyPart({
           partName: editDialog.form.partName,
+          officialPartNo: editDialog.form.officialPartNo || undefined,
           model: editDialog.form.model || undefined,
           categoryCode: editDialog.form.categoryCode || undefined,
           referenceCostPrice: editDialog.form.referenceCostPrice || undefined,

@@ -201,6 +201,7 @@ export function createOfficialPart(body: {
  */
 export function createThirdPartyPart(body: {
   partName: string;
+  officialPartNo?: string;
   model?: string;
   categoryCode?: string;
   referenceCostPrice?: number;

@@ -43,6 +43,11 @@ public class PartServiceImpl implements PartService {
 
     private static final String BARCODE_TYPE_SYSTEM = "SYSTEM";
     private static final String BARCODE_TYPE_MANUAL = "MANUAL";
+    private static final String MATCH_SYSTEM_BARCODE = "SYSTEM_BARCODE";
+    private static final String MATCH_EXTERNAL_BARCODE = "EXTERNAL_BARCODE";
+    private static final String MATCH_PART_CODE = "PART_CODE";
+    private static final String MATCH_OFFICIAL_PART_NO = "OFFICIAL_PART_NO";
+    private static final String MATCH_DEFAULT_BARCODE = "DEFAULT_BARCODE";
 
     private final PartMapper partMapper;
     private final PartBarcodeMapper partBarcodeMapper;
@@ -172,6 +177,7 @@ public class PartServiceImpl implements PartService {
         PartEntity part = new PartEntity();
         part.setStoreId(command.getStoreId());
         part.setPartCode(partCode);
+        part.setOfficialPartNo(normalizeBarcode(command.getOfficialPartNo()));
         part.setPartName(command.getPartName());
         part.setModel(command.getModel());
         part.setSource(PartSource.THIRD_PARTY.getCode());
@@ -462,15 +468,17 @@ public class PartServiceImpl implements PartService {
         if (!StringUtils.hasText(code)) {
             throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "条码/编码不能为空");
         }
-        PartEntity part = findVisiblePartByCode(storeId, code);
-        if (part == null) {
-            throw new BusinessException(ErrorCode.PART_NOT_FOUND, "未找到对应配件");
+        String normalized = normalizeBarcode(code);
+        LookupCandidate candidate = findLookupCandidate(storeId, normalized);
+        if (candidate == null) {
+            return PartLookupResponse.notMatched(normalized);
         }
+        PartEntity part = candidate.part();
         if (!CommonStatus.ENABLED.getCode().equals(part.getStatus())) {
             throw new BusinessException(ErrorCode.PART_DISABLED, "该配件已停用，请先在管理端启用后再操作");
         }
         InventoryStockEntity stock = inventoryStockMapper.selectByStoreIdAndPartId(storeId, part.getId());
-        return PartLookupResponse.matched(part, stock);
+        return PartLookupResponse.matched(part, stock, normalized, candidate.matchType());
     }
 
     @Override
@@ -590,6 +598,53 @@ public class PartServiceImpl implements PartService {
 
     private String normalizeBarcode(String barcode) {
         return StringUtils.hasText(barcode) ? barcode.trim() : null;
+    }
+
+    private LookupCandidate findLookupCandidate(Long storeId, String normalized) {
+        if (storeId == null || normalized == null) {
+            return null;
+        }
+
+        PartBarcodeEntity barcodeEntity = partBarcodeMapper.selectByStoreIdAndBarcode(storeId, normalized);
+        if (barcodeEntity != null) {
+            PartEntity part = partMapper.selectById(barcodeEntity.getPartId());
+            if (isSameStoreVisiblePart(storeId, part)) {
+                return new LookupCandidate(
+                        repairDefaultBarcodeIfNeeded(part, null),
+                        resolveBarcodeMatchType(barcodeEntity));
+            }
+        }
+
+        PartEntity byPartCode = getByPartCode(storeId, normalized);
+        if (byPartCode != null) {
+            return new LookupCandidate(byPartCode, MATCH_PART_CODE);
+        }
+
+        PartEntity byOfficialPartNo = selectVisibleByColumn(storeId, "official_part_no", normalized);
+        if (byOfficialPartNo != null) {
+            return new LookupCandidate(byOfficialPartNo, MATCH_OFFICIAL_PART_NO);
+        }
+
+        PartEntity byDefaultBarcode = selectVisibleByColumn(storeId, "default_barcode", normalized);
+        if (byDefaultBarcode != null) {
+            return new LookupCandidate(byDefaultBarcode, MATCH_DEFAULT_BARCODE);
+        }
+
+        return null;
+    }
+
+    private boolean isSameStoreVisiblePart(Long storeId, PartEntity part) {
+        return part != null
+                && storeId.equals(part.getStoreId())
+                && (part.getDeleted() == null || part.getDeleted() == 0);
+    }
+
+    private String resolveBarcodeMatchType(PartBarcodeEntity barcodeEntity) {
+        if (Boolean.TRUE.equals(barcodeEntity.getPrimaryBarcode())
+                || BARCODE_TYPE_SYSTEM.equals(barcodeEntity.getBarcodeType())) {
+            return MATCH_SYSTEM_BARCODE;
+        }
+        return MATCH_EXTERNAL_BARCODE;
     }
 
     private void initializeBarcodesForNewPart(PartEntity part, CreatePartCommand command) {
@@ -909,5 +964,8 @@ public class PartServiceImpl implements PartService {
             boolean archived,
             boolean hasHistoryReference
     ) {
+    }
+
+    private record LookupCandidate(PartEntity part, String matchType) {
     }
 }

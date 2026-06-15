@@ -3,7 +3,9 @@
     <!-- 欢迎信息 -->
     <el-card shadow="never" class="welcome-card">
       <div class="welcome-content">
-        <div class="welcome-icon-wrapper">🏪</div>
+        <div class="welcome-icon-wrapper">
+          <el-icon><Shop /></el-icon>
+        </div>
         <div class="welcome-text">
           <div class="welcome-title">
             {{ greeting }}，{{ authStore.user?.realName || authStore.user?.username || '管理员' }}
@@ -146,7 +148,9 @@
             class="shortcut-item"
             @click="router.push(item.path)"
           >
-            <div class="shortcut-icon-wrapper">{{ item.icon }}</div>
+            <div class="shortcut-icon-wrapper">
+              <el-icon><component :is="item.icon" /></el-icon>
+            </div>
             <div class="shortcut-label">{{ item.label }}</div>
           </div>
         </div>
@@ -158,7 +162,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { Loading } from '@element-plus/icons-vue';
+import { Box, DataAnalysis, Loading, Money, OfficeBuilding, Operation, Shop, Tools } from '@element-plus/icons-vue';
 import { useAuthStore } from '@/stores/auth';
 import { hasPermission, hasAnyPermission } from '@/utils/permission';
 import { getDashboardSummary } from '@/api/dashboard';
@@ -181,6 +185,9 @@ const ROLE_LABEL_MAP: Record<string, string> = {
   STORE_ADMIN: '门店管理员',
   FINANCE: '财务',
   TECHNICIAN_FRONT_DESK: '前台员工',
+  INVENTORY_CLERK: '库存员',
+  CASHIER: '收银员',
+  READONLY_STAFF: '只读员工',
 };
 
 const roleDisplayName = computed(() => {
@@ -214,32 +221,32 @@ const statCards = computed(() => {
 
 const shortcuts = computed(() => {
   const all = [
-    { path: '/work-order', icon: '🔧', label: '工单管理', always: true },
-    { path: '/parts', icon: '📦', label: '配件管理', always: true },
+    { path: '/work-order', icon: Tools, label: '工单管理', always: true },
+    { path: '/parts', icon: Box, label: '配件管理', always: true },
     {
       path: '/inventory',
-      icon: '🗄️',
+      icon: Operation,
       label: '库存管理',
       always: false,
       check: () => hasAnyPermission(['INVENTORY_VIEW', 'INVENTORY_INBOUND', 'INVENTORY_ADJUST']),
     },
     {
       path: '/settlement',
-      icon: '🏢',
+      icon: OfficeBuilding,
       label: '官方结算',
       always: false,
       check: () => hasAnyPermission(['OFFICIAL_SETTLEMENT_MANAGE', 'FINANCE_VIEW']),
     },
     {
       path: '/reimbursement',
-      icon: '💰',
+      icon: Money,
       label: '报销台账',
       always: false,
       check: () => hasAnyPermission(['REIMBURSEMENT_CONFIRM', 'FINANCE_VIEW']),
     },
     {
       path: '/finance',
-      icon: '📊',
+      icon: DataAnalysis,
       label: '财务报表',
       always: false,
       check: () => hasPermission('FINANCE_VIEW'),

@@ -120,7 +120,7 @@ class M18BBarcodeScanIntegrationTest {
     }
 
     @Test
-    void lookupDoesNotMatchDisabledDeletedOrCrossStoreParts() throws Exception {
+    void lookupRejectsDisabledAndReturnsNotMatchedForInvisibleOrUnknownParts() throws Exception {
         mockMvc.perform(get("/api/staff/parts/lookup")
                         .header("X-User-Id", "1")
                         .header("X-Store-Id", "1")
@@ -128,9 +128,9 @@ class M18BBarcodeScanIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("PART_DISABLED"))
                 .andExpect(jsonPath("$.message").value("该配件已停用，请先在管理端启用后再操作"));
-        assertLookupRejected("M18B-BC-DELETED", 1);
-        assertLookupRejected("M18B-BC-CROSS", 1);
-        assertLookupRejected("M18B-BC-UNKNOWN", 1);
+        assertLookupNotMatched("M18B-BC-DELETED", 1);
+        assertLookupNotMatched("M18B-BC-CROSS", 1);
+        assertLookupNotMatched("M18B-BC-UNKNOWN", 1);
     }
 
     @Test
@@ -309,11 +309,11 @@ class M18BBarcodeScanIntegrationTest {
     // M18F: admin 创建配件返回 PartCreateResponse
     // ──────────────────────────────────────────────
 
-    /** #1 admin 创建第三方配件返回 partId / partCode / defaultBarcode */
+    /** #1 admin 创建第三方配件返回 partId / partCode / defaultBarcode，并保存参考官方品号 */
     @Test
     void adminCreateThirdPartyPartReturnsPartCreateResponse() throws Exception {
         String body = """
-                {"partName":"Admin第三方件","model":"NQi","categoryCode":"BRAKE","referenceCostPrice":20.00}
+                {"partName":"Admin第三方件","officialPartNo":"M18B-REF-OFF","model":"NQi","categoryCode":"BRAKE","referenceCostPrice":20.00}
                 """;
         MvcResult result = mockMvc.perform(post("/api/admin/parts/third-party")
                         .header("X-User-Id", "1")
@@ -337,6 +337,8 @@ class M18BBarcodeScanIntegrationTest {
         assertTrue(partId > 0);
         assertNotNull(partCode);
         assertEquals(partCode, defaultBarcode, "defaultBarcode 应等于系统生成的 partCode");
+        assertEquals("M18B-REF-OFF", jdbcTemplate.queryForObject(
+                "SELECT official_part_no FROM part WHERE id = ?", String.class, partId));
     }
 
     /** #2 admin 创建官方配件返回 partId / partCode / defaultBarcode */
@@ -622,14 +624,14 @@ class M18BBarcodeScanIntegrationTest {
     // helper
     // ──────────────────────────────────────────────
 
-    private void assertLookupRejected(String code, int storeId) throws Exception {
+    private void assertLookupNotMatched(String code, int storeId) throws Exception {
         mockMvc.perform(get("/api/staff/parts/lookup")
                         .header("X-User-Id", "1")
                         .header("X-Store-Id", String.valueOf(storeId))
                         .param("code", code))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("PART_NOT_FOUND"))
-                .andExpect(jsonPath("$.message").value("未找到对应配件"));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.matched").value(false))
+                .andExpect(jsonPath("$.data.scannedCode").value(code));
     }
 
     private void assertStock(long partId, int actual, int available, int reserved) {

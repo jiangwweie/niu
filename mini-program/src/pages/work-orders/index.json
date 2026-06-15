@@ -3,7 +3,8 @@
   "usingComponents": {
     "t-search": "tdesign-miniprogram/search/search",
     "t-tag": "tdesign-miniprogram/tag/tag",
-    "t-button": "tdesign-miniprogram/button/button"
+    "t-button": "tdesign-miniprogram/button/button",
+    "t-icon": "tdesign-miniprogram/icon/icon"
   },
   "enablePullDownRefresh": true
 }

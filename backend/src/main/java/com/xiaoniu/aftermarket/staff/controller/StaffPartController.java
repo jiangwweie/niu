@@ -101,6 +101,7 @@ public class StaffPartController {
         validateSourceConsistency(request.source(), "THIRD_PARTY");
         CurrentUser user = requireCurrentUser();
         CreatePartCommand command = buildCreateCommand(user, request);
+        command.setOfficialPartNo(request.officialPartNo());
         PartEntity part = partService.createThirdPartyPart(command);
         return ApiResponse.success(PartCreateResponse.from(part));
     }
@@ -121,6 +122,7 @@ public class StaffPartController {
         command.setStoreId(user.storeId());
         command.setOperatorId(user.userId());
         command.setPartName(request.partName());
+        command.setOfficialPartNo(request.officialPartNo());
         command.setModel(request.model());
         command.setCategoryCode(request.categoryCode());
         command.setReferenceCostPrice(request.costPrice());

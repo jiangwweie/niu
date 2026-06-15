@@ -1,6 +1,6 @@
 import { submitReimbursement } from '../../api/reimbursement';
-import { authStore } from '../../stores/auth';
 import Toast from 'tdesign-miniprogram/toast/index';
+import { requireAnyPermission, requireLogin } from '../../utils/permission';
 
 Page({
   data: {
@@ -13,9 +13,8 @@ Page({
   },
 
   onShow() {
-    if (!authStore.isLoggedIn) {
-      wx.redirectTo({ url: '/pages/login/index?redirect=' + encodeURIComponent('/pages/reimbursement-placeholder/index') });
-    }
+    if (!requireLogin('/pages/reimbursement-placeholder/index')) return;
+    requireAnyPermission(['REIMBURSEMENT_SUBMIT'], '当前账号无权提交报销');
   },
 
   onFormChange(e: any) {

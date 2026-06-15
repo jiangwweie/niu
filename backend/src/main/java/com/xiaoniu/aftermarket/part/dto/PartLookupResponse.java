@@ -12,6 +12,8 @@ public record PartLookupResponse(
         String officialPartNo,
         String defaultBarcode,
         String source,
+        String matchType,
+        String scannedCode,
         String name,
         String model,
         String categoryCode,
@@ -25,12 +27,12 @@ public record PartLookupResponse(
         Integer reservedQty
 ) {
 
-    public static PartLookupResponse notMatched() {
+    public static PartLookupResponse notMatched(String scannedCode) {
         return new PartLookupResponse(false, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null, null, null);
+                null, null, scannedCode, null, null, null, null, null, null, null, null, null, null, null);
     }
 
-    public static PartLookupResponse matched(PartEntity part, InventoryStockEntity stock) {
+    public static PartLookupResponse matched(PartEntity part, InventoryStockEntity stock, String scannedCode, String matchType) {
         return new PartLookupResponse(
                 true,
                 part.getId(),
@@ -39,6 +41,8 @@ public record PartLookupResponse(
                 part.getOfficialPartNo(),
                 part.getDefaultBarcode(),
                 part.getSource(),
+                matchType,
+                scannedCode,
                 part.getPartName(),
                 part.getModel(),
                 part.getCategoryCode(),

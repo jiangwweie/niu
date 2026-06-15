@@ -18,11 +18,11 @@
     </block>
     <view wx:if="{{loading && parts.length === 0}}" class="loading-tip">加载中...</view>
     <view wx:elif="{{!loading && parts.length === 0 && keyword}}" class="empty">
-      <view class="empty-icon">🔍</view>
+      <t-icon name="search" size="64rpx" color="#B8C1CC" />
       <text class="empty-text">没有找到相关配件，请更换关键词</text>
     </view>
     <view wx:elif="{{!loading && parts.length === 0}}" class="empty">
-      <view class="empty-icon">📦</view>
+      <t-icon name="layers" size="64rpx" color="#B8C1CC" />
       <text class="empty-text">暂无配件</text>
     </view>
   </view>

@@ -1,7 +1,7 @@
 <template>
   <PageContainer title="收款记录" description="查看客户收款明细，支持多次收款与混合收款记录展示">
     <el-alert
-      title="收款操作在员工小程序端完成，此处仅查看记录。"
+      title="有收款权限的账号可在工单详情记录收款，本页用于查看与追踪收款明细。"
       type="success"
       show-icon
       :closable="false"

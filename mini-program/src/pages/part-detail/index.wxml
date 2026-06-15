@@ -1,0 +1,30 @@
+<view class="container">
+  <view wx:if="{{part}}" class="detail-card">
+    <view class="header-row">
+      <view>
+        <view class="part-name">{{part.partName}}</view>
+        <view class="part-code">{{part.partCode}}</view>
+      </view>
+      <t-tag theme="{{part.source === 'OFFICIAL' ? 'primary' : 'warning'}}" variant="light">{{part.sourceText}}</t-tag>
+    </view>
+
+    <t-cell-group>
+      <t-cell title="配件编码" note="{{part.partCode || '-'}}" />
+      <t-cell title="{{part.officialPartNoLabel}}" note="{{part.officialPartNo || '-'}}" />
+      <t-cell title="型号" note="{{part.model || '-'}}" />
+      <t-cell title="分类编码" note="{{part.categoryCode || '-'}}" />
+      <t-cell title="默认成本价" note="{{part.costPriceText}}" />
+      <t-cell title="默认销售价" note="{{part.salePriceText}}" />
+      <t-cell title="库位备注" note="{{part.locationRemark || '-'}}" />
+      <t-cell title="状态" note="{{part.statusText}}" />
+    </t-cell-group>
+
+    <view class="hint">
+      <t-icon name="info-circle" size="32rpx" color="#6B7A90" />
+      <text>信息录错时，请由有权限账号在管理端配件管理中修正。</text>
+    </view>
+  </view>
+
+  <view wx:elif="{{loading}}" class="state">加载中...</view>
+  <view wx:else class="state">暂无配件信息</view>
+</view>

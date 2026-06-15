@@ -1,6 +1,6 @@
 import { getWorkOrderDetail, cancelWorkOrder, recordPayment, recordRefund, markRepairDone, deliverWorkOrder } from '../../api/workOrder';
 import { WorkOrder, PaymentMethod } from '../../types/workOrder';
-import { hasPermission } from '../../utils/permission';
+import { hasPermission, requireAnyPermission, requireLogin } from '../../utils/permission';
 import {
   getCashierStatusText,
   getInventoryStatusText,
@@ -101,6 +101,8 @@ Page({
     deliverLoading: false,
   },
   onLoad(options: any) {
+    if (!requireLogin('/pages/work-orders/index')) return;
+    if (!requireAnyPermission(['WORK_ORDER_VIEW', 'WORK_ORDER_CREATE', 'WORK_ORDER_UPDATE', 'PAYMENT_RECORD', 'REFUND_RECORD'], '当前账号无权查看工单')) return;
     this.setData({
       hasCancelPermission: hasPermission('WORK_ORDER_CANCEL'),
       hasPaymentPermission: hasPermission('PAYMENT_RECORD'),

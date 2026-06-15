@@ -1,7 +1,7 @@
 <view class="container">
   <!-- 问候卡片 -->
   <view class="header-card">
-    <text class="greeting">{{greeting}}，{{userName}} 👋</text>
+    <text class="greeting">{{greeting}}，{{userName}}</text>
     <text class="subtitle">门店售后工作台</text>
   </view>
 
@@ -11,25 +11,25 @@
     <view class="grid-actions">
       <view class="action-item" wx:if="{{hasCreateOrderPermission}}" bindtap="goToCreateOrder">
         <view class="icon-wrap bg-primary">
-          <view class="emoji-icon">🔧</view>
+          <t-icon name="tools" size="44rpx" color="#008d9e" />
         </view>
         <text class="action-name">新建工单</text>
       </view>
       <view class="action-item" wx:if="{{hasInboundPermission}}" bindtap="goToInbound">
         <view class="icon-wrap bg-success">
-          <view class="emoji-icon">📦</view>
+          <t-icon name="layers" size="44rpx" color="#2ba471" />
         </view>
         <text class="action-name">配件入库</text>
       </view>
       <view class="action-item" bindtap="goToInventory">
         <view class="icon-wrap bg-info">
-          <view class="emoji-icon">🗄️</view>
+          <t-icon name="search" size="44rpx" color="#0052d9" />
         </view>
         <text class="action-name">查库存</text>
       </view>
       <view class="action-item" wx:if="{{hasReimbursementPermission}}" bindtap="goToReimbursement">
         <view class="icon-wrap bg-warning">
-          <view class="emoji-icon">💰</view>
+          <t-icon name="wallet" size="44rpx" color="#e37318" />
         </view>
         <text class="action-name">报销申请</text>
       </view>
@@ -40,7 +40,7 @@
   <view class="section">
     <text class="section-title">工单提醒</text>
     <view class="notice-card">
-      <view class="notice-icon">📋</view>
+      <view class="notice-icon"><t-icon name="assignment" size="48rpx" color="#008d9e" /></view>
       <view class="notice-body">
         <text class="notice-text">请前往工单列表查看当前待处理工单。</text>
         <view class="notice-action" bindtap="goToWorkOrders">

@@ -11,8 +11,9 @@
       </view>
       <text class="part-desc">编码: {{selectedPart.partCode}}</text>
       <text class="part-desc" wx:if="{{selectedPart.officialPartNo}}">官方品号: {{selectedPart.officialPartNo}}</text>
-      <text class="part-desc" wx:if="{{selectedPart.source}}">来源: {{selectedPart.source}}</text>
+      <text class="part-desc" wx:if="{{selectedPart.source}}">分类: {{selectedPart.source === 'OFFICIAL' ? '官方配件' : '第三方配件'}}</text>
       <text class="part-desc" wx:if="{{selectedPart.model}}">型号: {{selectedPart.model}}</text>
+      <text class="part-desc" wx:if="{{lookupResult.matchTypeText}}">{{lookupResult.matchTypeText}}: {{lookupResult.scannedCode || formData.barcode}}</text>
       <view class="stock-summary" wx:if="{{lookupResult}}">
         <text>当前库存 可用 {{lookupResult.availableQty || 0}}</text>
         <text>实际 {{lookupResult.actualQty || 0}}</text>
@@ -33,14 +34,14 @@
     <t-cell-group>
       <t-input label="入库数量" type="number" placeholder="必填，必须大于0" bind:change="onQuantityChange" align="right" value="{{formData.quantity}}" />
       <t-input label="入库单价" type="digit" placeholder="选填，不能为负数" bind:change="onUnitCostChange" align="right" value="{{formData.unitCost}}" />
-      <t-input label="条码信息" placeholder="选填" bind:change="onBarcodeChange" align="right" value="{{formData.barcode}}" />
+      <t-input label="扫码识别码" placeholder="选填，可绑定本次入库条码" bind:change="onBarcodeChange" align="right" value="{{formData.barcode}}" />
       <t-input label="库位备注" placeholder="选填" bind:change="onLocationChange" align="right" value="{{formData.locationRemark}}" />
       <t-input label="入库原因" placeholder="选填" bind:change="onReasonChange" align="right" value="{{formData.reason}}" />
       <t-input label="其他备注" placeholder="选填" bind:change="onRemarkChange" align="right" value="{{formData.remark}}" />
     </t-cell-group>
   </view>
 
-  <view class="footer" wx:if="{{!successResult}}">
+  <view class="page-footer" wx:if="{{!successResult}}">
     <t-button theme="primary" block size="large" bind:tap="submitInbound" loading="{{submitting}}">确认入库</t-button>
   </view>
 
@@ -88,20 +89,32 @@
     <view class="popup-header">
       <text class="popup-title">新增配件并入库</text>
     </view>
-    <scroll-view scroll-y style="height: calc(85vh - 120rpx); padding: 24rpx;">
+    <scroll-view scroll-y class="create-part-scroll">
       <view class="section-title">配件信息</view>
       <t-cell-group>
-        <t-cell title="配件来源">
-          <t-radio-group slot="note" value="{{createPartFormData.source}}" bind:change="onCreatePartSourceChange" style="display:flex;">
-            <t-radio value="THIRD_PARTY">第三方</t-radio>
-            <t-radio value="OFFICIAL">官方</t-radio>
-          </t-radio-group>
-        </t-cell>
+        <view class="source-picker">
+          <view class="source-title">配件分类</view>
+          <view class="source-options">
+            <view class="source-option {{createPartFormData.source === 'THIRD_PARTY' ? 'active' : ''}}" data-source="THIRD_PARTY" bind:tap="onTapCreatePartSource">
+              <text class="source-name">第三方配件</text>
+              <text class="source-desc">供应商、通用件或非官方渠道配件</text>
+            </view>
+            <view class="source-option {{createPartFormData.source === 'OFFICIAL' ? 'active' : ''}}" data-source="OFFICIAL" bind:tap="onTapCreatePartSource">
+              <text class="source-name">官方配件</text>
+              <text class="source-desc">小牛官方配件，可填写官方品号</text>
+            </view>
+          </view>
+        </view>
         <t-input label="配件名称" placeholder="必填" bind:change="onCreatePartNameChange" value="{{createPartFormData.partName}}" />
-        <t-input label="官方品号" placeholder="{{createPartFormData.source === 'OFFICIAL' ? '官方配件必填' : '选填'}}" bind:change="onCreatePartOfficialPartNoChange" value="{{createPartFormData.officialPartNo}}" />
+        <t-input
+          label="{{createPartFormData.source === 'OFFICIAL' ? '官方品号' : '参考官方品号'}}"
+          placeholder="{{createPartFormData.source === 'OFFICIAL' ? '官方配件必填，可由扫码识别码带入' : '选填，用于兼容/替代关系'}}"
+          bind:change="onCreatePartOfficialPartNoChange"
+          value="{{createPartFormData.officialPartNo}}"
+        />
         <t-input label="型号" placeholder="选填" bind:change="onCreatePartModelChange" value="{{createPartFormData.model}}" />
         <t-input label="分类编码" placeholder="选填" bind:change="onCreatePartCategoryChange" value="{{createPartFormData.categoryCode}}" />
-        <t-input label="外部条码" placeholder="扫码得到的条码" bind:change="" value="{{createPartFormData.externalBarcode}}" disabled />
+        <t-input label="扫码识别码" placeholder="扫码后自动带入，可用于后续识别" bind:change="" value="{{createPartFormData.externalBarcode}}" disabled />
         <t-input label="默认成本价" type="digit" placeholder="选填" bind:change="onCreatePartCostPriceChange" value="{{createPartFormData.costPrice}}" align="right" />
         <t-input label="默认销售价" type="digit" placeholder="选填" bind:change="onCreatePartSalePriceChange" value="{{createPartFormData.salePrice}}" align="right" />
       </t-cell-group>
@@ -115,7 +128,7 @@
         <t-input label="备注" placeholder="选填" bind:change="onCreatePartRemarkChange" value="{{createPartFormData.remark}}" align="right" />
       </t-cell-group>
     </scroll-view>
-    <view class="footer">
+    <view class="popup-footer">
       <t-button theme="default" size="large" bind:tap="cancelCreatePart" style="margin-right: 16rpx;">取消</t-button>
       <t-button theme="primary" size="large" bind:tap="submitCreatePartAndInbound" loading="{{createPartSubmitting}}">确认新增并入库</t-button>
     </view>

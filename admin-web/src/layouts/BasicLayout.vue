@@ -3,7 +3,7 @@
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-logo">
-        <div class="logo-icon">ERP</div>
+        <div class="logo-icon">售后</div>
         <span class="logo-text">授权店售后管家</span>
       </div>
       
@@ -80,17 +80,17 @@
           <el-sub-menu
             v-if="
               hasPermission('FINANCE_VIEW') ||
-              hasAnyPermission(['OFFICIAL_SETTLEMENT_MANAGE', 'REIMBURSEMENT_CONFIRM'])
+              hasAnyPermission(['PAYMENT_RECORD', 'REFUND_RECORD', 'OFFICIAL_SETTLEMENT_MANAGE', 'REIMBURSEMENT_CONFIRM'])
             "
             index="finance"
           >
             <template #title>
               <span>收银财务</span>
             </template>
-            <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/payment">
+            <el-menu-item v-if="hasAnyPermission(['PAYMENT_RECORD', 'FINANCE_VIEW'])" index="/payment">
               <template #title>收款记录</template>
             </el-menu-item>
-            <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/refund">
+            <el-menu-item v-if="hasAnyPermission(['REFUND_RECORD', 'FINANCE_VIEW'])" index="/refund">
               <template #title>退款记录</template>
             </el-menu-item>
             <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/finance/cashier-report">
@@ -136,18 +136,15 @@
             <el-menu-item v-if="hasPermission('DICT_MANAGE')" index="/dictionary">
               <template #title>基础配置</template>
             </el-menu-item>
-            <el-menu-item v-if="hasPermission('EXCEL_EXPORT')" index="/export">
-              <template #title>数据导出</template>
-            </el-menu-item>
             <el-menu-item v-if="hasRole('SUPER_ADMIN')" index="/trial-data">
-              <template #title>试运行数据清理</template>
+              <template #title>数据清理</template>
             </el-menu-item>
           </el-sub-menu>
         </template>
       </el-menu>
       
       <div class="sidebar-footer">
-        <div class="version-text">试运行版</div>
+        <div class="version-text">单门店版</div>
       </div>
     </aside>
 
@@ -239,6 +236,9 @@ const ROLE_LABEL_MAP: Record<string, string> = {
   STORE_ADMIN: '门店管理员',
   FINANCE: '财务',
   TECHNICIAN_FRONT_DESK: '前台员工',
+  INVENTORY_CLERK: '库存员',
+  CASHIER: '收银员',
+  READONLY_STAFF: '只读员工',
 };
 
 const roleDisplayName = computed(() => {

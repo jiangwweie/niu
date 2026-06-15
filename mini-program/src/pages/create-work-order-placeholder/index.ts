@@ -1,7 +1,7 @@
 import { getParts, lookupPartByCode } from '../../api/parts';
 import { getInventoryStockDetail } from '../../api/inventory';
 import { searchCustomers, searchVehicles, CustomerSearchResult, VehicleSearchResult } from '../../api/customer';
-import { authStore } from '../../stores/auth';
+import { requireAnyPermission, requireLogin } from '../../utils/permission';
 import {
   createDraftWorkOrder,
   updateDraftWorkOrder,
@@ -207,10 +207,8 @@ Page({
   },
 
   onShow() {
-    if (!authStore.isLoggedIn) {
-      wx.redirectTo({ url: '/pages/login/index?redirect=' + encodeURIComponent('/pages/create-work-order-placeholder/index') });
-      return;
-    }
+    if (!requireLogin('/pages/create-work-order-placeholder/index')) return;
+    if (!requireAnyPermission(['WORK_ORDER_CREATE', 'WORK_ORDER_UPDATE'], '当前账号无权创建或编辑工单')) return;
     if (this.data.workOrderId) {
       this.refreshWorkOrder();
     }

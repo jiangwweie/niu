@@ -24,7 +24,7 @@
         <el-form-item label="配件名称">
           <el-input v-model="queryParams.partName" placeholder="请输入配件名称" clearable style="width: 220px;" />
         </el-form-item>
-        <el-form-item label="来源">
+        <el-form-item label="配件分类">
           <el-select v-model="queryParams.source" placeholder="请选择" clearable style="width: 220px;">
             <el-option label="官方" value="OFFICIAL" />
             <el-option label="第三方" value="THIRD_PARTY" />
@@ -71,7 +71,7 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="来源" width="90" align="center">
+          <el-table-column label="配件分类" width="100" align="center">
             <template #default="{ row }">
               <el-tag :type="isOfficialSource(row.source) ? 'danger' : 'info'" size="small">
                 {{ isOfficialSource(row.source) ? '官方' : '第三方' }}
