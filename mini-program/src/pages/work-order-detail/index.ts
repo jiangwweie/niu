@@ -177,7 +177,7 @@ Page({
   onContinueEdit() {
     if (!this.data.orderId) return;
     wx.navigateTo({
-      url: `/pages/create-work-order-placeholder/index?id=${this.data.orderId}`
+      url: `/pages/create-work-order/index?id=${this.data.orderId}`
     });
   },
 

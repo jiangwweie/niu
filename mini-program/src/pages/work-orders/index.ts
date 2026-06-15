@@ -80,7 +80,7 @@ Page({
     this.fetchData();
   },
   goToCreate() {
-    wx.navigateTo({ url: '/pages/create-work-order-placeholder/index' });
+    wx.navigateTo({ url: '/pages/create-work-order/index' });
   },
   onSearch(e: any) {
     this.setData({ keyword: e.detail.value });
@@ -185,7 +185,7 @@ Page({
   onEditDraft(e: any) {
     const id = e.currentTarget.dataset.id;
     wx.navigateTo({
-      url: `/pages/create-work-order-placeholder/index?id=${id}`
+      url: `/pages/create-work-order/index?id=${id}`
     });
   }
 });

@@ -35,7 +35,7 @@ Page({
   },
 
   onShow() {
-    if (!requireLogin('/pages/payment-placeholder/index')) return;
+    if (!requireLogin('/pages/cashier-workbench/index')) return;
     if (!requireAnyPermission(['PAYMENT_RECORD', 'REFUND_RECORD', 'WORK_ORDER_VIEW'], '当前账号无权访问收银工作台')) return;
     this.fetchData();
   },

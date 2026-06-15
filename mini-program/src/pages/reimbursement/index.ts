@@ -13,7 +13,7 @@ Page({
   },
 
   onShow() {
-    if (!requireLogin('/pages/reimbursement-placeholder/index')) return;
+    if (!requireLogin('/pages/reimbursement/index')) return;
     requireAnyPermission(['REIMBURSEMENT_SUBMIT'], '当前账号无权提交报销');
   },
 

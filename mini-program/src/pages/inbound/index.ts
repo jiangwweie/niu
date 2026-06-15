@@ -49,13 +49,13 @@ Page({
   },
 
   onLoad() {
-    if (!requireLogin('/pages/inbound-placeholder/index')) return;
+    if (!requireLogin('/pages/inbound/index')) return;
     if (!requireAnyPermission(['INVENTORY_INBOUND'], '当前账号无权进行配件入库')) return;
     this.loadParts();
   },
 
   onShow() {
-    if (!requireLogin('/pages/inbound-placeholder/index')) return;
+    if (!requireLogin('/pages/inbound/index')) return;
     requireAnyPermission(['INVENTORY_INBOUND'], '当前账号无权进行配件入库');
   },
 

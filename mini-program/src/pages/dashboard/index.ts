@@ -36,13 +36,13 @@ Page({
     });
   },
   goToCreateOrder() {
-    wx.navigateTo({ url: '/pages/create-work-order-placeholder/index' });
+    wx.navigateTo({ url: '/pages/create-work-order/index' });
   },
   goToInbound() {
-    wx.navigateTo({ url: '/pages/inbound-placeholder/index' });
+    wx.navigateTo({ url: '/pages/inbound/index' });
   },
   goToReimbursement() {
-    wx.navigateTo({ url: '/pages/reimbursement-placeholder/index' });
+    wx.navigateTo({ url: '/pages/reimbursement/index' });
   },
   goToInventory() {
     wx.switchTab({ url: '/pages/inventory/index' });

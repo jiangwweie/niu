@@ -207,7 +207,7 @@ Page({
   },
 
   onShow() {
-    if (!requireLogin('/pages/create-work-order-placeholder/index')) return;
+    if (!requireLogin('/pages/create-work-order/index')) return;
     if (!requireAnyPermission(['WORK_ORDER_CREATE', 'WORK_ORDER_UPDATE'], '当前账号无权创建或编辑工单')) return;
     if (this.data.workOrderId) {
       this.refreshWorkOrder();

@@ -49,7 +49,7 @@ Page({
     this.fetchData();
   },
   goToInbound() {
-    wx.navigateTo({ url: '/pages/inbound-placeholder/index' });
+    wx.navigateTo({ url: '/pages/inbound/index' });
   },
   onSearch(e: any) {
     this.setData({ keyword: e.detail.value });

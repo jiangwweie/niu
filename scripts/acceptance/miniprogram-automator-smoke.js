@@ -25,10 +25,10 @@ const pages = [
   { name: 'mine', route: '/pages/mine/index', tab: true },
   { name: 'parts', route: '/pages/parts/index' },
   { name: 'part-detail', route: '/pages/part-detail/index?id=8' },
-  { name: 'inbound', route: '/pages/inbound-placeholder/index' },
-  { name: 'create-work-order', route: '/pages/create-work-order-placeholder/index' },
-  { name: 'cashier-workbench', route: '/pages/payment-placeholder/index' },
-  { name: 'reimbursement', route: '/pages/reimbursement-placeholder/index' },
+  { name: 'inbound', route: '/pages/inbound/index' },
+  { name: 'create-work-order', route: '/pages/create-work-order/index' },
+  { name: 'cashier-workbench', route: '/pages/cashier-workbench/index' },
+  { name: 'reimbursement', route: '/pages/reimbursement/index' },
 ];
 
 function ensureDir(dir) {

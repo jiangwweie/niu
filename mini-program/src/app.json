@@ -7,10 +7,10 @@
     "pages/inventory/index",
     "pages/parts/index",
     "pages/part-detail/index",
-    "pages/inbound-placeholder/index",
-    "pages/create-work-order-placeholder/index",
-    "pages/payment-placeholder/index",
-    "pages/reimbursement-placeholder/index",
+    "pages/inbound/index",
+    "pages/create-work-order/index",
+    "pages/cashier-workbench/index",
+    "pages/reimbursement/index",
     "pages/mine/index"
   ],
   "window": {

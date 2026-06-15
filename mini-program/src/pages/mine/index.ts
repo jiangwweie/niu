@@ -21,7 +21,7 @@ Page({
   onLoad() {
     this.setData({
       currentUser: authStore.getCurrentUser() as any,
-      mockUsers: mockUsers as any
+      mockUsers: API_MODE === 'mock' ? mockUsers as any : []
     });
   },
   onShow() {
@@ -64,7 +64,7 @@ Page({
 
   goToReimbursement() {
     wx.navigateTo({
-      url: '/pages/reimbursement-placeholder/index'
+      url: '/pages/reimbursement/index'
     });
   },
 
