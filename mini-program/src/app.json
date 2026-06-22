@@ -11,6 +11,7 @@
     "pages/create-work-order/index",
     "pages/cashier-workbench/index",
     "pages/reimbursement/index",
+    "pages/funding/index",
     "pages/mine/index"
   ],
   "window": {

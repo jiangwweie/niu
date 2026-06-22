@@ -140,6 +140,14 @@ MERGE INTO sys_user_role (id, user_id, role_id) KEY (user_id, role_id) VALUES (4
 -- M18G: permission test data
 -- PART_CREATE permission (used in @PreAuthorize for part creation)
 MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1033, 'PART_CREATE', '配件新增', 'PART', 'ENABLED');
+MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1040, 'FUNDING_APPLICATION_VIEW', '资方资料查看', 'FUNDING', 'ENABLED');
+MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1041, 'FUNDING_APPLICATION_MANAGE', '资方资料管理', 'FUNDING', 'ENABLED');
+MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1042, 'FUNDING_APPLICATION_AUDIT', '资方资料审核', 'FUNDING', 'ENABLED');
+MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1043, 'FUNDING_CONTRACT_MANAGE', '资方合同管理', 'FUNDING', 'ENABLED');
+MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1044, 'FUNDING_LEDGER_VIEW', '资方台账查看', 'FUNDING', 'ENABLED');
+MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1045, 'FUNDING_LEDGER_MANAGE', '资方台账管理', 'FUNDING', 'ENABLED');
+MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1046, 'FUNDING_PAYMENT_RECORD', '资方收款登记', 'FUNDING', 'ENABLED');
+MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1047, 'FUNDING_EXPORT', '资方台账导出', 'FUNDING', 'ENABLED');
 -- INVENTORY_STAFF role: only INVENTORY_INBOUND (no part create/manage)
 MERGE INTO sys_role (id, store_id, role_code, role_name, status) KEY (store_id, role_code) VALUES (103, 1, 'INVENTORY_STAFF', '入库专员', 'ENABLED');
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (3001, 103, 1006);
@@ -153,3 +161,18 @@ MERGE INTO sys_user (id, store_id, username, password_hash, real_name, phone, ac
 MERGE INTO sys_user_role (id, user_id, role_id) KEY (user_id, role_id) VALUES (502, 51, 104);
 -- PART_CREATE also assigned to role 100 (STORE_ADMIN template) for testing
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (3003, 100, 1033);
+MERGE INTO sys_role (id, store_id, role_code, role_name, status) KEY (store_id, role_code) VALUES (105, 1, 'FUNDING_LEDGER_OPERATOR', '资方台账专员', 'ENABLED');
+MERGE INTO sys_user (id, store_id, username, password_hash, real_name, phone, account_type, status, password_must_change, deleted) KEY (phone) VALUES (52, 1, 'funding_staff', '{noop}dev123', '资方专员', '13800000052', 'STORE', 'ENABLED', FALSE, 0);
+MERGE INTO sys_user_role (id, user_id, role_id) KEY (user_id, role_id) VALUES (503, 52, 105);
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (3100, 1, 1040);
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (3101, 1, 1041);
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (3102, 1, 1042);
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (3103, 1, 1043);
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (3104, 1, 1044);
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (3105, 1, 1045);
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (3106, 1, 1046);
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (3107, 1, 1047);
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (3110, 105, 1040);
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (3111, 105, 1041);
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (3112, 105, 1044);
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (3113, 105, 1046);

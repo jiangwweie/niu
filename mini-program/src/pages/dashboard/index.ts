@@ -7,7 +7,8 @@ Page({
     greeting: '你好',
     hasCreateOrderPermission: false,
     hasInboundPermission: false,
-    hasReimbursementPermission: false
+    hasReimbursementPermission: false,
+    hasFundingPermission: false
   },
   onShow() {
     if (!authStore.isLoggedIn) {
@@ -32,7 +33,8 @@ Page({
       greeting,
       hasCreateOrderPermission: hasPermission('WORK_ORDER_CREATE'),
       hasInboundPermission: hasPermission('INVENTORY_INBOUND'),
-      hasReimbursementPermission: hasPermission('REIMBURSEMENT_SUBMIT')
+      hasReimbursementPermission: hasPermission('REIMBURSEMENT_SUBMIT'),
+      hasFundingPermission: hasPermission('FUNDING_APPLICATION_VIEW') || hasPermission('FUNDING_LEDGER_VIEW')
     });
   },
   goToCreateOrder() {
@@ -43,6 +45,9 @@ Page({
   },
   goToReimbursement() {
     wx.navigateTo({ url: '/pages/reimbursement/index' });
+  },
+  goToFunding() {
+    wx.navigateTo({ url: '/pages/funding/index' });
   },
   goToInventory() {
     wx.switchTab({ url: '/pages/inventory/index' });

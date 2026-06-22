@@ -32,5 +32,5 @@ export * from './dictionary';
 export * from './userPermission';
 export * from './exportCenter';
 export * from './store';
-
+export * from './funding';
 

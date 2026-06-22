@@ -1,0 +1,99 @@
+.container {
+  min-height: 100vh;
+  background: #f5f7fa;
+}
+
+.panel {
+  padding: 16px;
+}
+
+.notice {
+  padding: 12px;
+  margin-bottom: 12px;
+  color: #374151;
+  background: #eef6ff;
+  border-radius: 6px;
+  font-size: 26rpx;
+}
+
+.radio-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx 32rpx;
+  background: #fff;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.button-row {
+  margin-top: 32rpx;
+}
+
+.file-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+  padding: 24rpx 32rpx;
+  background: #fff;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.file-meta {
+  min-width: 0;
+}
+
+.file-title {
+  display: block;
+  color: #111827;
+  font-size: 28rpx;
+}
+
+.file-name {
+  display: block;
+  margin-top: 8rpx;
+  max-width: 420rpx;
+  overflow: hidden;
+  color: #6b7280;
+  font-size: 24rpx;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 12rpx;
+}
+
+.card {
+  margin-top: 16rpx;
+  padding: 24rpx;
+  background: #fff;
+  border-radius: 8rpx;
+}
+
+.card-title {
+  font-weight: 600;
+  font-size: 32rpx;
+  color: #111827;
+}
+
+.card-line {
+  margin-top: 10rpx;
+  color: #4b5563;
+  font-size: 26rpx;
+}
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 18rpx;
+}
+
+.payment-box {
+  margin-top: 18rpx;
+  padding-top: 12rpx;
+  border-top: 1rpx solid #f3f4f6;
+}

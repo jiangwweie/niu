@@ -80,6 +80,23 @@ const routes: Array<RouteRecordRaw> = [
         meta: { title: '报销台账', anyPermissions: ['REIMBURSEMENT_CONFIRM', 'FINANCE_VIEW'] }
       },
       {
+        path: 'funding',
+        name: 'FundingLedger',
+        component: () => import('@/views/funding/index.vue'),
+        meta: {
+          title: '资方台账',
+          anyPermissions: [
+            'FUNDING_APPLICATION_VIEW',
+            'FUNDING_APPLICATION_MANAGE',
+            'FUNDING_APPLICATION_AUDIT',
+            'FUNDING_CONTRACT_MANAGE',
+            'FUNDING_LEDGER_VIEW',
+            'FUNDING_LEDGER_MANAGE',
+            'FUNDING_PAYMENT_RECORD',
+          ]
+        }
+      },
+      {
         path: 'finance',
         name: 'Finance',
         component: () => import('@/views/finance/index.vue'),
@@ -156,6 +173,7 @@ function firstAccessiblePath(user: AuthUser | null): string {
   const hasRole = (code: string) => roles.includes(code);
 
   if (hasPermission('FINANCE_VIEW')) return '/dashboard';
+  if (hasAnyPermission(['FUNDING_APPLICATION_VIEW', 'FUNDING_LEDGER_VIEW'])) return '/funding';
   if (hasAnyPermission(['CUSTOMER_VIEW', 'CUSTOMER_MANAGE'])) return '/customers';
   if (hasAnyPermission(['WORK_ORDER_VIEW', 'WORK_ORDER_CREATE', 'WORK_ORDER_SETTLE'])) return '/work-order';
   if (hasAnyPermission(['PART_VIEW', 'PART_MANAGE'])) return '/parts';

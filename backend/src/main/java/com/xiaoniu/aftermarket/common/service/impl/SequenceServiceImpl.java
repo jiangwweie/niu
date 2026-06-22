@@ -24,6 +24,11 @@ public class SequenceServiceImpl implements SequenceService {
             "PAYMENT", "PAY",
             "REFUND", "REF",
             "REIMBURSEMENT", "REIM",
+            "FUNDING_APPLICATION", "FA",
+            "FUNDING_CONTRACT", "FC",
+            "FUNDING_LEDGER", "FL",
+            "FUNDING_PAYMENT", "FPAY",
+            "FUNDING_IMPORT", "FIMP",
             "PART_CODE", "TP"
     );
 

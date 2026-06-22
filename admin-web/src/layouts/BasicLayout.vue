@@ -113,6 +113,29 @@
             </el-menu-item>
           </el-sub-menu>
 
+          <!-- 资方业务 -->
+          <el-sub-menu
+            v-if="
+              hasAnyPermission([
+                'FUNDING_APPLICATION_VIEW',
+                'FUNDING_APPLICATION_MANAGE',
+                'FUNDING_APPLICATION_AUDIT',
+                'FUNDING_CONTRACT_MANAGE',
+                'FUNDING_LEDGER_VIEW',
+                'FUNDING_LEDGER_MANAGE',
+                'FUNDING_PAYMENT_RECORD'
+              ])
+            "
+            index="funding"
+          >
+            <template #title>
+              <span>资方业务</span>
+            </template>
+            <el-menu-item index="/funding">
+              <template #title>资方台账</template>
+            </el-menu-item>
+          </el-sub-menu>
+
           <!-- 系统设置 -->
           <el-sub-menu
             v-if="

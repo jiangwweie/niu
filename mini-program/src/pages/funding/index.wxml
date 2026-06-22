@@ -1,0 +1,73 @@
+<view class="container">
+  <t-tabs value="{{activeTab}}" bind:change="onTabChange">
+    <t-tab-panel label="新增资料" value="form" />
+    <t-tab-panel label="资料列表" value="applications" />
+    <t-tab-panel label="台账收款" value="ledgers" />
+  </t-tabs>
+
+  <view wx:if="{{activeTab === 'form'}}" class="panel">
+    <view class="notice">客户不登录，由内部人员录入资料后提交资方审核。</view>
+    <t-input label="客户姓名" value="{{form.customerName}}" placeholder="必填" bind:change="onFormChange" data-field="customerName" align="right" />
+    <t-input label="手机号" value="{{form.phone}}" placeholder="必填" bind:change="onFormChange" data-field="phone" align="right" />
+    <t-input label="身份证号" value="{{form.idCardNo}}" placeholder="必填" bind:change="onFormChange" data-field="idCardNo" align="right" />
+    <t-input label="车型" value="{{form.vehicleModel}}" placeholder="必填" bind:change="onFormChange" data-field="vehicleModel" align="right" />
+    <t-input label="提车日期" value="{{form.pickupDate}}" placeholder="YYYY-MM-DD" bind:change="onFormChange" data-field="pickupDate" align="right" />
+    <view class="radio-line">
+      <text>付款方式</text>
+      <t-radio-group value="{{form.paymentType}}" bind:change="onPaymentTypeChange">
+        <t-radio value="FULL">全款</t-radio>
+        <t-radio value="INSTALLMENT">分期</t-radio>
+      </t-radio-group>
+    </view>
+    <t-input label="应收总计" type="digit" value="{{form.receivableAmount}}" placeholder="必填" bind:change="onFormChange" data-field="receivableAmount" align="right" />
+    <t-input label="首付" type="digit" value="{{form.downPayment}}" placeholder="选填" bind:change="onFormChange" data-field="downPayment" align="right" />
+    <t-input label="分期期数" type="number" value="{{form.installmentCount}}" placeholder="选填" bind:change="onFormChange" data-field="installmentCount" align="right" />
+    <t-input label="每期金额" type="digit" value="{{form.installmentAmount}}" placeholder="选填" bind:change="onFormChange" data-field="installmentAmount" align="right" />
+    <t-input label="首期日期" value="{{form.firstDueDate}}" placeholder="YYYY-MM-DD" bind:change="onFormChange" data-field="firstDueDate" align="right" />
+    <t-input label="组长" value="{{form.groupLeader}}" placeholder="必填" bind:change="onFormChange" data-field="groupLeader" align="right" />
+    <view class="file-box">
+      <view class="file-meta">
+        <text class="file-title">资料附件</text>
+        <text class="file-name">{{selectedFile ? selectedFile.name : '未选择'}}</text>
+      </view>
+      <view class="file-actions">
+        <t-button size="small" variant="outline" bind:tap="onChooseFile">选择文件</t-button>
+        <t-button wx:if="{{selectedFile}}" size="small" theme="danger" variant="text" bind:tap="onClearFile">移除</t-button>
+      </view>
+    </view>
+    <view class="button-row">
+      <t-button theme="primary" block loading="{{submitLoading}}" bind:tap="onCreateAndSubmit">保存并提交审核</t-button>
+    </view>
+  </view>
+
+  <view wx:if="{{activeTab === 'applications'}}" class="panel">
+    <t-button theme="primary" variant="outline" block bind:tap="loadApplications">刷新资料列表</t-button>
+    <view wx:for="{{applications}}" wx:key="id" class="card">
+      <view class="card-title">{{item.customerName}} · {{item.vehicleModel}}</view>
+      <view class="card-line">申请单：{{item.applicationNo}}</view>
+      <view class="card-line">电话：{{item.phone}}</view>
+      <view class="card-line">应收：￥{{item.receivableAmount}}</view>
+      <view class="card-footer">
+        <t-tag theme="{{item.statusTheme}}">{{item.statusLabel}}</t-tag>
+        <t-button wx:if="{{item.status === 'DRAFT' || item.status === 'REJECTED'}}" size="small" bind:tap="onSubmitApplication" data-id="{{item.id}}">提交</t-button>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{activeTab === 'ledgers'}}" class="panel">
+    <t-button theme="primary" variant="outline" block bind:tap="loadLedgers">刷新台账列表</t-button>
+    <view wx:for="{{ledgers}}" wx:key="id" class="card">
+      <view class="card-title">{{item.customerName}} · {{item.vehicleModel}}</view>
+      <view class="card-line">台账号：{{item.ledgerNo}}</view>
+      <view class="card-line">应收：￥{{item.receivableAmount}}　已收：￥{{item.receivedAmount}}</view>
+      <view class="card-line">未收：￥{{item.outstandingAmount}}</view>
+      <view class="payment-box">
+        <t-input label="收款金额" type="digit" value="{{item.paymentAmount}}" bind:change="onPaymentAmountChange" data-index="{{index}}" align="right" />
+        <t-input label="备注" value="{{item.paymentRemark}}" bind:change="onPaymentRemarkChange" data-index="{{index}}" align="right" />
+        <t-button theme="success" size="small" bind:tap="onRecordPayment" data-index="{{index}}">登记收款</t-button>
+      </view>
+    </view>
+  </view>
+
+  <t-toast id="t-toast" />
+</view>

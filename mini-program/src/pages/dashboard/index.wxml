@@ -33,6 +33,12 @@
         </view>
         <text class="action-name">报销申请</text>
       </view>
+      <view class="action-item" wx:if="{{hasFundingPermission}}" bindtap="goToFunding">
+        <view class="icon-wrap bg-info">
+          <t-icon name="file-paste" size="44rpx" color="#0052d9" />
+        </view>
+        <text class="action-name">资方台账</text>
+      </view>
     </view>
   </view>
 
