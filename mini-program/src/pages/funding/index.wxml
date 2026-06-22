@@ -46,6 +46,7 @@
       <view class="card-title">{{item.customerName}} · {{item.vehicleModel}}</view>
       <view class="card-line">申请单：{{item.applicationNo}}</view>
       <view class="card-line">电话：{{item.phone}}</view>
+      <view class="card-line">付款方式：{{item.paymentTypeLabel}}</view>
       <view class="card-line">应收：￥{{item.receivableAmount}}</view>
       <view class="card-footer">
         <t-tag theme="{{item.statusTheme}}">{{item.statusLabel}}</t-tag>
@@ -59,8 +60,12 @@
     <view wx:for="{{ledgers}}" wx:key="id" class="card">
       <view class="card-title">{{item.customerName}} · {{item.vehicleModel}}</view>
       <view class="card-line">台账号：{{item.ledgerNo}}</view>
+      <view class="card-line">付款方式：{{item.paymentTypeLabel}}</view>
       <view class="card-line">应收：￥{{item.receivableAmount}}　已收：￥{{item.receivedAmount}}</view>
       <view class="card-line">未收：￥{{item.outstandingAmount}}</view>
+      <view class="card-footer compact">
+        <t-tag theme="{{item.statusTheme}}">{{item.statusLabel}}</t-tag>
+      </view>
       <view class="payment-box">
         <t-input label="收款金额" type="digit" value="{{item.paymentAmount}}" bind:change="onPaymentAmountChange" data-index="{{index}}" align="right" />
         <t-input label="备注" value="{{item.paymentRemark}}" bind:change="onPaymentRemarkChange" data-index="{{index}}" align="right" />

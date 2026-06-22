@@ -27,11 +27,41 @@ function statusText(status: string) {
   const map: Record<string, string> = {
     DRAFT: '草稿',
     PENDING_AUDIT: '待审核',
+    APPROVED: '已同意',
     CONTRACT_PENDING: '待合同',
+    CONTRACT_CONFIRMED: '合同已确认',
     REJECTED: '不同意',
-    LEDGER_CREATED: '已生成台账'
+    LEDGER_CREATED: '已生成台账',
+    VOIDED: '已作废'
   };
   return map[status] || status;
+}
+
+function paymentTypeText(type: string) {
+  const map: Record<string, string> = {
+    FULL: '全款',
+    INSTALLMENT: '分期'
+  };
+  return map[type] || type || '-';
+}
+
+function ledgerStatusText(status: string) {
+  const map: Record<string, string> = {
+    NORMAL: '正常',
+    PARTIAL_PAID: '部分收款',
+    SETTLED: '已结清',
+    OVERDUE: '已逾期',
+    ABNORMAL: '异常',
+    VOIDED: '已作废'
+  };
+  return map[status] || status || '-';
+}
+
+function ledgerStatusTheme(status: string) {
+  if (status === 'SETTLED') return 'success';
+  if (status === 'PARTIAL_PAID' || status === 'OVERDUE') return 'warning';
+  if (status === 'ABNORMAL' || status === 'VOIDED') return 'danger';
+  return 'primary';
 }
 
 Page({
@@ -134,6 +164,7 @@ Page({
     getFundingApplications({ pageNo: 1, pageSize: 20 }).then((res) => {
       const records = (res.data.records || []).map((item: any) => ({
         ...item,
+        paymentTypeLabel: paymentTypeText(item.paymentType),
         statusLabel: statusText(item.status),
         statusTheme: item.status === 'REJECTED' ? 'danger' : item.status === 'PENDING_AUDIT' ? 'warning' : 'success'
       }));
@@ -145,6 +176,9 @@ Page({
     getFundingLedgers({ pageNo: 1, pageSize: 20 }).then((res) => {
       const records = (res.data.records || []).map((item: any) => ({
         ...item,
+        paymentTypeLabel: paymentTypeText(item.paymentType),
+        statusLabel: ledgerStatusText(item.status),
+        statusTheme: ledgerStatusTheme(item.status),
         paymentAmount: '',
         paymentRemark: ''
       }));

@@ -221,8 +221,8 @@
 
         <el-descriptions v-if="detail.data.contract" title="合同" :column="2" border class="detail-block">
           <el-descriptions-item label="合同号">{{ detail.data.contract.contractNo }}</el-descriptions-item>
-          <el-descriptions-item label="状态">{{ detail.data.contract.status }}</el-descriptions-item>
-          <el-descriptions-item label="类型">{{ detail.data.contract.contractType }}</el-descriptions-item>
+          <el-descriptions-item label="状态">{{ contractStatusLabel(detail.data.contract.status) }}</el-descriptions-item>
+          <el-descriptions-item label="类型">{{ contractTypeLabel(detail.data.contract.contractType) }}</el-descriptions-item>
           <el-descriptions-item label="签订日期">{{ detail.data.contract.signedDate || '-' }}</el-descriptions-item>
         </el-descriptions>
 
@@ -237,16 +237,26 @@
         <el-table :data="detail.data.installmentPlans" border size="small">
           <el-table-column prop="phaseName" label="期次" />
           <el-table-column prop="dueDate" label="到期日" />
-          <el-table-column prop="receivableAmount" label="应收" />
-          <el-table-column prop="receivedAmount" label="已收" />
-          <el-table-column prop="status" label="状态" />
+          <el-table-column label="应收">
+            <template #default="{ row }"><MoneyText :amount="row.receivableAmount" /></template>
+          </el-table-column>
+          <el-table-column label="已收">
+            <template #default="{ row }"><MoneyText :amount="row.receivedAmount" type="success" /></template>
+          </el-table-column>
+          <el-table-column label="状态">
+            <template #default="{ row }">{{ installmentStatusLabel(row.status) }}</template>
+          </el-table-column>
         </el-table>
 
         <h3 class="section-title">收款记录</h3>
         <el-table :data="detail.data.payments" border size="small">
           <el-table-column prop="paymentNo" label="收款编号" />
-          <el-table-column prop="amount" label="金额" />
-          <el-table-column prop="paymentMethod" label="方式" />
+          <el-table-column label="金额">
+            <template #default="{ row }"><MoneyText :amount="row.amount" type="success" /></template>
+          </el-table-column>
+          <el-table-column label="方式">
+            <template #default="{ row }">{{ paymentMethodLabel(row.paymentMethod) }}</template>
+          </el-table-column>
           <el-table-column prop="paidAt" label="时间" />
         </el-table>
 
@@ -268,7 +278,9 @@
           <el-button type="primary" :disabled="!uploadForm.file" @click="uploadAttachment">上传</el-button>
         </div>
         <el-table :data="detail.data.attachments" border size="small">
-          <el-table-column prop="attachmentType" label="类型" width="120" />
+          <el-table-column label="类型" width="120">
+            <template #default="{ row }">{{ attachmentTypeLabel(row.attachmentType) }}</template>
+          </el-table-column>
           <el-table-column prop="originalFilename" label="文件名" />
           <el-table-column label="操作" width="90">
             <template #default="{ row }">
@@ -279,9 +291,15 @@
 
         <h3 class="section-title">修改日志</h3>
         <el-table :data="detail.data.changeLogs" border size="small">
-          <el-table-column prop="fieldName" label="字段" width="120" />
-          <el-table-column prop="oldValue" label="原值" />
-          <el-table-column prop="newValue" label="新值" />
+          <el-table-column label="字段" width="120">
+            <template #default="{ row }">{{ changeFieldLabel(row.fieldName) }}</template>
+          </el-table-column>
+          <el-table-column label="原值">
+            <template #default="{ row }">{{ changeValueLabel(row.fieldName, row.oldValue) }}</template>
+          </el-table-column>
+          <el-table-column label="新值">
+            <template #default="{ row }">{{ changeValueLabel(row.fieldName, row.newValue) }}</template>
+          </el-table-column>
           <el-table-column prop="operatedAt" label="时间" width="170" />
         </el-table>
       </template>
@@ -589,6 +607,27 @@ function paymentTypeLabel(value: string) {
   return value === 'FULL' ? '全款' : value === 'INSTALLMENT' ? '分期' : value;
 }
 
+function contractTypeLabel(value: string) {
+  const map: Record<string, string> = {
+    FULL: '全款合同',
+    INSTALLMENT: '分期合同',
+    SUPPLEMENT: '补充协议',
+    OFFLINE_UPLOAD: '线下合同',
+    OTHER: '其他',
+  };
+  return map[value] || value || '-';
+}
+
+function contractStatusLabel(value: string) {
+  const map: Record<string, string> = {
+    PENDING_UPLOAD: '待上传',
+    UPLOADED: '已上传',
+    CONFIRMED: '已确认',
+    VOIDED: '已作废',
+  };
+  return map[value] || value || '-';
+}
+
 function applicationStatusLabel(value: string) {
   const map: Record<string, string> = {
     DRAFT: '草稿',
@@ -603,6 +642,16 @@ function applicationStatusLabel(value: string) {
   return map[value] || value;
 }
 
+function installmentStatusLabel(value: string) {
+  const map: Record<string, string> = {
+    PENDING: '待收款',
+    PARTIAL_PAID: '部分收款',
+    PAID: '已收齐',
+    OVERDUE: '已逾期',
+  };
+  return map[value] || value || '-';
+}
+
 function ledgerStatusLabel(value: string) {
   const map: Record<string, string> = {
     NORMAL: '正常',
@@ -613,6 +662,59 @@ function ledgerStatusLabel(value: string) {
     VOIDED: '作废',
   };
   return map[value] || value;
+}
+
+function paymentMethodLabel(value: string) {
+  const map: Record<string, string> = {
+    CASH: '现金',
+    WECHAT: '微信',
+    ALIPAY: '支付宝',
+    TRANSFER: '转账',
+    OTHER: '其他',
+  };
+  return map[value] || value || '-';
+}
+
+function attachmentTypeLabel(value: string) {
+  const map: Record<string, string> = {
+    ID_CARD: '身份证',
+    CONTRACT: '合同',
+    PAYMENT_VOUCHER: '收款凭证',
+    VEHICLE: '车辆资料',
+    OTHER: '其他资料',
+  };
+  return map[value] || value || '-';
+}
+
+function changeFieldLabel(value: string) {
+  const map: Record<string, string> = {
+    customerName: '客户姓名',
+    phone: '电话',
+    idCardNo: '身份证号',
+    vehicleModel: '车型',
+    pickupDate: '提车日期',
+    paymentType: '付款方式',
+    purchaseCost: '进货成本',
+    incentiveAmount: '激励',
+    upstreamAmount: '上级费用',
+    totalCost: '总计成本',
+    retailPrice: '零售价格',
+    receivableAmount: '应收总计',
+    receivedAmount: '已收金额',
+    outstandingAmount: '未收金额',
+    groupLeader: '组长',
+    handlerName: '经办人',
+    status: '状态',
+    remark: '备注',
+  };
+  return map[value] || value || '-';
+}
+
+function changeValueLabel(fieldName: string, value?: string | null) {
+  if (value === undefined || value === null || value === '') return '-';
+  if (fieldName === 'paymentType') return paymentTypeLabel(value);
+  if (fieldName === 'status') return ledgerStatusLabel(value);
+  return value;
 }
 
 function applicationStatusType(value: string) {
