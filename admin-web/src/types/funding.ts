@@ -131,6 +131,16 @@ export interface FundingSummary {
   overduePlanCount: number;
 }
 
+export interface FundingImportResult {
+  batchId: number;
+  batchNo: string;
+  status: string;
+  totalRows: number;
+  successRows: number;
+  failedRows: number;
+  errors: string[];
+}
+
 export interface FundingApplicationQuery {
   keyword?: string;
   status?: string;

@@ -56,6 +56,10 @@ export async function confirmFundingContract(contractId: number): Promise<Fundin
   return await request.post(`/api/admin/funding/contracts/${contractId}/confirm`);
 }
 
+export async function voidFundingContract(contractId: number, reason: string) {
+  return await request.post(`/api/admin/funding/contracts/${contractId}/void`, { reason });
+}
+
 export async function getFundingLedgers(params: FundingLedgerQuery): Promise<FundingPage<FundingLedger>> {
   const query: Record<string, unknown> = { pageNo: params.pageNo, pageSize: params.pageSize };
   setSearchParam(query, 'keyword', params.keyword);
@@ -73,6 +77,23 @@ export async function updateFundingLedger(id: number, data: Partial<FundingLedge
 
 export async function recordFundingPayment(id: number, data: { installmentPlanId?: number; amount: number; paymentMethod: string; paidAt?: string; remark?: string }): Promise<FundingPayment> {
   return await request.post(`/api/admin/funding/ledgers/${id}/payments`, data);
+}
+
+export async function exportFundingLedgers(params: FundingLedgerQuery) {
+  const query: Record<string, unknown> = {};
+  setSearchParam(query, 'keyword', params.keyword);
+  if (params.status) query.status = params.status;
+  const response = await request.get('/api/admin/funding/ledgers/export', {
+    params: query,
+    responseType: 'blob'
+  });
+  await handleBlobResponse(response, 'funding_ledgers.xlsx');
+}
+
+export async function importFundingLedgers(data: FormData) {
+  return await request.post('/api/admin/funding/ledgers/import', data, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
 }
 
 export async function uploadFundingAttachment(data: FormData) {

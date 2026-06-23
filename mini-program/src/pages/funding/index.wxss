@@ -20,9 +20,18 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 24rpx;
   padding: 24rpx 32rpx;
   background: #fff;
   border-bottom: 1rpx solid #f0f0f0;
+}
+
+.radio-line text {
+  flex-shrink: 0;
+}
+
+.status-line {
+  align-items: flex-start;
 }
 
 .button-row {
@@ -94,11 +103,35 @@
 
 .card-footer.compact {
   justify-content: flex-start;
+  gap: 12rpx;
   margin-top: 14rpx;
+}
+
+.inline-actions {
+  display: flex;
+  gap: 12rpx;
 }
 
 .payment-box {
   margin-top: 18rpx;
   padding-top: 12rpx;
   border-top: 1rpx solid #f3f4f6;
+}
+
+.attachment-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  padding: 18rpx 0;
+  border-top: 1rpx solid #f3f4f6;
+}
+
+.attachment-name {
+  min-width: 0;
+  overflow: hidden;
+  color: #374151;
+  font-size: 26rpx;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

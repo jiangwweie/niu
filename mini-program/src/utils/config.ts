@@ -18,3 +18,13 @@ const BASE_URLS: Record<ApiEnv, string> = {
 };
 
 export const BASE_URL = BASE_URLS[API_ENV];
+
+export function getBaseUrl() {
+  try {
+    const override = wx.getStorageSync('apiBaseUrl');
+    if (typeof override === 'string' && /^https?:\/\//.test(override.trim())) {
+      return override.trim().replace(/\/+$/, '');
+    }
+  } catch (e) {}
+  return BASE_URL;
+}

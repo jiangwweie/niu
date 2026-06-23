@@ -1,17 +1,19 @@
 <view class="container">
   <t-tabs value="{{activeTab}}" bind:change="onTabChange">
-    <t-tab-panel label="新增资料" value="form" />
-    <t-tab-panel label="资料列表" value="applications" />
-    <t-tab-panel label="台账收款" value="ledgers" />
+    <t-tab-panel wx:if="{{canManageApplication}}" label="新增资料" value="form" />
+    <t-tab-panel wx:if="{{canViewApplication}}" label="资料列表" value="applications" />
+    <t-tab-panel wx:if="{{canViewLedger || canRecordPayment}}" label="台账收款" value="ledgers" />
+    <t-tab-panel wx:if="{{canManageLedger && editingLedger}}" label="修改台账" value="ledgerEdit" />
+    <t-tab-panel wx:if="{{selectedDetail}}" label="详情" value="detail" />
   </t-tabs>
 
-  <view wx:if="{{activeTab === 'form'}}" class="panel">
+  <view wx:if="{{activeTab === 'form' && canManageApplication}}" class="panel">
     <view class="notice">客户不登录，由内部人员录入资料后提交资方审核。</view>
     <t-input label="客户姓名" value="{{form.customerName}}" placeholder="必填" bind:change="onFormChange" data-field="customerName" align="right" />
     <t-input label="手机号" value="{{form.phone}}" placeholder="必填" bind:change="onFormChange" data-field="phone" align="right" />
     <t-input label="身份证号" value="{{form.idCardNo}}" placeholder="必填" bind:change="onFormChange" data-field="idCardNo" align="right" />
     <t-input label="车型" value="{{form.vehicleModel}}" placeholder="必填" bind:change="onFormChange" data-field="vehicleModel" align="right" />
-    <t-input label="提车日期" value="{{form.pickupDate}}" placeholder="YYYY-MM-DD" bind:change="onFormChange" data-field="pickupDate" align="right" />
+    <t-input label="提车日期" value="{{form.pickupDate}}" placeholder="如 2026-06-23" bind:change="onFormChange" data-field="pickupDate" align="right" />
     <view class="radio-line">
       <text>付款方式</text>
       <t-radio-group value="{{form.paymentType}}" bind:change="onPaymentTypeChange">
@@ -23,7 +25,7 @@
     <t-input label="首付" type="digit" value="{{form.downPayment}}" placeholder="选填" bind:change="onFormChange" data-field="downPayment" align="right" />
     <t-input label="分期期数" type="number" value="{{form.installmentCount}}" placeholder="选填" bind:change="onFormChange" data-field="installmentCount" align="right" />
     <t-input label="每期金额" type="digit" value="{{form.installmentAmount}}" placeholder="选填" bind:change="onFormChange" data-field="installmentAmount" align="right" />
-    <t-input label="首期日期" value="{{form.firstDueDate}}" placeholder="YYYY-MM-DD" bind:change="onFormChange" data-field="firstDueDate" align="right" />
+    <t-input label="首期日期" value="{{form.firstDueDate}}" placeholder="如 2026-07-23" bind:change="onFormChange" data-field="firstDueDate" align="right" />
     <t-input label="组长" value="{{form.groupLeader}}" placeholder="必填" bind:change="onFormChange" data-field="groupLeader" align="right" />
     <view class="file-box">
       <view class="file-meta">
@@ -50,7 +52,10 @@
       <view class="card-line">应收：￥{{item.receivableAmount}}</view>
       <view class="card-footer">
         <t-tag theme="{{item.statusTheme}}">{{item.statusLabel}}</t-tag>
-        <t-button wx:if="{{item.status === 'DRAFT' || item.status === 'REJECTED'}}" size="small" bind:tap="onSubmitApplication" data-id="{{item.id}}">提交</t-button>
+        <view class="inline-actions">
+          <t-button size="small" variant="outline" bind:tap="onOpenApplicationDetail" data-id="{{item.id}}">详情</t-button>
+          <t-button wx:if="{{canManageApplication && (item.status === 'DRAFT' || item.status === 'REJECTED')}}" size="small" bind:tap="onSubmitApplication" data-id="{{item.id}}">提交</t-button>
+        </view>
       </view>
     </view>
   </view>
@@ -66,10 +71,69 @@
       <view class="card-footer compact">
         <t-tag theme="{{item.statusTheme}}">{{item.statusLabel}}</t-tag>
       </view>
-      <view class="payment-box">
+      <view class="card-footer compact">
+        <t-button size="small" variant="outline" bind:tap="onOpenLedgerDetail" data-id="{{item.id}}">详情</t-button>
+        <t-button wx:if="{{canManageLedger}}" size="small" theme="primary" variant="outline" bind:tap="onOpenLedgerEdit" data-index="{{index}}">修改</t-button>
+      </view>
+      <view wx:if="{{canRecordPayment}}" class="payment-box">
         <t-input label="收款金额" type="digit" value="{{item.paymentAmount}}" bind:change="onPaymentAmountChange" data-index="{{index}}" align="right" />
         <t-input label="备注" value="{{item.paymentRemark}}" bind:change="onPaymentRemarkChange" data-index="{{index}}" align="right" />
         <t-button theme="success" size="small" bind:tap="onRecordPayment" data-index="{{index}}">登记收款</t-button>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{activeTab === 'ledgerEdit' && canManageLedger && editingLedger}}" class="panel">
+    <t-input label="客户姓名" value="{{ledgerEditForm.customerName}}" placeholder="必填" bind:change="onLedgerEditChange" data-field="customerName" align="right" />
+    <t-input label="手机号" value="{{ledgerEditForm.phone}}" placeholder="必填" bind:change="onLedgerEditChange" data-field="phone" align="right" />
+    <t-input label="身份证号" value="{{ledgerEditForm.idCardNo}}" placeholder="必填" bind:change="onLedgerEditChange" data-field="idCardNo" align="right" />
+    <t-input label="车型" value="{{ledgerEditForm.vehicleModel}}" placeholder="必填" bind:change="onLedgerEditChange" data-field="vehicleModel" align="right" />
+    <t-input label="提车日期" value="{{ledgerEditForm.pickupDate}}" placeholder="如 2026-06-23" bind:change="onLedgerEditChange" data-field="pickupDate" align="right" />
+    <view class="radio-line">
+      <text>付款方式</text>
+      <t-radio-group value="{{ledgerEditForm.paymentType}}" bind:change="onLedgerEditPaymentTypeChange">
+        <t-radio value="FULL">全款</t-radio>
+        <t-radio value="INSTALLMENT">分期</t-radio>
+      </t-radio-group>
+    </view>
+    <t-input label="进货成本" type="digit" value="{{ledgerEditForm.purchaseCost}}" bind:change="onLedgerEditChange" data-field="purchaseCost" align="right" />
+    <t-input label="激励" type="digit" value="{{ledgerEditForm.incentiveAmount}}" bind:change="onLedgerEditChange" data-field="incentiveAmount" align="right" />
+    <t-input label="上级费用" type="digit" value="{{ledgerEditForm.upstreamAmount}}" bind:change="onLedgerEditChange" data-field="upstreamAmount" align="right" />
+    <t-input label="总计成本" type="digit" value="{{ledgerEditForm.totalCost}}" bind:change="onLedgerEditChange" data-field="totalCost" align="right" />
+    <t-input label="零售价格" type="digit" value="{{ledgerEditForm.retailPrice}}" bind:change="onLedgerEditChange" data-field="retailPrice" align="right" />
+    <t-input label="应收总计" type="digit" value="{{ledgerEditForm.receivableAmount}}" placeholder="必填" bind:change="onLedgerEditChange" data-field="receivableAmount" align="right" />
+    <t-input label="组长" value="{{ledgerEditForm.groupLeader}}" placeholder="必填" bind:change="onLedgerEditChange" data-field="groupLeader" align="right" />
+    <t-input label="经办人" value="{{ledgerEditForm.handlerName}}" bind:change="onLedgerEditChange" data-field="handlerName" align="right" />
+    <view class="radio-line status-line">
+      <text>状态</text>
+      <t-radio-group value="{{ledgerEditForm.status}}" bind:change="onLedgerEditStatusChange">
+        <t-radio value="NORMAL">正常</t-radio>
+        <t-radio value="PARTIAL_PAID">部分收款</t-radio>
+        <t-radio value="SETTLED">已结清</t-radio>
+        <t-radio value="OVERDUE">已逾期</t-radio>
+        <t-radio value="ABNORMAL">异常</t-radio>
+      </t-radio-group>
+    </view>
+    <t-input label="修改原因" value="{{ledgerEditForm.changeRemark}}" placeholder="建议填写" bind:change="onLedgerEditChange" data-field="changeRemark" align="right" />
+    <t-input label="备注" value="{{ledgerEditForm.remark}}" bind:change="onLedgerEditChange" data-field="remark" align="right" />
+    <view class="button-row">
+      <t-button theme="primary" block bind:tap="onSaveLedgerEdit">保存台账</t-button>
+    </view>
+  </view>
+
+  <view wx:if="{{activeTab === 'detail' && selectedDetail}}" class="panel">
+    <view class="card">
+      <view class="card-title">{{selectedDetail.application.customerName}} · {{selectedDetail.application.vehicleModel}}</view>
+      <view class="card-line">申请单：{{selectedDetail.application.applicationNo}}</view>
+      <view wx:if="{{selectedDetail.ledger}}" class="card-line">台账号：{{selectedDetail.ledger.ledgerNo}}</view>
+      <view class="card-line">应收：￥{{selectedDetail.ledger ? selectedDetail.ledger.receivableAmount : selectedDetail.application.receivableAmount}}</view>
+    </view>
+    <view class="card">
+      <view class="card-title">附件留存</view>
+      <view wx:if="{{!selectedDetail.attachments || selectedDetail.attachments.length === 0}}" class="card-line">暂无附件</view>
+      <view wx:for="{{selectedDetail.attachments}}" wx:key="id" class="attachment-row">
+        <view class="attachment-name">{{item.originalFilename}}</view>
+        <t-button size="small" variant="outline" bind:tap="onDownloadAttachment" data-id="{{item.id}}" data-filename="{{item.originalFilename}}">打开</t-button>
       </view>
     </view>
   </view>

@@ -606,3 +606,22 @@ CREATE TABLE IF NOT EXISTS funding_ledger_change_log (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id)
 );
+
+CREATE TABLE IF NOT EXISTS funding_import_batch (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    store_id BIGINT NOT NULL,
+    batch_no VARCHAR(64) NOT NULL,
+    original_filename VARCHAR(255) NOT NULL,
+    status VARCHAR(32) NOT NULL,
+    total_rows INTEGER NOT NULL DEFAULT 0,
+    success_rows INTEGER NOT NULL DEFAULT 0,
+    failed_rows INTEGER NOT NULL DEFAULT 0,
+    error_summary VARCHAR(1024) NULL,
+    created_by BIGINT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by BIGINT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (id),
+    UNIQUE (batch_no)
+);

@@ -93,6 +93,8 @@ const routes: Array<RouteRecordRaw> = [
             'FUNDING_LEDGER_VIEW',
             'FUNDING_LEDGER_MANAGE',
             'FUNDING_PAYMENT_RECORD',
+            'FUNDING_EXPORT',
+            'FUNDING_IMPORT',
           ]
         }
       },
@@ -136,7 +138,7 @@ const routes: Array<RouteRecordRaw> = [
         path: 'export',
         name: 'Export',
         component: () => import('@/views/export/index.vue'),
-        meta: { title: '数据导出', roles: ['SUPER_ADMIN'] }
+        meta: { title: '数据导出', anyPermissions: ['EXCEL_EXPORT'] }
       },
       {
         path: 'trial-data',
@@ -173,13 +175,14 @@ function firstAccessiblePath(user: AuthUser | null): string {
   const hasRole = (code: string) => roles.includes(code);
 
   if (hasPermission('FINANCE_VIEW')) return '/dashboard';
-  if (hasAnyPermission(['FUNDING_APPLICATION_VIEW', 'FUNDING_LEDGER_VIEW'])) return '/funding';
+  if (hasAnyPermission(['FUNDING_APPLICATION_VIEW', 'FUNDING_LEDGER_VIEW', 'FUNDING_IMPORT', 'FUNDING_EXPORT'])) return '/funding';
   if (hasAnyPermission(['CUSTOMER_VIEW', 'CUSTOMER_MANAGE'])) return '/customers';
   if (hasAnyPermission(['WORK_ORDER_VIEW', 'WORK_ORDER_CREATE', 'WORK_ORDER_SETTLE'])) return '/work-order';
   if (hasAnyPermission(['PART_VIEW', 'PART_MANAGE'])) return '/parts';
   if (hasAnyPermission(['INVENTORY_VIEW', 'INVENTORY_INBOUND', 'INVENTORY_ADJUST'])) return '/inventory';
   if (hasPermission('PAYMENT_RECORD')) return '/payment';
   if (hasPermission('REFUND_RECORD')) return '/refund';
+  if (hasPermission('EXCEL_EXPORT')) return '/export';
   if (hasAnyPermission(['USER_MANAGE', 'ROLE_MANAGE'])) return '/user';
   if (hasPermission('STORE_MANAGE')) return '/store';
   if (hasRole('SUPER_ADMIN')) return '/trial-data';

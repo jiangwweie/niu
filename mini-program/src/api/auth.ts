@@ -1,5 +1,5 @@
 import { request } from '../utils/request';
-import { BASE_URL } from '../utils/config';
+import { getBaseUrl } from '../utils/config';
 import { authStore } from '../stores/auth';
 import type { ApiResponse } from '../types/common';
 
@@ -51,7 +51,7 @@ export const authApi = {
     return new Promise((resolve, reject) => {
       wx.showLoading({ title: '登录中...', mask: true });
       wx.request({
-        url: `${BASE_URL}/api/auth/login/wechat`,
+        url: `${getBaseUrl()}/api/auth/login/wechat`,
         method: 'POST',
         data: { code },
         header: { 'Content-Type': 'application/json' },

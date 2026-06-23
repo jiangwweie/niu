@@ -123,7 +123,9 @@
                 'FUNDING_CONTRACT_MANAGE',
                 'FUNDING_LEDGER_VIEW',
                 'FUNDING_LEDGER_MANAGE',
-                'FUNDING_PAYMENT_RECORD'
+                'FUNDING_PAYMENT_RECORD',
+                'FUNDING_EXPORT',
+                'FUNDING_IMPORT'
               ])
             "
             index="funding"
@@ -158,6 +160,9 @@
             </el-menu-item>
             <el-menu-item v-if="hasPermission('DICT_MANAGE')" index="/dictionary">
               <template #title>基础配置</template>
+            </el-menu-item>
+            <el-menu-item v-if="hasPermission('EXCEL_EXPORT')" index="/export">
+              <template #title>数据导出</template>
             </el-menu-item>
             <el-menu-item v-if="hasRole('SUPER_ADMIN')" index="/trial-data">
               <template #title>数据清理</template>
@@ -262,6 +267,7 @@ const ROLE_LABEL_MAP: Record<string, string> = {
   INVENTORY_CLERK: '库存员',
   CASHIER: '收银员',
   READONLY_STAFF: '只读员工',
+  FUNDING_LEDGER_OPERATOR: '资方台账专员',
 };
 
 const roleDisplayName = computed(() => {

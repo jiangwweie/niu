@@ -5,6 +5,7 @@ import com.xiaoniu.aftermarket.funding.dto.FundingDtos.ApplicationResponse;
 import com.xiaoniu.aftermarket.funding.dto.FundingDtos.AttachmentResponse;
 import com.xiaoniu.aftermarket.funding.dto.FundingDtos.ContractResponse;
 import com.xiaoniu.aftermarket.funding.dto.FundingDtos.FundingDetailResponse;
+import com.xiaoniu.aftermarket.funding.dto.FundingDtos.FundingImportResultResponse;
 import com.xiaoniu.aftermarket.funding.dto.FundingDtos.FundingPaymentResponse;
 import com.xiaoniu.aftermarket.funding.dto.FundingDtos.FundingSummaryResponse;
 import com.xiaoniu.aftermarket.funding.dto.FundingDtos.LedgerResponse;
@@ -12,6 +13,7 @@ import com.xiaoniu.aftermarket.funding.dto.FundingDtos.RecordFundingPaymentReque
 import com.xiaoniu.aftermarket.funding.dto.FundingDtos.SaveApplicationRequest;
 import com.xiaoniu.aftermarket.funding.dto.FundingDtos.SaveContractRequest;
 import com.xiaoniu.aftermarket.funding.dto.FundingDtos.UpdateLedgerRequest;
+import com.xiaoniu.aftermarket.export.dto.ExportFile;
 import java.io.IOException;
 import org.springframework.core.io.Resource;
 import org.springframework.web.multipart.MultipartFile;
@@ -47,6 +49,10 @@ public interface FundingService {
     FundingPaymentResponse recordPayment(Long storeId, Long operatorId, Long ledgerId, RecordFundingPaymentRequest request);
 
     FundingSummaryResponse summary(Long storeId);
+
+    FundingImportResultResponse importLedgers(Long storeId, Long operatorId, MultipartFile file) throws IOException;
+
+    ExportFile exportLedgers(Long storeId, String keyword, String status);
 
     AttachmentResponse uploadAttachment(Long storeId, Long operatorId, String ownerType, Long ownerId, String attachmentType,
                                         MultipartFile file, String remark) throws IOException;

@@ -21,11 +21,22 @@ export interface FundingLedger {
   ledgerNo: string;
   customerName: string;
   phone: string;
+  idCardNo: string;
   vehicleModel: string;
+  pickupDate: string;
+  paymentType: string;
+  purchaseCost: number;
+  incentiveAmount: number;
+  upstreamAmount: number;
+  totalCost: number;
+  retailPrice: number;
   receivableAmount: number;
   receivedAmount: number;
   outstandingAmount: number;
+  groupLeader: string;
+  handlerName?: string;
   status: string;
+  remark?: string;
 }
 
 export interface FundingInstallmentPlan {
@@ -41,6 +52,19 @@ export interface FundingDetail {
   application?: FundingApplication;
   ledger?: FundingLedger;
   installmentPlans: FundingInstallmentPlan[];
+  attachments?: FundingAttachment[];
+}
+
+export interface FundingAttachment {
+  id: number;
+  ownerType: string;
+  ownerId: number;
+  attachmentType: string;
+  originalFilename: string;
+  contentType?: string;
+  fileSize: number;
+  remark?: string;
+  createdAt?: string;
 }
 
 export interface SaveFundingApplicationRequest {

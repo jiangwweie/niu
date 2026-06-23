@@ -1,4 +1,4 @@
-import { API_MODE, BASE_URL } from './config';
+import { API_MODE, getBaseUrl } from './config';
 import { ApiResponse } from '../types/common';
 import { authStore } from '../stores/auth';
 import { getFriendlyErrorMessage } from './statusText';
@@ -55,7 +55,7 @@ export const request = <T = any>(options: RequestOptions): Promise<ApiResponse<T
 
     wx.request({
       ...options,
-      url: options.url.startsWith('http') ? options.url : `${BASE_URL}${options.url}`,
+      url: options.url.startsWith('http') ? options.url : `${getBaseUrl()}${options.url}`,
       header: headers,
       success: (res) => {
         complete();

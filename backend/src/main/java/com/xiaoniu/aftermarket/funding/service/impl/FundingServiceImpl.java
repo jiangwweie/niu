@@ -9,11 +9,13 @@ import com.xiaoniu.aftermarket.common.api.ErrorCode;
 import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
 import com.xiaoniu.aftermarket.common.service.SequenceService;
+import com.xiaoniu.aftermarket.export.dto.ExportFile;
 import com.xiaoniu.aftermarket.funding.dto.FundingDtos.ApplicationResponse;
 import com.xiaoniu.aftermarket.funding.dto.FundingDtos.AttachmentResponse;
 import com.xiaoniu.aftermarket.funding.dto.FundingDtos.ChangeLogResponse;
 import com.xiaoniu.aftermarket.funding.dto.FundingDtos.ContractResponse;
 import com.xiaoniu.aftermarket.funding.dto.FundingDtos.FundingDetailResponse;
+import com.xiaoniu.aftermarket.funding.dto.FundingDtos.FundingImportResultResponse;
 import com.xiaoniu.aftermarket.funding.dto.FundingDtos.FundingPaymentResponse;
 import com.xiaoniu.aftermarket.funding.dto.FundingDtos.FundingSummaryResponse;
 import com.xiaoniu.aftermarket.funding.dto.FundingDtos.InstallmentPlanResponse;
@@ -25,6 +27,7 @@ import com.xiaoniu.aftermarket.funding.dto.FundingDtos.UpdateLedgerRequest;
 import com.xiaoniu.aftermarket.funding.entity.FundingApplicationEntity;
 import com.xiaoniu.aftermarket.funding.entity.FundingAttachmentEntity;
 import com.xiaoniu.aftermarket.funding.entity.FundingContractEntity;
+import com.xiaoniu.aftermarket.funding.entity.FundingImportBatchEntity;
 import com.xiaoniu.aftermarket.funding.entity.FundingInstallmentPlanEntity;
 import com.xiaoniu.aftermarket.funding.entity.FundingLedgerChangeLogEntity;
 import com.xiaoniu.aftermarket.funding.entity.FundingLedgerEntity;
@@ -32,11 +35,13 @@ import com.xiaoniu.aftermarket.funding.entity.FundingPaymentRecordEntity;
 import com.xiaoniu.aftermarket.funding.mapper.FundingApplicationMapper;
 import com.xiaoniu.aftermarket.funding.mapper.FundingAttachmentMapper;
 import com.xiaoniu.aftermarket.funding.mapper.FundingContractMapper;
+import com.xiaoniu.aftermarket.funding.mapper.FundingImportBatchMapper;
 import com.xiaoniu.aftermarket.funding.mapper.FundingInstallmentPlanMapper;
 import com.xiaoniu.aftermarket.funding.mapper.FundingLedgerChangeLogMapper;
 import com.xiaoniu.aftermarket.funding.mapper.FundingLedgerMapper;
 import com.xiaoniu.aftermarket.funding.mapper.FundingPaymentRecordMapper;
 import com.xiaoniu.aftermarket.funding.service.FundingService;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -45,9 +50,22 @@ import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.DataFormat;
+import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.usermodel.DateUtil;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -76,6 +94,9 @@ public class FundingServiceImpl implements FundingService {
     private static final String LEDGER_SETTLED = "SETTLED";
     private static final String LEDGER_OVERDUE = "OVERDUE";
     private static final String LEDGER_VOIDED = "VOIDED";
+    private static final String IMPORT_IMPORTED = "IMPORTED";
+    private static final String IMPORT_FAILED = "FAILED";
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final FundingApplicationMapper applicationMapper;
     private final FundingContractMapper contractMapper;
@@ -83,6 +104,7 @@ public class FundingServiceImpl implements FundingService {
     private final FundingInstallmentPlanMapper planMapper;
     private final FundingPaymentRecordMapper paymentMapper;
     private final FundingAttachmentMapper attachmentMapper;
+    private final FundingImportBatchMapper importBatchMapper;
     private final FundingLedgerChangeLogMapper changeLogMapper;
     private final SequenceService sequenceService;
     private final Path uploadRoot;
@@ -93,6 +115,7 @@ public class FundingServiceImpl implements FundingService {
                               FundingInstallmentPlanMapper planMapper,
                               FundingPaymentRecordMapper paymentMapper,
                               FundingAttachmentMapper attachmentMapper,
+                              FundingImportBatchMapper importBatchMapper,
                               FundingLedgerChangeLogMapper changeLogMapper,
                               SequenceService sequenceService,
                               @Value("${app.funding.upload-dir:uploads/funding}") String uploadDir) {
@@ -102,6 +125,7 @@ public class FundingServiceImpl implements FundingService {
         this.planMapper = planMapper;
         this.paymentMapper = paymentMapper;
         this.attachmentMapper = attachmentMapper;
+        this.importBatchMapper = importBatchMapper;
         this.changeLogMapper = changeLogMapper;
         this.sequenceService = sequenceService;
         this.uploadRoot = Path.of(uploadDir).toAbsolutePath().normalize();
@@ -337,7 +361,11 @@ public class FundingServiceImpl implements FundingService {
         change(ledger, "handlerName", ledger.getHandlerName(), request.handlerName(), v -> ledger.setHandlerName(v), operatorId, remark);
         change(ledger, "status", ledger.getStatus(), request.status(), v -> ledger.setStatus(v), operatorId, remark);
         change(ledger, "remark", ledger.getRemark(), request.remark(), v -> ledger.setRemark(v), operatorId, remark);
+        if (nz(ledger.getReceivableAmount()).compareTo(nz(ledger.getReceivedAmount())) < 0) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "应收金额不能小于已收金额");
+        }
         ledger.setOutstandingAmount(nz(ledger.getReceivableAmount()).subtract(nz(ledger.getReceivedAmount())).setScale(2, RoundingMode.HALF_UP));
+        validateLedgerStatus(ledger);
         ledger.setUpdatedBy(operatorId);
         ledgerMapper.updateById(ledger);
         return toLedgerResponse(loadLedger(storeId, ledgerId));
@@ -402,6 +430,121 @@ public class FundingServiceImpl implements FundingService {
 
     @Override
     @Transactional
+    public FundingImportResultResponse importLedgers(Long storeId, Long operatorId, MultipartFile file) throws IOException {
+        validateUserContext(storeId, operatorId);
+        if (file == null || file.isEmpty()) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "导入文件不能为空");
+        }
+        FundingImportBatchEntity batch = new FundingImportBatchEntity();
+        batch.setStoreId(storeId);
+        batch.setBatchNo(sequenceService.next("FUNDING_IMPORT"));
+        batch.setOriginalFilename(file.getOriginalFilename() == null ? "funding-import.xlsx" : file.getOriginalFilename());
+        batch.setStatus("PENDING");
+        batch.setTotalRows(0);
+        batch.setSuccessRows(0);
+        batch.setFailedRows(0);
+        batch.setCreatedBy(operatorId);
+        importBatchMapper.insert(batch);
+
+        int total = 0;
+        int success = 0;
+        List<String> errors = new ArrayList<>();
+        try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
+            Sheet sheet = workbook.getNumberOfSheets() == 0 ? null : workbook.getSheetAt(0);
+            if (sheet == null || sheet.getLastRowNum() < 1) {
+                throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "导入文件没有可识别的数据行");
+            }
+            Map<String, Integer> headers = headerIndexes(sheet.getRow(0));
+            DataFormatter formatter = new DataFormatter();
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+                Row row = sheet.getRow(i);
+                if (isSkippedImportRow(row, headers, formatter)) {
+                    continue;
+                }
+                total++;
+                try {
+                    ImportLedgerRow imported = parseImportRow(row, headers, formatter);
+                    createImportedLedger(storeId, operatorId, imported);
+                    success++;
+                } catch (RuntimeException e) {
+                    errors.add("第" + (i + 1) + "行：" + e.getMessage());
+                }
+            }
+        } catch (BusinessException e) {
+            throw e;
+        } catch (RuntimeException e) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "导入文件解析失败：" + e.getMessage());
+        }
+
+        batch.setTotalRows(total);
+        batch.setSuccessRows(success);
+        batch.setFailedRows(errors.size());
+        batch.setStatus(success > 0 ? IMPORT_IMPORTED : IMPORT_FAILED);
+        batch.setErrorSummary(String.join("；", errors).substring(0, Math.min(1024, String.join("；", errors).length())));
+        batch.setUpdatedBy(operatorId);
+        importBatchMapper.updateById(batch);
+        return new FundingImportResultResponse(batch.getId(), batch.getBatchNo(), batch.getStatus(), total, success, errors.size(), errors);
+    }
+
+    @Override
+    public ExportFile exportLedgers(Long storeId, String keyword, String status) {
+        QueryWrapper<FundingLedgerEntity> wrapper = baseStoreWrapper(storeId);
+        String normalized = normalize(keyword);
+        if (normalized != null) {
+            String pattern = buildContainsPattern(normalized);
+            wrapper.and(q -> q.apply(containsCondition("ledger_no"), pattern)
+                    .or().apply(containsCondition("customer_name"), pattern)
+                    .or().apply(containsCondition("phone"), pattern)
+                    .or().apply(containsCondition("vehicle_model"), pattern)
+                    .or().apply(containsCondition("group_leader"), pattern));
+        }
+        if (StringUtils.hasText(status)) {
+            wrapper.eq("status", status.trim());
+        }
+        wrapper.orderByDesc("created_at").orderByDesc("id");
+        List<FundingLedgerEntity> ledgers = ledgerMapper.selectList(wrapper);
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet("资方台账");
+            CellStyle moneyStyle = moneyStyle(workbook);
+            writeHeader(sheet.createRow(0), List.of("台账编号", "客户", "电话", "身份证号", "车型", "提车日期",
+                    "付款方式", "进货成本", "激励", "上级费用", "总计成本", "零售价格", "应收总计",
+                    "已收金额", "未收金额", "组长", "经办人", "状态", "合同编号", "合同状态", "创建时间", "备注"));
+            int rowIndex = 1;
+            for (FundingLedgerEntity ledger : ledgers) {
+                FundingContractEntity contract = loadContract(storeId, ledger.getContractId());
+                Row row = sheet.createRow(rowIndex++);
+                writeText(row, 0, ledger.getLedgerNo());
+                writeText(row, 1, ledger.getCustomerName());
+                writeText(row, 2, ledger.getPhone());
+                writeText(row, 3, ledger.getIdCardNo());
+                writeText(row, 4, ledger.getVehicleModel());
+                writeText(row, 5, formatDate(ledger.getPickupDate()));
+                writeText(row, 6, paymentTypeText(ledger.getPaymentType()));
+                writeMoney(row, 7, ledger.getPurchaseCost(), moneyStyle);
+                writeMoney(row, 8, ledger.getIncentiveAmount(), moneyStyle);
+                writeMoney(row, 9, ledger.getUpstreamAmount(), moneyStyle);
+                writeMoney(row, 10, ledger.getTotalCost(), moneyStyle);
+                writeMoney(row, 11, ledger.getRetailPrice(), moneyStyle);
+                writeMoney(row, 12, ledger.getReceivableAmount(), moneyStyle);
+                writeMoney(row, 13, ledger.getReceivedAmount(), moneyStyle);
+                writeMoney(row, 14, ledger.getOutstandingAmount(), moneyStyle);
+                writeText(row, 15, ledger.getGroupLeader());
+                writeText(row, 16, ledger.getHandlerName());
+                writeText(row, 17, ledgerStatusText(ledger.getStatus()));
+                writeText(row, 18, contract.getContractNo());
+                writeText(row, 19, contractStatusText(contract.getStatus()));
+                writeText(row, 20, formatDateTime(ledger.getCreatedAt()));
+                writeText(row, 21, ledger.getRemark());
+            }
+            autosize(sheet, 22);
+            return new ExportFile("funding_ledgers_" + LocalDate.now() + ".xlsx", toBytes(workbook));
+        } catch (IOException e) {
+            throw new BusinessException(ErrorCode.COMMON_INTERNAL_ERROR, "导出资方台账失败");
+        }
+    }
+
+    @Override
+    @Transactional
     public AttachmentResponse uploadAttachment(Long storeId, Long operatorId, String ownerType, Long ownerId, String attachmentType,
                                                MultipartFile file, String remark) throws IOException {
         validateOwner(storeId, ownerType, ownerId);
@@ -449,6 +592,274 @@ public class FundingServiceImpl implements FundingService {
     @Override
     public String attachmentFilename(Long storeId, Long attachmentId) {
         return loadAttachmentEntity(storeId, attachmentId).getOriginalFilename();
+    }
+
+    private void createImportedLedger(Long storeId, Long operatorId, ImportLedgerRow imported) {
+        BigDecimal received = nz(imported.receivedAmount());
+        if (received.compareTo(nz(imported.receivableAmount())) > 0) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "收款总计不能大于应收总计");
+        }
+        LocalDateTime now = LocalDateTime.now();
+        FundingApplicationEntity application = new FundingApplicationEntity();
+        application.setStoreId(storeId);
+        application.setApplicationNo(sequenceService.next("FUNDING_APPLICATION"));
+        application.setCustomerName(imported.customerName());
+        application.setPhone(imported.phone());
+        application.setIdCardNo(imported.idCardNo());
+        application.setVehicleModel(imported.vehicleModel());
+        application.setPickupDate(imported.pickupDate());
+        application.setPaymentType(imported.paymentType());
+        application.setPurchaseCost(imported.purchaseCost());
+        application.setIncentiveAmount(imported.incentiveAmount());
+        application.setUpstreamAmount(imported.upstreamAmount());
+        application.setTotalCost(imported.totalCost());
+        application.setRetailPrice(imported.retailPrice());
+        application.setReceivableAmount(imported.receivableAmount());
+        application.setDownPayment(imported.downPayment());
+        application.setInstallmentCount(imported.installmentCount());
+        application.setInstallmentAmount(imported.installmentAmount());
+        application.setFirstDueDate(imported.firstDueDate());
+        application.setGroupLeader(imported.groupLeader());
+        application.setHandlerName(imported.handlerName());
+        application.setAddOnRemark(imported.addOnRemark());
+        application.setStatus(APP_LEDGER_CREATED);
+        application.setAuditRemark("Excel导入");
+        application.setSubmittedBy(operatorId);
+        application.setSubmittedAt(now);
+        application.setAuditedBy(operatorId);
+        application.setAuditedAt(now);
+        application.setRemark(imported.remark());
+        application.setCreatedBy(operatorId);
+        applicationMapper.insert(application);
+
+        FundingContractEntity contract = new FundingContractEntity();
+        contract.setStoreId(storeId);
+        contract.setApplicationId(application.getId());
+        contract.setContractNo(sequenceService.next("FUNDING_CONTRACT"));
+        contract.setContractType(imported.paymentType());
+        contract.setSignedDate(imported.pickupDate());
+        contract.setStatus(CONTRACT_CONFIRMED);
+        contract.setConfirmedBy(operatorId);
+        contract.setConfirmedAt(now);
+        contract.setRemark("Excel导入生成线下合同记录");
+        contract.setCreatedBy(operatorId);
+        contractMapper.insert(contract);
+
+        FundingLedgerEntity ledger = buildLedgerFromApplication(application, contract, operatorId);
+        ledgerMapper.insert(ledger);
+        createInstallmentPlans(application, ledger, operatorId);
+
+        if (received.compareTo(BigDecimal.ZERO) > 0) {
+            FundingPaymentRecordEntity payment = new FundingPaymentRecordEntity();
+            payment.setStoreId(storeId);
+            payment.setLedgerId(ledger.getId());
+            payment.setPaymentNo(sequenceService.next("FUNDING_PAYMENT"));
+            payment.setAmount(received);
+            payment.setPaymentMethod("TRANSFER");
+            payment.setPaidAt(now);
+            payment.setOperatorId(operatorId);
+            payment.setRemark("Excel导入收款总计");
+            payment.setCreatedBy(operatorId);
+            paymentMapper.insert(payment);
+        }
+        refreshLedgerAmounts(ledger, operatorId);
+    }
+
+    private ImportLedgerRow parseImportRow(Row row, Map<String, Integer> headers, DataFormatter formatter) {
+        String customerName = requiredText(row, headers, formatter, "姓名", "客户姓名不能为空");
+        String groupLeader = defaultText(text(row, headers, formatter, "组长"), "未填写组长");
+        LocalDate pickupDate = parseDate(row, headers, formatter, "日期");
+        if (pickupDate == null) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "日期不能为空");
+        }
+        String paymentType = normalizePaymentType(text(row, headers, formatter, "付款方式"));
+        BigDecimal purchaseCost = amount(row, headers, formatter, "进货成本");
+        BigDecimal incentive = amount(row, headers, formatter, "激励");
+        BigDecimal upstream = amount(row, headers, formatter, "上级");
+        BigDecimal totalCost = amount(row, headers, formatter, "总计成本");
+        if (totalCost.compareTo(BigDecimal.ZERO) == 0) {
+            totalCost = purchaseCost.add(incentive).add(upstream).setScale(2, RoundingMode.HALF_UP);
+        }
+        BigDecimal retailPrice = amount(row, headers, formatter, "零售价格");
+        BigDecimal downPayment = amount(row, headers, formatter, "首付");
+        List<BigDecimal> installments = installmentAmounts(row, headers, formatter);
+        BigDecimal installmentAmount = installments.isEmpty() ? BigDecimal.ZERO.setScale(2) : installments.get(0);
+        BigDecimal receivable = amount(row, headers, formatter, "应收总计");
+        if (receivable.compareTo(BigDecimal.ZERO) == 0) {
+            receivable = downPayment.add(installments.stream().reduce(BigDecimal.ZERO, BigDecimal::add)).setScale(2, RoundingMode.HALF_UP);
+        }
+        if (receivable.compareTo(BigDecimal.ZERO) <= 0 && retailPrice.compareTo(BigDecimal.ZERO) > 0) {
+            receivable = retailPrice;
+        }
+        if (receivable.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "应收总计必须大于0");
+        }
+        return new ImportLedgerRow(
+                customerName,
+                defaultText(text(row, headers, formatter, "电话"), "-"),
+                defaultText(text(row, headers, formatter, "身份证号"), "-"),
+                defaultText(text(row, headers, formatter, "车型"), "未填写车型"),
+                pickupDate,
+                paymentType,
+                purchaseCost,
+                incentive,
+                upstream,
+                totalCost,
+                retailPrice,
+                receivable,
+                downPayment,
+                installments.size(),
+                installmentAmount,
+                installments.isEmpty() ? null : pickupDate.plusMonths(1),
+                groupLeader,
+                "Excel导入",
+                text(row, headers, formatter, "加装"),
+                "Excel导入"
+                        + optionalRemark("序号", text(row, headers, formatter, "序号"))
+                        + optionalRemark("应收额", text(row, headers, formatter, "应收额")),
+                amount(row, headers, formatter, "收款总计")
+        );
+    }
+
+    private Map<String, Integer> headerIndexes(Row headerRow) {
+        if (headerRow == null) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "导入文件缺少表头");
+        }
+        Map<String, Integer> indexes = new HashMap<>();
+        DataFormatter formatter = new DataFormatter();
+        for (Cell cell : headerRow) {
+            String value = normalizeHeader(formatter.formatCellValue(cell));
+            if (StringUtils.hasText(value)) {
+                indexes.put(value, cell.getColumnIndex());
+            }
+        }
+        return indexes;
+    }
+
+    private boolean isSkippedImportRow(Row row, Map<String, Integer> headers, DataFormatter formatter) {
+        if (row == null) {
+            return true;
+        }
+        boolean allBlank = true;
+        for (Cell cell : row) {
+            if (StringUtils.hasText(formatter.formatCellValue(cell))) {
+                allBlank = false;
+                break;
+            }
+        }
+        if (allBlank) {
+            return true;
+        }
+        String first = formatter.formatCellValue(row.getCell(0));
+        String normalizedFirst = first == null ? "" : first.trim();
+        if (List.of("收款栏", "小计", "合计", "总计").contains(normalizedFirst)) {
+            return true;
+        }
+        return !StringUtils.hasText(text(row, headers, formatter, "姓名"));
+    }
+
+    private String requiredText(Row row, Map<String, Integer> headers, DataFormatter formatter, String header, String message) {
+        String value = text(row, headers, formatter, header);
+        if (!StringUtils.hasText(value)) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, message);
+        }
+        return value.trim();
+    }
+
+    private String text(Row row, Map<String, Integer> headers, DataFormatter formatter, String header) {
+        Cell cell = cell(row, headers, header);
+        if (cell == null) {
+            return "";
+        }
+        String value = formatter.formatCellValue(cell);
+        if (!StringUtils.hasText(value) || "/".equals(value.trim())) {
+            return "";
+        }
+        return value.trim();
+    }
+
+    private Cell cell(Row row, Map<String, Integer> headers, String header) {
+        Integer index = headers.get(normalizeHeader(header));
+        return index == null ? null : row.getCell(index);
+    }
+
+    private BigDecimal amount(Row row, Map<String, Integer> headers, DataFormatter formatter, String header) {
+        Cell cell = cell(row, headers, header);
+        if (cell == null) {
+            return BigDecimal.ZERO.setScale(2);
+        }
+        if (cell.getCellType() == CellType.NUMERIC) {
+            return importAmount(BigDecimal.valueOf(cell.getNumericCellValue()).setScale(2, RoundingMode.HALF_UP), header);
+        }
+        if (cell.getCellType() == CellType.FORMULA && cell.getCachedFormulaResultType() == CellType.NUMERIC) {
+            return importAmount(BigDecimal.valueOf(cell.getNumericCellValue()).setScale(2, RoundingMode.HALF_UP), header);
+        }
+        String value = formatter.formatCellValue(cell);
+        if (!StringUtils.hasText(value) || "/".equals(value.trim())) {
+            return BigDecimal.ZERO.setScale(2);
+        }
+        String normalized = value.replace(",", "").replace("￥", "").trim();
+        try {
+            return importAmount(new BigDecimal(normalized).setScale(2, RoundingMode.HALF_UP), header);
+        } catch (NumberFormatException e) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, header + "金额格式不正确");
+        }
+    }
+
+    private BigDecimal importAmount(BigDecimal amount, String header) {
+        if (amount.compareTo(BigDecimal.ZERO) < 0) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, header + "金额不能为负数");
+        }
+        return amount;
+    }
+
+    private LocalDate parseDate(Row row, Map<String, Integer> headers, DataFormatter formatter, String header) {
+        Cell cell = cell(row, headers, header);
+        if (cell == null) {
+            return null;
+        }
+        if (cell.getCellType() == CellType.NUMERIC && DateUtil.isCellDateFormatted(cell)) {
+            return cell.getLocalDateTimeCellValue().toLocalDate();
+        }
+        String value = formatter.formatCellValue(cell);
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(value.trim());
+        } catch (RuntimeException e) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, header + "日期格式必须为 yyyy-MM-dd");
+        }
+    }
+
+    private List<BigDecimal> installmentAmounts(Row row, Map<String, Integer> headers, DataFormatter formatter) {
+        List<BigDecimal> values = new ArrayList<>();
+        for (String header : List.of("一期", "二期", "三期", "四期", "五期", "六期", "七期", "八期", "九期")) {
+            BigDecimal value = amount(row, headers, formatter, header);
+            if (value.compareTo(BigDecimal.ZERO) > 0) {
+                values.add(value);
+            }
+        }
+        return values;
+    }
+
+    private String normalizePaymentType(String value) {
+        if ("全款".equals(value) || "FULL".equalsIgnoreCase(value)) {
+            return "FULL";
+        }
+        return "INSTALLMENT";
+    }
+
+    private String normalizeHeader(String value) {
+        return value == null ? "" : value.replaceAll("\\s+", "").trim();
+    }
+
+    private String defaultText(String value, String defaultValue) {
+        return StringUtils.hasText(value) ? value.trim() : defaultValue;
+    }
+
+    private String optionalRemark(String label, String value) {
+        return StringUtils.hasText(value) ? "；" + label + "：" + value.trim() : "";
     }
 
     private FundingLedgerEntity buildLedgerFromApplication(FundingApplicationEntity app, FundingContractEntity contract, Long operatorId) {
@@ -534,6 +945,42 @@ public class FundingServiceImpl implements FundingService {
         ledgerMapper.updateById(ledger);
     }
 
+    private void validateLedgerStatus(FundingLedgerEntity ledger) {
+        String status = ledger.getStatus();
+        if (status == null) {
+            return;
+        }
+        BigDecimal received = nz(ledger.getReceivedAmount());
+        BigDecimal outstanding = nz(ledger.getOutstandingAmount());
+        boolean overdue = outstanding.compareTo(BigDecimal.ZERO) > 0 && hasOverduePlan(ledger.getStoreId(), ledger.getId());
+        switch (status) {
+            case LEDGER_SETTLED -> {
+                if (outstanding.compareTo(BigDecimal.ZERO) != 0) {
+                    throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "仍有未收金额的台账不能标记为已结清");
+                }
+            }
+            case LEDGER_PARTIAL_PAID -> {
+                if (received.compareTo(BigDecimal.ZERO) <= 0 || outstanding.compareTo(BigDecimal.ZERO) <= 0) {
+                    throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "部分收款状态必须同时存在已收金额和未收金额");
+                }
+            }
+            case LEDGER_NORMAL -> {
+                if (received.compareTo(BigDecimal.ZERO) > 0 || overdue) {
+                    throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "有收款或逾期计划的台账不能标记为正常");
+                }
+            }
+            case LEDGER_OVERDUE -> {
+                if (!overdue) {
+                    throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "没有逾期未收计划的台账不能标记为逾期");
+                }
+            }
+            case "ABNORMAL", LEDGER_VOIDED -> {
+                // Manual exception states are allowed for operational handling.
+            }
+            default -> throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "不支持的台账状态");
+        }
+    }
+
     private boolean hasOverduePlan(Long storeId, Long ledgerId) {
         return planMapper.selectCount(this.<FundingInstallmentPlanEntity>baseStoreWrapper(storeId)
                 .eq("ledger_id", ledgerId)
@@ -563,17 +1010,17 @@ public class FundingServiceImpl implements FundingService {
         entity.setVehicleModel(trimRequired(request.vehicleModel(), "车型不能为空"));
         entity.setPickupDate(Objects.requireNonNull(request.pickupDate(), "提车日期不能为空"));
         entity.setPaymentType(trimRequired(request.paymentType(), "付款方式不能为空"));
-        entity.setPurchaseCost(nz(request.purchaseCost()));
-        entity.setIncentiveAmount(nz(request.incentiveAmount()));
-        entity.setUpstreamAmount(nz(request.upstreamAmount()));
+        entity.setPurchaseCost(optionalNonNegative(request.purchaseCost(), "进货成本不能为负数"));
+        entity.setIncentiveAmount(optionalNonNegative(request.incentiveAmount(), "激励不能为负数"));
+        entity.setUpstreamAmount(optionalNonNegative(request.upstreamAmount(), "上级费用不能为负数"));
         entity.setTotalCost(request.totalCost() != null
-                ? nz(request.totalCost())
-                : nz(request.purchaseCost()).add(nz(request.incentiveAmount())).add(nz(request.upstreamAmount())).setScale(2, RoundingMode.HALF_UP));
-        entity.setRetailPrice(nz(request.retailPrice()));
+                ? optionalNonNegative(request.totalCost(), "总计成本不能为负数")
+                : entity.getPurchaseCost().add(entity.getIncentiveAmount()).add(entity.getUpstreamAmount()).setScale(2, RoundingMode.HALF_UP));
+        entity.setRetailPrice(optionalNonNegative(request.retailPrice(), "零售价格不能为负数"));
         entity.setReceivableAmount(nonNegative(request.receivableAmount(), "应收总计不能为空"));
-        entity.setDownPayment(nz(request.downPayment()));
+        entity.setDownPayment(optionalNonNegative(request.downPayment(), "首付不能为负数"));
         entity.setInstallmentCount(request.installmentCount() != null ? Math.max(request.installmentCount(), 0) : 0);
-        entity.setInstallmentAmount(nz(request.installmentAmount()));
+        entity.setInstallmentAmount(optionalNonNegative(request.installmentAmount(), "每期金额不能为负数"));
         entity.setFirstDueDate(request.firstDueDate());
         entity.setGroupLeader(trimRequired(request.groupLeader(), "组长不能为空"));
         entity.setHandlerName(request.handlerName());
@@ -747,12 +1194,90 @@ public class FundingServiceImpl implements FundingService {
         return result;
     }
 
+    private BigDecimal optionalNonNegative(BigDecimal value, String message) {
+        if (value == null) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+        BigDecimal result = nz(value);
+        if (result.compareTo(BigDecimal.ZERO) < 0) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, message);
+        }
+        return result;
+    }
+
     private BigDecimal normalizePositiveAmount(BigDecimal value, String message) {
         BigDecimal result = nonNegative(value, message);
         if (result.compareTo(BigDecimal.ZERO) <= 0) {
             throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, message);
         }
         return result;
+    }
+
+    private void writeHeader(Row row, List<String> headers) {
+        for (int i = 0; i < headers.size(); i++) {
+            writeText(row, i, headers.get(i));
+        }
+    }
+
+    private void writeText(Row row, int column, String value) {
+        row.createCell(column).setCellValue(value == null ? "" : value);
+    }
+
+    private void writeMoney(Row row, int column, BigDecimal value, CellStyle style) {
+        Cell cell = row.createCell(column);
+        cell.setCellValue(value == null ? 0D : value.doubleValue());
+        cell.setCellStyle(style);
+    }
+
+    private CellStyle moneyStyle(Workbook workbook) {
+        CellStyle style = workbook.createCellStyle();
+        DataFormat dataFormat = workbook.createDataFormat();
+        style.setDataFormat(dataFormat.getFormat("0.00"));
+        return style;
+    }
+
+    private void autosize(Sheet sheet, int columnCount) {
+        for (int i = 0; i < columnCount; i++) {
+            sheet.autoSizeColumn(i);
+        }
+    }
+
+    private byte[] toBytes(Workbook workbook) throws IOException {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        workbook.write(outputStream);
+        return outputStream.toByteArray();
+    }
+
+    private String formatDate(LocalDate value) {
+        return value == null ? "" : DateTimeFormatter.ISO_LOCAL_DATE.format(value);
+    }
+
+    private String formatDateTime(LocalDateTime value) {
+        return value == null ? "" : DATE_TIME_FORMATTER.format(value);
+    }
+
+    private String paymentTypeText(String value) {
+        return "FULL".equals(value) ? "全款" : "INSTALLMENT".equals(value) ? "分期" : value;
+    }
+
+    private String contractStatusText(String value) {
+        return switch (value == null ? "" : value) {
+            case CONTRACT_UPLOADED -> "已上传";
+            case CONTRACT_CONFIRMED -> "已确认";
+            case CONTRACT_VOIDED -> "已作废";
+            default -> value;
+        };
+    }
+
+    private String ledgerStatusText(String value) {
+        return switch (value == null ? "" : value) {
+            case LEDGER_NORMAL -> "正常";
+            case LEDGER_PARTIAL_PAID -> "部分收款";
+            case LEDGER_SETTLED -> "已结清";
+            case LEDGER_OVERDUE -> "逾期";
+            case LEDGER_VOIDED -> "作废";
+            default -> value;
+        };
     }
 
     private void writeLog(FundingLedgerEntity ledger, String field, String oldValue, String newValue, Long operatorId, String remark) {
@@ -781,6 +1306,9 @@ public class FundingServiceImpl implements FundingService {
                               java.util.function.Consumer<BigDecimal> setter, Long operatorId, String remark) {
         if (newValue != null) {
             BigDecimal normalized = nz(newValue);
+            if (normalized.compareTo(BigDecimal.ZERO) < 0) {
+                throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "金额不能为负数");
+            }
             if (nz(oldValue).compareTo(normalized) != 0) {
                 writeLog(ledger, field, String.valueOf(nz(oldValue)), String.valueOf(normalized), operatorId, remark);
                 setter.accept(normalized);
@@ -827,5 +1355,30 @@ public class FundingServiceImpl implements FundingService {
     private ChangeLogResponse toChangeLogResponse(FundingLedgerChangeLogEntity e) {
         return new ChangeLogResponse(e.getId(), e.getLedgerId(), e.getFieldName(), e.getOldValue(), e.getNewValue(),
                 e.getOperatorId(), e.getOperatedAt(), e.getRemark());
+    }
+
+    private record ImportLedgerRow(
+            String customerName,
+            String phone,
+            String idCardNo,
+            String vehicleModel,
+            LocalDate pickupDate,
+            String paymentType,
+            BigDecimal purchaseCost,
+            BigDecimal incentiveAmount,
+            BigDecimal upstreamAmount,
+            BigDecimal totalCost,
+            BigDecimal retailPrice,
+            BigDecimal receivableAmount,
+            BigDecimal downPayment,
+            int installmentCount,
+            BigDecimal installmentAmount,
+            LocalDate firstDueDate,
+            String groupLeader,
+            String handlerName,
+            String addOnRemark,
+            String remark,
+            BigDecimal receivedAmount
+    ) {
     }
 }

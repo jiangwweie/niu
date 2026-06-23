@@ -10,6 +10,7 @@ import com.xiaoniu.aftermarket.funding.dto.FundingDtos.ApplicationResponse;
 import com.xiaoniu.aftermarket.funding.dto.FundingDtos.AttachmentResponse;
 import com.xiaoniu.aftermarket.funding.dto.FundingDtos.ContractResponse;
 import com.xiaoniu.aftermarket.funding.dto.FundingDtos.FundingDetailResponse;
+import com.xiaoniu.aftermarket.funding.dto.FundingDtos.FundingImportResultResponse;
 import com.xiaoniu.aftermarket.funding.dto.FundingDtos.FundingPaymentResponse;
 import com.xiaoniu.aftermarket.funding.dto.FundingDtos.FundingSummaryResponse;
 import com.xiaoniu.aftermarket.funding.dto.FundingDtos.LedgerResponse;
@@ -19,6 +20,7 @@ import com.xiaoniu.aftermarket.funding.dto.FundingDtos.SaveApplicationRequest;
 import com.xiaoniu.aftermarket.funding.dto.FundingDtos.SaveContractRequest;
 import com.xiaoniu.aftermarket.funding.dto.FundingDtos.UpdateLedgerRequest;
 import com.xiaoniu.aftermarket.funding.dto.FundingDtos.VoidContractRequest;
+import com.xiaoniu.aftermarket.export.dto.ExportFile;
 import com.xiaoniu.aftermarket.funding.service.FundingService;
 import jakarta.validation.Valid;
 import java.io.IOException;
@@ -27,6 +29,7 @@ import java.nio.charset.StandardCharsets;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -43,6 +46,9 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api/admin/funding")
 public class AdminFundingController {
 
+    private static final MediaType XLSX_MEDIA_TYPE = MediaType.parseMediaType(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+
     private final FundingService fundingService;
 
     public AdminFundingController(FundingService fundingService) {
@@ -50,7 +56,7 @@ public class AdminFundingController {
     }
 
     @GetMapping("/summary")
-    @PreAuthorize("hasAuthority('FUNDING_LEDGER_VIEW')")
+    @PreAuthorize("hasAnyAuthority('FUNDING_LEDGER_VIEW', 'FUNDING_PAYMENT_RECORD')")
     public ApiResponse<FundingSummaryResponse> summary() {
         CurrentUser user = requireCurrentUser();
         return ApiResponse.success(fundingService.summary(user.storeId()));
@@ -134,7 +140,7 @@ public class AdminFundingController {
     }
 
     @GetMapping("/ledgers")
-    @PreAuthorize("hasAuthority('FUNDING_LEDGER_VIEW')")
+    @PreAuthorize("hasAnyAuthority('FUNDING_LEDGER_VIEW', 'FUNDING_PAYMENT_RECORD')")
     public ApiResponse<PageResponse<LedgerResponse>> listLedgers(@RequestParam(required = false) String keyword,
                                                                  @RequestParam(required = false) String status,
                                                                  @RequestParam(defaultValue = "1") int pageNo,
@@ -144,10 +150,27 @@ public class AdminFundingController {
     }
 
     @GetMapping("/ledgers/{id}")
-    @PreAuthorize("hasAuthority('FUNDING_LEDGER_VIEW')")
+    @PreAuthorize("hasAnyAuthority('FUNDING_LEDGER_VIEW', 'FUNDING_PAYMENT_RECORD')")
     public ApiResponse<FundingDetailResponse> getLedger(@PathVariable Long id) {
         CurrentUser user = requireCurrentUser();
         return ApiResponse.success(fundingService.getLedgerDetail(user.storeId(), id));
+    }
+
+    @GetMapping("/ledgers/export")
+    @PreAuthorize("hasAuthority('FUNDING_EXPORT')")
+    public ResponseEntity<byte[]> exportLedgers(@RequestParam(required = false) String keyword,
+                                                @RequestParam(required = false) String status) {
+        CurrentUser user = requireCurrentUser();
+        ExportFile file = fundingService.exportLedgers(user.storeId(), keyword, status);
+        String encodedFilename = URLEncoder.encode(file.filename(), StandardCharsets.UTF_8)
+                .replace("+", "%20");
+        ContentDisposition disposition = ContentDisposition.attachment()
+                .filename(encodedFilename, StandardCharsets.UTF_8)
+                .build();
+        return ResponseEntity.ok()
+                .contentType(XLSX_MEDIA_TYPE)
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+                .body(file.content());
     }
 
     @PutMapping("/ledgers/{id}")
@@ -166,8 +189,19 @@ public class AdminFundingController {
         return ApiResponse.success(fundingService.recordPayment(user.storeId(), user.userId(), id, request));
     }
 
+    @PostMapping("/ledgers/import")
+    @PreAuthorize("hasAuthority('FUNDING_IMPORT')")
+    public ApiResponse<FundingImportResultResponse> importLedgers(@RequestParam MultipartFile file) throws IOException {
+        CurrentUser user = requireCurrentUser();
+        return ApiResponse.success(fundingService.importLedgers(user.storeId(), user.userId(), file));
+    }
+
     @PostMapping("/attachments")
-    @PreAuthorize("hasAnyAuthority('FUNDING_APPLICATION_MANAGE', 'FUNDING_CONTRACT_MANAGE', 'FUNDING_PAYMENT_RECORD')")
+    @PreAuthorize("""
+            (#ownerType == 'APPLICATION' and hasAuthority('FUNDING_APPLICATION_MANAGE')) or
+            (#ownerType == 'CONTRACT' and hasAuthority('FUNDING_CONTRACT_MANAGE')) or
+            (#ownerType == 'PAYMENT' and hasAuthority('FUNDING_PAYMENT_RECORD'))
+            """)
     public ApiResponse<AttachmentResponse> uploadAttachment(@RequestParam String ownerType,
                                                             @RequestParam Long ownerId,
                                                             @RequestParam String attachmentType,
@@ -178,7 +212,7 @@ public class AdminFundingController {
     }
 
     @GetMapping("/attachments/{id}/download")
-    @PreAuthorize("hasAnyAuthority('FUNDING_APPLICATION_VIEW', 'FUNDING_LEDGER_VIEW')")
+    @PreAuthorize("hasAnyAuthority('FUNDING_APPLICATION_VIEW', 'FUNDING_LEDGER_VIEW', 'FUNDING_PAYMENT_RECORD')")
     public ResponseEntity<Resource> downloadAttachment(@PathVariable Long id) {
         CurrentUser user = requireCurrentUser();
         Resource resource = fundingService.loadAttachment(user.storeId(), id);

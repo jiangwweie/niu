@@ -231,4 +231,15 @@ public final class FundingDtos {
             long overduePlanCount
     ) {
     }
+
+    public record FundingImportResultResponse(
+            Long batchId,
+            String batchNo,
+            String status,
+            int totalRows,
+            int successRows,
+            int failedRows,
+            List<String> errors
+    ) {
+    }
 }

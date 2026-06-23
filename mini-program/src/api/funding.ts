@@ -1,5 +1,5 @@
 import { request } from '../utils/request';
-import { API_MODE, BASE_URL } from '../utils/config';
+import { API_MODE, getBaseUrl } from '../utils/config';
 import { authStore } from '../stores/auth';
 import { PageResponse } from '../types/common';
 import { FundingApplication, FundingDetail, FundingLedger, SaveFundingApplicationRequest } from '../types/funding';
@@ -30,6 +30,14 @@ export const submitFundingApplication = (id: number) => {
   });
 };
 
+export const getFundingApplicationDetail = (id: number) => {
+  return request<FundingDetail>({
+    url: `/api/staff/funding/applications/${id}`,
+    method: 'GET',
+    showLoading: true
+  });
+};
+
 export const getFundingLedgers = (params?: any) => {
   return request<PageResponse<FundingLedger>>({
     url: '/api/staff/funding/ledgers',
@@ -43,6 +51,15 @@ export const getFundingLedgerDetail = (id: number) => {
   return request<FundingDetail>({
     url: `/api/staff/funding/ledgers/${id}`,
     method: 'GET',
+    showLoading: true
+  });
+};
+
+export const updateFundingLedger = (id: number, data: Partial<FundingLedger> & { changeRemark?: string }) => {
+  return request<FundingLedger>({
+    url: `/api/staff/funding/ledgers/${id}`,
+    method: 'PUT',
+    data,
     showLoading: true
   });
 };
@@ -69,7 +86,7 @@ export const uploadFundingAttachment = (data: { ownerType: string; ownerId: numb
   return new Promise<any>((resolve, reject) => {
     wx.showLoading({ title: '上传中...', mask: true });
     wx.uploadFile({
-      url: `${BASE_URL}/api/staff/funding/attachments`,
+      url: `${getBaseUrl()}/api/staff/funding/attachments`,
       filePath: data.filePath,
       name: 'file',
       header: authStore.accessToken ? { Authorization: `Bearer ${authStore.accessToken}` } : {},
@@ -94,6 +111,43 @@ export const uploadFundingAttachment = (data: { ownerType: string; ownerId: numb
         } catch {
           reject(new Error('附件上传响应异常'));
         }
+      },
+      fail: reject,
+      complete: () => wx.hideLoading()
+    });
+  });
+};
+
+export const downloadFundingAttachment = (id: number, filename?: string) => {
+  if (API_MODE === 'mock') {
+    return Promise.resolve();
+  }
+  return new Promise<void>((resolve, reject) => {
+    wx.showLoading({ title: '打开中...', mask: true });
+    wx.downloadFile({
+      url: `${getBaseUrl()}/api/staff/funding/attachments/${id}/download`,
+      header: authStore.accessToken ? { Authorization: `Bearer ${authStore.accessToken}` } : {},
+      success: (res) => {
+        if (res.statusCode < 200 || res.statusCode >= 300) {
+          reject(new Error('附件下载失败'));
+          return;
+        }
+        const ext = filename?.split('.').pop()?.toLowerCase();
+        const fileType = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'pdf'].includes(ext || '')
+          ? ext as 'doc' | 'docx' | 'xls' | 'xlsx' | 'ppt' | 'pptx' | 'pdf'
+          : undefined;
+        if (!fileType) {
+          wx.showToast({ title: '文件已下载，当前格式不支持预览', icon: 'none' });
+          resolve();
+          return;
+        }
+        wx.openDocument({
+          filePath: res.tempFilePath,
+          fileType,
+          showMenu: true,
+          success: () => resolve(),
+          fail: reject
+        });
       },
       fail: reject,
       complete: () => wx.hideLoading()

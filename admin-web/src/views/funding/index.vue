@@ -1,6 +1,6 @@
 <template>
   <PageContainer title="资方台账" description="内部资料审核、线下合同留存、应收台账和收款维护">
-    <div class="summary-row">
+    <div v-if="canViewSummary" class="summary-row">
       <el-card v-for="item in summaryCards" :key="item.label" shadow="never" class="summary-card">
         <div class="summary-label">{{ item.label }}</div>
         <div class="summary-value">{{ item.value }}</div>
@@ -9,18 +9,20 @@
 
     <el-card shadow="never" class="main-card">
       <el-tabs v-model="activeTab" @tab-change="handleTabChange">
-        <el-tab-pane label="资料申请" name="applications">
+        <el-tab-pane v-if="canUseApplicationTab" label="资料申请" name="applications">
           <div class="toolbar">
-            <el-input v-model="applicationQuery.keyword" placeholder="搜索姓名、电话、车型、组长" clearable style="width: 260px" @keyup.enter="loadApplications" />
-            <el-select v-model="applicationQuery.status" placeholder="状态" clearable style="width: 180px">
+            <el-input v-if="canViewApplications" v-model="applicationQuery.keyword" placeholder="搜索姓名、电话、车型、组长" clearable style="width: 260px" @keyup.enter="loadApplications" />
+            <el-select v-if="canViewApplications" v-model="applicationQuery.status" placeholder="状态" clearable style="width: 180px">
               <el-option v-for="item in applicationStatusOptions" :key="item.value" :label="item.label" :value="item.value" />
             </el-select>
-            <el-button type="primary" @click="loadApplications">查询</el-button>
-            <el-button @click="resetApplicationQuery">重置</el-button>
-            <el-button type="success" @click="openApplicationDialog()">新增资料</el-button>
+            <el-button v-if="canViewApplications" type="primary" @click="loadApplications">查询</el-button>
+            <el-button v-if="canViewApplications" @click="resetApplicationQuery">重置</el-button>
+            <el-button v-if="hasPermission('FUNDING_APPLICATION_MANAGE')" type="success" @click="openApplicationDialog()">新增资料</el-button>
+            <el-button v-if="hasPermission('FUNDING_IMPORT')" type="warning" :loading="importLoading" @click="triggerImport">导入台账</el-button>
+            <input ref="importInputRef" class="hidden-input" type="file" accept=".xlsx" @change="handleImportFile" />
           </div>
 
-          <el-table v-loading="applicationLoading" :data="applications" border style="width: 100%; min-width: 1180px">
+          <el-table v-if="canViewApplications" v-loading="applicationLoading" :data="applications" border style="width: 100%; min-width: 1180px">
             <el-table-column prop="applicationNo" label="申请单号" width="150" />
             <el-table-column prop="customerName" label="客户" width="110" />
             <el-table-column prop="phone" label="电话" width="130" />
@@ -39,15 +41,16 @@
             <el-table-column label="操作" width="310" fixed="right">
               <template #default="{ row }">
                 <el-button link type="primary" @click="openDetail(row.id, 'application')">详情</el-button>
-                <el-button v-if="canEditApplication(row.status)" link type="primary" @click="openApplicationDialog(row)">编辑</el-button>
-                <el-button v-if="row.status === 'DRAFT' || row.status === 'REJECTED'" link type="success" @click="submitApplication(row.id)">提交</el-button>
-                <el-button v-if="row.status === 'PENDING_AUDIT'" link type="success" @click="approveApplication(row.id)">同意</el-button>
-                <el-button v-if="row.status === 'PENDING_AUDIT'" link type="danger" @click="rejectApplication(row.id)">不同意</el-button>
-                <el-button v-if="row.status === 'CONTRACT_PENDING' || row.status === 'APPROVED'" link type="warning" @click="openContractDialog(row)">合同</el-button>
+                <el-button v-if="hasPermission('FUNDING_APPLICATION_MANAGE') && canEditApplication(row.status)" link type="primary" @click="openApplicationDialog(row)">编辑</el-button>
+                <el-button v-if="hasPermission('FUNDING_APPLICATION_MANAGE') && (row.status === 'DRAFT' || row.status === 'REJECTED')" link type="success" @click="submitApplication(row.id)">提交</el-button>
+                <el-button v-if="hasPermission('FUNDING_APPLICATION_AUDIT') && row.status === 'PENDING_AUDIT'" link type="success" @click="approveApplication(row.id)">同意</el-button>
+                <el-button v-if="hasPermission('FUNDING_APPLICATION_AUDIT') && row.status === 'PENDING_AUDIT'" link type="danger" @click="rejectApplication(row.id)">不同意</el-button>
+                <el-button v-if="hasPermission('FUNDING_CONTRACT_MANAGE') && (row.status === 'CONTRACT_PENDING' || row.status === 'APPROVED')" link type="warning" @click="openContractDialog(row)">合同</el-button>
               </template>
             </el-table-column>
           </el-table>
           <el-pagination
+            v-if="canViewApplications"
             class="pager"
             layout="total, sizes, prev, pager, next"
             :total="applicationTotal"
@@ -58,17 +61,18 @@
           />
         </el-tab-pane>
 
-        <el-tab-pane label="正式台账" name="ledgers">
+        <el-tab-pane v-if="canUseLedgerTab" label="正式台账" name="ledgers">
           <div class="toolbar">
             <el-input v-model="ledgerQuery.keyword" placeholder="搜索台账号、姓名、电话、车型" clearable style="width: 260px" @keyup.enter="loadLedgers" />
             <el-select v-model="ledgerQuery.status" placeholder="状态" clearable style="width: 180px">
               <el-option v-for="item in ledgerStatusOptions" :key="item.value" :label="item.label" :value="item.value" />
             </el-select>
-            <el-button type="primary" @click="loadLedgers">查询</el-button>
-            <el-button @click="resetLedgerQuery">重置</el-button>
+            <el-button v-if="canViewLedgers" type="primary" @click="loadLedgers">查询</el-button>
+            <el-button v-if="canViewLedgers" @click="resetLedgerQuery">重置</el-button>
+            <el-button v-if="hasPermission('FUNDING_EXPORT')" type="success" :loading="exportLoading" @click="exportLedgers">导出台账</el-button>
           </div>
 
-          <el-table v-loading="ledgerLoading" :data="ledgers" border style="width: 100%; min-width: 1180px">
+          <el-table v-if="canViewLedgers" v-loading="ledgerLoading" :data="ledgers" border style="width: 100%; min-width: 1180px">
             <el-table-column prop="ledgerNo" label="台账编号" width="150" />
             <el-table-column prop="customerName" label="客户" width="110" />
             <el-table-column prop="phone" label="电话" width="130" />
@@ -89,12 +93,13 @@
             <el-table-column label="操作" width="210" fixed="right">
               <template #default="{ row }">
                 <el-button link type="primary" @click="openDetail(row.id, 'ledger')">详情</el-button>
-                <el-button link type="primary" @click="openLedgerDialog(row)">修改</el-button>
-                <el-button link type="success" @click="openPaymentDialog(row)">收款</el-button>
+                <el-button v-if="hasPermission('FUNDING_LEDGER_MANAGE')" link type="primary" @click="openLedgerDialog(row)">修改</el-button>
+                <el-button v-if="hasPermission('FUNDING_PAYMENT_RECORD')" link type="success" @click="openPaymentDialog(row)">收款</el-button>
               </template>
             </el-table-column>
           </el-table>
           <el-pagination
+            v-if="canViewLedgers"
             class="pager"
             layout="total, sizes, prev, pager, next"
             :total="ledgerTotal"
@@ -159,15 +164,30 @@
         <el-button @click="contractDialog.visible = false">取消</el-button>
         <el-button type="primary" :loading="saving" @click="saveContract">保存合同</el-button>
         <el-button type="success" :disabled="!contractDialog.contractId" :loading="saving" @click="confirmContract">确认并生成台账</el-button>
+        <el-button v-if="contractDialog.contractId" type="danger" :loading="saving" @click="voidContract">作废合同</el-button>
       </template>
     </el-dialog>
 
-    <el-dialog v-model="ledgerDialog.visible" title="修改台账" width="640px">
+    <el-dialog v-model="ledgerDialog.visible" title="修改台账" width="760px">
       <el-form :model="ledgerDialog.form" label-width="100px" class="two-col-form">
         <el-form-item label="客户姓名"><el-input v-model="ledgerDialog.form.customerName" /></el-form-item>
         <el-form-item label="电话"><el-input v-model="ledgerDialog.form.phone" /></el-form-item>
+        <el-form-item label="身份证号"><el-input v-model="ledgerDialog.form.idCardNo" /></el-form-item>
         <el-form-item label="车型"><el-input v-model="ledgerDialog.form.vehicleModel" /></el-form-item>
+        <el-form-item label="提车日期"><el-date-picker v-model="ledgerDialog.form.pickupDate" value-format="YYYY-MM-DD" type="date" /></el-form-item>
+        <el-form-item label="付款方式">
+          <el-select v-model="ledgerDialog.form.paymentType">
+            <el-option label="全款" value="FULL" />
+            <el-option label="分期" value="INSTALLMENT" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="进货成本"><el-input-number v-model="ledgerDialog.form.purchaseCost" :precision="2" :min="0" /></el-form-item>
+        <el-form-item label="激励"><el-input-number v-model="ledgerDialog.form.incentiveAmount" :precision="2" :min="0" /></el-form-item>
+        <el-form-item label="上级费用"><el-input-number v-model="ledgerDialog.form.upstreamAmount" :precision="2" :min="0" /></el-form-item>
+        <el-form-item label="总计成本"><el-input-number v-model="ledgerDialog.form.totalCost" :precision="2" :min="0" /></el-form-item>
+        <el-form-item label="零售价格"><el-input-number v-model="ledgerDialog.form.retailPrice" :precision="2" :min="0" /></el-form-item>
         <el-form-item label="组长"><el-input v-model="ledgerDialog.form.groupLeader" /></el-form-item>
+        <el-form-item label="经办人"><el-input v-model="ledgerDialog.form.handlerName" /></el-form-item>
         <el-form-item label="应收"><el-input-number v-model="ledgerDialog.form.receivableAmount" :precision="2" :min="0" /></el-form-item>
         <el-form-item label="状态">
           <el-select v-model="ledgerDialog.form.status">
@@ -261,7 +281,7 @@
         </el-table>
 
         <h3 class="section-title">附件留存</h3>
-        <div class="upload-line">
+        <div v-if="canUploadAttachment" class="upload-line">
           <el-select v-model="uploadForm.ownerType" style="width: 150px">
             <el-option label="申请资料" value="APPLICATION" />
             <el-option label="合同" value="CONTRACT" />
@@ -317,11 +337,13 @@ import {
   confirmFundingContract,
   createFundingApplication,
   downloadFundingAttachment,
+  exportFundingLedgers,
   getFundingApplicationDetail,
   getFundingApplications,
   getFundingLedgerDetail,
   getFundingLedgers,
   getFundingSummary,
+  importFundingLedgers,
   recordFundingPayment,
   rejectFundingApplication,
   saveFundingContract,
@@ -329,13 +351,18 @@ import {
   updateFundingApplication,
   updateFundingLedger,
   uploadFundingAttachment,
+  voidFundingContract,
 } from '@/api/funding';
+import { hasPermission } from '@/utils/permission';
 import type { FundingApplication, FundingDetail, FundingLedger, SaveFundingApplicationBody } from '@/types/funding';
 
 const activeTab = ref('applications');
 const saving = ref(false);
+const exportLoading = ref(false);
+const importLoading = ref(false);
 const applicationLoading = ref(false);
 const ledgerLoading = ref(false);
+const importInputRef = ref<HTMLInputElement | null>(null);
 const applications = ref<FundingApplication[]>([]);
 const ledgers = ref<FundingLedger[]>([]);
 const applicationTotal = ref(0);
@@ -389,6 +416,28 @@ const ledgerDialog = reactive({ visible: false, form: {} as Partial<FundingLedge
 const paymentDialog = reactive({ visible: false, ledgerId: 0, form: { installmentPlanId: undefined as number | undefined, amount: 0, paymentMethod: 'WECHAT', paidAt: '', remark: '' } });
 const detail = reactive({ visible: false, mode: 'application', id: 0, data: null as FundingDetail | null, installmentPlans: [] as FundingDetail['installmentPlans'] });
 const uploadForm = reactive({ ownerType: 'APPLICATION', attachmentType: 'ID_CARD', file: null as File | null });
+const canUploadAttachment = computed(() =>
+  hasPermission('FUNDING_APPLICATION_MANAGE') ||
+  hasPermission('FUNDING_CONTRACT_MANAGE') ||
+  hasPermission('FUNDING_PAYMENT_RECORD')
+);
+const canViewApplications = computed(() => hasPermission('FUNDING_APPLICATION_VIEW'));
+const canViewLedgers = computed(() =>
+  hasPermission('FUNDING_LEDGER_VIEW') ||
+  hasPermission('FUNDING_PAYMENT_RECORD')
+);
+const canViewSummary = canViewLedgers;
+const canUseApplicationTab = computed(() =>
+  canViewApplications.value ||
+  hasPermission('FUNDING_APPLICATION_MANAGE') ||
+  hasPermission('FUNDING_APPLICATION_AUDIT') ||
+  hasPermission('FUNDING_CONTRACT_MANAGE') ||
+  hasPermission('FUNDING_IMPORT')
+);
+const canUseLedgerTab = computed(() =>
+  canViewLedgers.value ||
+  hasPermission('FUNDING_EXPORT')
+);
 
 const summaryCards = computed(() => [
   { label: '资料申请', value: summary.value.applicationCount },
@@ -400,14 +449,19 @@ const summaryCards = computed(() => [
 ]);
 
 onMounted(async () => {
-  await Promise.all([loadSummary(), loadApplications(), loadLedgers()]);
+  if (!canUseApplicationTab.value && canUseLedgerTab.value) {
+    activeTab.value = 'ledgers';
+  }
+  await refreshFundingPage();
 });
 
 async function loadSummary() {
+  if (!canViewSummary.value) return;
   summary.value = await getFundingSummary();
 }
 
 async function loadApplications() {
+  if (!canViewApplications.value) return;
   applicationLoading.value = true;
   try {
     const page = await getFundingApplications(applicationQuery);
@@ -419,6 +473,7 @@ async function loadApplications() {
 }
 
 async function loadLedgers() {
+  if (!canViewLedgers.value) return;
   ledgerLoading.value = true;
   try {
     const page = await getFundingLedgers(ledgerQuery);
@@ -440,11 +495,20 @@ function resetLedgerQuery() {
   ledgerQuery.keyword = '';
   ledgerQuery.status = '';
   ledgerQuery.pageNo = 1;
-  loadLedgers();
+  if (canViewLedgers.value) loadLedgers();
 }
 
 function handleTabChange() {
-  if (activeTab.value === 'ledgers') loadLedgers();
+  if (activeTab.value === 'applications' && canViewApplications.value) loadApplications();
+  if (activeTab.value === 'ledgers' && canViewLedgers.value) loadLedgers();
+}
+
+async function refreshFundingPage() {
+  const tasks: Promise<unknown>[] = [];
+  if (canViewSummary.value) tasks.push(loadSummary());
+  if (canViewApplications.value) tasks.push(loadApplications());
+  if (canViewLedgers.value) tasks.push(loadLedgers());
+  await Promise.all(tasks);
 }
 
 function openApplicationDialog(row?: FundingApplication) {
@@ -460,7 +524,7 @@ async function saveApplication() {
     else await createFundingApplication(form);
     ElMessage.success('资料已保存');
     applicationDialog.visible = false;
-    await Promise.all([loadSummary(), loadApplications()]);
+    await refreshFundingPage();
   } finally {
     saving.value = false;
   }
@@ -520,7 +584,20 @@ async function confirmContract() {
     await confirmFundingContract(contractDialog.contractId);
     ElMessage.success('合同已确认，台账已生成');
     contractDialog.visible = false;
-    await Promise.all([loadSummary(), loadApplications(), loadLedgers()]);
+    await refreshFundingPage();
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function voidContract() {
+  const { value } = await ElMessageBox.prompt('请输入作废原因', '作废合同', { inputPattern: /.+/, inputErrorMessage: '原因不能为空' });
+  saving.value = true;
+  try {
+    await voidFundingContract(contractDialog.contractId, value);
+    ElMessage.success('合同已作废');
+    contractDialog.visible = false;
+    await loadApplications();
   } finally {
     saving.value = false;
   }
@@ -545,7 +622,7 @@ async function saveLedger() {
     await updateFundingLedger(ledgerDialog.form.id!, ledgerDialog.form);
     ElMessage.success('台账已修改');
     ledgerDialog.visible = false;
-    await Promise.all([loadSummary(), loadLedgers()]);
+    await refreshFundingPage();
   } finally {
     saving.value = false;
   }
@@ -565,9 +642,40 @@ async function savePayment() {
     await recordFundingPayment(paymentDialog.ledgerId, paymentDialog.form);
     ElMessage.success('收款已登记');
     paymentDialog.visible = false;
-    await Promise.all([loadSummary(), loadLedgers()]);
+    await refreshFundingPage();
   } finally {
     saving.value = false;
+  }
+}
+
+async function exportLedgers() {
+  exportLoading.value = true;
+  try {
+    await exportFundingLedgers(ledgerQuery);
+    ElMessage.success('导出成功');
+  } finally {
+    exportLoading.value = false;
+  }
+}
+
+function triggerImport() {
+  importInputRef.value?.click();
+}
+
+async function handleImportFile(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = '';
+  if (!file) return;
+  importLoading.value = true;
+  try {
+    const data = new FormData();
+    data.append('file', file);
+    const result: any = await importFundingLedgers(data);
+    ElMessage.success(`导入完成：成功 ${result.successRows || 0} 行，失败 ${result.failedRows || 0} 行`);
+    await refreshFundingPage();
+  } finally {
+    importLoading.value = false;
   }
 }
 
@@ -604,7 +712,7 @@ function canEditApplication(status: string) {
 }
 
 function paymentTypeLabel(value: string) {
-  return value === 'FULL' ? '全款' : value === 'INSTALLMENT' ? '分期' : value;
+  return value === 'FULL' ? '全款' : value === 'INSTALLMENT' ? '分期' : '未知付款方式';
 }
 
 function contractTypeLabel(value: string) {
@@ -615,7 +723,7 @@ function contractTypeLabel(value: string) {
     OFFLINE_UPLOAD: '线下合同',
     OTHER: '其他',
   };
-  return map[value] || value || '-';
+  return map[value] || '未知合同类型';
 }
 
 function contractStatusLabel(value: string) {
@@ -625,7 +733,7 @@ function contractStatusLabel(value: string) {
     CONFIRMED: '已确认',
     VOIDED: '已作废',
   };
-  return map[value] || value || '-';
+  return map[value] || '未知合同状态';
 }
 
 function applicationStatusLabel(value: string) {
@@ -639,7 +747,7 @@ function applicationStatusLabel(value: string) {
     LEDGER_CREATED: '已生成台账',
     VOIDED: '作废',
   };
-  return map[value] || value;
+  return map[value] || '未知资料状态';
 }
 
 function installmentStatusLabel(value: string) {
@@ -649,7 +757,7 @@ function installmentStatusLabel(value: string) {
     PAID: '已收齐',
     OVERDUE: '已逾期',
   };
-  return map[value] || value || '-';
+  return map[value] || '未知收款状态';
 }
 
 function ledgerStatusLabel(value: string) {
@@ -661,7 +769,7 @@ function ledgerStatusLabel(value: string) {
     ABNORMAL: '异常',
     VOIDED: '作废',
   };
-  return map[value] || value;
+  return map[value] || '未知台账状态';
 }
 
 function paymentMethodLabel(value: string) {
@@ -672,7 +780,7 @@ function paymentMethodLabel(value: string) {
     TRANSFER: '转账',
     OTHER: '其他',
   };
-  return map[value] || value || '-';
+  return map[value] || '未知收款方式';
 }
 
 function attachmentTypeLabel(value: string) {
@@ -683,7 +791,7 @@ function attachmentTypeLabel(value: string) {
     VEHICLE: '车辆资料',
     OTHER: '其他资料',
   };
-  return map[value] || value || '-';
+  return map[value] || '未知附件类型';
 }
 
 function changeFieldLabel(value: string) {
@@ -707,7 +815,7 @@ function changeFieldLabel(value: string) {
     status: '状态',
     remark: '备注',
   };
-  return map[value] || value || '-';
+  return map[value] || '未知字段';
 }
 
 function changeValueLabel(fieldName: string, value?: string | null) {
@@ -799,5 +907,9 @@ function ledgerStatusType(value: string) {
   align-items: center;
   gap: 10px;
   margin-bottom: 10px;
+}
+
+.hidden-input {
+  display: none;
 }
 </style>

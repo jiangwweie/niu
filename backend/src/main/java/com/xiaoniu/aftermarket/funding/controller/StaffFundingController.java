@@ -13,9 +13,16 @@ import com.xiaoniu.aftermarket.funding.dto.FundingDtos.FundingPaymentResponse;
 import com.xiaoniu.aftermarket.funding.dto.FundingDtos.LedgerResponse;
 import com.xiaoniu.aftermarket.funding.dto.FundingDtos.RecordFundingPaymentRequest;
 import com.xiaoniu.aftermarket.funding.dto.FundingDtos.SaveApplicationRequest;
+import com.xiaoniu.aftermarket.funding.dto.FundingDtos.UpdateLedgerRequest;
 import com.xiaoniu.aftermarket.funding.service.FundingService;
 import jakarta.validation.Valid;
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -77,7 +84,7 @@ public class StaffFundingController {
     }
 
     @GetMapping("/ledgers")
-    @PreAuthorize("hasAuthority('FUNDING_LEDGER_VIEW')")
+    @PreAuthorize("hasAnyAuthority('FUNDING_LEDGER_VIEW', 'FUNDING_PAYMENT_RECORD')")
     public ApiResponse<PageResponse<LedgerResponse>> listLedgers(@RequestParam(required = false) String keyword,
                                                                  @RequestParam(required = false) String status,
                                                                  @RequestParam(defaultValue = "1") int pageNo,
@@ -87,10 +94,18 @@ public class StaffFundingController {
     }
 
     @GetMapping("/ledgers/{id}")
-    @PreAuthorize("hasAuthority('FUNDING_LEDGER_VIEW')")
+    @PreAuthorize("hasAnyAuthority('FUNDING_LEDGER_VIEW', 'FUNDING_PAYMENT_RECORD')")
     public ApiResponse<FundingDetailResponse> getLedger(@PathVariable Long id) {
         CurrentUser user = requireCurrentUser();
         return ApiResponse.success(fundingService.getLedgerDetail(user.storeId(), id));
+    }
+
+    @PutMapping("/ledgers/{id}")
+    @PreAuthorize("hasAuthority('FUNDING_LEDGER_MANAGE')")
+    public ApiResponse<LedgerResponse> updateLedger(@PathVariable Long id,
+                                                    @RequestBody UpdateLedgerRequest request) {
+        CurrentUser user = requireCurrentUser();
+        return ApiResponse.success(fundingService.updateLedger(user.storeId(), user.userId(), id, request));
     }
 
     @PostMapping("/ledgers/{id}/payments")
@@ -102,7 +117,11 @@ public class StaffFundingController {
     }
 
     @PostMapping("/attachments")
-    @PreAuthorize("hasAnyAuthority('FUNDING_APPLICATION_MANAGE', 'FUNDING_PAYMENT_RECORD')")
+    @PreAuthorize("""
+            (#ownerType == 'APPLICATION' and hasAuthority('FUNDING_APPLICATION_MANAGE')) or
+            (#ownerType == 'CONTRACT' and hasAuthority('FUNDING_CONTRACT_MANAGE')) or
+            (#ownerType == 'PAYMENT' and hasAuthority('FUNDING_PAYMENT_RECORD'))
+            """)
     public ApiResponse<AttachmentResponse> uploadAttachment(@RequestParam String ownerType,
                                                             @RequestParam Long ownerId,
                                                             @RequestParam String attachmentType,
@@ -110,6 +129,19 @@ public class StaffFundingController {
                                                             @RequestParam MultipartFile file) throws IOException {
         CurrentUser user = requireCurrentUser();
         return ApiResponse.success(fundingService.uploadAttachment(user.storeId(), user.userId(), ownerType, ownerId, attachmentType, file, remark));
+    }
+
+    @GetMapping("/attachments/{id}/download")
+    @PreAuthorize("hasAnyAuthority('FUNDING_APPLICATION_VIEW', 'FUNDING_LEDGER_VIEW', 'FUNDING_PAYMENT_RECORD')")
+    public ResponseEntity<Resource> downloadAttachment(@PathVariable Long id) {
+        CurrentUser user = requireCurrentUser();
+        Resource resource = fundingService.loadAttachment(user.storeId(), id);
+        String encoded = URLEncoder.encode(fundingService.attachmentFilename(user.storeId(), id), StandardCharsets.UTF_8)
+                .replace("+", "%20");
+        ContentDisposition disposition = ContentDisposition.attachment().filename(encoded, StandardCharsets.UTF_8).build();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+                .body(resource);
     }
 
     private CurrentUser requireCurrentUser() {

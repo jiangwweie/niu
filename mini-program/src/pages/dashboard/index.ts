@@ -34,7 +34,13 @@ Page({
       hasCreateOrderPermission: hasPermission('WORK_ORDER_CREATE'),
       hasInboundPermission: hasPermission('INVENTORY_INBOUND'),
       hasReimbursementPermission: hasPermission('REIMBURSEMENT_SUBMIT'),
-      hasFundingPermission: hasPermission('FUNDING_APPLICATION_VIEW') || hasPermission('FUNDING_LEDGER_VIEW')
+      hasFundingPermission: [
+        'FUNDING_APPLICATION_VIEW',
+        'FUNDING_APPLICATION_MANAGE',
+        'FUNDING_LEDGER_VIEW',
+        'FUNDING_LEDGER_MANAGE',
+        'FUNDING_PAYMENT_RECORD'
+      ].some(code => hasPermission(code))
     });
   },
   goToCreateOrder() {
