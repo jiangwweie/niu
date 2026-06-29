@@ -1,5 +1,6 @@
 import axios, { AxiosError, AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios';
 import { ElMessage } from 'element-plus';
+import { useAuthStore } from '@/stores/auth';
 import { getFriendlyErrorMessage } from './statusText';
 
 const request = axios.create({
@@ -7,7 +8,7 @@ const request = axios.create({
   timeout: 15000,
 });
 
-const AUTH_FREE_PATHS = ['/api/auth/login/password'];
+const AUTH_FREE_PATHS = ['/api/auth/login/password', '/api/auth/captcha'];
 
 function getRequestPath(config: AxiosRequestConfig) {
   const url = config.url || '';
@@ -17,6 +18,19 @@ function getRequestPath(config: AxiosRequestConfig) {
   } catch {
     return url.split('?')[0];
   }
+}
+
+function clearClientAuth() {
+  localStorage.removeItem('accessToken');
+  try {
+    useAuthStore().clearAuth();
+  } catch {
+    // Pinia may not be active during early module initialization.
+  }
+}
+
+function currentFullPath() {
+  return `${window.location.pathname}${window.location.search}${window.location.hash}`;
 }
 
 // Remove hardcoded X-User-Id and use JWT
@@ -48,12 +62,25 @@ request.interceptors.response.use(
     return Promise.reject(err);
   },
   async (error: AxiosError<{ code?: string; message?: string }>) => {
+    const requestPath = getRequestPath(error.config || {});
+    const isAuthFreeRequest = AUTH_FREE_PATHS.includes(requestPath);
     if (error.response?.status === 401) {
-      localStorage.removeItem('accessToken');
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+      clearClientAuth();
+      const data = error.response?.data as any;
+      const msg = requestPath === '/api/auth/login/password'
+        ? '账号或密码不正确，或账号已停用'
+        : (data?.message || getFriendlyErrorMessage('UNAUTHORIZED'));
+      error.message = msg;
+
+      if (isAuthFreeRequest) {
+        ElMessage.error(msg);
+        return Promise.reject(error);
       }
-      error.message = getFriendlyErrorMessage('UNAUTHORIZED');
+
+      if (window.location.pathname !== '/login') {
+        ElMessage.warning(getFriendlyErrorMessage('UNAUTHORIZED'));
+        window.location.href = '/login?redirect=' + encodeURIComponent(currentFullPath());
+      }
       return Promise.reject(error);
     }
     if (error.response?.status === 403) {

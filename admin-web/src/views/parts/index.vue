@@ -49,6 +49,11 @@
         </div>
         <div class="toolbar-right">
           <el-button v-if="hasPermission('PART_MANAGE')" type="success" @click="openAddDialog">新增配件</el-button>
+          <el-tooltip v-else content="新增配件需要 PART_MANAGE 权限，请使用门店管理员账号或调整角色权限。" placement="top">
+            <span>
+              <el-button type="success" disabled>新增配件</el-button>
+            </span>
+          </el-tooltip>
         </div>
       </div>
 
@@ -282,7 +287,7 @@
 import { ref, reactive, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import JsBarcode from 'jsbarcode';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import PageContainer from '@/components/PageContainer.vue';
 import MoneyText from '@/components/MoneyText.vue';
 import { hasPermission } from '@/utils/permission';
@@ -301,6 +306,7 @@ import {
 import type { PartViewRecord } from '@/api/parts';
 
 const router = useRouter();
+const route = useRoute();
 
 // 查询参数
 const queryParams = reactive({
@@ -720,6 +726,13 @@ const printBarcode = (row: PartViewRecord) => {
 
 onMounted(() => {
   fetchData();
+  if (route.query.action === 'create') {
+    if (hasPermission('PART_MANAGE')) {
+      openAddDialog();
+    } else {
+      ElMessage.warning('当前账号没有新增配件权限，请使用门店管理员账号或调整角色权限');
+    }
+  }
 });
 </script>
 

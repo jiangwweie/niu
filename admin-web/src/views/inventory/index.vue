@@ -44,7 +44,18 @@
           <span class="table-title">库存台账列表</span>
         </div>
         <div class="toolbar-right">
+          <el-button v-if="canCreatePart" type="primary" plain @click="goToCreatePart">新增配件</el-button>
+          <el-tooltip v-else content="新增配件需要 PART_MANAGE 权限，请使用门店管理员账号或调整角色权限。" placement="top">
+            <span>
+              <el-button type="primary" plain disabled>新增配件</el-button>
+            </span>
+          </el-tooltip>
           <el-button v-if="hasPermission('INVENTORY_INBOUND')" type="success" @click="handleInbound">配件入库</el-button>
+          <el-tooltip v-else content="配件入库需要 INVENTORY_INBOUND 权限。" placement="top">
+            <span>
+              <el-button type="success" disabled>配件入库</el-button>
+            </span>
+          </el-tooltip>
         </div>
       </div>
 
@@ -138,7 +149,10 @@
           class="dialog-alert"
         >
           <template #default>
-            <el-button type="primary" link @click="goToPartsPage">去新增配件</el-button>
+            <template v-if="canCreatePart">
+              <el-button type="primary" link @click="goToCreatePart">去新增配件</el-button>
+            </template>
+            <span v-else>当前账号可入库已有配件，但新增配件需要 PART_MANAGE 权限，请联系门店管理员处理。</span>
           </template>
         </el-alert>
         <el-form-item v-if="inboundDialog.lockPart" label="配件" required>
@@ -278,7 +292,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { computed, ref, reactive, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { useRoute, useRouter } from 'vue-router';
 import PageContainer from '@/components/PageContainer.vue';
@@ -313,6 +327,7 @@ const queryParams = reactive<InventoryQuery>({
 const loading = ref(false);
 const tableData = ref<InventoryRecord[]>([]);
 const total = ref(0);
+const canCreatePart = computed(() => hasPermission('PART_MANAGE'));
 
 const isOfficialSource = (source?: string) => String(source || '').toUpperCase() === 'OFFICIAL';
 const getInventoryStateTagType = (code?: string) => {
@@ -453,9 +468,9 @@ const handlePartSelectorVisibleChange = (visible: boolean) => {
   }
 };
 
-const goToPartsPage = () => {
+const goToCreatePart = () => {
   inboundDialog.visible = false;
-  router.push('/parts');
+  router.push({ path: '/parts', query: { action: 'create' } });
 };
 
 const openInboundDialog = (row: InventoryRecord) => {

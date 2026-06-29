@@ -64,7 +64,7 @@ export const getFriendlyErrorMessage = (code?: string, message?: string) => {
     PAYMENT_EXCEEDS_RECEIVABLE: '收款金额超过待收金额。',
     REFUND_EXCEEDS_PAID_AMOUNT: '退款金额超过可退金额。',
     FORBIDDEN: '当前账号无权操作。',
-    UNAUTHORIZED: '登录已过期，请重新登录。',
+    UNAUTHORIZED: '登录状态已失效，请重新登录。',
   };
   return (code && map[code]) || message || '请求失败';
 };
