@@ -60,6 +60,8 @@ MERGE INTO sys_permission (id, permission_code, permission_name, module_code, st
 MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1029, 'USER_MANAGE', '用户管理', 'USER', 'ENABLED');
 MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1031, 'PLATFORM_MANAGE', '平台管理', 'PLATFORM', 'ENABLED');
 MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1032, 'REFUND_AFTER_DELIVERY', '交付后退款', 'PAYMENT', 'ENABLED');
+MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1035, 'PART_VIEW', '配件查看', 'PART', 'ENABLED');
+MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1036, 'WORK_ORDER_VIEW', '工单查看', 'WORK_ORDER', 'ENABLED');
 
 -- user-role relations
 MERGE INTO sys_user_role (id, user_id, role_id) KEY (user_id, role_id) VALUES (1, 1, 1);
@@ -183,3 +185,29 @@ MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permis
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (3116, 105, 1046);
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (3117, 105, 1047);
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (3118, 105, 1048);
+
+-- Normalize administrator roles in test data: SUPER_ADMIN = all permissions, STORE_ADMIN = all store-grantable permissions.
+INSERT INTO sys_role_permission (role_id, permission_id)
+SELECT r.id, p.id
+FROM sys_role r
+JOIN sys_permission p ON p.status = 'ENABLED'
+WHERE r.role_code = 'SUPER_ADMIN'
+  AND r.status = 'ENABLED'
+  AND p.permission_code NOT LIKE '%:%'
+  AND NOT EXISTS (
+      SELECT 1 FROM sys_role_permission rp
+      WHERE rp.role_id = r.id AND rp.permission_id = p.id
+  );
+
+INSERT INTO sys_role_permission (role_id, permission_id)
+SELECT r.id, p.id
+FROM sys_role r
+JOIN sys_permission p ON p.status = 'ENABLED'
+WHERE r.role_code = 'STORE_ADMIN'
+  AND r.status = 'ENABLED'
+  AND p.permission_code <> 'PLATFORM_MANAGE'
+  AND p.permission_code NOT LIKE '%:%'
+  AND NOT EXISTS (
+      SELECT 1 FROM sys_role_permission rp
+      WHERE rp.role_id = r.id AND rp.permission_id = p.id
+  );

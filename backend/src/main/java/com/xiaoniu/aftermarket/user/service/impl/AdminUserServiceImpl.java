@@ -15,11 +15,14 @@ import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import com.xiaoniu.aftermarket.common.mapper.StoreMapper;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
 import com.xiaoniu.aftermarket.common.persistence.entity.StoreEntity;
+import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.CreateRoleRequest;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.CreateUserRequest;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.CreateUserResponse;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.PermissionResponse;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.ResetPasswordResponse;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.RoleResponse;
+import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.UpdateRolePermissionsRequest;
+import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.UpdateRoleRequest;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.UpdateUserRequest;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.UserDetailResponse;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.UserRoleResponse;
@@ -35,6 +38,7 @@ import com.xiaoniu.aftermarket.user.mapper.SysRolePermissionMapper;
 import com.xiaoniu.aftermarket.user.mapper.SysUserMapper;
 import com.xiaoniu.aftermarket.user.mapper.SysUserRoleMapper;
 import com.xiaoniu.aftermarket.user.service.AdminUserService;
+import com.xiaoniu.aftermarket.user.service.PermissionCatalog;
 import com.xiaoniu.aftermarket.user.service.PermissionQueryService;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
@@ -45,6 +49,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,6 +58,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AdminUserServiceImpl implements AdminUserService {
 
+    private static final Logger log = LoggerFactory.getLogger(AdminUserServiceImpl.class);
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final String TEMP_PASSWORD_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
     private static final String SUPER_ADMIN = "SUPER_ADMIN";
@@ -253,21 +260,13 @@ public class AdminUserServiceImpl implements AdminUserService {
                 .eq(SysRoleEntity::getDeleted, 0);
         if (!isSuperAdmin(currentUser)) {
             requireStoreAdmin(currentUser);
-            wrapper.eq(SysRoleEntity::getStoreId, currentUser.storeId())
-                    .ne(SysRoleEntity::getRoleCode, STORE_ADMIN);
+            wrapper.eq(SysRoleEntity::getStoreId, currentUser.storeId());
         }
         wrapper.orderByAsc(SysRoleEntity::getStoreId, SysRoleEntity::getSortOrder, SysRoleEntity::getId);
         return roleMapper.selectList(wrapper)
                 .stream()
                 .filter(role -> isSuperAdmin(currentUser) || !SUPER_ADMIN.equals(role.getRoleCode()))
-                .map(role -> new RoleResponse(
-                        role.getId(),
-                        role.getStoreId(),
-                        storeName(role.getStoreId()),
-                        role.getRoleCode(),
-                        role.getRoleName(),
-                        role.getRemark(),
-                        permissionCodesByRole(role.getId())))
+                .map(role -> toRoleResponse(currentUser, role))
                 .toList();
     }
 
@@ -279,8 +278,76 @@ public class AdminUserServiceImpl implements AdminUserService {
                         .eq(SysPermissionEntity::getDeleted, 0)
                         .orderByAsc(SysPermissionEntity::getModuleCode, SysPermissionEntity::getSortOrder, SysPermissionEntity::getId))
                 .stream()
-                .map(p -> new PermissionResponse(p.getPermissionCode(), p.getPermissionName(), p.getModuleCode()))
+                .filter(p -> isSuperAdmin(currentUser) || PermissionCatalog.isStoreGrantable(p.getPermissionCode()))
+                .map(this::toPermissionResponse)
                 .toList();
+    }
+
+    @Override
+    @Transactional
+    public RoleResponse createRole(AuthenticatedUser currentUser, CreateRoleRequest request) {
+        ensureRoleWriteAdmin(currentUser);
+        Long targetStoreId = roleTargetStoreId(currentUser, request.storeId());
+        validateTargetStore(targetStoreId);
+
+        String roleCode = normalizeRoleCode(request.roleCode(), targetStoreId);
+        ensureUniqueRoleCode(targetStoreId, roleCode, null);
+
+        SysRoleEntity role = new SysRoleEntity();
+        role.setStoreId(targetStoreId);
+        role.setRoleCode(roleCode);
+        role.setRoleName(request.roleName().trim());
+        role.setStatus(CommonStatus.ENABLED.name());
+        role.setSortOrder(nextRoleSortOrder(targetStoreId));
+        role.setRemark(blankToNull(request.description()));
+        role.setCreatedBy(currentUser.userId());
+        role.setCreatedAt(LocalDateTime.now());
+        role.setUpdatedBy(currentUser.userId());
+        role.setUpdatedAt(LocalDateTime.now());
+        role.setDeleted(0);
+        roleMapper.insert(role);
+
+        Set<String> requestedCodes = normalizedPermissionCodes(request.permissionCodes());
+        List<SysPermissionEntity> permissions = permissionsByCodes(requestedCodes);
+        validateGrantablePermissions(currentUser, role, permissions);
+        replaceRolePermissions(currentUser, role, Set.of(), permissions);
+        return toRoleResponse(currentUser, role);
+    }
+
+    @Override
+    @Transactional
+    public RoleResponse updateRole(AuthenticatedUser currentUser, Long roleId, UpdateRoleRequest request) {
+        ensureRoleWriteAdmin(currentUser);
+        SysRoleEntity role = requireManageableRole(currentUser, roleId);
+        if (hasText(request.roleName())) {
+            role.setRoleName(request.roleName().trim());
+        }
+        if (request.description() != null) {
+            role.setRemark(blankToNull(request.description()));
+        }
+        if (request.enabled() != null) {
+            role.setStatus(request.enabled() ? CommonStatus.ENABLED.name() : CommonStatus.DISABLED.name());
+        }
+        role.setUpdatedBy(currentUser.userId());
+        role.setUpdatedAt(LocalDateTime.now());
+        roleMapper.updateById(role);
+        log.info("role metadata updated operator={} roleId={} roleCode={} storeId={} status={}",
+                currentUser.userId(), role.getId(), role.getRoleCode(), role.getStoreId(), role.getStatus());
+        return toRoleResponse(currentUser, role);
+    }
+
+    @Override
+    @Transactional
+    public RoleResponse updateRolePermissions(AuthenticatedUser currentUser, Long roleId,
+                                              UpdateRolePermissionsRequest request) {
+        ensureRoleWriteAdmin(currentUser);
+        SysRoleEntity role = requireManageableRole(currentUser, roleId);
+        Set<String> before = new LinkedHashSet<>(permissionCodesByRole(role.getId()));
+        Set<String> requestedCodes = normalizedPermissionCodes(request.permissionCodes());
+        List<SysPermissionEntity> permissions = permissionsByCodes(requestedCodes);
+        validateGrantablePermissions(currentUser, role, permissions);
+        replaceRolePermissions(currentUser, role, before, permissions);
+        return toRoleResponse(currentUser, role);
     }
 
     private LambdaQueryWrapper<SysUserEntity> baseScopedUserQuery(AuthenticatedUser currentUser, Long scopedStoreId) {
@@ -580,6 +647,201 @@ public class AdminUserServiceImpl implements AdminUserService {
                 .map(SysPermissionEntity::getPermissionCode)
                 .sorted()
                 .toList();
+    }
+
+    private RoleResponse toRoleResponse(AuthenticatedUser currentUser, SysRoleEntity role) {
+        boolean systemRole = isSystemRole(role);
+        boolean editable = isSuperAdmin(currentUser)
+                || (isStoreAdmin(currentUser)
+                && role.getStoreId() != null
+                && role.getStoreId().equals(currentUser.storeId())
+                && !systemRole);
+        return new RoleResponse(
+                role.getId(),
+                role.getStoreId(),
+                storeName(role.getStoreId()),
+                role.getRoleCode(),
+                role.getRoleName(),
+                role.getRemark(),
+                permissionCodesByRole(role.getId()),
+                systemRole,
+                editable,
+                roleUserCount(role.getId())
+        );
+    }
+
+    private PermissionResponse toPermissionResponse(SysPermissionEntity permission) {
+        PermissionCatalog.PermissionMeta meta = PermissionCatalog.meta(
+                permission.getPermissionCode(),
+                permission.getModuleCode(),
+                permission.getPermissionName()
+        );
+        return new PermissionResponse(
+                permission.getPermissionCode(),
+                permission.getPermissionName(),
+                permission.getModuleCode(),
+                meta.moduleName(),
+                meta.resourceKey(),
+                meta.displayName(),
+                meta.resourceType(),
+                meta.storeGrantable()
+        );
+    }
+
+    private int roleUserCount(Long roleId) {
+        return Math.toIntExact(userRoleMapper.selectCount(new LambdaQueryWrapper<SysUserRoleEntity>()
+                .eq(SysUserRoleEntity::getRoleId, roleId)));
+    }
+
+    private boolean isSystemRole(SysRoleEntity role) {
+        return role != null && (SUPER_ADMIN.equals(role.getRoleCode()) || STORE_ADMIN.equals(role.getRoleCode()));
+    }
+
+    private void ensureRoleWriteAdmin(AuthenticatedUser currentUser) {
+        if (!isSuperAdmin(currentUser) && !isStoreAdmin(currentUser)) {
+            throw new BusinessException(ErrorCode.USER_OPERATION_NOT_ALLOWED);
+        }
+        if (currentUser.permissionCodes() == null || !currentUser.permissionCodes().contains("ROLE_MANAGE")) {
+            throw new BusinessException(ErrorCode.USER_OPERATION_NOT_ALLOWED);
+        }
+    }
+
+    private Long roleTargetStoreId(AuthenticatedUser currentUser, Long requestedStoreId) {
+        if (!isSuperAdmin(currentUser)) {
+            requireStoreAdmin(currentUser);
+            if (requestedStoreId != null && !requestedStoreId.equals(currentUser.storeId())) {
+                throw new BusinessException(ErrorCode.USER_OPERATION_NOT_ALLOWED, "门店管理员只能创建本门店角色");
+            }
+            return currentUser.storeId();
+        }
+        return requestedStoreId;
+    }
+
+    private SysRoleEntity requireManageableRole(AuthenticatedUser currentUser, Long roleId) {
+        SysRoleEntity role = roleMapper.selectOne(new LambdaQueryWrapper<SysRoleEntity>()
+                .eq(SysRoleEntity::getId, roleId)
+                .eq(SysRoleEntity::getDeleted, 0)
+                .last("LIMIT 1"));
+        if (role == null) {
+            throw new BusinessException(ErrorCode.ROLE_NOT_FOUND);
+        }
+        if (isSuperAdmin(currentUser)) {
+            return role;
+        }
+        requireStoreAdmin(currentUser);
+        if (role.getStoreId() == null
+                || !role.getStoreId().equals(currentUser.storeId())
+                || isSystemRole(role)) {
+            throw new BusinessException(ErrorCode.USER_OPERATION_NOT_ALLOWED);
+        }
+        return role;
+    }
+
+    private String normalizeRoleCode(String requestedRoleCode, Long targetStoreId) {
+        String roleCode = hasText(requestedRoleCode)
+                ? requestedRoleCode.trim().toUpperCase()
+                : "CUSTOM_" + (targetStoreId == null ? "PLATFORM" : "STORE_" + targetStoreId) + "_" + System.currentTimeMillis();
+        if (!roleCode.matches("[A-Z][A-Z0-9_]{2,63}")) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "角色编码只能使用大写字母、数字和下划线，且必须以字母开头");
+        }
+        if (SUPER_ADMIN.equals(roleCode) || STORE_ADMIN.equals(roleCode)) {
+            throw new BusinessException(ErrorCode.USER_OPERATION_NOT_ALLOWED, "系统角色编码不可用于自定义角色");
+        }
+        return roleCode;
+    }
+
+    private void ensureUniqueRoleCode(Long storeId, String roleCode, Long excludeId) {
+        LambdaQueryWrapper<SysRoleEntity> wrapper = new LambdaQueryWrapper<SysRoleEntity>()
+                .eq(SysRoleEntity::getRoleCode, roleCode)
+                .eq(SysRoleEntity::getDeleted, 0);
+        if (storeId == null) {
+            wrapper.isNull(SysRoleEntity::getStoreId);
+        } else {
+            wrapper.eq(SysRoleEntity::getStoreId, storeId);
+        }
+        if (excludeId != null) {
+            wrapper.ne(SysRoleEntity::getId, excludeId);
+        }
+        if (roleMapper.selectCount(wrapper) > 0) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "角色编码已存在");
+        }
+    }
+
+    private int nextRoleSortOrder(Long storeId) {
+        LambdaQueryWrapper<SysRoleEntity> wrapper = new LambdaQueryWrapper<SysRoleEntity>()
+                .eq(SysRoleEntity::getDeleted, 0)
+                .orderByDesc(SysRoleEntity::getSortOrder)
+                .last("LIMIT 1");
+        if (storeId == null) {
+            wrapper.isNull(SysRoleEntity::getStoreId);
+        } else {
+            wrapper.eq(SysRoleEntity::getStoreId, storeId);
+        }
+        SysRoleEntity latest = roleMapper.selectOne(wrapper);
+        return latest == null || latest.getSortOrder() == null ? 100 : latest.getSortOrder() + 10;
+    }
+
+    private Set<String> normalizedPermissionCodes(List<String> permissionCodes) {
+        if (permissionCodes == null || permissionCodes.isEmpty()) {
+            return Set.of();
+        }
+        return permissionCodes.stream()
+                .filter(this::hasText)
+                .map(String::trim)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    private List<SysPermissionEntity> permissionsByCodes(Set<String> permissionCodes) {
+        if (permissionCodes == null || permissionCodes.isEmpty()) {
+            return List.of();
+        }
+        List<SysPermissionEntity> permissions = permissionMapper.selectList(new LambdaQueryWrapper<SysPermissionEntity>()
+                .in(SysPermissionEntity::getPermissionCode, permissionCodes)
+                .eq(SysPermissionEntity::getStatus, CommonStatus.ENABLED.name())
+                .eq(SysPermissionEntity::getDeleted, 0));
+        Set<String> found = permissions.stream()
+                .map(SysPermissionEntity::getPermissionCode)
+                .collect(Collectors.toSet());
+        if (!found.containsAll(permissionCodes)) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "包含不存在或已停用的权限");
+        }
+        return permissions;
+    }
+
+    private void validateGrantablePermissions(AuthenticatedUser currentUser, SysRoleEntity role,
+                                              List<SysPermissionEntity> permissions) {
+        if (!isSuperAdmin(currentUser) && (role.getStoreId() == null || !role.getStoreId().equals(currentUser.storeId()))) {
+            throw new BusinessException(ErrorCode.USER_OPERATION_NOT_ALLOWED);
+        }
+        if (role.getStoreId() != null) {
+            List<String> forbidden = permissions.stream()
+                    .map(SysPermissionEntity::getPermissionCode)
+                    .filter(code -> !PermissionCatalog.isStoreGrantable(code))
+                    .toList();
+            if (!forbidden.isEmpty()) {
+                throw new BusinessException(ErrorCode.USER_OPERATION_NOT_ALLOWED,
+                        "门店角色不能授予平台或跨店权限: " + String.join(",", forbidden));
+            }
+        }
+    }
+
+    private void replaceRolePermissions(AuthenticatedUser currentUser, SysRoleEntity role, Set<String> before,
+                                        List<SysPermissionEntity> permissions) {
+        rolePermissionMapper.delete(new LambdaQueryWrapper<SysRolePermissionEntity>()
+                .eq(SysRolePermissionEntity::getRoleId, role.getId()));
+        for (SysPermissionEntity permission : permissions) {
+            SysRolePermissionEntity relation = new SysRolePermissionEntity();
+            relation.setRoleId(role.getId());
+            relation.setPermissionId(permission.getId());
+            relation.setCreatedBy(currentUser.userId());
+            relation.setCreatedAt(LocalDateTime.now());
+            rolePermissionMapper.insert(relation);
+        }
+        Set<String> after = permissions.stream()
+                .map(SysPermissionEntity::getPermissionCode)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        log.info("role permissions updated operator={} roleId={} roleCode={} storeId={} before={} after={}",
+                currentUser.userId(), role.getId(), role.getRoleCode(), role.getStoreId(), before, after);
     }
 
     private List<SysRoleEntity> rolesByIds(List<Long> roleIds) {

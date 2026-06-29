@@ -2,11 +2,14 @@ package com.xiaoniu.aftermarket.user.service;
 
 import com.xiaoniu.aftermarket.auth.security.AuthenticatedUser;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
+import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.CreateRoleRequest;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.CreateUserResponse;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.CreateUserRequest;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.PermissionResponse;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.ResetPasswordResponse;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.RoleResponse;
+import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.UpdateRolePermissionsRequest;
+import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.UpdateRoleRequest;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.UpdateUserRequest;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.UserDetailResponse;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.UserSummaryResponse;
@@ -35,4 +38,10 @@ public interface AdminUserService {
     List<RoleResponse> listRoles(AuthenticatedUser currentUser);
 
     List<PermissionResponse> listPermissions(AuthenticatedUser currentUser);
+
+    RoleResponse createRole(AuthenticatedUser currentUser, CreateRoleRequest request);
+
+    RoleResponse updateRole(AuthenticatedUser currentUser, Long roleId, UpdateRoleRequest request);
+
+    RoleResponse updateRolePermissions(AuthenticatedUser currentUser, Long roleId, UpdateRolePermissionsRequest request);
 }

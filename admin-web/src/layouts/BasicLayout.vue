@@ -13,166 +13,33 @@
         :default-openeds="defaultOpeneds"
         router
       >
-        <el-menu-item v-if="isPlatform" index="/platform/stores">
-          <template #title>门店管理</template>
-        </el-menu-item>
-        <el-menu-item v-if="isPlatform && hasAnyPermission(['USER_MANAGE', 'ROLE_MANAGE'])" index="/user">
-          <template #title>员工与权限</template>
+        <el-menu-item v-for="item in platformMenuItems" :key="item.index" :index="item.index">
+          <template #title>{{ item.title }}</template>
         </el-menu-item>
 
         <template v-if="!isPlatform">
-          <!-- 首页 -->
-          <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/dashboard">
-            <template #title>首页</template>
-          </el-menu-item>
-
-          <!-- 业务管理 -->
-          <el-sub-menu
-            v-if="hasAnyPermission(['WORK_ORDER_VIEW', 'WORK_ORDER_CREATE', 'WORK_ORDER_SETTLE', 'CUSTOMER_VIEW', 'CUSTOMER_MANAGE'])"
-            index="business"
-          >
-            <template #title>
-              <span>业务管理</span>
-            </template>
-            <el-menu-item
-              v-if="hasAnyPermission(['WORK_ORDER_VIEW', 'WORK_ORDER_CREATE', 'WORK_ORDER_SETTLE'])"
-              index="/work-order"
-            >
-              <template #title>工单管理</template>
+          <template v-for="entry in storeMenuItems" :key="entry.index">
+            <el-sub-menu v-if="isMenuGroup(entry)" :index="entry.index">
+              <template #title>
+                <span>{{ entry.title }}</span>
+              </template>
+              <el-menu-item
+                v-for="child in visibleMenuChildren(entry, authStore.user)"
+                :key="child.index"
+                :index="child.index"
+              >
+                <template #title>{{ child.title }}</template>
+              </el-menu-item>
+            </el-sub-menu>
+            <el-menu-item v-else :index="entry.index">
+              <template #title>{{ entry.title }}</template>
             </el-menu-item>
-            <el-menu-item
-              v-if="hasAnyPermission(['CUSTOMER_VIEW', 'CUSTOMER_MANAGE'])"
-              index="/customers"
-            >
-              <template #title>客户档案</template>
-            </el-menu-item>
-            <el-menu-item
-              v-if="hasAnyPermission(['CUSTOMER_VIEW', 'CUSTOMER_MANAGE'])"
-              index="/vehicles"
-            >
-              <template #title>车辆档案</template>
-            </el-menu-item>
-          </el-sub-menu>
-
-          <!-- 配件库存 -->
-          <el-sub-menu
-            v-if="hasAnyPermission(['PART_VIEW', 'PART_MANAGE', 'INVENTORY_VIEW', 'INVENTORY_INBOUND', 'INVENTORY_ADJUST'])"
-            index="inventory"
-          >
-            <template #title>
-              <span>配件库存</span>
-            </template>
-            <el-menu-item
-              v-if="hasAnyPermission(['PART_VIEW', 'PART_MANAGE'])"
-              index="/parts"
-            >
-              <template #title>配件管理</template>
-            </el-menu-item>
-            <el-menu-item
-              v-if="hasAnyPermission(['INVENTORY_VIEW', 'INVENTORY_INBOUND', 'INVENTORY_ADJUST'])"
-              index="/inventory"
-            >
-              <template #title>库存管理</template>
-            </el-menu-item>
-          </el-sub-menu>
-
-          <!-- 收银财务 -->
-          <el-sub-menu
-            v-if="
-              hasPermission('FINANCE_VIEW') ||
-              hasAnyPermission(['PAYMENT_RECORD', 'REFUND_RECORD', 'OFFICIAL_SETTLEMENT_MANAGE', 'REIMBURSEMENT_CONFIRM'])
-            "
-            index="finance"
-          >
-            <template #title>
-              <span>收银财务</span>
-            </template>
-            <el-menu-item v-if="hasAnyPermission(['PAYMENT_RECORD', 'FINANCE_VIEW'])" index="/payment">
-              <template #title>收款记录</template>
-            </el-menu-item>
-            <el-menu-item v-if="hasAnyPermission(['REFUND_RECORD', 'FINANCE_VIEW'])" index="/refund">
-              <template #title>退款记录</template>
-            </el-menu-item>
-            <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/finance/cashier-report">
-              <template #title>收银日报</template>
-            </el-menu-item>
-            <el-menu-item v-if="hasPermission('FINANCE_VIEW')" index="/finance">
-              <template #title>财务报表</template>
-            </el-menu-item>
-            <el-menu-item
-              v-if="hasAnyPermission(['OFFICIAL_SETTLEMENT_MANAGE', 'FINANCE_VIEW'])"
-              index="/settlement"
-            >
-              <template #title>官方结算</template>
-            </el-menu-item>
-            <el-menu-item
-              v-if="hasAnyPermission(['REIMBURSEMENT_CONFIRM', 'FINANCE_VIEW'])"
-              index="/reimbursement"
-            >
-              <template #title>报销台账</template>
-            </el-menu-item>
-          </el-sub-menu>
-
-          <!-- 资方业务 -->
-          <el-sub-menu
-            v-if="
-              hasAnyPermission([
-                'FUNDING_APPLICATION_VIEW',
-                'FUNDING_APPLICATION_MANAGE',
-                'FUNDING_APPLICATION_AUDIT',
-                'FUNDING_CONTRACT_MANAGE',
-                'FUNDING_LEDGER_VIEW',
-                'FUNDING_LEDGER_MANAGE',
-                'FUNDING_PAYMENT_RECORD',
-                'FUNDING_EXPORT',
-                'FUNDING_IMPORT'
-              ])
-            "
-            index="funding"
-          >
-            <template #title>
-              <span>资方业务</span>
-            </template>
-            <el-menu-item index="/funding">
-              <template #title>资方台账</template>
-            </el-menu-item>
-          </el-sub-menu>
-
-          <!-- 系统设置 -->
-          <el-sub-menu
-            v-if="
-              hasPermission('STORE_MANAGE') ||
-              hasAnyPermission(['USER_MANAGE', 'ROLE_MANAGE']) ||
-              hasPermission('DICT_MANAGE') ||
-              hasPermission('EXCEL_EXPORT') ||
-              hasRole('SUPER_ADMIN')
-            "
-            index="settings"
-          >
-            <template #title>
-              <span>系统设置</span>
-            </template>
-            <el-menu-item v-if="hasPermission('STORE_MANAGE')" index="/store">
-              <template #title>门店配置</template>
-            </el-menu-item>
-            <el-menu-item v-if="hasAnyPermission(['USER_MANAGE', 'ROLE_MANAGE'])" index="/user">
-              <template #title>员工与权限</template>
-            </el-menu-item>
-            <el-menu-item v-if="hasPermission('DICT_MANAGE')" index="/dictionary">
-              <template #title>基础配置</template>
-            </el-menu-item>
-            <el-menu-item v-if="hasPermission('EXCEL_EXPORT')" index="/export">
-              <template #title>数据导出</template>
-            </el-menu-item>
-            <el-menu-item v-if="hasRole('SUPER_ADMIN')" index="/trial-data">
-              <template #title>数据清理</template>
-            </el-menu-item>
-          </el-sub-menu>
+          </template>
         </template>
       </el-menu>
       
       <div class="sidebar-footer">
-        <div class="version-text">单门店版</div>
+        <div class="version-text">门店数据隔离版</div>
       </div>
     </aside>
 
@@ -234,7 +101,13 @@ import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { logout } from '@/api/auth';
-import { hasPermission, hasAnyPermission, hasRole } from '@/utils/permission';
+import {
+  defaultOpenMenuGroups,
+  isMenuGroup,
+  visibleMenuChildren,
+  visiblePlatformMenus,
+  visibleStoreMenus,
+} from '@/config/menuCatalog';
 import { ElMessage } from 'element-plus';
 
 const route = useRoute();
@@ -248,15 +121,12 @@ const activeMenu = computed(() => {
 
 // Auto-expand active menu group / default visible groups
 const defaultOpeneds = computed(() => {
-  const path = route.path;
-  const list = ['business', 'inventory', 'finance'];
-  if (['/store', '/user', '/dictionary', '/export', '/trial-data'].includes(path)) {
-    list.push('settings');
-  }
-  return list;
+  return defaultOpenMenuGroups(route.path, authStore.user);
 });
 
 const isPlatform = computed(() => authStore.user?.accountType === 'PLATFORM');
+const platformMenuItems = computed(() => visiblePlatformMenus(authStore.user));
+const storeMenuItems = computed(() => visibleStoreMenus(authStore.user));
 
 // Role code → Chinese display mapping
 const ROLE_LABEL_MAP: Record<string, string> = {

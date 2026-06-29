@@ -125,7 +125,7 @@ public class PartController {
         return ApiResponse.success(partService.getDeleteCheck(user.storeId(), partId));
     }
 
-    @PreAuthorize("hasAuthority('PART_MANAGE')")
+    @PreAuthorize("hasAnyAuthority('PART_MANAGE', 'PART_CREATE')")
     @PostMapping("/official")
     public ApiResponse<PartCreateResponse> createOfficialPart(@Valid @RequestBody CreateOfficialPartRequest request) {
         CurrentUser user = requireCurrentUser();
@@ -138,7 +138,7 @@ public class PartController {
         return ApiResponse.success(PartCreateResponse.from(part));
     }
 
-    @PreAuthorize("hasAuthority('PART_MANAGE')")
+    @PreAuthorize("hasAnyAuthority('PART_MANAGE', 'PART_CREATE')")
     @PostMapping("/third-party")
     public ApiResponse<PartCreateResponse> createThirdPartyPart(@Valid @RequestBody CreateThirdPartyPartRequest request) {
         CurrentUser user = requireCurrentUser();

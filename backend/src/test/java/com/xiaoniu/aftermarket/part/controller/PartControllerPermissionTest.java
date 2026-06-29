@@ -47,6 +47,14 @@ class PartControllerPermissionTest {
         ).token();
     }
 
+    private String tokenWithPartCreateOnly() {
+        return jwtProvider.generateAccessToken(
+                new AuthenticatedUser(51L, 1L, "part_creator", "配件创建员",
+                        null, Set.of("PART_CREATOR"), Set.of("PART_CREATE"), false, null),
+                Instant.now(), Instant.now().plusSeconds(3600)
+        ).token();
+    }
+
     @Test
     void unauthenticatedWriteReturns401() throws Exception {
         mockMvc.perform(post("/api/admin/parts/official")
@@ -164,6 +172,43 @@ class PartControllerPermissionTest {
                     assertNotEquals(403, s, "disablePart should not be 403, got: " + s);
                     assertNotEquals(500, s, "disablePart should not be 500, got: " + s);
                 });
+    }
+
+    @Test
+    void partCreateCanCreateButCannotMaintainParts() throws Exception {
+        String token = tokenWithPartCreateOnly();
+
+        mockMvc.perform(post("/api/admin/parts/official")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"partName\":\"part-create-admin-official\",\"officialPartNo\":\"PCA001\"}"))
+                .andExpect(result -> {
+                    int s = result.getResponse().getStatus();
+                    assertNotEquals(403, s, "PART_CREATE should create official parts, got: " + s);
+                    assertNotEquals(500, s, "PART_CREATE should not cause 500 for official parts, got: " + s);
+                });
+
+        mockMvc.perform(post("/api/admin/parts/third-party")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"partName\":\"part-create-admin-third\"}"))
+                .andExpect(result -> {
+                    int s = result.getResponse().getStatus();
+                    assertNotEquals(403, s, "PART_CREATE should create third-party parts, got: " + s);
+                    assertNotEquals(500, s, "PART_CREATE should not cause 500 for third-party parts, got: " + s);
+                });
+
+        mockMvc.perform(put("/api/admin/parts/1")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+
+        mockMvc.perform(post("/api/admin/parts/1/enable")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
     }
 
     @Test

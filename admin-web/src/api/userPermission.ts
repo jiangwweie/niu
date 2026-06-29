@@ -4,10 +4,13 @@ import type { PaginatedResult } from '@/types';
 import type {
   CreateUserRequest,
   CreateUserResponse,
+  CreateRoleRequest,
   PermissionNode,
   ResetPasswordResponse,
   RoleInfo,
   SystemUser,
+  UpdateRolePermissionsRequest,
+  UpdateRoleRequest,
   UpdateUserRequest,
   UserQuery,
 } from '@/types/userPermission';
@@ -60,6 +63,18 @@ export async function unbindWechat(id: number): Promise<void> {
 
 export async function getRoleList(): Promise<RoleInfo[]> {
   return await request.get('/api/admin/roles');
+}
+
+export async function createRole(data: CreateRoleRequest): Promise<RoleInfo> {
+  return await request.post('/api/admin/roles', data);
+}
+
+export async function updateRole(id: number, data: UpdateRoleRequest): Promise<RoleInfo> {
+  return await request.put(`/api/admin/roles/${id}`, data);
+}
+
+export async function updateRolePermissions(id: number, data: UpdateRolePermissionsRequest): Promise<RoleInfo> {
+  return await request.put(`/api/admin/roles/${id}/permissions`, data);
 }
 
 export async function getPermissionList(): Promise<PermissionNode[]> {

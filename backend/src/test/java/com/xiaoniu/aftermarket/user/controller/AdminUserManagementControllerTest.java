@@ -309,6 +309,108 @@ class AdminUserManagementControllerTest {
         assertTrue(user.getDeleted() == 0);
     }
 
+    @Test
+    void storeAdminCanCreateAndUpdateCurrentStoreNormalRolePermissions() throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/admin/roles")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(10L, Set.of("ROLE_MANAGE")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "roleName": "二店临时库存角色",
+                                  "storeId": 2,
+                                  "permissionCodes": ["PART_VIEW", "INVENTORY_VIEW"]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.storeId").value(2))
+                .andExpect(jsonPath("$.data.systemRole").value(false))
+                .andExpect(jsonPath("$.data.editable").value(true))
+                .andExpect(jsonPath("$.data.permissionCodes[0]").exists())
+                .andReturn();
+
+        long roleId = objectMapper.readTree(result.getResponse().getContentAsString())
+                .path("data").path("roleId").asLong();
+
+        mockMvc.perform(put("/api/admin/roles/" + roleId + "/permissions")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(10L, Set.of("ROLE_MANAGE")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "permissionCodes": ["PART_VIEW", "INVENTORY_INBOUND"]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.permissionCodes").isArray());
+
+        Integer inboundCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM sys_role_permission rp
+                JOIN sys_permission p ON p.id = rp.permission_id
+                WHERE rp.role_id = ? AND p.permission_code = 'INVENTORY_INBOUND'
+                """, Integer.class, roleId);
+        assertTrue(inboundCount != null && inboundCount == 1);
+    }
+
+    @Test
+    void storeAdminCannotModifyStoreAdminRolePermissions() throws Exception {
+        mockMvc.perform(put("/api/admin/roles/5/permissions")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(10L, Set.of("ROLE_MANAGE")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "permissionCodes": ["PART_VIEW"]
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("USER_OPERATION_NOT_ALLOWED"));
+    }
+
+    @Test
+    void ordinaryRoleManageUserCannotWriteRolePermissions() throws Exception {
+        jdbcTemplate.update("""
+                INSERT INTO sys_user (id, store_id, username, password_hash, real_name, phone, account_type, status, password_must_change, deleted)
+                VALUES (901, 1, 'role_manage_writer', '{noop}dev123', '角色写测试', '13910000901', 'STORE', 'ENABLED', FALSE, 0)
+                """);
+        jdbcTemplate.update("""
+                INSERT INTO sys_role (id, store_id, role_code, role_name, status, deleted)
+                VALUES (901, 1, 'ROLE_MANAGE_WRITER', '角色写测试', 'ENABLED', 0)
+                """);
+        jdbcTemplate.update("INSERT INTO sys_user_role (user_id, role_id) VALUES (?, ?)", 901L, 901L);
+        jdbcTemplate.update("INSERT INTO sys_role_permission (role_id, permission_id) VALUES (?, ?)", 901L, 1023L);
+        try {
+            mockMvc.perform(post("/api/admin/roles")
+                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(901L, Set.of("ROLE_MANAGE")))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "roleName": "越权角色",
+                                      "permissionCodes": ["PART_VIEW"]
+                                    }
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("USER_OPERATION_NOT_ALLOWED"));
+        } finally {
+            jdbcTemplate.update("DELETE FROM sys_role_permission WHERE role_id = ?", 901L);
+            jdbcTemplate.update("DELETE FROM sys_user_role WHERE user_id = ?", 901L);
+            jdbcTemplate.update("DELETE FROM sys_role WHERE id = ?", 901L);
+            jdbcTemplate.update("DELETE FROM sys_user WHERE id = ?", 901L);
+        }
+    }
+
+    @Test
+    void storeScopedRoleCannotReceivePlatformPermissionEvenBySuperAdmin() throws Exception {
+        mockMvc.perform(put("/api/admin/roles/6/permissions")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(20L, Set.of("ROLE_MANAGE")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "permissionCodes": ["PLATFORM_MANAGE"]
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("USER_OPERATION_NOT_ALLOWED"));
+    }
+
     private String token(Long userId, Set<String> permissions) {
         return jwtProvider.generateAccessToken(
                 new AuthenticatedUser(userId, 1L, "test", "测试用户", null, Set.of("ADMIN"), permissions, false, null),

@@ -90,7 +90,10 @@ public final class AdminUserDtos {
             String roleCode,
             String roleName,
             String description,
-            List<String> permissionCodes
+            List<String> permissionCodes,
+            Boolean systemRole,
+            Boolean editable,
+            Integer userCount
     ) {
     }
 
@@ -106,7 +109,33 @@ public final class AdminUserDtos {
     public record PermissionResponse(
             String permissionCode,
             String permissionName,
-            String module
+            String module,
+            String moduleName,
+            String resourceKey,
+            String resourceName,
+            String resourceType,
+            Boolean storeGrantable
+    ) {
+    }
+
+    public record CreateRoleRequest(
+            String roleCode,
+            @NotBlank String roleName,
+            String description,
+            List<String> permissionCodes,
+            Long storeId
+    ) {
+    }
+
+    public record UpdateRoleRequest(
+            String roleName,
+            String description,
+            Boolean enabled
+    ) {
+    }
+
+    public record UpdateRolePermissionsRequest(
+            List<String> permissionCodes
     ) {
     }
 }

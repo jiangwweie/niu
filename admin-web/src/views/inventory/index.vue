@@ -45,7 +45,7 @@
         </div>
         <div class="toolbar-right">
           <el-button v-if="canCreatePart" type="primary" plain @click="goToCreatePart">新增配件</el-button>
-          <el-tooltip v-else content="新增配件需要 PART_MANAGE 权限，请使用门店管理员账号或调整角色权限。" placement="top">
+          <el-tooltip v-else content="新增配件需要 PART_CREATE 或 PART_MANAGE 权限，请使用门店管理员账号或调整角色权限。" placement="top">
             <span>
               <el-button type="primary" plain disabled>新增配件</el-button>
             </span>
@@ -152,7 +152,7 @@
             <template v-if="canCreatePart">
               <el-button type="primary" link @click="goToCreatePart">去新增配件</el-button>
             </template>
-            <span v-else>当前账号可入库已有配件，但新增配件需要 PART_MANAGE 权限，请联系门店管理员处理。</span>
+            <span v-else>当前账号可入库已有配件，但新增配件需要 PART_CREATE 或 PART_MANAGE 权限，请联系门店管理员处理。</span>
           </template>
         </el-alert>
         <el-form-item v-if="inboundDialog.lockPart" label="配件" required>
@@ -304,7 +304,7 @@ import {
 } from '@/api/inventory';
 import { getPartsList } from '@/api/parts';
 import type { PartViewRecord } from '@/api/parts';
-import { hasPermission } from '@/utils/permission';
+import { hasAnyPermission, hasPermission } from '@/utils/permission';
 import { formatDateTime } from '@/utils/formatDateTime';
 import { trimSearchFields } from '@/utils/searchParams';
 import type { InventoryQuery, InventoryRecord, InventoryLogRecord } from '@/types/inventory';
@@ -327,7 +327,7 @@ const queryParams = reactive<InventoryQuery>({
 const loading = ref(false);
 const tableData = ref<InventoryRecord[]>([]);
 const total = ref(0);
-const canCreatePart = computed(() => hasPermission('PART_MANAGE'));
+const canCreatePart = computed(() => hasAnyPermission(['PART_CREATE', 'PART_MANAGE']));
 
 const isOfficialSource = (source?: string) => String(source || '').toUpperCase() === 'OFFICIAL';
 const getInventoryStateTagType = (code?: string) => {

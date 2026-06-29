@@ -73,10 +73,36 @@ export interface RoleInfo {
   roleName: string;
   description?: string;
   permissionCodes: string[];
+  systemRole?: boolean;
+  editable?: boolean;
+  userCount?: number;
 }
 
 export interface PermissionNode {
   permissionCode: string;
   permissionName: string;
   module: string;
+  moduleName?: string;
+  resourceKey?: string;
+  resourceName?: string;
+  resourceType?: 'PAGE' | 'BUTTON' | 'API' | string;
+  storeGrantable?: boolean;
+}
+
+export interface CreateRoleRequest {
+  roleCode?: string;
+  roleName: string;
+  description?: string;
+  storeId?: number | null;
+  permissionCodes?: string[];
+}
+
+export interface UpdateRoleRequest {
+  roleName?: string;
+  description?: string;
+  enabled?: boolean;
+}
+
+export interface UpdateRolePermissionsRequest {
+  permissionCodes: string[];
 }

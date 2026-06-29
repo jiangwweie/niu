@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 import BasicLayout from '@/layouts/BasicLayout.vue';
+import { firstAccessibleMenuPath } from '@/config/menuCatalog';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -47,7 +48,7 @@ const routes: Array<RouteRecordRaw> = [
         path: 'parts',
         name: 'Parts',
         component: () => import('@/views/parts/index.vue'),
-        meta: { title: '配件管理', anyPermissions: ['PART_VIEW', 'PART_MANAGE'] }
+        meta: { title: '配件管理', anyPermissions: ['PART_VIEW', 'PART_CREATE', 'PART_MANAGE'] }
       },
       {
         path: 'inventory',
@@ -166,27 +167,7 @@ import type { AuthUser } from '@/stores/auth';
 import { getMe } from '@/api/auth';
 
 function firstAccessiblePath(user: AuthUser | null): string {
-  if (user?.accountType === 'PLATFORM') return '/platform/stores';
-
-  const permissions = user?.permissionCodes || [];
-  const roles = user?.roleCodes || [];
-  const hasPermission = (code: string) => permissions.includes(code);
-  const hasAnyPermission = (codes: string[]) => codes.some(code => permissions.includes(code));
-  const hasRole = (code: string) => roles.includes(code);
-
-  if (hasPermission('FINANCE_VIEW')) return '/dashboard';
-  if (hasAnyPermission(['FUNDING_APPLICATION_VIEW', 'FUNDING_LEDGER_VIEW', 'FUNDING_IMPORT', 'FUNDING_EXPORT'])) return '/funding';
-  if (hasAnyPermission(['CUSTOMER_VIEW', 'CUSTOMER_MANAGE'])) return '/customers';
-  if (hasAnyPermission(['WORK_ORDER_VIEW', 'WORK_ORDER_CREATE', 'WORK_ORDER_SETTLE'])) return '/work-order';
-  if (hasAnyPermission(['PART_VIEW', 'PART_MANAGE'])) return '/parts';
-  if (hasAnyPermission(['INVENTORY_VIEW', 'INVENTORY_INBOUND', 'INVENTORY_ADJUST'])) return '/inventory';
-  if (hasPermission('PAYMENT_RECORD')) return '/payment';
-  if (hasPermission('REFUND_RECORD')) return '/refund';
-  if (hasPermission('EXCEL_EXPORT')) return '/export';
-  if (hasAnyPermission(['USER_MANAGE', 'ROLE_MANAGE'])) return '/user';
-  if (hasPermission('STORE_MANAGE')) return '/store';
-  if (hasRole('SUPER_ADMIN')) return '/trial-data';
-  return '/change-password';
+  return firstAccessibleMenuPath(user);
 }
 
 function canAccessRoute(user: AuthUser | null, to: any): boolean {

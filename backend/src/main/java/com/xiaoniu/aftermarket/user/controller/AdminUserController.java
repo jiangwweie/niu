@@ -3,11 +3,14 @@ package com.xiaoniu.aftermarket.user.controller;
 import com.xiaoniu.aftermarket.auth.security.AuthenticatedUser;
 import com.xiaoniu.aftermarket.common.api.ApiResponse;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
+import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.CreateRoleRequest;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.CreateUserRequest;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.CreateUserResponse;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.PermissionResponse;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.ResetPasswordResponse;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.RoleResponse;
+import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.UpdateRolePermissionsRequest;
+import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.UpdateRoleRequest;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.UpdateUserRequest;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.UserDetailResponse;
 import com.xiaoniu.aftermarket.user.controller.dto.AdminUserDtos.UserSummaryResponse;
@@ -108,6 +111,29 @@ public class AdminUserController {
     public ApiResponse<List<RoleResponse>> listRoles() {
         AuthenticatedUser user = requireCurrentUser();
         return ApiResponse.success(adminUserService.listRoles(user));
+    }
+
+    @PreAuthorize("hasAuthority('ROLE_MANAGE')")
+    @PostMapping("/roles")
+    public ApiResponse<RoleResponse> createRole(@Valid @RequestBody CreateRoleRequest request) {
+        AuthenticatedUser user = requireCurrentUser();
+        return ApiResponse.success(adminUserService.createRole(user, request));
+    }
+
+    @PreAuthorize("hasAuthority('ROLE_MANAGE')")
+    @PutMapping("/roles/{id}")
+    public ApiResponse<RoleResponse> updateRole(@PathVariable Long id,
+                                                @Valid @RequestBody UpdateRoleRequest request) {
+        AuthenticatedUser user = requireCurrentUser();
+        return ApiResponse.success(adminUserService.updateRole(user, id, request));
+    }
+
+    @PreAuthorize("hasAuthority('ROLE_MANAGE')")
+    @PutMapping("/roles/{id}/permissions")
+    public ApiResponse<RoleResponse> updateRolePermissions(@PathVariable Long id,
+                                                           @RequestBody UpdateRolePermissionsRequest request) {
+        AuthenticatedUser user = requireCurrentUser();
+        return ApiResponse.success(adminUserService.updateRolePermissions(user, id, request));
     }
 
     @PreAuthorize("hasAnyAuthority('USER_MANAGE', 'ROLE_MANAGE')")
