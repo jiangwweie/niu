@@ -4,6 +4,7 @@ import { normalizeSearchParam } from '../../utils/searchParams';
 import { requireAnyPermission, requireLogin } from '../../utils/permission';
 
 let partSearchTimer: number | undefined;
+const PART_PAGE_PERMISSIONS = ['PART_VIEW', 'PART_MANAGE', 'PART_CREATE'];
 
 Page({
   data: {
@@ -13,12 +14,12 @@ Page({
   },
   onLoad() {
     if (!requireLogin('/pages/parts/index')) return;
-    if (!requireAnyPermission(['PART_VIEW', 'PART_MANAGE'], '当前账号无权查看配件')) return;
+    if (!requireAnyPermission(PART_PAGE_PERMISSIONS, '当前账号无权查看配件')) return;
     this.fetchData();
   },
   onShow() {
     if (!requireLogin('/pages/parts/index')) return;
-    requireAnyPermission(['PART_VIEW', 'PART_MANAGE'], '当前账号无权查看配件');
+    requireAnyPermission(PART_PAGE_PERMISSIONS, '当前账号无权查看配件');
   },
   onSearch(e: any) {
     this.setData({ keyword: e.detail.value });

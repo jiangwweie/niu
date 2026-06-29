@@ -212,6 +212,24 @@ class StaffControllerTest {
     }
 
     @Test
+    void staffPartListRequiresPartInventoryOrWorkOrderPermission() throws Exception {
+        mockMvc.perform(get("/api/staff/parts")
+                        .header("X-User-Id", "52")
+                        .header("X-Store-Id", "1"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+    }
+
+    @Test
+    void staffPartListAllowsInventoryInboundUserForInboundSelection() throws Exception {
+        mockMvc.perform(get("/api/staff/parts")
+                        .header("X-User-Id", "50")
+                        .header("X-Store-Id", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"));
+    }
+
+    @Test
     void staffPartListExcludesDisabledParts() throws Exception {
         mockMvc.perform(get("/api/staff/parts")
                         .header("X-User-Id", "1")
@@ -254,6 +272,26 @@ class StaffControllerTest {
                 .andExpect(jsonPath("$.data.records[0].status").value("ENABLED"));
     }
 
+    @Test
+    void staffPartLookupAllowsInventoryInboundUserForBarcodeInbound() throws Exception {
+        mockMvc.perform(get("/api/staff/parts/lookup")
+                        .header("X-User-Id", "50")
+                        .header("X-Store-Id", "1")
+                        .param("code", "S-TEST-001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"));
+    }
+
+    @Test
+    void staffPartLookupRequiresPartInventoryOrWorkOrderPermission() throws Exception {
+        mockMvc.perform(get("/api/staff/parts/lookup")
+                        .header("X-User-Id", "52")
+                        .header("X-Store-Id", "1")
+                        .param("code", "S-TEST-001"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+    }
+
     // ========== Part detail ==========
 
     @Test
@@ -270,6 +308,15 @@ class StaffControllerTest {
                 .andExpect(jsonPath("$.data.status").value("ENABLED"))
                 .andExpect(jsonPath("$.data.remark").value("电池备注"))
                 .andExpect(jsonPath("$.data.referenceCostPrice").doesNotExist());
+    }
+
+    @Test
+    void staffPartDetailRequiresPartInventoryOrWorkOrderPermission() throws Exception {
+        mockMvc.perform(get("/api/staff/parts/80001")
+                        .header("X-User-Id", "52")
+                        .header("X-Store-Id", "1"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
     }
 
     @Test

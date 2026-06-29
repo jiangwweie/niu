@@ -29,12 +29,18 @@ import org.springframework.security.access.prepost.PreAuthorize;
 @RequestMapping("/api/staff/parts")
 public class StaffPartController {
 
+    private static final String PART_READ_AUTHORITIES = "hasAnyAuthority("
+            + "'PART_VIEW', 'PART_MANAGE', 'PART_CREATE', "
+            + "'INVENTORY_VIEW', 'INVENTORY_INBOUND', "
+            + "'WORK_ORDER_CREATE', 'WORK_ORDER_UPDATE')";
+
     private final PartService partService;
 
     public StaffPartController(PartService partService) {
         this.partService = partService;
     }
 
+    @PreAuthorize(PART_READ_AUTHORITIES)
     @GetMapping
     public ApiResponse<PageResponse<StaffPartListItem>> listParts(
             @RequestParam(required = false) String keyword,
@@ -64,7 +70,7 @@ public class StaffPartController {
         return ApiResponse.success(result.map(StaffPartListItem::from));
     }
 
-    @PreAuthorize("hasAnyAuthority('INVENTORY_VIEW', 'WORK_ORDER_CREATE', 'WORK_ORDER_UPDATE')")
+    @PreAuthorize(PART_READ_AUTHORITIES)
     @GetMapping("/lookup")
     public ApiResponse<PartLookupResponse> lookup(@RequestParam(required = false) String code,
                                                   @RequestParam(required = false) String barcode) {
@@ -72,6 +78,7 @@ public class StaffPartController {
         return ApiResponse.success(partService.lookup(user.storeId(), resolveLookupCode(code, barcode)));
     }
 
+    @PreAuthorize(PART_READ_AUTHORITIES)
     @GetMapping("/{partId}")
     public ApiResponse<StaffPartDetail> getPart(@PathVariable Long partId) {
         CurrentUser user = requireCurrentUser();

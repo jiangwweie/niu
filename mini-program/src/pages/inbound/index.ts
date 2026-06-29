@@ -4,7 +4,7 @@ import { Part, PartLookupResult } from '../../types/parts';
 import { InboundRequest, InboundResponse, CreatePartAndInboundResponse } from '../../types/inventory';
 import Toast from 'tdesign-miniprogram/toast/index';
 import { normalizeSearchParam } from '../../utils/searchParams';
-import { requireAnyPermission, requireLogin } from '../../utils/permission';
+import { hasPermission, requireAnyPermission, requireLogin } from '../../utils/permission';
 
 let partSearchTimer: number | undefined;
 
@@ -45,18 +45,27 @@ Page({
       reason: '扫码新增配件入库',
       remark: ''
     },
-    createPartSubmitting: false
+    createPartSubmitting: false,
+    hasCreatePartPermission: false
   },
 
   onLoad() {
     if (!requireLogin('/pages/inbound/index')) return;
     if (!requireAnyPermission(['INVENTORY_INBOUND'], '当前账号无权进行配件入库')) return;
+    this.refreshPermissions();
     this.loadParts();
   },
 
   onShow() {
     if (!requireLogin('/pages/inbound/index')) return;
     requireAnyPermission(['INVENTORY_INBOUND'], '当前账号无权进行配件入库');
+    this.refreshPermissions();
+  },
+
+  refreshPermissions() {
+    this.setData({
+      hasCreatePartPermission: hasPermission('PART_CREATE') || hasPermission('PART_MANAGE')
+    });
   },
 
   loadParts(keyword?: string) {
@@ -134,11 +143,15 @@ Page({
         });
         wx.showModal({
           title: '未识别该条码',
-          content: '可手动选择已有配件，或新增配件并入库。',
-          confirmText: '新增配件并入库',
+          content: this.data.hasCreatePartPermission
+            ? '可手动选择已有配件，或新增配件并入库。'
+            : '当前账号可手动选择已有配件入库，新增配件需联系门店管理员授权。',
+          confirmText: this.data.hasCreatePartPermission ? '新增配件并入库' : '手动选择配件',
           cancelText: '我知道了',
           success: modalRes => {
-            if (modalRes.confirm) this.showCreatePartForm();
+            if (!modalRes.confirm) return;
+            if (this.data.hasCreatePartPermission) this.showCreatePartForm();
+            else this.showPartSelector();
           }
         });
         return;
@@ -188,11 +201,15 @@ Page({
         });
       wx.showModal({
         title: '未识别该条码',
-        content: '可手动选择已有配件，或新增配件并入库。',
-        confirmText: '新增配件并入库',
+        content: this.data.hasCreatePartPermission
+          ? '可手动选择已有配件，或新增配件并入库。'
+          : '当前账号可手动选择已有配件入库，新增配件需联系门店管理员授权。',
+        confirmText: this.data.hasCreatePartPermission ? '新增配件并入库' : '手动选择配件',
         cancelText: '我知道了',
         success: modalRes => {
-          if (modalRes.confirm) this.showCreatePartForm();
+          if (!modalRes.confirm) return;
+          if (this.data.hasCreatePartPermission) this.showCreatePartForm();
+          else this.showPartSelector();
         }
       });
     });
@@ -210,6 +227,10 @@ Page({
   },
 
   showCreatePartForm() {
+    if (!this.data.hasCreatePartPermission) {
+      Toast({ context: this, selector: '#t-toast', message: '新增配件需 PART_CREATE 或 PART_MANAGE 权限', icon: 'close-circle' });
+      return;
+    }
     this.setData({ createPartVisible: true });
   },
 

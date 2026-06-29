@@ -2,6 +2,8 @@ import { getPartDetail } from '../../api/parts';
 import { Part } from '../../types/parts';
 import { requireAnyPermission, requireLogin } from '../../utils/permission';
 
+const PART_PAGE_PERMISSIONS = ['PART_VIEW', 'PART_MANAGE', 'PART_CREATE'];
+
 type PartDetailView = Part & {
   sourceText: string;
   officialPartNoLabel: string;
@@ -35,7 +37,7 @@ Page({
 
   onLoad(options: any) {
     if (!requireLogin('/pages/parts/index')) return;
-    if (!requireAnyPermission(['PART_VIEW', 'PART_MANAGE'], '当前账号无权查看配件')) return;
+    if (!requireAnyPermission(PART_PAGE_PERMISSIONS, '当前账号无权查看配件')) return;
 
     if (!options.id) {
       wx.showToast({ title: '缺少配件ID', icon: 'none' });

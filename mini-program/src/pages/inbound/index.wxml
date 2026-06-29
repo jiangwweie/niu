@@ -24,7 +24,7 @@
 
     <t-button block theme="default" icon="scan" bind:tap="handleScan" style="margin-top: 16px;">扫码识别配件</t-button>
     <view class="scan-actions" wx:if="{{!selectedPart && formData.barcode}}">
-      <t-button theme="primary" variant="outline" size="small" bind:tap="showCreatePartForm">新增配件并入库</t-button>
+      <t-button wx:if="{{hasCreatePartPermission}}" theme="primary" variant="outline" size="small" bind:tap="showCreatePartForm">新增配件并入库</t-button>
       <t-button theme="default" variant="outline" size="small" bind:tap="showPartSelector">手动选择配件</t-button>
     </view>
   </view>
