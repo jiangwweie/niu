@@ -63,6 +63,7 @@ export function getFriendlyErrorMessage(code?: string | number, message?: string
     REFUND_EXCEEDS_PAID_AMOUNT: '退款金额超过可退金额。',
     FORBIDDEN: '当前账号无权操作。',
     UNAUTHORIZED: '登录已过期，请重新登录。',
+    PASSWORD_CHANGE_REQUIRED: '当前账号必须先修改密码。',
   };
   const key = code == null ? '' : String(code);
   return map[key] || message || '请求失败';

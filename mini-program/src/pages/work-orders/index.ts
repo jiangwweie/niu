@@ -2,6 +2,7 @@ import { getWorkOrders } from '../../api/workOrder';
 import { WorkOrder } from '../../types/workOrder';
 import { hasPermission, requireAnyPermission, requireLogin } from '../../utils/permission';
 import { normalizeSearchParam } from '../../utils/searchParams';
+import { showRequestErrorToast } from '../../utils/requestError';
 import {
   getCashierStatusText,
   getInventoryStatusText,
@@ -129,7 +130,7 @@ Page({
       this.setData({ orders, hasMore, loading: false, pageNo: 1 });
     } catch (e) {
       this.setData({ loading: false });
-      wx.showToast({ title: '网络异常，请下拉刷新重试', icon: 'none', duration: 2000 });
+      showRequestErrorToast(e, '工单加载失败，请下拉刷新重试');
     }
   },
   async loadMore() {
@@ -165,7 +166,7 @@ Page({
       this.setData({ orders: combined, hasMore, loadingMore: false, pageNo: nextPage });
     } catch (e) {
       this.setData({ loadingMore: false });
-      wx.showToast({ title: '网络异常，请稍后重试', icon: 'none', duration: 2000 });
+      showRequestErrorToast(e, '更多工单加载失败，请稍后重试');
     }
   },
   onReachBottom() {

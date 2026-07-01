@@ -43,13 +43,13 @@ export const request = <T = any>(options: RequestOptions): Promise<ApiResponse<T
       return;
     }
 
-    const user = authStore.getCurrentUser();
+    authStore.getCurrentUser();
     const headers = {
       ...options.header,
       'Content-Type': 'application/json'
     } as Record<string, string>;
 
-    if (!options.skipAuth && user && authStore.accessToken) {
+    if (!options.skipAuth && authStore.accessToken) {
       headers['Authorization'] = `Bearer ${authStore.accessToken}`;
     }
 
@@ -70,7 +70,8 @@ export const request = <T = any>(options: RequestOptions): Promise<ApiResponse<T
           return;
         }
         if (res.statusCode === 403) {
-          const message = getFriendlyErrorMessage('FORBIDDEN');
+          const apiRes = res.data as Partial<ApiResponse<any>> | undefined;
+          const message = apiRes?.message || getFriendlyErrorMessage(apiRes?.code, getFriendlyErrorMessage('FORBIDDEN'));
           wx.showToast({ title: message, icon: 'none' });
           reject(new Error(message));
           return;

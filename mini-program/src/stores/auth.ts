@@ -7,8 +7,10 @@ import { defaultMockUser, mockUsers } from '../mock/auth';
 class AuthStore {
   currentUser: User | null = null;
   accessToken: string = '';
+  private initialized = false;
 
   init() {
+    if (this.initialized) return;
     this.accessToken = wx.getStorageSync('accessToken') || '';
     let user = storage.getUser();
     
@@ -23,12 +25,11 @@ class AuthStore {
         this.currentUser = user;
       }
     }
+    this.initialized = true;
   }
 
   getCurrentUser(): User | null {
-    if (!this.currentUser) {
-      this.init();
-    }
+    this.init();
     return this.currentUser;
   }
 
@@ -60,6 +61,7 @@ class AuthStore {
   }
 
   get isLoggedIn(): boolean {
+    this.init();
     if (API_MODE === 'mock') return true;
     return !!this.accessToken;
   }

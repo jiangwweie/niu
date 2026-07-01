@@ -2,6 +2,7 @@ import { getInventoryStocks } from '../../api/inventory';
 import { InventoryStock } from '../../types/inventory';
 import { hasPermission, requireAnyPermission, requireLogin } from '../../utils/permission';
 import { normalizeSearchParam } from '../../utils/searchParams';
+import { showRequestErrorToast } from '../../utils/requestError';
 
 let inventorySearchTimer: number | undefined;
 
@@ -84,7 +85,7 @@ Page({
       this.setData({ stocks, loading: false });
     } catch (e) {
       this.setData({ loading: false });
-      wx.showToast({ title: '网络异常，请稍后重试', icon: 'none', duration: 2000 });
+      showRequestErrorToast(e, '库存加载失败，请稍后重试');
     }
   },
   onTapDetail(e: any) {

@@ -2,6 +2,7 @@ import { getParts } from '../../api/parts';
 import { Part } from '../../types/parts';
 import { normalizeSearchParam } from '../../utils/searchParams';
 import { requireAnyPermission, requireLogin } from '../../utils/permission';
+import { showRequestErrorToast } from '../../utils/requestError';
 
 let partSearchTimer: number | undefined;
 const PART_PAGE_PERMISSIONS = ['PART_VIEW', 'PART_MANAGE', 'PART_CREATE'];
@@ -42,7 +43,7 @@ Page({
       this.setData({ parts: res.data.records, loading: false });
     } catch (e) {
       this.setData({ loading: false });
-      wx.showToast({ title: '网络异常，请稍后重试', icon: 'none', duration: 2000 });
+      showRequestErrorToast(e, '配件加载失败，请稍后重试');
     }
   },
   onTapDetail(e: any) {
