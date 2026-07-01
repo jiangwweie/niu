@@ -16,9 +16,7 @@ import {
   StaffRefundRecordResponse,
   MarkRepairDoneRequest,
   DeliverWorkOrderRequest,
-  AddNonInventoryChargeRequest,
-  SettleWorkOrderRequest,
-  StaffSettledWorkOrderResponse
+  AddNonInventoryChargeRequest
 } from '../types/workOrder';
 import { mockWorkOrders } from '../mock/workOrder';
 
@@ -189,22 +187,6 @@ export const addNonInventoryCharge = (workOrderId: string | number, data: AddNon
     method: 'POST',
     data,
     mockData: undefined,
-    showLoading: true
-  });
-};
-
-/** @deprecated 已由 markRepairDone + deliver 替代 */
-export const settleWorkOrder = (workOrderId: string | number, data?: SettleWorkOrderRequest) => {
-  const record = mockWorkOrders.records.find(w => w.id == workOrderId);
-  if (record) {
-    record.progressStatus = 'DELIVERED';
-    record.progressStatusText = '已交付';
-  }
-  return request<StaffSettledWorkOrderResponse>({
-    url: `/api/staff/work-orders/${workOrderId}/settle`,
-    method: 'POST',
-    data: data || {},
-    mockData: { workOrderId, status: 'DELIVERED', receivableAmount: 0, receivedAmount: 0, settledAt: new Date().toISOString(), settlerId: 1 } as StaffSettledWorkOrderResponse,
     showLoading: true
   });
 };

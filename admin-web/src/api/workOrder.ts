@@ -185,17 +185,6 @@ export async function recordRefund(
   return await request.post(`/api/admin/work-orders/${workOrderId}/refunds`, data);
 }
 
-/** 
- * POST /api/admin/work-orders/{id}/settle
- * @deprecated Use deliverWorkOrder instead. Old settle endpoint is disabled on backend.
- */
-export async function settleWorkOrder(
-  workOrderId: string | number,
-  data: { remark?: string },
-) {
-  return await request.post(`/api/admin/work-orders/${workOrderId}/settle`, data);
-}
-
 /** POST /api/admin/work-orders/{id}/mark-repair-done */
 export async function markRepairDone(
   workOrderId: string | number,

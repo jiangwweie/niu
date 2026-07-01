@@ -30,7 +30,7 @@ public final class PermissionCatalog {
             entry("WORK_ORDER_UPDATE", "BUSINESS", "业务管理", "menu.workOrder", "工单编辑", "BUTTON", true),
             entry("WORK_ORDER_SUBMIT", "BUSINESS", "业务管理", "menu.workOrder", "工单提交", "BUTTON", true),
             entry("WORK_ORDER_CANCEL", "BUSINESS", "业务管理", "menu.workOrder", "工单取消", "BUTTON", true),
-            entry("WORK_ORDER_SETTLE", "BUSINESS", "业务管理", "menu.workOrder", "工单结算", "BUTTON", true),
+            entry("WORK_ORDER_SETTLE", "BUSINESS", "业务管理", "menu.workOrder", "维修完成/交付关闭", "BUTTON", true),
             entry("CUSTOMER_VIEW", "BUSINESS", "业务管理", "menu.customers", "客户车辆查看", "PAGE", true),
             entry("CUSTOMER_MANAGE", "BUSINESS", "业务管理", "menu.customers", "客户车辆维护", "BUTTON", true),
 

@@ -1,6 +1,8 @@
 # Xiaoniu Aftermarket Backend
 
-Spring Boot backend skeleton for the single-store MVP.
+Spring Boot backend for the Xiaoniu authorized store aftermarket management system.
+
+The backend is a modular monolith. It currently supports store-scoped data isolation, admin web APIs, staff mini-program APIs, work orders, inventory, payments, refunds, official settlements, reimbursements, finance reports, funding ledgers, export, and authentication.
 
 ## Requirements
 
@@ -63,3 +65,12 @@ Migration files live under `src/main/resources/db/migration/`.
 - **`JWT_SECRET` must be set in production** — the app will refuse to start with a dev placeholder secret outside dev/test profiles.
 - Permissions are snapshot into the JWT at login time. Changes to a user's permissions take effect only after the token expires and is re-issued. If immediate revocation is needed (e.g. employee offboarding), a token version or blacklist mechanism must be introduced.
 - Logout is client-side only (discard the token). Server-side token invalidation is not yet implemented.
+
+## API Boundaries
+
+- `/api/admin/**`: admin web APIs for platform and store management.
+- `/api/staff/**`: staff mini-program APIs for store-side field operations.
+- `/api/auth/**`: password login, WeChat login, current user, and WeChat binding.
+- `/api/client/**`: planned customer-side appointment and queue APIs.
+
+Client-side appointment and queue capabilities should be implemented as an isolated module boundary. Customer users must not be stored in `sys_user`, and customer appointments must not directly reserve inventory, deduct inventory, record payment, record refund, close work orders, or affect finance.

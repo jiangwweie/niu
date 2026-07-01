@@ -940,7 +940,7 @@ public class PartServiceImpl implements PartService {
 
         List<String> reasons = new ArrayList<>();
         if (reservedQty > 0) {
-            reasons.add("该配件存在未结算工单预占库存，不能删除。请先处理相关工单。");
+            reasons.add("该配件存在未完结工单预占库存，不能删除。请先处理相关工单。");
         }
         if (actualQty > 0 || availableQty > 0) {
             reasons.add("该配件当前仍有库存，不能删除。请先通过库存调整处理库存后再删除。");

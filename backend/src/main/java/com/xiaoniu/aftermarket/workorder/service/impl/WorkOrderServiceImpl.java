@@ -794,13 +794,6 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     }
 
     private void consumePartStock(WorkOrderEntity workOrder, Long partId, Integer quantity,
-                                  SettleWorkOrderCommand command,
-                                  LocalDateTime operatedAt) {
-        consumePartStock(workOrder, partId, quantity, command.getOperatorId(),
-                "工单结算扣减库存", command.getRemark(), operatedAt);
-    }
-
-    private void consumePartStock(WorkOrderEntity workOrder, Long partId, Integer quantity,
                                   Long operatorId, String reason, String remark,
                                   LocalDateTime operatedAt) {
         InventoryStockEntity stock = inventoryStockMapper.selectByStoreIdAndPartIdForUpdate(

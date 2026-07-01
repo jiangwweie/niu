@@ -163,7 +163,8 @@ GET    /api/work-orders
 POST   /api/work-orders
 POST   /api/work-orders/{id}/submit
 POST   /api/work-orders/{id}/cancel
-POST   /api/work-orders/{id}/settle
+POST   /api/work-orders/{id}/mark-repair-done
+POST   /api/work-orders/{id}/deliver
 POST   /api/payments
 POST   /api/refunds
 POST   /api/inventory/inbound
@@ -175,8 +176,8 @@ POST   /api/inventory/adjust
 例如：
 
 ```text
-不要：PUT /api/work-orders/{id} 直接改 status=SETTLED
-应该：POST /api/work-orders/{id}/settle
+不要：PUT /api/work-orders/{id} 直接改 status=REPAIR_DONE 或 DELIVERED
+应该：POST /api/work-orders/{id}/mark-repair-done 或 POST /api/work-orders/{id}/deliver
 ```
 
 ## 6. 事务护栏
@@ -186,7 +187,8 @@ POST   /api/inventory/adjust
 - 入库 + 库存流水
 - 提交工单 + 预占库存 + 流水
 - 取消工单 + 释放库存 + 流水
-- 结算工单 + 扣减库存 + 状态变化
+- 标记维修完成 + 扣减库存 + 状态变化
+- 交付关闭 + 状态变化
 - 退款记录 + 实收金额变化相关校验
 - 报销确认 + 成本统计相关状态变化
 
@@ -196,7 +198,8 @@ POST   /api/inventory/adjust
 
 - 工单提交
 - 工单取消
-- 工单结算
+- 标记维修完成
+- 交付关闭
 - 库存扣减
 - 退款记录提交
 - 报销确认

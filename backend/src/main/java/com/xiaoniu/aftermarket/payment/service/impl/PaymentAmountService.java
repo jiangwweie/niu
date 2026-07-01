@@ -32,7 +32,7 @@ public class PaymentAmountService {
         return normalizeAmount(refundRecordMapper.sumAmountByWorkOrderId(workOrderId));
     }
 
-    // 实收金额 = 支付总额 - 退款总额，是工单结算判断和可退金额计算的核心口径
+    // 实收金额 = 支付总额 - 退款总额，是交付关闭判断和可退金额计算的核心口径
     public BigDecimal calculateReceivedAmount(Long workOrderId) {
         return sumPaidAmount(workOrderId)
                 .subtract(sumRefundAmount(workOrderId))

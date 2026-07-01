@@ -10,7 +10,6 @@ import com.xiaoniu.aftermarket.common.util.DateParamParser;
 import com.xiaoniu.aftermarket.workorder.application.CancelWorkOrderApplicationService;
 import com.xiaoniu.aftermarket.workorder.application.DeliverWorkOrderApplicationService;
 import com.xiaoniu.aftermarket.workorder.application.MarkRepairDoneWorkOrderApplicationService;
-import com.xiaoniu.aftermarket.workorder.application.SettleWorkOrderApplicationService;
 import com.xiaoniu.aftermarket.workorder.application.SubmitWorkOrderApplicationService;
 import com.xiaoniu.aftermarket.workorder.dto.AddWorkOrderChargeItemCommand;
 import com.xiaoniu.aftermarket.workorder.dto.AddNonInventoryChargeCommand;
@@ -18,7 +17,6 @@ import com.xiaoniu.aftermarket.workorder.dto.CancelWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.CreateDraftWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.DeliverWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.MarkRepairDoneWorkOrderCommand;
-import com.xiaoniu.aftermarket.workorder.dto.SettleWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.SubmitWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.UpdateWorkOrderChargeItemCommand;
 import com.xiaoniu.aftermarket.workorder.dto.UpdateWorkOrderDraftCommand;
@@ -40,7 +38,6 @@ public class WorkOrderController {
     private final WorkOrderDraftReferenceResolver draftReferenceResolver;
     private final SubmitWorkOrderApplicationService submitService;
     private final CancelWorkOrderApplicationService cancelService;
-    private final SettleWorkOrderApplicationService settleService;
     private final MarkRepairDoneWorkOrderApplicationService markRepairDoneService;
     private final DeliverWorkOrderApplicationService deliverService;
 
@@ -48,14 +45,12 @@ public class WorkOrderController {
                                WorkOrderDraftReferenceResolver draftReferenceResolver,
                                SubmitWorkOrderApplicationService submitService,
                                CancelWorkOrderApplicationService cancelService,
-                               SettleWorkOrderApplicationService settleService,
                                MarkRepairDoneWorkOrderApplicationService markRepairDoneService,
                                DeliverWorkOrderApplicationService deliverService) {
         this.workOrderService = workOrderService;
         this.draftReferenceResolver = draftReferenceResolver;
         this.submitService = submitService;
         this.cancelService = cancelService;
-        this.settleService = settleService;
         this.markRepairDoneService = markRepairDoneService;
         this.deliverService = deliverService;
     }
@@ -301,12 +296,6 @@ public class WorkOrderController {
     @PreAuthorize("hasAuthority('WORK_ORDER_SETTLE')")
     public ApiResponse<Void> settle(@PathVariable Long workOrderId,
                                     @Valid @RequestBody SettleRequest request) {
-        CurrentUser user = requireCurrentUser();
-        SettleWorkOrderCommand command = new SettleWorkOrderCommand();
-        command.setStoreId(user.storeId());
-        command.setWorkOrderId(workOrderId);
-        command.setOperatorId(user.userId());
-        command.setRemark(request.remark());
         throw new BusinessException(ErrorCode.WORK_ORDER_LEGACY_SETTLE_DISABLED);
     }
 

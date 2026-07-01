@@ -209,20 +209,3 @@ export interface AddNonInventoryChargeRequest {
   reason: string;
   remark?: string;
 }
-
-/** @deprecated 已由 markRepairDone + deliver 替代，仅保留类型兼容 */
-export interface SettleWorkOrderRequest {
-  settledAt?: string;
-  remark?: string;
-}
-
-/** @deprecated 已由 markRepairDone + deliver 替代，仅保留类型兼容 */
-export interface StaffSettledWorkOrderResponse {
-  workOrderId: number | string;
-  workOrderNo: string;
-  status: string;
-  receivableAmount: number;
-  receivedAmount: number;
-  settledAt: string;
-  settlerId: number | string;
-}

@@ -25,11 +25,9 @@ import com.xiaoniu.aftermarket.staff.dto.StaffDeliverWorkOrderRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffMarkRepairDoneRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffRecordPaymentRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffRecordRefundRequest;
-import com.xiaoniu.aftermarket.staff.dto.StaffSettleWorkOrderRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffSubmitWorkOrderRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffUpdateChargeItemRequest;
 import com.xiaoniu.aftermarket.staff.dto.StaffUpdateDraftWorkOrderRequest;
-import com.xiaoniu.aftermarket.workorder.application.SettleWorkOrderApplicationService;
 import com.xiaoniu.aftermarket.workorder.application.AddTempPartChargeApplicationService;
 import com.xiaoniu.aftermarket.workorder.dto.AddWorkOrderChargeItemCommand;
 import com.xiaoniu.aftermarket.workorder.dto.AddNonInventoryChargeCommand;
@@ -37,7 +35,6 @@ import com.xiaoniu.aftermarket.workorder.dto.CancelWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.CreateDraftWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.DeliverWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.MarkRepairDoneWorkOrderCommand;
-import com.xiaoniu.aftermarket.workorder.dto.SettleWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.SubmitWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.UpdateWorkOrderChargeItemCommand;
 import com.xiaoniu.aftermarket.workorder.dto.UpdateWorkOrderDraftCommand;
@@ -64,7 +61,6 @@ public class StaffWorkOrderController {
     private final PaymentService paymentService;
     private final RecordRefundApplicationService recordRefundService;
     private final RefundService refundService;
-    private final SettleWorkOrderApplicationService settleService;
     private final AddTempPartChargeApplicationService addTempPartChargeService;
 
     public StaffWorkOrderController(WorkOrderService workOrderService,
@@ -74,7 +70,6 @@ public class StaffWorkOrderController {
                                     PaymentService paymentService,
                                     RecordRefundApplicationService recordRefundService,
                                     RefundService refundService,
-                                    SettleWorkOrderApplicationService settleService,
                                     AddTempPartChargeApplicationService addTempPartChargeService) {
         this.workOrderService = workOrderService;
         this.workOrderMapper = workOrderMapper;
@@ -83,7 +78,6 @@ public class StaffWorkOrderController {
         this.paymentService = paymentService;
         this.recordRefundService = recordRefundService;
         this.refundService = refundService;
-        this.settleService = settleService;
         this.addTempPartChargeService = addTempPartChargeService;
     }
 
@@ -414,17 +408,7 @@ public class StaffWorkOrderController {
 
     @PostMapping("/{workOrderId}/settle")
     @PreAuthorize("hasAuthority('WORK_ORDER_SETTLE')")
-    public ApiResponse<StaffSettledWorkOrderResponse> settle(
-            @PathVariable Long workOrderId,
-            @Valid @RequestBody StaffSettleWorkOrderRequest request) {
-        CurrentUser user = requireCurrentUser();
-
-        SettleWorkOrderCommand command = new SettleWorkOrderCommand();
-        command.setStoreId(user.storeId());
-        command.setWorkOrderId(workOrderId);
-        command.setOperatorId(user.userId());
-        command.setRemark(request.remark());
-
+    public ApiResponse<Void> settle(@PathVariable Long workOrderId) {
         throw new BusinessException(ErrorCode.WORK_ORDER_LEGACY_SETTLE_DISABLED);
     }
 

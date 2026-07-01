@@ -156,7 +156,7 @@ export const mockInventoryLogs: InventoryLogRecord[] = [
     partCode: 'PT-LT-015',
     partName: 'NQi 前大灯总成',
     operatorId: 1,
-    remark: '工单已结算，真实扣减库存',
+    remark: '工单已标记维修完成，真实扣减库存',
     createdAt: '2023-10-24T14:45:00',
     actualBefore: 3,
     actualAfter: 2,
