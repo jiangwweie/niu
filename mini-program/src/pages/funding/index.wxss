@@ -38,6 +38,14 @@
   margin-top: 32rpx;
 }
 
+.option-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  padding: 12rpx 32rpx 20rpx;
+  background: #ffffff;
+}
+
 .file-box {
   display: flex;
   align-items: center;

@@ -24,10 +24,12 @@ class DictServiceTest {
 
     @Test
     void listItemsByTypeCodeReturnsEnabledItems() {
-        // PART_CATEGORY is ENABLED, has BATTERY(ENABLED), MOTOR(ENABLED), BRAKE(DISABLED)
+        // PART_CATEGORY is ENABLED and returns enabled items only.
         List<SysDictItemEntity> items = dictService.listItemsByTypeCode("PART_CATEGORY");
         assertNotNull(items);
-        assertEquals(2, items.size());
+        assertTrue(items.size() >= 2);
+        assertTrue(items.stream().anyMatch(i -> "BATTERY".equals(i.getItemCode())));
+        assertTrue(items.stream().anyMatch(i -> "MOTOR".equals(i.getItemCode())));
         assertTrue(items.stream().allMatch(i -> "ENABLED".equals(i.getStatus())));
     }
 

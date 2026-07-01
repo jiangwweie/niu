@@ -4,12 +4,38 @@
 MERGE INTO sys_dict_type (id, type_code, type_name, status) KEY (type_code) VALUES (1, 'PART_CATEGORY', '零件分类', 'ENABLED');
 MERGE INTO sys_dict_type (id, type_code, type_name, status) KEY (type_code) VALUES (2, 'REPAIR_TYPE', '维修类型', 'DISABLED');
 MERGE INTO sys_dict_type (id, type_code, type_name, status) KEY (type_code) VALUES (3, 'PRIORITY', '优先级', 'ENABLED');
+MERGE INTO sys_dict_type (id, type_code, type_name, status, edit_mode) KEY (type_code) VALUES (4, 'VEHICLE_MODEL', '车型', 'ENABLED', 'STORE_EXTENDABLE');
+MERGE INTO sys_dict_type (id, type_code, type_name, status, edit_mode) KEY (type_code) VALUES (5, 'REPAIR_ITEM', '维修项目', 'ENABLED', 'STORE_EXTENDABLE');
+MERGE INTO sys_dict_type (id, type_code, type_name, status, edit_mode) KEY (type_code) VALUES (6, 'UNIT', '单位', 'ENABLED', 'STORE_EXTENDABLE');
+MERGE INTO sys_dict_type (id, type_code, type_name, status, edit_mode) KEY (type_code) VALUES (7, 'NO_CHARGE_REASON', '无需收款原因', 'ENABLED', 'STORE_EXTENDABLE');
+MERGE INTO sys_dict_type (id, type_code, type_name, status, edit_mode) KEY (type_code) VALUES (8, 'REFUND_REASON', '退款原因', 'ENABLED', 'STORE_EXTENDABLE');
+MERGE INTO sys_dict_type (id, type_code, type_name, status, edit_mode) KEY (type_code) VALUES (9, 'WORK_ORDER_CANCEL_REASON', '工单取消原因', 'ENABLED', 'STORE_EXTENDABLE');
+MERGE INTO sys_dict_type (id, type_code, type_name, status, edit_mode) KEY (type_code) VALUES (10, 'INBOUND_REASON', '入库原因', 'ENABLED', 'STORE_EXTENDABLE');
+UPDATE sys_dict_type SET edit_mode = 'STORE_EXTENDABLE' WHERE type_code IN ('PART_CATEGORY', 'VEHICLE_MODEL', 'REPAIR_ITEM', 'UNIT', 'NO_CHARGE_REASON', 'REFUND_REASON', 'WORK_ORDER_CANCEL_REASON', 'INBOUND_REASON');
 UPDATE sys_dict_type SET deleted = 1 WHERE type_code = 'PRIORITY';
 
 -- dict items
 MERGE INTO sys_dict_item (id, type_id, item_code, item_name, sort_order, status, is_system) KEY (type_id, item_code) VALUES (1, 1, 'BATTERY', '电池', 1, 'ENABLED', 0);
 MERGE INTO sys_dict_item (id, type_id, item_code, item_name, sort_order, status, is_system) KEY (type_id, item_code) VALUES (2, 1, 'MOTOR', '电机', 2, 'ENABLED', 0);
 MERGE INTO sys_dict_item (id, type_id, item_code, item_name, sort_order, status, is_system) KEY (type_id, item_code) VALUES (3, 1, 'BRAKE', '刹车', 3, 'DISABLED', 0);
+UPDATE sys_dict_item SET scope = 'SYSTEM', is_system = 1 WHERE type_id = 1;
+MERGE INTO sys_dict_item (id, type_id, store_id, scope, item_code, item_name, sort_order, status, is_system) KEY (id) VALUES (4, 1, 1, 'STORE', 'STORE_BATTERY', '本店电池', 0, 'ENABLED', 0);
+MERGE INTO sys_dict_item (id, type_id, scope, item_code, item_name, sort_order, status, is_system) KEY (id) VALUES (10, 4, 'SYSTEM', 'NQI', 'NQi', 10, 'ENABLED', 1);
+MERGE INTO sys_dict_item (id, type_id, scope, item_code, item_name, sort_order, status, is_system) KEY (id) VALUES (11, 4, 'SYSTEM', 'MQI', 'MQi', 20, 'ENABLED', 1);
+MERGE INTO sys_dict_item (id, type_id, scope, item_code, item_name, sort_order, status, is_system) KEY (id) VALUES (12, 4, 'SYSTEM', 'UQI', 'UQi', 30, 'ENABLED', 1);
+MERGE INTO sys_dict_item (id, type_id, scope, item_code, item_name, sort_order, status, is_system) KEY (id) VALUES (13, 4, 'SYSTEM', 'GOVA', 'GOVA', 40, 'ENABLED', 1);
+MERGE INTO sys_dict_item (id, type_id, scope, item_code, item_name, sort_order, status, is_system) KEY (id) VALUES (20, 5, 'SYSTEM', 'INSPECTION', '整车检测', 10, 'ENABLED', 1);
+MERGE INTO sys_dict_item (id, type_id, scope, item_code, item_name, sort_order, status, is_system) KEY (id) VALUES (21, 5, 'SYSTEM', 'TIRE_REPLACE', '轮胎更换', 20, 'ENABLED', 1);
+MERGE INTO sys_dict_item (id, type_id, scope, item_code, item_name, sort_order, status, is_system) KEY (id) VALUES (30, 6, 'SYSTEM', 'PIECE', '件', 10, 'ENABLED', 1);
+MERGE INTO sys_dict_item (id, type_id, scope, item_code, item_name, sort_order, status, is_system) KEY (id) VALUES (31, 6, 'SYSTEM', 'TIME', '次', 20, 'ENABLED', 1);
+MERGE INTO sys_dict_item (id, type_id, scope, item_code, item_name, sort_order, status, is_system) KEY (id) VALUES (40, 7, 'SYSTEM', 'OFFICIAL_AFTER_SALES', '官方售后', 10, 'ENABLED', 1);
+MERGE INTO sys_dict_item (id, type_id, scope, item_code, item_name, sort_order, status, is_system) KEY (id) VALUES (41, 7, 'SYSTEM', 'WARRANTY', '质保处理', 20, 'ENABLED', 1);
+MERGE INTO sys_dict_item (id, type_id, scope, item_code, item_name, sort_order, status, is_system) KEY (id) VALUES (50, 8, 'SYSTEM', 'CUSTOMER_CANCEL', '客户取消', 10, 'ENABLED', 1);
+MERGE INTO sys_dict_item (id, type_id, scope, item_code, item_name, sort_order, status, is_system) KEY (id) VALUES (51, 8, 'SYSTEM', 'AMOUNT_ERROR', '金额录错', 20, 'ENABLED', 1);
+MERGE INTO sys_dict_item (id, type_id, scope, item_code, item_name, sort_order, status, is_system) KEY (id) VALUES (60, 9, 'SYSTEM', 'CUSTOMER_CANCEL', '客户取消', 10, 'ENABLED', 1);
+MERGE INTO sys_dict_item (id, type_id, scope, item_code, item_name, sort_order, status, is_system) KEY (id) VALUES (61, 9, 'SYSTEM', 'INPUT_ERROR', '录入错误', 20, 'ENABLED', 1);
+MERGE INTO sys_dict_item (id, type_id, scope, item_code, item_name, sort_order, status, is_system) KEY (id) VALUES (70, 10, 'SYSTEM', 'PURCHASE_INBOUND', '采购入库', 10, 'ENABLED', 1);
+MERGE INTO sys_dict_item (id, type_id, scope, item_code, item_name, sort_order, status, is_system) KEY (id) VALUES (71, 10, 'SYSTEM', 'SCAN_NEW_PART', '扫码新增配件入库', 20, 'ENABLED', 1);
 
 -- users
 MERGE INTO store (id, store_code, store_name, contact_name, contact_phone, address, status, deleted) KEY (id) VALUES (1, 'DEFAULT', '默认门店', '王店长', '13800000000', '测试地址', 'ENABLED', 0);
@@ -37,6 +63,7 @@ MERGE INTO sys_permission (id, permission_code, permission_name, module_code, st
 MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (4, 'payment:refund', '退款', 'PAYMENT', 'DISABLED');
 MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (5, 'report:view', '报表查看', 'REPORT', 'ENABLED');
 MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1004, 'PART_MANAGE', '配件管理', 'PART', 'ENABLED');
+MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1003, 'DICT_MANAGE', '字典配置', 'DICT', 'ENABLED');
 MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1005, 'INVENTORY_VIEW', '库存查看', 'INVENTORY', 'ENABLED');
 MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1006, 'INVENTORY_INBOUND', '库存入库', 'INVENTORY', 'ENABLED');
 MERGE INTO sys_permission (id, permission_code, permission_name, module_code, status) KEY (permission_code) VALUES (1007, 'INVENTORY_ADJUST', '库存调整', 'INVENTORY', 'ENABLED');
@@ -80,6 +107,7 @@ MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permis
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (5, 2, 4);
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (6, 3, 5);
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1004, 1, 1004);
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1003, 1, 1003);
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1006, 1, 1006);
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1007, 1, 1007);
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1010, 1, 1010);
@@ -123,6 +151,7 @@ MERGE INTO sys_user_role (id, user_id, role_id) KEY (user_id, role_id) VALUES (2
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (2001, 5, 1029);
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (2002, 5, 1023);
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (2003, 5, 1024);
+MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (2004, 5, 1003);
 -- M18 customer/vehicle permissions for store2 admin role (via V10 migration auto-assign)
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1042, 5, 1021);
 MERGE INTO sys_role_permission (id, role_id, permission_id) KEY (role_id, permission_id) VALUES (1043, 5, 1022);

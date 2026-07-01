@@ -1,4 +1,5 @@
 import Toast from 'tdesign-miniprogram/toast/index';
+import { dictItemLabels, getDictItems } from '../../api/dict';
 import { createFundingApplication, downloadFundingAttachment, getFundingApplicationDetail, getFundingApplications, getFundingLedgerDetail, getFundingLedgers, recordFundingPayment, submitFundingApplication, updateFundingLedger, uploadFundingAttachment } from '../../api/funding';
 import { hasPermission, requireAnyPermission, requireLogin } from '../../utils/permission';
 
@@ -102,7 +103,12 @@ Page({
     canViewLedger: false,
     canManageLedger: false,
     canRecordPayment: false,
+    vehicleModelOptions: [] as string[],
     submitLoading: false
+  },
+
+  onLoad() {
+    this.loadDictionaryOptions();
   },
 
   onShow() {
@@ -119,6 +125,12 @@ Page({
     this.loadLedgers();
   },
 
+  loadDictionaryOptions() {
+    getDictItems('VEHICLE_MODEL')
+      .then(res => this.setData({ vehicleModelOptions: dictItemLabels(res.data, []) }))
+      .catch(() => this.setData({ vehicleModelOptions: [] }));
+  },
+
   onTabChange(e: any) {
     this.setData({ activeTab: e.detail.value });
   },
@@ -128,6 +140,10 @@ Page({
     this.setData({ [`form.${field}`]: e.detail.value });
   },
 
+  onSelectFormVehicleModel(e: any) {
+    this.setData({ 'form.vehicleModel': e.currentTarget.dataset.value });
+  },
+
   onPaymentTypeChange(e: any) {
     this.setData({ 'form.paymentType': e.detail.value });
   },
@@ -135,6 +151,10 @@ Page({
   onLedgerEditChange(e: any) {
     const field = e.currentTarget.dataset.field;
     this.setData({ [`ledgerEditForm.${field}`]: e.detail.value });
+  },
+
+  onSelectLedgerVehicleModel(e: any) {
+    this.setData({ 'ledgerEditForm.vehicleModel': e.currentTarget.dataset.value });
   },
 
   onLedgerEditPaymentTypeChange(e: any) {

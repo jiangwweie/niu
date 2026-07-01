@@ -13,5 +13,6 @@ public class SysDictTypeEntity extends SoftDeleteEntity {
     private String typeCode;
     private String typeName;
     private String status;
+    private String editMode;
     private String remark;
 }

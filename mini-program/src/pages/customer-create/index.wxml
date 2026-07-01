@@ -26,6 +26,16 @@
     </view>
     <view class="section-tip">填写任意车辆信息后，需要同时填写车架号，避免车辆档案无法唯一识别。</view>
     <t-input label="车型" placeholder="选填" value="{{vehicleForm.model}}" bind:change="onVehicleFormChange" data-field="model" align="right" />
+    <view class="option-row" wx:if="{{vehicleModelOptions.length > 0}}">
+      <t-tag
+        wx:for="{{vehicleModelOptions}}"
+        wx:key="*this"
+        theme="{{vehicleForm.model === item ? 'primary' : 'default'}}"
+        variant="{{vehicleForm.model === item ? 'light' : 'outline'}}"
+        bind:tap="onSelectVehicleModel"
+        data-value="{{item}}"
+      >{{item}}</t-tag>
+    </view>
     <t-input label="车架号" placeholder="登记车辆时必填" value="{{vehicleForm.frameNo}}" bind:change="onVehicleFormChange" data-field="frameNo" align="right" />
     <t-input label="电池号" placeholder="选填" value="{{vehicleForm.batteryNo}}" bind:change="onVehicleFormChange" data-field="batteryNo" align="right" />
     <t-input label="车辆备注" placeholder="选填" value="{{vehicleForm.remark}}" bind:change="onVehicleFormChange" data-field="remark" align="right" />

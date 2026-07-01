@@ -1,4 +1,5 @@
 import { createCustomer, createVehicle } from '../../api/customer';
+import { dictItemLabels, getDictItems } from '../../api/dict';
 import Toast from 'tdesign-miniprogram/toast/index';
 import { requireAnyPermission, requireLogin } from '../../utils/permission';
 import { showRequestErrorToast } from '../../utils/requestError';
@@ -35,14 +36,25 @@ Page({
   data: {
     customerForm: emptyCustomerForm(),
     vehicleForm: emptyVehicleForm(),
+    vehicleModelOptions: [] as string[],
     submitLoading: false,
     createdCustomerId: null as number | null,
     successMessage: ''
   },
 
+  onLoad() {
+    this.loadDictionaryOptions();
+  },
+
   onShow() {
     if (!requireLogin('/pages/customer-create/index')) return;
     if (!requireAnyPermission(['CUSTOMER_MANAGE'], '当前账号无权录入客户')) return;
+  },
+
+  loadDictionaryOptions() {
+    getDictItems('VEHICLE_MODEL')
+      .then(res => this.setData({ vehicleModelOptions: dictItemLabels(res.data, []) }))
+      .catch(() => this.setData({ vehicleModelOptions: [] }));
   },
 
   onCustomerFormChange(e: any) {
@@ -57,6 +69,13 @@ Page({
     const field = e.currentTarget.dataset.field;
     this.setData({
       [`vehicleForm.${field}`]: e.detail.value,
+      successMessage: ''
+    });
+  },
+
+  onSelectVehicleModel(e: any) {
+    this.setData({
+      'vehicleForm.model': e.currentTarget.dataset.value,
       successMessage: ''
     });
   },

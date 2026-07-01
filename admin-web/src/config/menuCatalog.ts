@@ -38,6 +38,12 @@ export const platformMenus: MenuItemConfig[] = [
     permissions: ['USER_MANAGE', 'ROLE_MANAGE'],
     platformOnly: true,
   },
+  {
+    index: '/dictionary',
+    title: '基础配置',
+    permissions: ['PLATFORM_MANAGE'],
+    platformOnly: true,
+  },
 ];
 
 export const storeMenus: MenuEntryConfig[] = [

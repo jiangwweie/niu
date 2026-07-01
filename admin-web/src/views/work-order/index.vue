@@ -390,14 +390,54 @@
           :closable="false"
           style="margin-bottom: 16px;"
         />
+        <el-form-item label="关联客户">
+          <el-select
+            v-model="draftEditForm.customerId"
+            filterable
+            remote
+            clearable
+            reserve-keyword
+            placeholder="搜索客户姓名/手机号，可不关联"
+            :remote-method="searchDraftCustomers"
+            :loading="draftCustomerLoading"
+            style="width: 100%"
+            @change="handleDraftCustomerChange"
+          >
+            <el-option
+              v-for="item in draftCustomerOptions"
+              :key="item.id"
+              :label="`${item.customerName}${item.phone ? ' / ' + item.phone : ''}`"
+              :value="item.id"
+            />
+          </el-select>
+          <div class="field-hint">选择客户后自动带出手机号；若名下有车辆，将同步带出或提示选择车辆。</div>
+        </el-form-item>
         <el-form-item label="客户姓名" required>
           <el-input v-model="draftEditForm.customerNameSnapshot" placeholder="必填" />
         </el-form-item>
         <el-form-item label="手机号">
           <el-input v-model="draftEditForm.customerPhoneSnapshot" placeholder="选填" />
         </el-form-item>
+        <el-form-item v-if="draftVehicleOptions.length > 0" label="客户车辆">
+          <el-select
+            v-model="draftEditForm.vehicleId"
+            clearable
+            placeholder="请选择车辆"
+            style="width: 100%"
+            @change="handleDraftVehicleChange"
+          >
+            <el-option
+              v-for="item in draftVehicleOptions"
+              :key="item.id"
+              :label="formatVehicleOption(item)"
+              :value="item.id"
+            />
+          </el-select>
+        </el-form-item>
         <el-form-item label="车型">
-          <el-input v-model="draftEditForm.vehicleModelSnapshot" placeholder="选填" />
+          <el-select v-model="draftEditForm.vehicleModelSnapshot" filterable allow-create clearable placeholder="选择或输入车型" style="width: 100%">
+            <el-option v-for="item in vehicleModelOptions" :key="item" :label="item" :value="item" />
+          </el-select>
         </el-form-item>
         <el-form-item label="车架号">
           <el-input v-model="draftEditForm.frameNoSnapshot" placeholder="选填" />
@@ -406,7 +446,9 @@
           <el-input v-model="draftEditForm.batteryNoSnapshot" placeholder="选填" />
         </el-form-item>
         <el-form-item label="维修项目" required>
-          <el-input v-model="draftEditForm.repairItem" placeholder="必填" />
+          <el-select v-model="draftEditForm.repairItem" filterable allow-create placeholder="选择或输入维修项目" style="width: 100%">
+            <el-option v-for="item in repairItemOptions" :key="item" :label="item" :value="item" />
+          </el-select>
         </el-form-item>
         <el-form-item label="备注">
           <el-input v-model="draftEditForm.remark" type="textarea" :rows="3" placeholder="选填" />
@@ -487,7 +529,9 @@
           </el-select>
         </el-form-item>
         <el-form-item label="退款原因" required>
-          <el-input v-model="refundForm.reason" placeholder="必填" />
+          <el-select v-model="refundForm.reason" filterable allow-create placeholder="选择或输入退款原因" style="width: 100%">
+            <el-option v-for="item in refundReasonOptions" :key="item" :label="item" :value="item" />
+          </el-select>
         </el-form-item>
         <el-form-item label="备注">
           <el-input v-model="refundForm.remark" type="textarea" :rows="2" placeholder="选填" />
@@ -514,14 +558,10 @@
         />
         <el-form-item label="无需收款原因" required>
           <el-select v-model="repairDoneForm.noChargeReason" placeholder="请选择原因" style="width: 100%">
-            <el-option label="保修内免费" value="WARRANTY_FREE" />
-            <el-option label="首保赠送" value="FIRST_MAINTENANCE_FREE" />
-            <el-option label="客户自备配件" value="CUSTOMER_OWN_PARTS" />
-            <el-option label="无收费项目" value="NO_CHARGE_ITEM" />
-            <el-option label="其他" value="OTHER" />
+            <el-option v-for="item in noChargeReasonOptions" :key="item" :label="item" :value="item" />
           </el-select>
         </el-form-item>
-        <el-form-item v-if="repairDoneForm.noChargeReason === 'OTHER'" label="其他原因说明" required>
+        <el-form-item v-if="repairDoneForm.noChargeReason === '其他'" label="其他原因说明" required>
           <el-input v-model="repairDoneForm.otherReason" placeholder="请输入具体原因" />
         </el-form-item>
         <el-form-item label="无需收款备注">
@@ -631,7 +671,9 @@
           style="margin-bottom: 16px;"
         />
         <el-form-item label="取消原因" required>
-          <el-input v-model="cancelForm.reason" type="textarea" :rows="3" placeholder="请输入取消原因（必填）" />
+          <el-select v-model="cancelForm.reason" filterable allow-create placeholder="选择或输入取消原因" style="width: 100%">
+            <el-option v-for="item in cancelReasonOptions" :key="item" :label="item" :value="item" />
+          </el-select>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -676,10 +718,44 @@ import {
 } from '@/utils/statusText';
 import { formatDateTime } from '@/utils/formatDateTime';
 import type { WorkOrderRecord, WorkOrderQuery } from '@/types/workOrder';
+import { getDictionaryItems } from '@/api/dictionary';
+import { getCustomerDetail, getCustomerList, type CustomerListItem, type VehicleBrief } from '@/api/customer';
 
 const authStore = useAuthStore();
 const route = useRoute();
 const hasWorkOrderUpdate = computed(() => hasPermission('WORK_ORDER_UPDATE'));
+const vehicleModelOptions = ref<string[]>([]);
+const repairItemOptions = ref<string[]>([]);
+const refundReasonOptions = ref<string[]>([]);
+const noChargeReasonOptions = ref<string[]>([]);
+const cancelReasonOptions = ref<string[]>([]);
+const draftCustomerLoading = ref(false);
+const draftCustomerOptions = ref<CustomerListItem[]>([]);
+const draftVehicleOptions = ref<VehicleBrief[]>([]);
+
+async function loadDictOptionLabels(typeCode: string): Promise<string[]> {
+  try {
+    const items = await getDictionaryItems(typeCode);
+    return items.filter(item => item.enabled).map(item => item.dictLabel);
+  } catch {
+    return [];
+  }
+}
+
+async function loadDictionaryOptions() {
+  const [vehicleModels, repairItems, refundReasons, noChargeReasons, cancelReasons] = await Promise.all([
+    loadDictOptionLabels('VEHICLE_MODEL'),
+    loadDictOptionLabels('REPAIR_ITEM'),
+    loadDictOptionLabels('REFUND_REASON'),
+    loadDictOptionLabels('NO_CHARGE_REASON'),
+    loadDictOptionLabels('WORK_ORDER_CANCEL_REASON'),
+  ]);
+  vehicleModelOptions.value = vehicleModels;
+  repairItemOptions.value = repairItems;
+  refundReasonOptions.value = refundReasons;
+  noChargeReasonOptions.value = noChargeReasons.length ? noChargeReasons : ['官方售后', '质保处理', '免费检测', '老板免单', '其他'];
+  cancelReasonOptions.value = cancelReasons;
+}
 
 // 查询参数
 const queryParams = reactive<WorkOrderQuery>({
@@ -862,6 +938,101 @@ const draftEditForm = reactive({
   remark: '',
 });
 
+const ensureDraftCustomerOption = (customer: Pick<CustomerListItem, 'id' | 'customerName' | 'phone'>) => {
+  if (!draftCustomerOptions.value.some(item => item.id === customer.id)) {
+    draftCustomerOptions.value.unshift({
+      id: customer.id,
+      customerName: customer.customerName,
+      phone: customer.phone || '',
+      remark: '',
+      vehicleCount: 0,
+      lastRepairAt: null,
+      createdAt: '',
+    });
+  }
+};
+
+const searchDraftCustomers = async (keyword: string) => {
+  const normalized = keyword.trim();
+  if (!normalized) {
+    draftCustomerOptions.value = [];
+    return;
+  }
+  draftCustomerLoading.value = true;
+  try {
+    const res = await getCustomerList({ keyword: normalized, pageNo: 1, pageSize: 20 });
+    draftCustomerOptions.value = res.records;
+  } catch {
+    draftCustomerOptions.value = [];
+  } finally {
+    draftCustomerLoading.value = false;
+  }
+};
+
+const formatVehicleOption = (vehicle: VehicleBrief) => {
+  const main = vehicle.model || '未填车型';
+  const frame = vehicle.frameNo ? ` / ${vehicle.frameNo}` : '';
+  const battery = vehicle.batteryNo ? ` / ${vehicle.batteryNo}` : '';
+  return `${main}${frame}${battery}`;
+};
+
+const applyDraftVehicle = (vehicle: VehicleBrief | undefined) => {
+  if (!vehicle) {
+    draftEditForm.vehicleId = null;
+    draftEditForm.vehicleModelSnapshot = '';
+    draftEditForm.frameNoSnapshot = '';
+    draftEditForm.batteryNoSnapshot = '';
+    return;
+  }
+  draftEditForm.vehicleId = vehicle.id;
+  draftEditForm.vehicleModelSnapshot = vehicle.model || '';
+  draftEditForm.frameNoSnapshot = vehicle.frameNo || '';
+  draftEditForm.batteryNoSnapshot = vehicle.batteryNo || '';
+};
+
+const loadDraftCustomerVehicles = async (customerId: number, autoApply: boolean) => {
+  const detail = await getCustomerDetail(customerId);
+  ensureDraftCustomerOption({
+    id: detail.id,
+    customerName: detail.customerName,
+    phone: detail.phone || '',
+  });
+  draftEditForm.customerNameSnapshot = detail.customerName || '';
+  draftEditForm.customerPhoneSnapshot = detail.phone || '';
+  draftVehicleOptions.value = detail.vehicles || [];
+  if (autoApply) {
+    applyDraftVehicle(undefined);
+    if (draftVehicleOptions.value.length === 1) {
+      applyDraftVehicle(draftVehicleOptions.value[0]);
+    } else if (draftVehicleOptions.value.length > 1) {
+      ElMessage.info('该客户有多辆车，请选择本次维修车辆');
+    }
+  }
+};
+
+const handleDraftCustomerChange = async (customerId?: number) => {
+  if (!customerId) {
+    draftEditForm.customerId = null;
+    draftEditForm.vehicleId = null;
+    draftVehicleOptions.value = [];
+    return;
+  }
+  try {
+    await loadDraftCustomerVehicles(customerId, true);
+  } catch {
+    draftVehicleOptions.value = [];
+    ElMessage.warning('客户车辆查询失败，可继续手工录入车辆信息');
+  }
+};
+
+const handleDraftVehicleChange = (vehicleId?: number) => {
+  if (!vehicleId) {
+    applyDraftVehicle(undefined);
+    return;
+  }
+  applyDraftVehicle(draftVehicleOptions.value.find(item => item.id === vehicleId));
+};
+
 const openDraftEditDialog = async (row: WorkOrderRecord) => {
   if ((row.progressStatus || row.status) !== 'DRAFT') {
     ElMessage.warning('仅新建中工单可编辑');
@@ -883,6 +1054,18 @@ const openDraftEditDialog = async (row: WorkOrderRecord) => {
     draftEditForm.batteryNoSnapshot = detail.batteryNo || '';
     draftEditForm.repairItem = detail.repairItem || '';
     draftEditForm.remark = detail.remark || '';
+    draftVehicleOptions.value = [];
+    draftCustomerOptions.value = [];
+    if (detail.customerId) {
+      ensureDraftCustomerOption({
+        id: detail.customerId,
+        customerName: detail.customerName || '',
+        phone: detail.phone || '',
+      });
+      loadDraftCustomerVehicles(detail.customerId, false).catch(() => {
+        draftVehicleOptions.value = [];
+      });
+    }
     draftEditDialogVisible.value = true;
   } catch {
     // request interceptor already shows error
@@ -1124,7 +1307,7 @@ const submitRepairDone = async () => {
       ElMessage.warning('请选择无需收款原因');
       return;
     }
-    if (repairDoneForm.noChargeReason === 'OTHER') {
+    if (repairDoneForm.noChargeReason === '其他') {
       if (!repairDoneForm.otherReason.trim()) {
         ElMessage.warning('请输入其他原因具体说明');
         return;
@@ -1319,6 +1502,7 @@ const submitCancel = async () => {
 };
 
 onMounted(async () => {
+  await loadDictionaryOptions();
   if (typeof route.query.partId === 'string') {
     const partId = Number(route.query.partId);
     queryParams.partId = Number.isNaN(partId) ? undefined : partId;

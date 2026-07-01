@@ -208,7 +208,9 @@
           <el-input v-model="editDialog.form.model" placeholder="请输入适用型号，如 NQi, 通用" />
         </el-form-item>
         <el-form-item label="分类">
-          <el-input v-model="editDialog.form.categoryCode" placeholder="请输入分类编码" />
+          <el-select v-model="editDialog.form.categoryCode" filterable allow-create clearable placeholder="选择或输入分类" style="width: 100%">
+            <el-option v-for="item in partCategoryOptions" :key="item" :label="item" :value="item" />
+          </el-select>
         </el-form-item>
         <el-form-item label="成本价">
           <el-input-number v-model="editDialog.form.referenceCostPrice" :min="0" :precision="2" :step="10" style="width: 100%" />
@@ -305,6 +307,7 @@ import {
   getPartDeleteCheck,
 } from '@/api/parts';
 import type { PartViewRecord } from '@/api/parts';
+import { getDictionaryItems } from '@/api/dictionary';
 
 const router = useRouter();
 const route = useRoute();
@@ -327,6 +330,7 @@ const queryParams = reactive({
 const loading = ref(false);
 const tableData = ref<PartViewRecord[]>([]);
 const total = ref(0);
+const partCategoryOptions = ref<string[]>([]);
 
 const isOfficialSource = (source?: string) => String(source || '').toUpperCase() === 'OFFICIAL';
 
@@ -728,6 +732,9 @@ const printBarcode = (row: PartViewRecord) => {
 };
 
 onMounted(() => {
+  getDictionaryItems('PART_CATEGORY')
+    .then(items => { partCategoryOptions.value = items.filter(item => item.enabled).map(item => item.dictLabel); })
+    .catch(() => { partCategoryOptions.value = []; });
   fetchData();
   if (route.query.action === 'create') {
     if (canCreatePart.value) {

@@ -1,4 +1,5 @@
 import { getWorkOrderDetail, cancelWorkOrder, recordPayment, recordRefund, markRepairDone, deliverWorkOrder } from '../../api/workOrder';
+import { dictItemLabels, getDictItems } from '../../api/dict';
 import { WorkOrder, PaymentMethod } from '../../types/workOrder';
 import { hasPermission, requireAnyPermission, requireLogin } from '../../utils/permission';
 import {
@@ -94,6 +95,8 @@ Page({
     noChargeReason: '',
     noChargeRemark: '',
     noChargeReasons: NO_CHARGE_REASONS,
+    refundReasonOptions: [] as string[],
+    cancelReasonOptions: [] as string[],
 
     // Deliver
     deliverDialogVisible: false,
@@ -104,6 +107,7 @@ Page({
   onLoad(options: any) {
     if (!requireLogin('/pages/work-orders/index')) return;
     if (!requireAnyPermission(['WORK_ORDER_VIEW', 'WORK_ORDER_CREATE', 'WORK_ORDER_UPDATE', 'PAYMENT_RECORD', 'REFUND_RECORD'], '当前账号无权查看工单')) return;
+    this.loadDictionaryOptions();
     this.setData({
       hasCancelPermission: hasPermission('WORK_ORDER_CANCEL'),
       hasPaymentPermission: hasPermission('PAYMENT_RECORD'),
@@ -120,6 +124,19 @@ Page({
     if (this.data.orderId) {
       this.fetchData();
     }
+  },
+  loadDictionaryOptions() {
+    Promise.all([
+      getDictItems('NO_CHARGE_REASON').catch(() => ({ data: [] })),
+      getDictItems('REFUND_REASON').catch(() => ({ data: [] })),
+      getDictItems('WORK_ORDER_CANCEL_REASON').catch(() => ({ data: [] }))
+    ]).then(([noChargeReasons, refundReasons, cancelReasons]) => {
+      this.setData({
+        noChargeReasons: dictItemLabels(noChargeReasons.data, NO_CHARGE_REASONS),
+        refundReasonOptions: dictItemLabels(refundReasons.data, []),
+        cancelReasonOptions: dictItemLabels(cancelReasons.data, [])
+      });
+    });
   },
   async fetchData() {
     try {
@@ -200,6 +217,10 @@ Page({
 
   onCancelReasonChange(e: any) {
     this.setData({ cancelReason: e.detail.value });
+  },
+
+  onSelectCancelReason(e: any) {
+    this.setData({ cancelReason: e.currentTarget.dataset.value });
   },
 
   onCancelRemarkChange(e: any) {
@@ -363,6 +384,10 @@ Page({
 
   onSelectRefundMethod(e: any) {
     this.setData({ 'refundForm.refundMethod': e.currentTarget.dataset.val });
+  },
+
+  onSelectRefundReason(e: any) {
+    this.setData({ 'refundForm.reason': e.currentTarget.dataset.value });
   },
 
   confirmRecordRefund() {

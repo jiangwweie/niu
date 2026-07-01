@@ -187,7 +187,9 @@
           <el-input-number v-model="inboundDialog.form.unitCost" :min="0" :precision="2" :step="10" />
         </el-form-item>
         <el-form-item label="入库原因">
-          <el-input v-model="inboundDialog.form.reason" placeholder="如：采购入库、初始入库" />
+          <el-select v-model="inboundDialog.form.reason" filterable allow-create clearable placeholder="选择或输入入库原因" style="width: 100%">
+            <el-option v-for="item in inboundReasonOptions" :key="item" :label="item" :value="item" />
+          </el-select>
         </el-form-item>
         <el-form-item label="备注">
           <el-input v-model="inboundDialog.form.remark" type="textarea" :rows="2" />
@@ -303,6 +305,7 @@ import {
   submitAdjust as submitAdjustApi,
 } from '@/api/inventory';
 import { getPartsList } from '@/api/parts';
+import { getDictionaryItems } from '@/api/dictionary';
 import type { PartViewRecord } from '@/api/parts';
 import { hasAnyPermission, hasPermission } from '@/utils/permission';
 import { formatDateTime } from '@/utils/formatDateTime';
@@ -328,6 +331,16 @@ const loading = ref(false);
 const tableData = ref<InventoryRecord[]>([]);
 const total = ref(0);
 const canCreatePart = computed(() => hasAnyPermission(['PART_CREATE', 'PART_MANAGE']));
+const inboundReasonOptions = ref<string[]>([]);
+
+const loadDictionaryOptions = async () => {
+  try {
+    const items = await getDictionaryItems('INBOUND_REASON');
+    inboundReasonOptions.value = items.filter((item) => item.enabled).map((item) => item.dictLabel);
+  } catch {
+    inboundReasonOptions.value = [];
+  }
+};
 
 const isOfficialSource = (source?: string) => String(source || '').toUpperCase() === 'OFFICIAL';
 const getInventoryStateTagType = (code?: string) => {
@@ -646,6 +659,7 @@ onMounted(() => {
     queryParams.view = route.query.view;
   }
   fetchData();
+  loadDictionaryOptions();
   if (route.query.openLogs === '1' && route.query.partId) {
     const partId = Number(route.query.partId);
     if (!Number.isNaN(partId) && partId > 0) {

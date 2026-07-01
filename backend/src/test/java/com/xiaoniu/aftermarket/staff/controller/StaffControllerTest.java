@@ -178,11 +178,15 @@ class StaffControllerTest {
                         .header("X-Store-Id", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("SUCCESS"))
-                .andExpect(jsonPath("$.data", hasSize(2)))
-                .andExpect(jsonPath("$.data[0].itemCode").value("BATTERY"))
-                .andExpect(jsonPath("$.data[0].itemName").value("电池"))
-                .andExpect(jsonPath("$.data[0].sortOrder").value(1))
-                .andExpect(jsonPath("$.data[0].enabled").value(true));
+                .andExpect(jsonPath("$.data", hasSize(3)))
+                .andExpect(jsonPath("$.data[0].itemCode").value("STORE_BATTERY"))
+                .andExpect(jsonPath("$.data[0].itemName").value("本店电池"))
+                .andExpect(jsonPath("$.data[0].scope").value("STORE"))
+                .andExpect(jsonPath("$.data[0].sortOrder").value(0))
+                .andExpect(jsonPath("$.data[0].enabled").value(true))
+                .andExpect(jsonPath("$.data[0].editable").value(false))
+                .andExpect(jsonPath("$.data[1].itemCode").value("BATTERY"))
+                .andExpect(jsonPath("$.data[1].scope").value("SYSTEM"));
     }
 
     @Test

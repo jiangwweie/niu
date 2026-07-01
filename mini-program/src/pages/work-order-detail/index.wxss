@@ -215,6 +215,22 @@
   font-weight: bold;
   color: #222;
 }
+
+.option-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  padding: 12rpx 32rpx 20rpx;
+  background: #ffffff;
+}
+
+.dialog-option-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-bottom: 16rpx;
+}
+
 .popup-body {
   max-height: 72vh;
   box-sizing: border-box;

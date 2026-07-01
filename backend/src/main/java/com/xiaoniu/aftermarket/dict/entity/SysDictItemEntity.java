@@ -12,6 +12,8 @@ import lombok.Setter;
 public class SysDictItemEntity extends SoftDeleteEntity {
 
     private Long typeId;
+    private Long storeId;
+    private String scope;
     private String itemCode;
     private String itemName;
     private Integer sortOrder;

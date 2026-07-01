@@ -1,6 +1,7 @@
 import { getParts, lookupPartByCode } from '../../api/parts';
 import { getInventoryStockDetail } from '../../api/inventory';
-import { searchCustomers, searchVehicles, CustomerSearchResult, VehicleSearchResult } from '../../api/customer';
+import { searchCustomers, searchVehicles, listCustomerVehicles, CustomerSearchResult, VehicleSearchResult } from '../../api/customer';
+import { dictItemLabels, getDictItems } from '../../api/dict';
 import { requireAnyPermission, requireLogin } from '../../utils/permission';
 import {
   createDraftWorkOrder,
@@ -179,6 +180,12 @@ Page({
     noChargeReason: '',
     noChargeRemark: '',
     noChargeReasons: NO_CHARGE_REASONS,
+    vehicleModelOptions: [] as string[],
+    repairItemOptions: [] as string[],
+    unitOptions: [] as string[],
+    refundReasonOptions: [] as string[],
+    cancelReasonOptions: [] as string[],
+    partCategoryOptions: [] as string[],
 
     // Deliver
     deliverDialogVisible: false,
@@ -196,6 +203,7 @@ Page({
 
   onLoad(options?: { id?: string; workOrderId?: string }) {
     this.loadParts();
+    this.loadDictionaryOptions();
     const workOrderId = options?.id || options?.workOrderId;
     if (workOrderId) {
       this.setData({
@@ -205,6 +213,28 @@ Page({
       });
       this.refreshWorkOrder();
     }
+  },
+
+  loadDictionaryOptions() {
+    Promise.all([
+      getDictItems('VEHICLE_MODEL').catch(() => ({ data: [] })),
+      getDictItems('REPAIR_ITEM').catch(() => ({ data: [] })),
+      getDictItems('UNIT').catch(() => ({ data: [] })),
+      getDictItems('NO_CHARGE_REASON').catch(() => ({ data: [] })),
+      getDictItems('REFUND_REASON').catch(() => ({ data: [] })),
+      getDictItems('WORK_ORDER_CANCEL_REASON').catch(() => ({ data: [] })),
+      getDictItems('PART_CATEGORY').catch(() => ({ data: [] }))
+    ]).then(([vehicleModels, repairItems, units, noChargeReasons, refundReasons, cancelReasons, partCategories]) => {
+      this.setData({
+        vehicleModelOptions: dictItemLabels(vehicleModels.data, []),
+        repairItemOptions: dictItemLabels(repairItems.data, []),
+        unitOptions: dictItemLabels(units.data, ['件', '个', '套', '次']),
+        noChargeReasons: dictItemLabels(noChargeReasons.data, NO_CHARGE_REASONS),
+        refundReasonOptions: dictItemLabels(refundReasons.data, []),
+        cancelReasonOptions: dictItemLabels(cancelReasons.data, []),
+        partCategoryOptions: dictItemLabels(partCategories.data, [])
+      });
+    });
   },
 
   onShow() {
@@ -229,6 +259,12 @@ Page({
   onDraftChange(e: any) {
     const field = e.currentTarget.dataset.field;
     this.setData({ [`draft.${field}`]: e.detail.value });
+  },
+
+  onSelectDraftOption(e: any) {
+    const field = e.currentTarget.dataset.field;
+    const value = e.currentTarget.dataset.value;
+    this.setData({ [`draft.${field}`]: value });
   },
 
   saveDraft() {
@@ -414,6 +450,12 @@ Page({
       return;
     }
     this.setData({ [`currentItemForm.${field}`]: e.detail.value });
+  },
+
+  onSelectItemOption(e: any) {
+    const field = e.currentTarget.dataset.field;
+    const value = e.currentTarget.dataset.value;
+    this.setData({ [`currentItemForm.${field}`]: value });
   },
 
   saveChargeItem() {
@@ -678,6 +720,12 @@ Page({
     this.setData({ [`tempPartForm.${field}`]: e.detail.value });
   },
 
+  onSelectTempPartOption(e: any) {
+    const field = e.currentTarget.dataset.field;
+    const value = e.currentTarget.dataset.value;
+    this.setData({ [`tempPartForm.${field}`]: value });
+  },
+
   submitTempPartCharge() {
     if (this.data.tempPartSaving || !this.data.workOrderId) return;
     const form = this.data.tempPartForm;
@@ -798,17 +846,40 @@ Page({
     const customer: CustomerSearchResult = e.currentTarget.dataset.item;
     this.setData({
       selectedCustomerId: customer.id,
+      selectedVehicleId: null,
       'draft.customerNameSnapshot': customer.customerName,
       'draft.customerPhoneSnapshot': customer.phone || '',
+      'draft.vehicleModelSnapshot': '',
+      'draft.frameNoSnapshot': '',
+      'draft.batteryNoSnapshot': '',
       customerSearchVisible: false
+    });
+    listCustomerVehicles(customer.id).then(res => {
+      const vehicles = res.data || [];
+      if (vehicles.length === 1) {
+        this.applyVehicleSelection(vehicles[0], false);
+      } else if (vehicles.length > 1) {
+        this.setData({
+          vehicleSearchResults: vehicles,
+          vehicleSearchState: 'success',
+          vehicleSearchVisible: true,
+          vehicleSearchKeyword: ''
+        });
+      }
+    }).catch(() => {
+      Toast({ context: this, selector: '#t-toast', message: '客户已带出，车辆查询失败，可手动搜索车辆', icon: 'close-circle' });
     });
   },
 
   clearSelectedCustomer() {
     this.setData({
       selectedCustomerId: null,
+      selectedVehicleId: null,
       'draft.customerNameSnapshot': '',
-      'draft.customerPhoneSnapshot': ''
+      'draft.customerPhoneSnapshot': '',
+      'draft.vehicleModelSnapshot': '',
+      'draft.frameNoSnapshot': '',
+      'draft.batteryNoSnapshot': ''
     });
   },
 
@@ -865,6 +936,10 @@ Page({
 
   selectVehicle(e: any) {
     const vehicle: VehicleSearchResult = e.currentTarget.dataset.item;
+    this.applyVehicleSelection(vehicle, true);
+  },
+
+  applyVehicleSelection(vehicle: VehicleSearchResult, closePopup: boolean) {
     this.setData({
       selectedCustomerId: vehicle.customerId || this.data.selectedCustomerId,
       selectedVehicleId: vehicle.id,
@@ -873,7 +948,7 @@ Page({
       'draft.vehicleModelSnapshot': vehicle.model || '',
       'draft.frameNoSnapshot': vehicle.frameNo || '',
       'draft.batteryNoSnapshot': vehicle.batteryNo || '',
-      vehicleSearchVisible: false
+      vehicleSearchVisible: closePopup ? false : this.data.vehicleSearchVisible
     });
   },
 
@@ -939,6 +1014,10 @@ Page({
 
   onCancelReasonChange(e: any) {
     this.setData({ cancelReason: e.detail.value });
+  },
+
+  onSelectCancelReason(e: any) {
+    this.setData({ cancelReason: e.currentTarget.dataset.value });
   },
 
   onCancelRemarkChange(e: any) {
@@ -1083,6 +1162,10 @@ Page({
   onRefundFormChange(e: any) {
     const field = e.currentTarget.dataset.field;
     this.setData({ [`refundForm.${field}`]: e.detail.value });
+  },
+
+  onSelectRefundReason(e: any) {
+    this.setData({ 'refundForm.reason': e.currentTarget.dataset.value });
   },
 
   onSelectRefundMethod(e: any) {

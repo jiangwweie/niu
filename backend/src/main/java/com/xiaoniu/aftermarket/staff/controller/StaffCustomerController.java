@@ -11,6 +11,7 @@ import com.xiaoniu.aftermarket.customer.dto.CreateCustomerRequest;
 import com.xiaoniu.aftermarket.customer.dto.CreateVehicleRequest;
 import com.xiaoniu.aftermarket.customer.dto.CustomerPageQuery;
 import com.xiaoniu.aftermarket.customer.dto.CustomerResponse;
+import com.xiaoniu.aftermarket.customer.dto.VehiclePageQuery;
 import com.xiaoniu.aftermarket.customer.service.CustomerService;
 import com.xiaoniu.aftermarket.customer.service.VehicleService;
 import jakarta.validation.Valid;
@@ -68,10 +69,30 @@ public class StaffCustomerController {
         return ApiResponse.success(id);
     }
 
+    @PreAuthorize("hasAuthority('CUSTOMER_VIEW')")
+    @GetMapping("/{customerId}/vehicles")
+    public ApiResponse<List<CustomerVehicleResult>> listVehicles(@PathVariable Long customerId) {
+        CurrentUser user = requireCurrentUser();
+        VehiclePageQuery query = new VehiclePageQuery();
+        query.setStoreId(user.storeId());
+        query.setCustomerId(customerId);
+        query.setPageNo(1);
+        query.setPageSize(50);
+        List<CustomerVehicleResult> results = vehicleService.pageQuery(query).records().stream()
+                .map(r -> new CustomerVehicleResult(r.getId(), r.getFrameNo(), r.getModel(),
+                        r.getBatteryNo(), r.getCustomerId(), r.getCustomerName(), r.getCustomerPhone()))
+                .toList();
+        return ApiResponse.success(results);
+    }
+
     private CurrentUser requireCurrentUser() {
         return CurrentUserContext.get()
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "缺少用户上下文"));
     }
 
     public record CustomerSearchResult(Long id, String customerName, String phone) {}
+
+    public record CustomerVehicleResult(Long id, String frameNo, String model,
+                                        String batteryNo, Long customerId,
+                                        String customerName, String customerPhone) {}
 }

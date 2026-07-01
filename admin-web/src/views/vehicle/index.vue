@@ -73,7 +73,9 @@
           <el-input v-model="form.frameNo" placeholder="必填" />
         </el-form-item>
         <el-form-item label="车型" prop="model">
-          <el-input v-model="form.model" placeholder="选填" />
+          <el-select v-model="form.model" filterable allow-create clearable placeholder="选择或输入车型" style="width: 100%">
+            <el-option v-for="item in vehicleModelOptions" :key="item" :label="item" :value="item" />
+          </el-select>
         </el-form-item>
         <el-form-item label="电池号" prop="batteryNo">
           <el-input v-model="form.batteryNo" placeholder="选填" />
@@ -141,6 +143,7 @@ import {
 } from '@/api/customer';
 import { getProgressStatusText } from '@/utils/statusText';
 import { formatDateTime } from '@/utils/formatDateTime';
+import { getDictionaryItems } from '@/api/dictionary';
 
 const router = useRouter();
 const route = useRoute();
@@ -149,6 +152,7 @@ const loading = ref(false);
 const total = ref(0);
 const tableData = ref<VehicleListItem[]>([]);
 const queryParams = reactive({ vin: '', model: '', customerPhone: '', customerName: '', pageNo: 1, pageSize: 20 });
+const vehicleModelOptions = ref<string[]>([]);
 
 // Dialog
 const dialogVisible = ref(false);
@@ -264,6 +268,9 @@ function goWorkOrder(id: number) {
 }
 
 onMounted(() => {
+  getDictionaryItems('VEHICLE_MODEL')
+    .then(items => { vehicleModelOptions.value = items.filter(item => item.enabled).map(item => item.dictLabel); })
+    .catch(() => { vehicleModelOptions.value = []; });
   fetchData();
   // If navigated with highlight query, open detail
   const highlight = route.query.highlight;

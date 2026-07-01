@@ -23,7 +23,8 @@ public class PlatformAccessGuard extends OncePerRequestFilter {
     private static final List<String> ADMIN_USER_MANAGEMENT_PATHS = List.of(
             "/api/admin/users",
             "/api/admin/roles",
-            "/api/admin/permissions"
+            "/api/admin/permissions",
+            "/api/admin/dict"
     );
 
     private final SecurityApiResponseWriter responseWriter;

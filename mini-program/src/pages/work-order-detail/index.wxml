@@ -142,6 +142,16 @@
 >
   <view slot="content" style="font-size: 14px; color: #666;">
     <text style="display: block; margin-bottom: 12px;">取消工单将关闭此工单；如已预占库存，系统将自动释放。若已有收款，请后续处理退款。</text>
+    <view class="dialog-option-row" wx:if="{{cancelReasonOptions.length > 0}}">
+      <t-tag
+        wx:for="{{cancelReasonOptions}}"
+        wx:key="*this"
+        theme="{{cancelReason === item ? 'primary' : 'default'}}"
+        variant="{{cancelReason === item ? 'light' : 'outline'}}"
+        bind:tap="onSelectCancelReason"
+        data-value="{{item}}"
+      >{{item}}</t-tag>
+    </view>
     <t-input placeholder="请输入取消原因(必填)" value="{{cancelReason}}" bind:change="onCancelReasonChange" borderless style="background: #f5f5f5; border-radius: 4px; margin-bottom: 8px;" />
     <t-input placeholder="可输入备注(选填)" value="{{cancelRemark}}" bind:change="onCancelRemarkChange" borderless style="background: #f5f5f5; border-radius: 4px;" />
   </view>
@@ -218,6 +228,16 @@
         </view>
 
         <t-input label="退款原因" placeholder="必填" value="{{refundForm.reason}}" bind:change="onRefundFormChange" data-field="reason" align="right" />
+        <view class="option-row" wx:if="{{refundReasonOptions.length > 0}}">
+          <t-tag
+            wx:for="{{refundReasonOptions}}"
+            wx:key="*this"
+            theme="{{refundForm.reason === item ? 'danger' : 'default'}}"
+            variant="{{refundForm.reason === item ? 'light' : 'outline'}}"
+            bind:tap="onSelectRefundReason"
+            data-value="{{item}}"
+          >{{item}}</t-tag>
+        </view>
         <t-input label="备注" placeholder="选填" value="{{refundForm.remark}}" bind:change="onRefundFormChange" data-field="remark" align="right" />
       </t-cell-group>
 

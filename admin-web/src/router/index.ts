@@ -115,7 +115,7 @@ const routes: Array<RouteRecordRaw> = [
         path: 'dictionary',
         name: 'Dictionary',
         component: () => import('@/views/dictionary/index.vue'),
-        meta: { title: '基础配置', anyPermissions: ['DICT_MANAGE'] }
+        meta: { title: '基础配置', anyPermissions: ['DICT_MANAGE', 'PLATFORM_MANAGE'] }
       },
       {
         path: 'user',
@@ -195,7 +195,7 @@ function nextAfterAuth(user: AuthUser, to: any, next: any) {
   if (user.passwordMustChange && to.path !== '/change-password') {
     return next({ path: '/change-password' });
   }
-  if (user.accountType === 'PLATFORM' && !to.path.startsWith('/platform') && to.path !== '/change-password' && to.path !== '/user' && to.path !== '/403') {
+  if (user.accountType === 'PLATFORM' && !to.path.startsWith('/platform') && to.path !== '/change-password' && to.path !== '/user' && to.path !== '/dictionary' && to.path !== '/403') {
     return next({ path: '/platform/stores' });
   }
   if (user.accountType === 'STORE' && to.path.startsWith('/platform')) {

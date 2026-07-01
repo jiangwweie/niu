@@ -62,6 +62,13 @@ export const createVehicle = (customerId: number, data: CreateVehiclePayload) =>
   });
 };
 
+export const listCustomerVehicles = (customerId: number) => {
+  return request<VehicleSearchResult[]>({
+    url: `/api/staff/customers/${customerId}/vehicles`,
+    method: 'GET'
+  });
+};
+
 export const searchVehicles = (keyword: string, customerId?: number | null) => {
   const normalizedKeyword = normalizeSearchParam(keyword);
   if (!normalizedKeyword) {

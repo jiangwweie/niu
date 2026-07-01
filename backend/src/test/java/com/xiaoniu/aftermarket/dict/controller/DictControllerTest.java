@@ -3,7 +3,9 @@ package com.xiaoniu.aftermarket.dict.controller;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -38,14 +40,52 @@ class DictControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("SUCCESS"))
                 .andExpect(jsonPath("$.message").value("OK"))
-                .andExpect(jsonPath("$.data", hasSize(2)))
-                .andExpect(jsonPath("$.data[0].itemCode").value("BATTERY"))
-                .andExpect(jsonPath("$.data[0].itemName").value("电池"))
-                .andExpect(jsonPath("$.data[0].sortOrder").value(1))
+                .andExpect(jsonPath("$.data", hasSize(3)))
+                .andExpect(jsonPath("$.data[0].itemCode").value("STORE_BATTERY"))
+                .andExpect(jsonPath("$.data[0].itemName").value("本店电池"))
+                .andExpect(jsonPath("$.data[0].sortOrder").value(0))
                 .andExpect(jsonPath("$.data[0].enabled").value(true))
-                .andExpect(jsonPath("$.data[0].id").doesNotExist())
+                .andExpect(jsonPath("$.data[0].id").value(4))
                 .andExpect(jsonPath("$.data[0].typeId").doesNotExist())
+                .andExpect(jsonPath("$.data[0].scope").value("STORE"))
+                .andExpect(jsonPath("$.data[0].systemItem").value(false))
                 .andExpect(jsonPath("$.traceId").value(nullValue()));
+    }
+
+    @Test
+    void storeAdminCanCreateAndDeleteStoreDictItem() throws Exception {
+        mockMvc.perform(post("/api/admin/dict/types/PART_CATEGORY/items")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "itemCode": "STORE_TEST_CATEGORY",
+                                  "itemName": "本店测试分类",
+                                  "sortOrder": -1,
+                                  "scope": "STORE"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.scope").value("STORE"))
+                .andExpect(jsonPath("$.data.storeId").value(1))
+                .andExpect(jsonPath("$.data.editable").value(true));
+
+        mockMvc.perform(get("/api/admin/dict/types/PART_CATEGORY/items")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].itemCode").value("STORE_TEST_CATEGORY"));
+    }
+
+    @Test
+    void storeUserCannotDeleteSystemDictItem() throws Exception {
+        mockMvc.perform(delete("/api/admin/dict/items/1")
+                        .header("X-User-Id", "10")
+                        .header("X-Store-Id", "1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
     }
 
     @Test
@@ -84,10 +124,12 @@ class DictControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("SUCCESS"))
                 .andExpect(jsonPath("$.data").isArray())
-                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data.length()").value(8))
                 .andExpect(jsonPath("$.data[0].typeCode").value("PART_CATEGORY"))
                 .andExpect(jsonPath("$.data[0].typeName").value("零件分类"))
-                .andExpect(jsonPath("$.data[0].enabled").value(true));
+                .andExpect(jsonPath("$.data[0].enabled").value(true))
+                .andExpect(jsonPath("$.data[7].typeCode").value("INBOUND_REASON"))
+                .andExpect(jsonPath("$.data[7].editMode").value("STORE_EXTENDABLE"));
     }
 
     @Test

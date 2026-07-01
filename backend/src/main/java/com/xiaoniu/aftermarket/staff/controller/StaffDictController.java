@@ -1,9 +1,13 @@
 package com.xiaoniu.aftermarket.staff.controller;
 
 import com.xiaoniu.aftermarket.common.api.ApiResponse;
+import com.xiaoniu.aftermarket.common.api.ErrorCode;
+import com.xiaoniu.aftermarket.common.context.CurrentUser;
+import com.xiaoniu.aftermarket.common.context.CurrentUserContext;
+import com.xiaoniu.aftermarket.common.exception.BusinessException;
+import com.xiaoniu.aftermarket.common.enums.CommonStatus;
 import com.xiaoniu.aftermarket.dict.controller.DictItemResponse;
 import com.xiaoniu.aftermarket.dict.entity.SysDictItemEntity;
-import com.xiaoniu.aftermarket.common.enums.CommonStatus;
 import com.xiaoniu.aftermarket.dict.service.DictService;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,7 +27,8 @@ public class StaffDictController {
 
     @GetMapping("/types/{typeCode}/items")
     public ApiResponse<List<DictItemResponse>> listItems(@PathVariable String typeCode) {
-        List<DictItemResponse> responses = dictService.listItemsByTypeCode(typeCode).stream()
+        CurrentUser user = requireCurrentUser();
+        List<DictItemResponse> responses = dictService.listItemsByTypeCode(typeCode, user.storeId()).stream()
                 .map(this::toResponse)
                 .toList();
         return ApiResponse.success(responses);
@@ -31,10 +36,20 @@ public class StaffDictController {
 
     private DictItemResponse toResponse(SysDictItemEntity entity) {
         return new DictItemResponse(
+                entity.getId(),
                 entity.getItemCode(),
                 entity.getItemName(),
                 entity.getSortOrder(),
-                CommonStatus.ENABLED.getCode().equals(entity.getStatus())
+                CommonStatus.ENABLED.getCode().equals(entity.getStatus()),
+                entity.getScope(),
+                entity.getStoreId(),
+                !"STORE".equals(entity.getScope()),
+                false
         );
+    }
+
+    private CurrentUser requireCurrentUser() {
+        return CurrentUserContext.get()
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "缺少用户上下文"));
     }
 }

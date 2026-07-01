@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS sys_dict_type (
     type_code VARCHAR(64) NOT NULL,
     type_name VARCHAR(128) NOT NULL,
     status VARCHAR(32) NOT NULL,
+    edit_mode VARCHAR(32) NOT NULL DEFAULT 'SYSTEM_ONLY',
     remark VARCHAR(512) NULL,
     created_by BIGINT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -30,6 +31,8 @@ CREATE TABLE IF NOT EXISTS sys_dict_type (
 CREATE TABLE IF NOT EXISTS sys_dict_item (
     id BIGINT NOT NULL AUTO_INCREMENT,
     type_id BIGINT NOT NULL,
+    store_id BIGINT NULL,
+    scope VARCHAR(16) NOT NULL DEFAULT 'SYSTEM',
     item_code VARCHAR(64) NOT NULL,
     item_name VARCHAR(128) NOT NULL,
     sort_order INTEGER NOT NULL DEFAULT 0,
@@ -42,7 +45,7 @@ CREATE TABLE IF NOT EXISTS sys_dict_item (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     deleted INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (id),
-    UNIQUE (type_id, item_code)
+    UNIQUE (type_id, scope, store_id, item_code)
 );
 
 CREATE TABLE IF NOT EXISTS sys_user (

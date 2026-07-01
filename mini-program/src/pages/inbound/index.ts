@@ -1,4 +1,5 @@
 import { getParts, lookupPartByCode } from '../../api/parts';
+import { dictItemLabels, getDictItems } from '../../api/dict';
 import { inboundInventory, createPartAndInbound } from '../../api/inventory';
 import { Part, PartLookupResult } from '../../types/parts';
 import { InboundRequest, InboundResponse, CreatePartAndInboundResponse } from '../../types/inventory';
@@ -48,7 +49,9 @@ Page({
       remark: ''
     },
     createPartSubmitting: false,
-    hasCreatePartPermission: false
+    hasCreatePartPermission: false,
+    partCategoryOptions: [] as string[],
+    inboundReasonOptions: [] as string[]
   },
 
   onLoad() {
@@ -56,6 +59,7 @@ Page({
     if (!requireAnyPermission(['INVENTORY_INBOUND'], '当前账号无权进行配件入库')) return;
     this.refreshPermissions();
     this.loadParts();
+    this.loadDictionaryOptions();
   },
 
   onShow() {
@@ -67,6 +71,18 @@ Page({
   refreshPermissions() {
     this.setData({
       hasCreatePartPermission: hasPermission('PART_CREATE') || hasPermission('PART_MANAGE')
+    });
+  },
+
+  loadDictionaryOptions() {
+    Promise.all([
+      getDictItems('PART_CATEGORY').catch(() => ({ data: [] })),
+      getDictItems('INBOUND_REASON').catch(() => ({ data: [] }))
+    ]).then(([partCategories, inboundReasons]) => {
+      this.setData({
+        partCategoryOptions: dictItemLabels(partCategories.data, []),
+        inboundReasonOptions: dictItemLabels(inboundReasons.data, ['采购入库', '初始入库', '扫码新增配件入库', '其他'])
+      });
     });
   },
 
@@ -242,12 +258,14 @@ Page({
   onCreatePartOfficialPartNoChange(e: any) { this.setData({ 'createPartFormData.officialPartNo': e.detail.value }); },
   onCreatePartModelChange(e: any) { this.setData({ 'createPartFormData.model': e.detail.value }); },
   onCreatePartCategoryChange(e: any) { this.setData({ 'createPartFormData.categoryCode': e.detail.value }); },
+  onSelectCreatePartCategory(e: any) { this.setData({ 'createPartFormData.categoryCode': e.currentTarget.dataset.value }); },
   onCreatePartCostPriceChange(e: any) { this.setData({ 'createPartFormData.costPrice': e.detail.value }); },
   onCreatePartSalePriceChange(e: any) { this.setData({ 'createPartFormData.salePrice': e.detail.value }); },
   onCreatePartInboundQtyChange(e: any) { this.setData({ 'createPartFormData.inboundQuantity': e.detail.value }); },
   onCreatePartUnitCostChange(e: any) { this.setData({ 'createPartFormData.unitCost': e.detail.value }); },
   onCreatePartLocationChange(e: any) { this.setData({ 'createPartFormData.locationRemark': e.detail.value }); },
   onCreatePartReasonChange(e: any) { this.setData({ 'createPartFormData.reason': e.detail.value }); },
+  onSelectCreatePartReason(e: any) { this.setData({ 'createPartFormData.reason': e.currentTarget.dataset.value }); },
   onCreatePartRemarkChange(e: any) { this.setData({ 'createPartFormData.remark': e.detail.value }); },
 
   cancelCreatePart() {
@@ -349,6 +367,7 @@ Page({
   },
   onLocationChange(e: any) { this.setData({ 'formData.locationRemark': e.detail.value }); },
   onReasonChange(e: any) { this.setData({ 'formData.reason': e.detail.value }); },
+  onSelectInboundReason(e: any) { this.setData({ 'formData.reason': e.currentTarget.dataset.value }); },
   onRemarkChange(e: any) { this.setData({ 'formData.remark': e.detail.value }); },
 
   submitInbound() {

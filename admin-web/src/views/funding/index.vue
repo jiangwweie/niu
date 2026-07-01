@@ -117,7 +117,11 @@
         <el-form-item label="客户姓名"><el-input v-model="applicationDialog.form.customerName" /></el-form-item>
         <el-form-item label="手机号"><el-input v-model="applicationDialog.form.phone" /></el-form-item>
         <el-form-item label="身份证号"><el-input v-model="applicationDialog.form.idCardNo" /></el-form-item>
-        <el-form-item label="车型"><el-input v-model="applicationDialog.form.vehicleModel" /></el-form-item>
+        <el-form-item label="车型">
+          <el-select v-model="applicationDialog.form.vehicleModel" filterable allow-create clearable placeholder="选择或输入车型" style="width: 100%">
+            <el-option v-for="item in vehicleModelOptions" :key="item" :label="item" :value="item" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="提车日期"><el-date-picker v-model="applicationDialog.form.pickupDate" value-format="YYYY-MM-DD" type="date" /></el-form-item>
         <el-form-item label="付款方式">
           <el-select v-model="applicationDialog.form.paymentType">
@@ -173,7 +177,11 @@
         <el-form-item label="客户姓名"><el-input v-model="ledgerDialog.form.customerName" /></el-form-item>
         <el-form-item label="电话"><el-input v-model="ledgerDialog.form.phone" /></el-form-item>
         <el-form-item label="身份证号"><el-input v-model="ledgerDialog.form.idCardNo" /></el-form-item>
-        <el-form-item label="车型"><el-input v-model="ledgerDialog.form.vehicleModel" /></el-form-item>
+        <el-form-item label="车型">
+          <el-select v-model="ledgerDialog.form.vehicleModel" filterable allow-create clearable placeholder="选择或输入车型" style="width: 100%">
+            <el-option v-for="item in vehicleModelOptions" :key="item" :label="item" :value="item" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="提车日期"><el-date-picker v-model="ledgerDialog.form.pickupDate" value-format="YYYY-MM-DD" type="date" /></el-form-item>
         <el-form-item label="付款方式">
           <el-select v-model="ledgerDialog.form.paymentType">
@@ -355,6 +363,7 @@ import {
 } from '@/api/funding';
 import { hasPermission } from '@/utils/permission';
 import type { FundingApplication, FundingDetail, FundingLedger, SaveFundingApplicationBody } from '@/types/funding';
+import { getDictionaryItems } from '@/api/dictionary';
 
 const activeTab = ref('applications');
 const saving = ref(false);
@@ -365,6 +374,7 @@ const ledgerLoading = ref(false);
 const importInputRef = ref<HTMLInputElement | null>(null);
 const applications = ref<FundingApplication[]>([]);
 const ledgers = ref<FundingLedger[]>([]);
+const vehicleModelOptions = ref<string[]>([]);
 const applicationTotal = ref(0);
 const ledgerTotal = ref(0);
 const summary = ref({ applicationCount: 0, pendingAuditCount: 0, ledgerCount: 0, receivableTotal: 0, receivedTotal: 0, outstandingTotal: 0, overduePlanCount: 0 });
@@ -449,6 +459,9 @@ const summaryCards = computed(() => [
 ]);
 
 onMounted(async () => {
+  getDictionaryItems('VEHICLE_MODEL')
+    .then(items => { vehicleModelOptions.value = items.filter(item => item.enabled).map(item => item.dictLabel); })
+    .catch(() => { vehicleModelOptions.value = []; });
   if (!canUseApplicationTab.value && canUseLedgerTab.value) {
     activeTab.value = 'ledgers';
   }
