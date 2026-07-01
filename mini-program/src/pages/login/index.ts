@@ -13,7 +13,8 @@ Page({
     loginError: '',
     captchaLoading: false,
     loading: false,
-    wechatLoading: false
+    wechatLoading: false,
+    passwordVisible: false
   },
 
   onLoad(options) {
@@ -32,6 +33,11 @@ Page({
 
   onPasswordChange(e: any) {
     this.setData({ password: e.detail.value, loginError: '' });
+  },
+
+  onPasswordInputClick(e: any) {
+    if (e.detail?.trigger !== 'suffix-icon') return;
+    this.setData({ passwordVisible: !this.data.passwordVisible });
   },
 
   onCaptchaChange(e: any) {

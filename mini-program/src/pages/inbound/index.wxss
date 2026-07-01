@@ -82,10 +82,86 @@ page {
   color: #333;
 }
 
+.inbound-state {
+  padding: 24rpx;
+  border-radius: 12rpx;
+  background: #f8f9fb;
+  border: 2rpx solid #edf0f5;
+}
+
+.inbound-state-warning {
+  background: #fff8e6;
+  border-color: #ffd98c;
+}
+
+.state-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.state-desc {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  line-height: 1.5;
+  color: #667085;
+  word-break: break-all;
+}
+
+.scan-primary {
+  margin-top: 20rpx;
+}
+
 .scan-actions {
   display: flex;
   gap: 16rpx;
   margin-top: 16rpx;
+}
+
+.action-button {
+  flex: 1;
+  min-height: 88rpx;
+  padding: 0 20rpx;
+  border-radius: 12rpx;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.action-secondary {
+  background: #fff;
+  border: 2rpx solid #d0d7e2;
+  color: #1f2937;
+}
+
+.action-primary-outline {
+  background: #f5f8ff;
+  border: 2rpx solid #0052d9;
+  color: #0052d9;
+}
+
+.selected-part-actions {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 16rpx;
+  justify-content: flex-end;
+}
+
+.permission-hint {
+  margin-top: 16rpx;
+  padding: 18rpx 20rpx;
+  border-radius: 10rpx;
+  background: #f3f6fb;
+  color: #5f6f89;
+  font-size: 24rpx;
+  line-height: 1.5;
 }
 
 .change-hint {

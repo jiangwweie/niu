@@ -13,10 +13,12 @@
     />
     <t-input
       value="{{password}}"
-      type="password"
+      type="{{passwordVisible ? 'text' : 'password'}}"
       placeholder="请输入密码"
       bind:change="onPasswordChange"
+      bind:click="onPasswordInputClick"
       prefixIcon="lock-on"
+      suffixIcon="{{passwordVisible ? 'browse' : 'browse-off'}}"
       clearable
     />
     <view class="captcha-row">

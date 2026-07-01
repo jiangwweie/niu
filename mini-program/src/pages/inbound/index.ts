@@ -13,6 +13,7 @@ Page({
   data: {
     selectedPart: null as Part | null,
     lookupResult: null as PartLookupResult | null,
+    scanUnmatchedCode: '',
     formData: {
       quantity: '',
       unitCost: '',
@@ -107,6 +108,7 @@ Page({
     this.setData({
       selectedPart: item,
       lookupResult: null,
+      scanUnmatchedCode: '',
       partSelectorVisible: false,
       'formData.unitCost': item.costPrice != null ? String(item.costPrice) : ''
     });
@@ -129,6 +131,17 @@ Page({
     });
   },
 
+  setScannedCreatePartContext(scanValue: string) {
+    this.setData({
+      'formData.barcode': scanValue,
+      'createPartFormData.externalBarcode': scanValue,
+      'createPartFormData.unitCost': '',
+      'createPartFormData.officialPartNo': this.data.createPartFormData.source === 'OFFICIAL'
+        ? (this.data.createPartFormData.officialPartNo || scanValue)
+        : this.data.createPartFormData.officialPartNo
+    });
+  },
+
   lookupScannedPart(scanValue: string) {
     lookupPartByCode(scanValue).then(res => {
       const result = res.data;
@@ -136,26 +149,10 @@ Page({
         this.setData({
           selectedPart: null,
           lookupResult: null,
-          'formData.barcode': scanValue,
-          'createPartFormData.externalBarcode': scanValue,
-          'createPartFormData.unitCost': '',
-          'createPartFormData.officialPartNo': this.data.createPartFormData.source === 'OFFICIAL'
-            ? (this.data.createPartFormData.officialPartNo || scanValue)
-            : this.data.createPartFormData.officialPartNo
+          scanUnmatchedCode: scanValue
         });
-        wx.showModal({
-          title: '未识别该条码',
-          content: this.data.hasCreatePartPermission
-            ? '可手动选择已有配件，或新增配件并入库。'
-            : '当前账号可手动选择已有配件入库，新增配件需联系门店管理员授权。',
-          confirmText: this.data.hasCreatePartPermission ? '新增配件并入库' : '手动选择配件',
-          cancelText: '我知道了',
-          success: modalRes => {
-            if (!modalRes.confirm) return;
-            if (this.data.hasCreatePartPermission) this.showCreatePartForm();
-            else this.showPartSelector();
-          }
-        });
+        this.setScannedCreatePartContext(scanValue);
+        Toast({ context: this, selector: '#t-toast', message: '未找到匹配配件', icon: 'close-circle' });
         return;
       }
       const part: Part = {
@@ -176,44 +173,19 @@ Page({
           ...result,
           matchTypeText: this.getMatchTypeText(result.matchType)
         } as any,
+        scanUnmatchedCode: '',
         'formData.barcode': scanValue,
         'formData.unitCost': part.costPrice != null ? String(part.costPrice) : ''
       });
       Toast({ context: this, selector: '#t-toast', message: '已识别配件', icon: 'check-circle' });
     }).catch((error: Error) => {
-      const message = error?.message || '';
-      if (message.includes('已停用')) {
-        this.setData({
-          selectedPart: null,
-          lookupResult: null,
-          'formData.barcode': scanValue
-        });
-        Toast({ context: this, selector: '#t-toast', message, icon: 'close-circle' });
-        return;
-      }
       this.setData({
-          selectedPart: null,
-          lookupResult: null,
-          'formData.barcode': scanValue,
-          'createPartFormData.externalBarcode': scanValue,
-          'createPartFormData.unitCost': '',
-          'createPartFormData.officialPartNo': this.data.createPartFormData.source === 'OFFICIAL'
-            ? (this.data.createPartFormData.officialPartNo || scanValue)
-            : this.data.createPartFormData.officialPartNo
-        });
-      wx.showModal({
-        title: '未识别该条码',
-        content: this.data.hasCreatePartPermission
-          ? '可手动选择已有配件，或新增配件并入库。'
-          : '当前账号可手动选择已有配件入库，新增配件需联系门店管理员授权。',
-        confirmText: this.data.hasCreatePartPermission ? '新增配件并入库' : '手动选择配件',
-        cancelText: '我知道了',
-        success: modalRes => {
-          if (!modalRes.confirm) return;
-          if (this.data.hasCreatePartPermission) this.showCreatePartForm();
-          else this.showPartSelector();
-        }
+        selectedPart: null,
+        lookupResult: null,
+        scanUnmatchedCode: '',
+        'formData.barcode': scanValue
       });
+      showRequestErrorToast(error, '扫码识别失败，请稍后重试或手动选择配件');
     });
   },
 
@@ -230,8 +202,12 @@ Page({
 
   showCreatePartForm() {
     if (!this.data.hasCreatePartPermission) {
-      Toast({ context: this, selector: '#t-toast', message: '新增配件需 PART_CREATE 或 PART_MANAGE 权限', icon: 'close-circle' });
+      Toast({ context: this, selector: '#t-toast', message: '新增配件需门店管理员授权', icon: 'close-circle' });
       return;
+    }
+    const barcode = (this.data.scanUnmatchedCode || this.data.formData.barcode || '').trim();
+    if (barcode) {
+      this.setScannedCreatePartContext(barcode);
     }
     this.setData({ createPartVisible: true });
   },
@@ -363,7 +339,14 @@ Page({
 
   onQuantityChange(e: any) { this.setData({ 'formData.quantity': e.detail.value }); },
   onUnitCostChange(e: any) { this.setData({ 'formData.unitCost': e.detail.value }); },
-  onBarcodeChange(e: any) { this.setData({ 'formData.barcode': e.detail.value }); },
+  onBarcodeChange(e: any) {
+    const barcode = e.detail.value;
+    this.setData({
+      scanUnmatchedCode: '',
+      'formData.barcode': barcode,
+      'createPartFormData.externalBarcode': barcode
+    });
+  },
   onLocationChange(e: any) { this.setData({ 'formData.locationRemark': e.detail.value }); },
   onReasonChange(e: any) { this.setData({ 'formData.reason': e.detail.value }); },
   onRemarkChange(e: any) { this.setData({ 'formData.remark': e.detail.value }); },
@@ -425,6 +408,7 @@ Page({
     this.setData({
       selectedPart: null,
       lookupResult: null,
+      scanUnmatchedCode: '',
       formData: {
         quantity: '',
         unitCost: '',

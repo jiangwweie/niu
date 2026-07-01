@@ -1,10 +1,7 @@
 <view class="container">
   <view class="section">
     <view class="section-title">入库配件信息</view>
-    <t-cell-group wx:if="{{!selectedPart}}">
-      <t-cell title="选择配件" arrow hover bind:tap="showPartSelector" note="点击选择" />
-    </t-cell-group>
-    <view wx:else class="selected-part" bind:tap="showPartSelector">
+    <view wx:if="{{selectedPart}}" class="selected-part" bind:tap="showPartSelector">
       <view class="part-header">
         <text class="part-name">{{selectedPart.partName}}</text>
         <t-tag theme="primary" variant="light">{{selectedPart.categoryCode}}</t-tag>
@@ -22,10 +19,38 @@
       <view class="change-hint">点击更换配件</view>
     </view>
 
-    <t-button block theme="default" icon="scan" bind:tap="handleScan" style="margin-top: 16px;">扫码识别配件</t-button>
-    <view class="scan-actions" wx:if="{{!selectedPart && formData.barcode}}">
-      <t-button wx:if="{{hasCreatePartPermission}}" theme="primary" variant="outline" size="small" bind:tap="showCreatePartForm">新增配件并入库</t-button>
-      <t-button theme="default" variant="outline" size="small" bind:tap="showPartSelector">手动选择配件</t-button>
+    <view wx:if="{{!selectedPart}}" class="inbound-state {{scanUnmatchedCode ? 'inbound-state-warning' : ''}}">
+      <view wx:if="{{scanUnmatchedCode}}">
+        <view class="state-title">未找到匹配配件</view>
+        <view class="state-desc">扫码识别码：{{scanUnmatchedCode}}</view>
+        <view wx:if="{{hasCreatePartPermission}}" class="state-desc">可新增该配件并入库，或手动选择已有配件继续入库。</view>
+        <view wx:else class="state-desc">当前账号可手动选择已有配件继续入库，新增配件需门店管理员授权。</view>
+      </view>
+      <view wx:else>
+        <view class="state-title">请选择入库配件</view>
+        <view class="state-desc">可扫码识别、手动选择已有配件，或新增配件后直接入库。</view>
+      </view>
+    </view>
+
+    <view wx:if="{{selectedPart}}" class="selected-part-actions">
+      <view class="action-button action-secondary" aria-role="button" bind:tap="showPartSelector">更换配件</view>
+      <view class="action-button action-secondary" aria-role="button" bind:tap="handleScan">
+        <t-icon name="scan" size="32rpx" />
+        <text>重新扫码</text>
+      </view>
+    </view>
+
+    <view wx:if="{{!selectedPart}}" class="scan-primary">
+      <t-button block theme="primary" icon="scan" bind:tap="handleScan">扫码识别配件</t-button>
+    </view>
+    <view class="scan-actions" wx:if="{{!selectedPart}}">
+      <view class="action-button action-secondary" aria-role="button" bind:tap="showPartSelector">手动选择已有配件</view>
+      <view wx:if="{{hasCreatePartPermission}}" class="action-button action-primary-outline" aria-role="button" bind:tap="showCreatePartForm">
+        {{scanUnmatchedCode ? '新增该配件并入库' : '新增配件并入库'}}
+      </view>
+    </view>
+    <view wx:if="{{!selectedPart && !hasCreatePartPermission}}" class="permission-hint">
+      当前账号可入库已有配件，新增配件需门店管理员授权。
     </view>
   </view>
 
@@ -42,7 +67,7 @@
   </view>
 
   <view class="page-footer" wx:if="{{!successResult}}">
-    <t-button theme="primary" block size="large" bind:tap="submitInbound" loading="{{submitting}}">确认入库</t-button>
+    <t-button theme="primary" block size="large" bind:tap="submitInbound" loading="{{submitting}}" disabled="{{!selectedPart}}">确认入库</t-button>
   </view>
 
   <!-- 成功结果区 -->
