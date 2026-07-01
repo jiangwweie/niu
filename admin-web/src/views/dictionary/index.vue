@@ -60,7 +60,6 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue';
-import { ElMessage } from 'element-plus';
 import PageContainer from '@/components/PageContainer.vue';
 import { getDictionaryTypes, getDictionaryItems } from '@/api/dictionary';
 import type { DictViewRow } from '@/api/dictionary';
@@ -102,7 +101,7 @@ const fetchItems = async () => {
   try {
     tableData.value = await getDictionaryItems(activeDictCode.value);
   } catch {
-    ElMessage.error('加载字典数据失败');
+    // request interceptor already shows error
   } finally {
     loading.value = false;
   }

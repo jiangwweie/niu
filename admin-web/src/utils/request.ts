@@ -9,6 +9,25 @@ const request = axios.create({
 });
 
 const AUTH_FREE_PATHS = ['/api/auth/login/password', '/api/auth/captcha'];
+const GENERIC_SERVER_MESSAGES = new Set([
+  'Unauthorized',
+  'Forbidden',
+  'Bad Request',
+  'Internal Server Error',
+  'Network Error',
+  '未登录或登录已过期',
+  '无权限访问该资源',
+  '请求失败',
+]);
+
+type ApiErrorBody = {
+  code?: string;
+  message?: string;
+};
+
+export function isRequestErrorHandled(error: unknown): boolean {
+  return Boolean((error as any)?.handledByInterceptor);
+}
 
 function getRequestPath(config: AxiosRequestConfig) {
   const url = config.url || '';
@@ -33,6 +52,20 @@ function currentFullPath() {
   return `${window.location.pathname}${window.location.search}${window.location.hash}`;
 }
 
+function apiErrorMessage(data?: ApiErrorBody, fallback = '请求失败') {
+  const message = data?.message;
+  const normalizedFallback = message && !GENERIC_SERVER_MESSAGES.has(message)
+    ? message
+    : fallback;
+  return getFriendlyErrorMessage(data?.code, normalizedFallback);
+}
+
+function markErrorHandled<T extends Error>(error: T, message: string): T {
+  error.message = message;
+  (error as any).handledByInterceptor = true;
+  return error;
+}
+
 // Remove hardcoded X-User-Id and use JWT
 request.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = localStorage.getItem('accessToken');
@@ -55,10 +88,11 @@ request.interceptors.response.use(
       return body.data;
     }
     // Backend returned a business error inside 200
-    const msg = body?.message || getFriendlyErrorMessage(body?.code);
+    const msg = apiErrorMessage(body);
     ElMessage.error(msg);
     const err = new Error(msg) as any;
     err.response = response;
+    err.handledByInterceptor = true;
     return Promise.reject(err);
   },
   async (error: AxiosError<{ code?: string; message?: string }>) => {
@@ -66,11 +100,11 @@ request.interceptors.response.use(
     const isAuthFreeRequest = AUTH_FREE_PATHS.includes(requestPath);
     if (error.response?.status === 401) {
       clearClientAuth();
-      const data = error.response?.data as any;
+      const data = error.response?.data as ApiErrorBody | undefined;
       const msg = requestPath === '/api/auth/login/password'
         ? '账号或密码不正确，或账号已停用'
-        : (data?.message || getFriendlyErrorMessage('UNAUTHORIZED'));
-      error.message = msg;
+        : apiErrorMessage(data, getFriendlyErrorMessage('UNAUTHORIZED'));
+      markErrorHandled(error, msg);
 
       if (isAuthFreeRequest) {
         ElMessage.error(msg);
@@ -84,25 +118,25 @@ request.interceptors.response.use(
       return Promise.reject(error);
     }
     if (error.response?.status === 403) {
-      const data = error.response?.data as any;
-      const msg = data?.message || getFriendlyErrorMessage(data?.code || 'FORBIDDEN');
+      const data = error.response?.data as ApiErrorBody | undefined;
+      const msg = apiErrorMessage({ code: data?.code || 'FORBIDDEN', message: data?.message }, '当前账号无权操作。');
       ElMessage.error(msg);
-      error.message = msg;
+      markErrorHandled(error, msg);
       return Promise.reject(error);
     }
 
     const data = error.response?.data as any;
-    let msg = data?.message || getFriendlyErrorMessage(data?.code, error.message || '网络请求错误');
+    let msg = apiErrorMessage(data, error.message || '网络请求错误');
     if (data instanceof Blob && data.type.includes('application/json')) {
       try {
         const json = JSON.parse(await data.text());
-        msg = json.message || getFriendlyErrorMessage(json.code, msg);
+        msg = apiErrorMessage(json, msg);
       } catch {
         msg = '请求失败';
       }
     }
     ElMessage.error(msg);
-    error.message = msg;
+    markErrorHandled(error, msg);
     return Promise.reject(error);
   },
 );

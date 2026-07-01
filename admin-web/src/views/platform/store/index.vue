@@ -99,6 +99,7 @@ import {
   type PlatformStore,
   type CreateStoreAdminResponse,
 } from '@/api/platform';
+import { isRequestErrorHandled } from '@/utils/request';
 
 const stores = ref<PlatformStore[]>([]);
 const loading = ref(false);
@@ -134,7 +135,9 @@ async function loadStores() {
   try {
     stores.value = await listPlatformStores();
   } catch (e: any) {
-    ElMessage.error(e?.message || '加载门店列表失败');
+    if (!isRequestErrorHandled(e)) {
+      ElMessage.error(e?.message || '加载门店列表失败');
+    }
   } finally {
     loading.value = false;
   }
@@ -177,7 +180,9 @@ async function submitStore() {
     storeDialogVisible.value = false;
     await loadStores();
   } catch (e: any) {
-    ElMessage.error(e?.message || '操作失败');
+    if (!isRequestErrorHandled(e)) {
+      ElMessage.error(e?.message || '操作失败');
+    }
   } finally {
     submitting.value = false;
   }
@@ -210,7 +215,9 @@ async function submitCreateAdmin() {
     createdAdmin.value = result;
     passwordDialogVisible.value = true;
   } catch (e: any) {
-    ElMessage.error(e?.message || '创建管理员失败');
+    if (!isRequestErrorHandled(e)) {
+      ElMessage.error(e?.message || '创建管理员失败');
+    }
   } finally {
     submitting.value = false;
   }

@@ -121,7 +121,6 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
-import { ElMessage } from 'element-plus';
 import PageContainer from '@/components/PageContainer.vue';
 import MoneyText from '@/components/MoneyText.vue';
 import { getPaymentList } from '@/api/payment';
@@ -156,7 +155,7 @@ const fetchData = async () => {
     tableData.value = res.records;
     total.value = res.total;
   } catch {
-    ElMessage.error('加载收款记录失败');
+    // request interceptor already shows error
   } finally {
     loading.value = false;
   }

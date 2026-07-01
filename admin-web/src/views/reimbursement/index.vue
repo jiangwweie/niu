@@ -210,6 +210,7 @@ import { exportReimbursements } from '@/api/export';
 import { hasPermission } from '@/utils/permission';
 import { formatDateTime } from '@/utils/formatDateTime';
 import { trimSearchFields } from '@/utils/searchParams';
+import { isRequestErrorHandled } from '@/utils/request';
 import type { ReimbursementQuery, ReimbursementRecord } from '@/types/reimbursement';
 
 const dateRange = ref<[string, string] | null>(null);
@@ -251,8 +252,8 @@ const fetchData = async () => {
     const res = await getReimbursementList(params);
     tableData.value = res.records;
     total.value = res.total;
-  } catch (error) {
-    ElMessage.error('加载失败');
+  } catch {
+    // request interceptor already shows error
   } finally {
     loading.value = false;
   }
@@ -289,7 +290,9 @@ const handleExport = async () => {
     await exportReimbursements(params);
     ElMessage.success('导出成功');
   } catch (error: any) {
-    ElMessage.error(error.message || '导出失败');
+    if (!isRequestErrorHandled(error)) {
+      ElMessage.error(error.message || '导出失败');
+    }
   } finally {
     exportLoading.value = false;
   }
@@ -328,7 +331,7 @@ const handleView = async (row: ReimbursementRecord) => {
     viewDrawer.current = detail;
     viewDrawer.visible = true;
   } catch {
-    ElMessage.error('加载详情失败');
+    // request interceptor already shows error
   }
 };
 

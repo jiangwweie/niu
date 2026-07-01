@@ -1,6 +1,7 @@
 import request from '@/utils/request';
 import { parseFilenameFromContentDisposition, downloadBlob } from '@/utils/download';
 import { setSearchParam } from '@/utils/searchParams';
+import { getFriendlyErrorMessage } from '@/utils/statusText';
 import type { FinanceQuery } from '@/types/finance';
 import type { ReimbursementQuery } from '@/types/reimbursement';
 
@@ -11,7 +12,7 @@ export async function handleBlobResponse(response: any, defaultFilename: string)
     let message = '导出失败';
     try {
       const json = JSON.parse(text);
-      message = json.message || message;
+      message = getFriendlyErrorMessage(json.code, json.message || message);
     } catch {
       // Keep the default message when the response is not valid JSON.
     }

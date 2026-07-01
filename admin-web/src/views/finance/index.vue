@@ -181,6 +181,7 @@ import MoneyText from '@/components/MoneyText.vue';
 import { getDailyFinance, getMonthlyFinance, getRangeFinance } from '@/api/finance';
 import { exportFinance } from '@/api/export';
 import { hasPermission } from '@/utils/permission';
+import { isRequestErrorHandled } from '@/utils/request';
 import type { FinanceQuery, FinanceReportResponse } from '@/types/finance';
 import dayjs from 'dayjs';
 
@@ -230,8 +231,8 @@ const fetchData = async () => {
     if (res) {
       summaryData.value = res;
     }
-  } catch (error: any) {
-    ElMessage.error(error.message || '加载失败');
+  } catch {
+    // request interceptor already shows error
   } finally {
     loading.value = false;
   }
@@ -268,7 +269,9 @@ const handleExport = async () => {
     await exportFinance(params);
     ElMessage.success('导出成功');
   } catch (error: any) {
-    ElMessage.error(error.message || '导出失败');
+    if (!isRequestErrorHandled(error)) {
+      ElMessage.error(error.message || '导出失败');
+    }
   } finally {
     exportLoading.value = false;
   }

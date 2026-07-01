@@ -250,7 +250,7 @@ const fetchData = async () => {
     tableData.value = res.records;
     total.value = res.total;
   } catch {
-    ElMessage.error('加载官方售后记录失败');
+    // request interceptor already shows error
   } finally {
     loading.value = false;
   }
@@ -299,7 +299,7 @@ const handleView = async (row: OfficialSettlementRecord) => {
     viewDrawer.detail = detail;
     viewDrawer.visible = true;
   } catch {
-    ElMessage.error('加载详情失败');
+    // request interceptor already shows error
   }
 };
 

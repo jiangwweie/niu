@@ -166,7 +166,6 @@ import { Box, DataAnalysis, Loading, Money, OfficeBuilding, Operation, Shop, Too
 import { useAuthStore } from '@/stores/auth';
 import { hasPermission, hasAnyPermission } from '@/utils/permission';
 import { getDashboardSummary } from '@/api/dashboard';
-import { ElMessage } from 'element-plus';
 import PageContainer from '@/components/PageContainer.vue';
 import MoneyText from '@/components/MoneyText.vue';
 import StatusTag from '@/components/StatusTag.vue';
@@ -260,7 +259,7 @@ onMounted(async () => {
     summary.value = await getDashboardSummary();
   } catch {
     loadError.value = true;
-    ElMessage.error('加载首页数据失败');
+    // request interceptor already shows error
   } finally {
     loading.value = false;
   }

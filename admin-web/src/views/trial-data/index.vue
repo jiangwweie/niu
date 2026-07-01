@@ -158,6 +158,7 @@ import { Loading } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { getTrialDataSummary, clearTrialData, cleanStartPreflight } from '@/api/trial-data';
 import PageContainer from '@/components/PageContainer.vue';
+import { isRequestErrorHandled } from '@/utils/request';
 import type { TrialDataSummaryResponse, ClearTrialDataResponse } from '@/types/trial-data';
 
 const loading = ref(true);
@@ -191,8 +192,10 @@ async function loadSummary() {
       if (summary.value) {
         hasLegacyWorkOrders.value = summary.value.legacyWorkOrderStatusCount > 0;
       }
-    } catch {
-      ElMessage.error('加载可清理数据摘要失败');
+    } catch (fallbackError: any) {
+      if (!isRequestErrorHandled(fallbackError)) {
+        ElMessage.error(fallbackError.message || '加载可清理数据摘要失败');
+      }
     }
   } finally {
     loading.value = false;
@@ -217,7 +220,9 @@ async function handleClear() {
     confirmInput.value = '';
     await loadSummary();
   } catch (err: any) {
-    ElMessage.error(err.message || err.response?.data?.message || '清理失败');
+    if (!isRequestErrorHandled(err)) {
+      ElMessage.error(err.message || '清理失败');
+    }
   } finally {
     clearing.value = false;
   }

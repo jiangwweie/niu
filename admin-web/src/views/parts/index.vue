@@ -292,6 +292,7 @@ import PageContainer from '@/components/PageContainer.vue';
 import MoneyText from '@/components/MoneyText.vue';
 import { hasAnyPermission, hasPermission } from '@/utils/permission';
 import { trimSearchFields } from '@/utils/searchParams';
+import { isRequestErrorHandled } from '@/utils/request';
 import {
   getPartsList,
   getPartDetail,
@@ -341,7 +342,7 @@ const fetchData = async () => {
     tableData.value = res.records;
     total.value = res.total;
   } catch {
-    ElMessage.error('加载配件列表失败');
+    // request interceptor already shows error
   } finally {
     loading.value = false;
   }
@@ -396,7 +397,7 @@ const handleView = async (row: PartViewRecord) => {
     detailDrawer.data = detail;
     detailDrawer.visible = true;
   } catch {
-    ElMessage.error('加载配件详情失败');
+    // request interceptor already shows error
   }
 };
 
@@ -584,8 +585,9 @@ const handleDelete = async (row: PartViewRecord) => {
     fetchData();
   } catch (err: any) {
     if (err !== 'cancel' && err !== 'close') {
-      const msg = err?.response?.data?.message || err?.message || '删除失败';
-      ElMessage.error(msg);
+      if (!isRequestErrorHandled(err)) {
+        ElMessage.error(err?.message || '删除失败');
+      }
     }
   }
 };

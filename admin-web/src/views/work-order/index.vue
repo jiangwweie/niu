@@ -667,6 +667,7 @@ import {
 import { useAuthStore } from '@/stores/auth';
 import { hasPermission } from '@/utils/permission';
 import { trimSearchFields } from '@/utils/searchParams';
+import { isRequestErrorHandled } from '@/utils/request';
 import {
   getCashierStatusText,
   getInventoryStatusText,
@@ -936,8 +937,9 @@ const handleDeleteDraft = async (row: WorkOrderRecord) => {
     fetchData();
   } catch (err: any) {
     if (err !== 'cancel' && err !== 'close') {
-      const msg = err?.response?.data?.message || err?.message || '删除失败';
-      ElMessage.error(msg);
+      if (!isRequestErrorHandled(err)) {
+        ElMessage.error(err?.message || '删除失败');
+      }
     }
   }
 };
@@ -950,13 +952,17 @@ const loadCashierRecords = async (workOrderId: string) => {
   if (paymentsResult.status === 'fulfilled') {
     workOrderPayments.value = paymentsResult.value || [];
   } else {
-    ElMessage.error('收款记录加载失败');
+    if (!isRequestErrorHandled(paymentsResult.reason)) {
+      ElMessage.error('收款记录加载失败');
+    }
     workOrderPayments.value = [];
   }
   if (refundsResult.status === 'fulfilled') {
     workOrderRefunds.value = refundsResult.value || [];
   } else {
-    ElMessage.error('退款记录加载失败');
+    if (!isRequestErrorHandled(refundsResult.reason)) {
+      ElMessage.error('退款记录加载失败');
+    }
     workOrderRefunds.value = [];
   }
 };
