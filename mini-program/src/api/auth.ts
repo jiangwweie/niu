@@ -70,7 +70,7 @@ export const authApi = {
         },
         fail: () => {
           wx.hideLoading();
-          wx.showToast({ title: '网络请求失败', icon: 'none' });
+          wx.showToast({ title: '网络连接失败，请检查网络后重试。', icon: 'none', duration: 3000 });
           reject(new Error('NETWORK_ERROR'));
         }
       });

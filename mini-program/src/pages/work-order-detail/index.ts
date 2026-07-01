@@ -7,6 +7,7 @@ import {
   getNoChargeReasonText,
   getProgressStatusText,
 } from '../../utils/statusText';
+import { showRequestErrorToast } from '../../utils/requestError';
 import Toast from 'tdesign-miniprogram/toast/index';
 
 const NO_CHARGE_REASONS = ['官方售后', '免费检测', '老板免单', '质保处理', '其他'];
@@ -156,7 +157,7 @@ Page({
         ...this.resolveActionState(order, outstanding, refundable),
       });
     } catch (e) {
-      wx.showToast({ title: '加载失败', icon: 'none' });
+      showRequestErrorToast(e, '工单详情加载失败，请返回列表刷新后重试');
     }
   },
 
@@ -184,7 +185,10 @@ Page({
   // --- Cancel Work Order ---
   onCancel() {
     if (!this.data.canShowCancel) {
-      Toast({ context: this, selector: '#t-toast', message: '当前无权限或状态不允许取消工单', icon: 'close-circle' });
+      const message = !this.data.hasCancelPermission
+        ? '当前账号没有取消工单权限，请联系门店管理员开通。'
+        : '当前工单状态不能取消，请刷新后查看最新状态。';
+      Toast({ context: this, selector: '#t-toast', message, icon: 'close-circle' });
       return;
     }
     this.setData({
@@ -224,6 +228,7 @@ Page({
       this.fetchData();
     }).catch(err => {
       console.error('Cancel work order failed:', err);
+      showRequestErrorToast(err, '取消工单失败，请刷新后重试');
     }).finally(() => {
       this.setData({ cancelLoading: false });
     });
@@ -237,7 +242,10 @@ Page({
         Toast({ context: this, selector: '#t-toast', message: '已无待收金额，无需继续收款', icon: 'close-circle' });
         return;
       }
-      Toast({ context: this, selector: '#t-toast', message: '当前状态不允许记录收款', icon: 'close-circle' });
+      const message = !this.data.hasPaymentPermission
+        ? '当前账号没有收款权限，请联系门店管理员开通。'
+        : '当前工单状态不能记录收款，请刷新后查看最新状态。';
+      Toast({ context: this, selector: '#t-toast', message, icon: 'close-circle' });
       return;
     }
 
@@ -309,6 +317,7 @@ Page({
       this.fetchData();
     }).catch(err => {
       console.error('Record payment failed:', err);
+      showRequestErrorToast(err, '收款记录保存失败，请检查金额后重试');
     }).finally(() => {
       this.setData({ paymentLoading: false });
     });
@@ -317,7 +326,10 @@ Page({
   // --- Record Refund ---
   openRefundPopup() {
     if (!this.data.canShowRecordRefund) {
-      Toast({ context: this, selector: '#t-toast', message: '当前无权限或状态不允许记录退款', icon: 'close-circle' });
+      const message = !this.data.hasRefundPermission
+        ? '当前账号没有退款权限，请联系门店管理员开通。'
+        : '当前工单状态不能记录退款，请刷新后查看最新状态。';
+      Toast({ context: this, selector: '#t-toast', message, icon: 'close-circle' });
       return;
     }
 
@@ -396,6 +408,7 @@ Page({
       this.fetchData();
     }).catch(err => {
       console.error('Record refund failed:', err);
+      showRequestErrorToast(err, '退款记录保存失败，请检查金额后重试');
     }).finally(() => {
       this.setData({ refundLoading: false });
     });
@@ -404,7 +417,10 @@ Page({
   // --- Mark Repair Done ---
   openMarkRepairDoneDialog() {
     if (!this.data.canShowMarkRepairDone) {
-      Toast({ context: this, selector: '#t-toast', message: '当前无权限或状态不允许标记维修完成', icon: 'close-circle' });
+      const message = !this.data.hasSettlePermission
+        ? '当前账号没有维修完成权限，请联系门店管理员开通。'
+        : '当前工单状态不能标记维修完成，请确认工单已提交并处于维修中。';
+      Toast({ context: this, selector: '#t-toast', message, icon: 'close-circle' });
       return;
     }
 
@@ -455,6 +471,7 @@ Page({
       this.fetchData();
     }).catch(err => {
       console.error('Mark repair done failed:', err);
+      showRequestErrorToast(err, '标记维修完成失败，请刷新工单后重试');
     }).finally(() => {
       this.setData({ markRepairDoneLoading: false });
     });
@@ -463,7 +480,12 @@ Page({
   // --- Deliver ---
   openDeliverDialog() {
     if (!this.data.canShowDeliver) {
-      Toast({ context: this, selector: '#t-toast', message: '当前无权限，或需先收齐尾款后再交付关闭', icon: 'close-circle' });
+      const message = !this.data.hasSettlePermission
+        ? '当前账号没有交付关闭权限，请联系门店管理员开通。'
+        : this.data.outstandingAmount > 0
+          ? '请先收齐尾款后再交付关闭。'
+          : '当前工单状态不能交付关闭，请刷新后查看最新状态。';
+      Toast({ context: this, selector: '#t-toast', message, icon: 'close-circle' });
       return;
     }
 
@@ -504,6 +526,7 @@ Page({
       this.fetchData();
     }).catch(err => {
       console.error('Deliver work order failed:', err);
+      showRequestErrorToast(err, '交付关闭失败，请确认尾款已收齐后重试');
     }).finally(() => {
       this.setData({ deliverLoading: false });
     });

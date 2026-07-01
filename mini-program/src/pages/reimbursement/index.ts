@@ -1,6 +1,7 @@
 import { submitReimbursement } from '../../api/reimbursement';
 import Toast from 'tdesign-miniprogram/toast/index';
 import { requireAnyPermission, requireLogin } from '../../utils/permission';
+import { showRequestErrorToast } from '../../utils/requestError';
 
 Page({
   data: {
@@ -14,7 +15,7 @@ Page({
 
   onShow() {
     if (!requireLogin('/pages/reimbursement/index')) return;
-    requireAnyPermission(['REIMBURSEMENT_SUBMIT'], '当前账号无权提交报销');
+    if (!requireAnyPermission(['REIMBURSEMENT_SUBMIT'], '当前账号无权提交报销')) return;
   },
 
   onFormChange(e: any) {
@@ -56,6 +57,7 @@ Page({
       }, 1500);
     }).catch((err: any) => {
       console.error('Submit reimbursement failed:', err);
+      showRequestErrorToast(err, '报销提交失败，请检查金额和用途后重试');
     }).finally(() => {
       this.setData({ submitLoading: false });
     });

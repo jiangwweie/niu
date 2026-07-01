@@ -8,7 +8,7 @@
   <!-- 快捷操作 -->
   <view class="section">
     <text class="section-title">快捷操作</text>
-    <view class="grid-actions">
+    <view class="grid-actions" wx:if="{{hasAnyQuickAction}}">
       <view class="action-item" wx:if="{{hasCreateOrderPermission}}" bindtap="goToCreateOrder">
         <view class="icon-wrap bg-primary">
           <t-icon name="tools" size="44rpx" color="#008d9e" />
@@ -21,7 +21,7 @@
         </view>
         <text class="action-name">配件入库</text>
       </view>
-      <view class="action-item" bindtap="goToInventory">
+      <view class="action-item" wx:if="{{hasInventoryPermission}}" bindtap="goToInventory">
         <view class="icon-wrap bg-info">
           <t-icon name="search" size="44rpx" color="#0052d9" />
         </view>
@@ -40,10 +40,14 @@
         <text class="action-name">资方台账</text>
       </view>
     </view>
+    <view class="empty-card" wx:else>
+      <t-icon name="lock-on" size="64rpx" color="#7D8B99" />
+      <text class="empty-text">当前账号暂无可用工作入口，请联系门店管理员分配角色权限。</text>
+    </view>
   </view>
 
   <!-- 工单快速入口（P0-01 fix: 移除静态误导性"无待办"提示，改为中性引导） -->
-  <view class="section">
+  <view class="section" wx:if="{{hasWorkOrderPermission}}">
     <text class="section-title">工单提醒</text>
     <view class="notice-card">
       <view class="notice-icon"><t-icon name="assignment" size="48rpx" color="#008d9e" /></view>

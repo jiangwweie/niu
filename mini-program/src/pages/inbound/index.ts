@@ -5,6 +5,7 @@ import { InboundRequest, InboundResponse, CreatePartAndInboundResponse } from '.
 import Toast from 'tdesign-miniprogram/toast/index';
 import { normalizeSearchParam } from '../../utils/searchParams';
 import { hasPermission, requireAnyPermission, requireLogin } from '../../utils/permission';
+import { showRequestErrorToast } from '../../utils/requestError';
 
 let partSearchTimer: number | undefined;
 
@@ -58,7 +59,7 @@ Page({
 
   onShow() {
     if (!requireLogin('/pages/inbound/index')) return;
-    requireAnyPermission(['INVENTORY_INBOUND'], '当前账号无权进行配件入库');
+    if (!requireAnyPermission(['INVENTORY_INBOUND'], '当前账号无权进行配件入库')) return;
     this.refreshPermissions();
   },
 
@@ -79,6 +80,7 @@ Page({
       });
     }).catch(err => {
       console.error(err);
+      showRequestErrorToast(err, '配件列表加载失败，请稍后重试');
     });
   },
 
@@ -415,6 +417,7 @@ Page({
       Toast({ context: this, selector: '#t-toast', message: '入库成功', icon: 'check-circle' });
     }).catch(err => {
       this.setData({ submitting: false });
+      showRequestErrorToast(err, '入库失败，请检查配件、数量和单价后重试');
     });
   },
 

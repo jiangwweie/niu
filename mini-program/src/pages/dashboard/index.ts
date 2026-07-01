@@ -6,9 +6,12 @@ Page({
     userName: '',
     greeting: '你好',
     hasCreateOrderPermission: false,
+    hasWorkOrderPermission: false,
     hasInboundPermission: false,
+    hasInventoryPermission: false,
     hasReimbursementPermission: false,
-    hasFundingPermission: false
+    hasFundingPermission: false,
+    hasAnyQuickAction: false
   },
   onShow() {
     if (!authStore.isLoggedIn) {
@@ -28,19 +31,39 @@ Page({
     else if (hour < 18) greeting = '下午好';
     else greeting = '晚上好';
 
+    const hasCreateOrderPermission = hasPermission('WORK_ORDER_CREATE');
+    const hasWorkOrderPermission = [
+      'WORK_ORDER_VIEW',
+      'WORK_ORDER_CREATE',
+      'WORK_ORDER_UPDATE',
+      'WORK_ORDER_SETTLE'
+    ].some(code => hasPermission(code));
+    const hasInboundPermission = hasPermission('INVENTORY_INBOUND');
+    const hasInventoryPermission = [
+      'INVENTORY_VIEW',
+      'INVENTORY_INBOUND',
+      'INVENTORY_ADJUST'
+    ].some(code => hasPermission(code));
+    const hasReimbursementPermission = hasPermission('REIMBURSEMENT_SUBMIT');
+    const hasFundingPermission = [
+      'FUNDING_APPLICATION_VIEW',
+      'FUNDING_APPLICATION_MANAGE',
+      'FUNDING_LEDGER_VIEW',
+      'FUNDING_LEDGER_MANAGE',
+      'FUNDING_PAYMENT_RECORD'
+    ].some(code => hasPermission(code));
+
     this.setData({
       userName: name,
       greeting,
-      hasCreateOrderPermission: hasPermission('WORK_ORDER_CREATE'),
-      hasInboundPermission: hasPermission('INVENTORY_INBOUND'),
-      hasReimbursementPermission: hasPermission('REIMBURSEMENT_SUBMIT'),
-      hasFundingPermission: [
-        'FUNDING_APPLICATION_VIEW',
-        'FUNDING_APPLICATION_MANAGE',
-        'FUNDING_LEDGER_VIEW',
-        'FUNDING_LEDGER_MANAGE',
-        'FUNDING_PAYMENT_RECORD'
-      ].some(code => hasPermission(code))
+      hasCreateOrderPermission,
+      hasWorkOrderPermission,
+      hasInboundPermission,
+      hasInventoryPermission,
+      hasReimbursementPermission,
+      hasFundingPermission,
+      hasAnyQuickAction: hasCreateOrderPermission || hasInboundPermission || hasInventoryPermission
+        || hasReimbursementPermission || hasFundingPermission
     });
   },
   goToCreateOrder() {

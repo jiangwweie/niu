@@ -37,6 +37,7 @@ import {
   getProgressStatusText,
 } from '../../utils/statusText';
 import { normalizeSearchParam } from '../../utils/searchParams';
+import { showRequestErrorToast } from '../../utils/requestError';
 
 const NO_CHARGE_REASONS = ['官方售后', '免费检测', '老板免单', '质保处理', '其他'];
 let customerSearchTimer: number | undefined;
@@ -258,8 +259,9 @@ Page({
         });
         Toast({ context: this, selector: '#t-toast', message: '草稿已更新', icon: 'check-circle' });
         this.refreshWorkOrder();
-      }).catch(() => {
+      }).catch(err => {
         this.setData({ saving: false });
+        showRequestErrorToast(err, '草稿保存失败，请检查客户和车辆信息后重试');
       });
       return;
     }
@@ -274,6 +276,7 @@ Page({
       this.refreshWorkOrder();
     }).catch(err => {
       this.setData({ saving: false });
+      showRequestErrorToast(err, '工单草稿创建失败，请检查必填信息后重试');
     });
   },
 
@@ -919,6 +922,7 @@ Page({
       this.refreshWorkOrder();
     }).catch(err => {
       console.error('Submit work order failed:', err);
+      showRequestErrorToast(err, '提交工单失败，请检查费用明细和库存后重试');
     }).finally(() => {
       this.setData({ submitLoading: false });
     });
@@ -963,6 +967,7 @@ Page({
       this.refreshWorkOrder();
     }).catch(err => {
       console.error('Cancel work order failed:', err);
+      showRequestErrorToast(err, '取消工单失败，请刷新后重试');
     }).finally(() => {
       this.setData({ cancelLoading: false });
     });
@@ -1042,6 +1047,7 @@ Page({
       this.refreshWorkOrder();
     }).catch(err => {
       console.error('Record payment failed:', err);
+      showRequestErrorToast(err, '收款记录保存失败，请检查金额后重试');
     }).finally(() => {
       this.setData({ paymentLoading: false });
     });
@@ -1124,6 +1130,7 @@ Page({
       this.refreshWorkOrder();
     }).catch(err => {
       console.error('Record refund failed:', err);
+      showRequestErrorToast(err, '退款记录保存失败，请检查金额后重试');
     }).finally(() => {
       this.setData({ refundLoading: false });
     });
@@ -1184,6 +1191,7 @@ Page({
       this.refreshWorkOrder();
     }).catch(err => {
       console.error('Mark repair done failed:', err);
+      showRequestErrorToast(err, '标记维修完成失败，请检查费用和库存后重试');
     }).finally(() => {
       this.setData({ markRepairDoneLoading: false });
     });
@@ -1234,6 +1242,7 @@ Page({
       this.refreshWorkOrder();
     }).catch(err => {
       console.error('Deliver work order failed:', err);
+      showRequestErrorToast(err, '交付关闭失败，请确认尾款已收齐后重试');
     }).finally(() => {
       this.setData({ deliverLoading: false });
     });

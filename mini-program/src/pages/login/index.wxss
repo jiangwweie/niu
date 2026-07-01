@@ -52,6 +52,20 @@
   display: block;
 }
 
+.login-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 12rpx;
+  margin-top: 24rpx;
+  padding: 20rpx 24rpx;
+  background: #fff5f5;
+  border: 1rpx solid #ffd8d8;
+  border-radius: 12rpx;
+  color: #c9353f;
+  font-size: 26rpx;
+  line-height: 1.5;
+}
+
 .divider {
   display: flex;
   align-items: center;

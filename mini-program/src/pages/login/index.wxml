@@ -38,6 +38,10 @@
         <text wx:else>{{captchaText || '刷新'}}</text>
       </t-button>
     </view>
+    <view wx:if="{{loginError}}" class="login-error">
+      <t-icon name="close-circle" size="32rpx" color="#C9353F" />
+      <text>{{loginError}}</text>
+    </view>
 
     <t-button
       theme="primary"

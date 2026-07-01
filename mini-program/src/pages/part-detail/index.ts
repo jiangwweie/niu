@@ -1,6 +1,7 @@
 import { getPartDetail } from '../../api/parts';
 import { Part } from '../../types/parts';
 import { requireAnyPermission, requireLogin } from '../../utils/permission';
+import { showRequestErrorToast } from '../../utils/requestError';
 
 const PART_PAGE_PERMISSIONS = ['PART_VIEW', 'PART_MANAGE', 'PART_CREATE'];
 
@@ -55,7 +56,7 @@ Page({
       this.setData({ part: buildView(res.data), loading: false });
     } catch (e) {
       this.setData({ loading: false });
-      wx.showToast({ title: '配件加载失败', icon: 'none' });
+      showRequestErrorToast(e, '配件加载失败，请返回列表刷新后重试');
     }
   }
 });

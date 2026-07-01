@@ -14,6 +14,11 @@ export function getRequestErrorMessage(error: unknown, fallback: string): string
 }
 
 export function showRequestErrorToast(error: unknown, fallback: string) {
+  if (typeof error === 'object' && error !== null && 'feedbackShown' in error
+      && (error as { feedbackShown?: boolean }).feedbackShown) {
+    return;
+  }
+
   wx.showToast({
     title: getRequestErrorMessage(error, fallback),
     icon: 'none',

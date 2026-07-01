@@ -1,5 +1,6 @@
 import { authApi } from '../../api/auth';
 import { authStore } from '../../stores/auth';
+import { getRequestErrorMessage } from '../../utils/requestError';
 
 Page({
   data: {
@@ -9,6 +10,7 @@ Page({
     captchaText: '',
     captchaImageSrc: '',
     captchaCode: '',
+    loginError: '',
     captchaLoading: false,
     loading: false,
     wechatLoading: false
@@ -25,15 +27,15 @@ Page({
   redirectUrl: '',
 
   onUsernameChange(e: any) {
-    this.setData({ username: e.detail.value });
+    this.setData({ username: e.detail.value, loginError: '' });
   },
 
   onPasswordChange(e: any) {
-    this.setData({ password: e.detail.value });
+    this.setData({ password: e.detail.value, loginError: '' });
   },
 
   onCaptchaChange(e: any) {
-    this.setData({ captchaCode: e.detail.value });
+    this.setData({ captchaCode: e.detail.value, loginError: '' });
   },
 
   async refreshCaptcha() {
@@ -56,15 +58,15 @@ Page({
 
   async handleLogin() {
     if (!this.data.username || !this.data.password) {
-      wx.showToast({ title: '请输入账号密码', icon: 'none' });
+      this.setData({ loginError: '请输入账号和密码。' });
       return;
     }
     if (!this.data.captchaCode) {
-      wx.showToast({ title: '请输入验证码', icon: 'none' });
+      this.setData({ loginError: '请输入图片中的验证码。' });
       return;
     }
 
-    this.setData({ loading: true });
+    this.setData({ loading: true, loginError: '' });
     try {
       const res = await authApi.loginWithPassword({
         username: this.data.username,
@@ -90,7 +92,9 @@ Page({
         }
       }, 500);
     } catch (e) {
-      // request wrapper handles error toast
+      this.setData({
+        loginError: getRequestErrorMessage(e, '登录失败，请检查账号、密码和验证码后重试。')
+      });
       this.refreshCaptcha();
     } finally {
       this.setData({ loading: false });

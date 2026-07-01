@@ -20,7 +20,7 @@ Page({
   },
   onShow() {
     if (!requireLogin('/pages/parts/index')) return;
-    requireAnyPermission(PART_PAGE_PERMISSIONS, '当前账号无权查看配件');
+    if (!requireAnyPermission(PART_PAGE_PERMISSIONS, '当前账号无权查看配件')) return;
   },
   onSearch(e: any) {
     this.setData({ keyword: e.detail.value });

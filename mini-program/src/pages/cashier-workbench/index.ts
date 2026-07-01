@@ -1,6 +1,7 @@
 import { getWorkOrders } from '../../api/workOrder';
 import { WorkOrder } from '../../types/workOrder';
 import { requireAnyPermission, requireLogin } from '../../utils/permission';
+import { showRequestErrorToast } from '../../utils/requestError';
 
 type CashierOrder = WorkOrder & {
   customerNameText: string;
@@ -50,7 +51,7 @@ Page({
       this.setData({ orders, loading: false });
     } catch (e) {
       this.setData({ loading: false });
-      wx.showToast({ title: '收银工单加载失败', icon: 'none' });
+      showRequestErrorToast(e, '收银工单加载失败，请下拉刷新后重试');
     }
   },
 

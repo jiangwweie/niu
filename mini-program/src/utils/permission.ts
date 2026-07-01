@@ -1,5 +1,7 @@
 import { authStore } from '../stores/auth';
 
+let permissionModalVisible = false;
+
 export function hasPermission(code: string): boolean {
   if (!authStore.currentUser || !authStore.currentUser.permissionCodes) return false;
   return authStore.currentUser.permissionCodes.includes(code);
@@ -21,9 +23,18 @@ export function requireLogin(redirectUrl: string): boolean {
 export function requireAnyPermission(codes: string[], message = '当前账号无权访问该功能'): boolean {
   if (hasAnyPermission(codes)) return true;
 
-  wx.showToast({ title: message, icon: 'none', duration: 2000 });
-  setTimeout(() => {
-    wx.switchTab({ url: '/pages/dashboard/index' });
-  }, 300);
+  if (!permissionModalVisible) {
+    permissionModalVisible = true;
+    wx.showModal({
+      title: '无权限访问',
+      content: `${message}。请切换有权限的账号，或联系门店管理员开通后再使用。`,
+      showCancel: false,
+      confirmText: '回到工作台',
+      complete: () => {
+        permissionModalVisible = false;
+        wx.switchTab({ url: '/pages/dashboard/index' });
+      }
+    });
+  }
   return false;
 }
