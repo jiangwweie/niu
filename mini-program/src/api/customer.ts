@@ -18,6 +18,19 @@ export interface VehicleSearchResult {
   customerPhone?: string;
 }
 
+export interface CreateCustomerPayload {
+  customerName: string;
+  phone?: string;
+  remark?: string;
+}
+
+export interface CreateVehiclePayload {
+  frameNo: string;
+  model?: string;
+  batteryNo?: string;
+  remark?: string;
+}
+
 export const searchCustomers = (keyword: string) => {
   const normalizedKeyword = normalizeSearchParam(keyword);
   if (!normalizedKeyword) {
@@ -30,6 +43,22 @@ export const searchCustomers = (keyword: string) => {
   return request<CustomerSearchResult[]>({
     url: `/api/staff/customers/search?keyword=${encodeURIComponent(normalizedKeyword)}`,
     method: 'GET'
+  });
+};
+
+export const createCustomer = (data: CreateCustomerPayload) => {
+  return request<number>({
+    url: '/api/staff/customers',
+    method: 'POST',
+    data
+  });
+};
+
+export const createVehicle = (customerId: number, data: CreateVehiclePayload) => {
+  return request<number>({
+    url: `/api/staff/customers/${customerId}/vehicles`,
+    method: 'POST',
+    data
   });
 };
 

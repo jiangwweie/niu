@@ -1,0 +1,52 @@
+<view class="container">
+  <view class="intro-card">
+    <view class="intro-icon">
+      <t-icon name="user-add" size="48rpx" color="#008d9e" />
+    </view>
+    <view class="intro-content">
+      <text class="intro-title">客户录入</text>
+      <text class="intro-desc">适合到店客户先建档，车辆信息可当场补充，也可后续在工单中填写。</text>
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="section-header">
+      <text class="section-title">客户信息</text>
+      <text class="section-tag">必填</text>
+    </view>
+    <t-input label="客户姓名" placeholder="必填" value="{{customerForm.customerName}}" bind:change="onCustomerFormChange" data-field="customerName" align="right" />
+    <t-input label="手机号" type="number" placeholder="选填" value="{{customerForm.phone}}" bind:change="onCustomerFormChange" data-field="phone" align="right" />
+    <t-input label="备注" placeholder="选填，如客户来源/特殊说明" value="{{customerForm.remark}}" bind:change="onCustomerFormChange" data-field="remark" align="right" />
+  </view>
+
+  <view class="section">
+    <view class="section-header">
+      <text class="section-title">车辆信息</text>
+      <text class="section-tag optional">选填</text>
+    </view>
+    <view class="section-tip">填写任意车辆信息后，需要同时填写车架号，避免车辆档案无法唯一识别。</view>
+    <t-input label="车型" placeholder="选填" value="{{vehicleForm.model}}" bind:change="onVehicleFormChange" data-field="model" align="right" />
+    <t-input label="车架号" placeholder="登记车辆时必填" value="{{vehicleForm.frameNo}}" bind:change="onVehicleFormChange" data-field="frameNo" align="right" />
+    <t-input label="电池号" placeholder="选填" value="{{vehicleForm.batteryNo}}" bind:change="onVehicleFormChange" data-field="batteryNo" align="right" />
+    <t-input label="车辆备注" placeholder="选填" value="{{vehicleForm.remark}}" bind:change="onVehicleFormChange" data-field="remark" align="right" />
+  </view>
+
+  <view class="success-card" wx:if="{{successMessage}}">
+    <t-icon name="check-circle" size="44rpx" color="#2ba471" />
+    <view class="success-body">
+      <text class="success-title">保存完成</text>
+      <text class="success-text">{{successMessage}}</text>
+    </view>
+  </view>
+
+  <view class="actions">
+    <t-button theme="primary" block size="large" bind:tap="onSubmit" loading="{{submitLoading}}">保存客户</t-button>
+    <view class="secondary-actions" wx:if="{{createdCustomerId}}">
+      <t-button theme="primary" variant="outline" block bind:tap="goToCreateOrder">新建工单</t-button>
+      <t-button theme="default" variant="outline" block bind:tap="onContinueCreate">继续录入</t-button>
+      <t-button theme="default" variant="text" block bind:tap="backToDashboard">返回工作台</t-button>
+    </view>
+  </view>
+
+  <t-toast id="t-toast" />
+</view>

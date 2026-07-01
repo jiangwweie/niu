@@ -1,0 +1,138 @@
+page {
+  background-color: #f5f6f8;
+}
+
+.container {
+  padding: 32rpx;
+  padding-bottom: calc(128rpx + env(safe-area-inset-bottom));
+}
+
+.intro-card {
+  display: flex;
+  gap: 24rpx;
+  align-items: flex-start;
+  padding: 32rpx;
+  margin-bottom: 24rpx;
+  background: #ffffff;
+  border-radius: 20rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+}
+
+.intro-icon {
+  width: 88rpx;
+  height: 88rpx;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 141, 158, 0.08);
+  border-radius: 22rpx;
+}
+
+.intro-content {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+}
+
+.intro-title {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #1f2933;
+}
+
+.intro-desc {
+  font-size: 26rpx;
+  line-height: 1.6;
+  color: #667085;
+}
+
+.section {
+  margin-bottom: 24rpx;
+  overflow: hidden;
+  background: #ffffff;
+  border-radius: 20rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28rpx 32rpx 12rpx;
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #1f2933;
+}
+
+.section-tag {
+  min-width: 72rpx;
+  padding: 6rpx 14rpx;
+  color: #b42318;
+  font-size: 22rpx;
+  line-height: 1.3;
+  text-align: center;
+  background: #fff1f0;
+  border-radius: 999rpx;
+}
+
+.section-tag.optional {
+  color: #0052d9;
+  background: #edf4ff;
+}
+
+.section-tip {
+  margin: 0 32rpx 12rpx;
+  padding: 18rpx 20rpx;
+  color: #667085;
+  font-size: 24rpx;
+  line-height: 1.5;
+  background: #f7f9fb;
+  border-radius: 12rpx;
+}
+
+.success-card {
+  display: flex;
+  gap: 18rpx;
+  align-items: flex-start;
+  padding: 28rpx;
+  margin-bottom: 24rpx;
+  background: #f0fff4;
+  border: 2rpx solid rgba(43, 164, 113, 0.18);
+  border-radius: 16rpx;
+}
+
+.success-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.success-title {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #1f2933;
+}
+
+.success-text {
+  font-size: 26rpx;
+  line-height: 1.5;
+  color: #4e5969;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.secondary-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}

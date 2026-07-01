@@ -8,6 +8,7 @@
     "pages/parts/index",
     "pages/part-detail/index",
     "pages/inbound/index",
+    "pages/customer-create/index",
     "pages/create-work-order/index",
     "pages/cashier-workbench/index",
     "pages/reimbursement/index",

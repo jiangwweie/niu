@@ -9,6 +9,7 @@ Page({
     hasWorkOrderPermission: false,
     hasInboundPermission: false,
     hasInventoryPermission: false,
+    hasCustomerManagePermission: false,
     hasReimbursementPermission: false,
     hasFundingPermission: false,
     hasAnyQuickAction: false
@@ -44,6 +45,7 @@ Page({
       'INVENTORY_INBOUND',
       'INVENTORY_ADJUST'
     ].some(code => hasPermission(code));
+    const hasCustomerManagePermission = hasPermission('CUSTOMER_MANAGE');
     const hasReimbursementPermission = hasPermission('REIMBURSEMENT_SUBMIT');
     const hasFundingPermission = [
       'FUNDING_APPLICATION_VIEW',
@@ -60,14 +62,18 @@ Page({
       hasWorkOrderPermission,
       hasInboundPermission,
       hasInventoryPermission,
+      hasCustomerManagePermission,
       hasReimbursementPermission,
       hasFundingPermission,
       hasAnyQuickAction: hasCreateOrderPermission || hasInboundPermission || hasInventoryPermission
-        || hasReimbursementPermission || hasFundingPermission
+        || hasCustomerManagePermission || hasReimbursementPermission || hasFundingPermission
     });
   },
   goToCreateOrder() {
     wx.navigateTo({ url: '/pages/create-work-order/index' });
+  },
+  goToCustomerCreate() {
+    wx.navigateTo({ url: '/pages/customer-create/index' });
   },
   goToInbound() {
     wx.navigateTo({ url: '/pages/inbound/index' });

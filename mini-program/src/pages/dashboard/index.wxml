@@ -15,6 +15,12 @@
         </view>
         <text class="action-name">新建工单</text>
       </view>
+      <view class="action-item" wx:if="{{hasCustomerManagePermission}}" bindtap="goToCustomerCreate">
+        <view class="icon-wrap bg-customer">
+          <t-icon name="user-add" size="44rpx" color="#7a3e00" />
+        </view>
+        <text class="action-name">客户录入</text>
+      </view>
       <view class="action-item" wx:if="{{hasInboundPermission}}" bindtap="goToInbound">
         <view class="icon-wrap bg-success">
           <t-icon name="layers" size="44rpx" color="#2ba471" />

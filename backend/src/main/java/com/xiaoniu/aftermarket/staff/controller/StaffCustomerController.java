@@ -7,9 +7,13 @@ import com.xiaoniu.aftermarket.common.context.CurrentUserContext;
 import com.xiaoniu.aftermarket.common.exception.BusinessException;
 import com.xiaoniu.aftermarket.common.pagination.PageResponse;
 import com.xiaoniu.aftermarket.common.util.SearchKeywordUtils;
+import com.xiaoniu.aftermarket.customer.dto.CreateCustomerRequest;
+import com.xiaoniu.aftermarket.customer.dto.CreateVehicleRequest;
 import com.xiaoniu.aftermarket.customer.dto.CustomerPageQuery;
 import com.xiaoniu.aftermarket.customer.dto.CustomerResponse;
 import com.xiaoniu.aftermarket.customer.service.CustomerService;
+import com.xiaoniu.aftermarket.customer.service.VehicleService;
+import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -19,9 +23,11 @@ import org.springframework.web.bind.annotation.*;
 public class StaffCustomerController {
 
     private final CustomerService customerService;
+    private final VehicleService vehicleService;
 
-    public StaffCustomerController(CustomerService customerService) {
+    public StaffCustomerController(CustomerService customerService, VehicleService vehicleService) {
         this.customerService = customerService;
+        this.vehicleService = vehicleService;
     }
 
     @PreAuthorize("hasAuthority('CUSTOMER_VIEW')")
@@ -43,6 +49,23 @@ public class StaffCustomerController {
                 .map(r -> new CustomerSearchResult(r.getId(), r.getCustomerName(), r.getPhone()))
                 .toList();
         return ApiResponse.success(results);
+    }
+
+    @PreAuthorize("hasAuthority('CUSTOMER_MANAGE')")
+    @PostMapping
+    public ApiResponse<Long> create(@Valid @RequestBody CreateCustomerRequest request) {
+        CurrentUser user = requireCurrentUser();
+        Long id = customerService.create(user.storeId(), user.userId(), request);
+        return ApiResponse.success(id);
+    }
+
+    @PreAuthorize("hasAuthority('CUSTOMER_MANAGE')")
+    @PostMapping("/{customerId}/vehicles")
+    public ApiResponse<Long> createVehicle(@PathVariable Long customerId,
+                                            @Valid @RequestBody CreateVehicleRequest request) {
+        CurrentUser user = requireCurrentUser();
+        Long id = vehicleService.create(customerId, user.storeId(), user.userId(), request);
+        return ApiResponse.success(id);
     }
 
     private CurrentUser requireCurrentUser() {

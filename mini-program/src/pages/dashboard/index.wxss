@@ -68,6 +68,7 @@ page {
 .bg-success { background-color: rgba(43, 164, 113, 0.08); }
 .bg-info    { background-color: rgba(0, 82, 217, 0.08); }
 .bg-warning { background-color: rgba(227, 115, 24, 0.08); }
+.bg-customer { background-color: rgba(122, 62, 0, 0.08); }
 .action-name {
   font-size: 24rpx;
   color: #444;

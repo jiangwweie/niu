@@ -228,6 +228,33 @@ class CustomerVehicleControllerTest {
     }
 
     @Test
+    void staffCreateCustomer_success() throws Exception {
+        mockMvc.perform(post("/api/staff/customers")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithCustomerManage())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"customerName\":\"小程序客户\",\"phone\":\"13800004444\",\"remark\":\"小程序录入\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data").isNumber());
+
+        mockMvc.perform(get("/api/staff/customers/search")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithCustomerView())
+                        .param("keyword", "小程序客户"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].phone").value("13800004444"));
+    }
+
+    @Test
+    void staffCreateCustomer_withoutManagePermission_returns403() throws Exception {
+        mockMvc.perform(post("/api/staff/customers")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithoutCustomerPermission())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"customerName\":\"无权限客户\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void updateCustomer_success() throws Exception {
         mockMvc.perform(put("/api/admin/customers/9001")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithCustomerManage())
@@ -332,6 +359,33 @@ class CustomerVehicleControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("SUCCESS"))
                 .andExpect(jsonPath("$.data").isNumber());
+    }
+
+    @Test
+    void staffCreateVehicle_forCustomer_success() throws Exception {
+        mockMvc.perform(post("/api/staff/customers/9001/vehicles")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithCustomerManage())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"frameNo\":\"VIN-MP-001\",\"model\":\"小程序车型\",\"batteryNo\":\"BAT-MP\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data").isNumber());
+
+        mockMvc.perform(get("/api/staff/vehicles/search")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithCustomerView())
+                        .param("keyword", "VIN-MP-001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].customerName").value("张三"));
+    }
+
+    @Test
+    void staffCreateVehicle_withoutManagePermission_returns403() throws Exception {
+        mockMvc.perform(post("/api/staff/customers/9001/vehicles")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithoutCustomerPermission())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"frameNo\":\"VIN-NO-PERM\"}"))
+                .andExpect(status().isForbidden());
     }
 
     @Test
