@@ -144,6 +144,21 @@ Page({
     this.setData({ 'form.vehicleModel': e.currentTarget.dataset.value });
   },
 
+  onFormVehicleModelPickerChange(e: any) {
+    const index = Number(e.detail.value);
+    const value = this.data.vehicleModelOptions[index];
+    if (!value) return;
+    this.setData({ 'form.vehicleModel': value });
+  },
+
+  onFormPickupDateChange(e: any) {
+    this.setData({ 'form.pickupDate': e.detail.value });
+  },
+
+  onFormFirstDueDateChange(e: any) {
+    this.setData({ 'form.firstDueDate': e.detail.value });
+  },
+
   onPaymentTypeChange(e: any) {
     this.setData({ 'form.paymentType': e.detail.value });
   },
@@ -155,6 +170,17 @@ Page({
 
   onSelectLedgerVehicleModel(e: any) {
     this.setData({ 'ledgerEditForm.vehicleModel': e.currentTarget.dataset.value });
+  },
+
+  onLedgerVehicleModelPickerChange(e: any) {
+    const index = Number(e.detail.value);
+    const value = this.data.vehicleModelOptions[index];
+    if (!value) return;
+    this.setData({ 'ledgerEditForm.vehicleModel': value });
+  },
+
+  onLedgerPickupDateChange(e: any) {
+    this.setData({ 'ledgerEditForm.pickupDate': e.detail.value });
   },
 
   onLedgerEditPaymentTypeChange(e: any) {

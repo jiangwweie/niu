@@ -1,40 +1,42 @@
-page { background-color: #f5f5f5; }
-.container { padding: 16px; }
+page { background-color: #f5f6f8; }
+.container { padding: 24rpx; }
 .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
 
 .warning-banner {
   display: flex;
   background: #e6f0ff;
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 16px;
+  padding: 24rpx;
+  border-radius: 12rpx;
+  margin-bottom: 24rpx;
   align-items: flex-start;
 }
 .warning-banner text {
-  font-size: 13px;
+  font-size: 24rpx;
   color: #0052d9;
-  margin-left: 8px;
+  margin-left: 12rpx;
   flex: 1;
   line-height: 1.5;
 }
 
 .section {
   background: #fff;
-  border-radius: 8px;
-  padding: 16px 0;
-  margin-bottom: 16px;
+  border-radius: 16rpx;
+  padding: 28rpx 0;
+  margin-bottom: 24rpx;
+  overflow: hidden;
+  box-shadow: 0 2rpx 12rpx rgba(15, 23, 42, 0.04);
 }
 .section-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
-  margin: 0 16px 12px;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #1f2933;
+  margin: 0 32rpx 20rpx;
 }
 .section-title.mt {
-  margin-top: 16px;
+  margin-top: 28rpx;
 }
 
-.action-bar { padding: 16px; }
+.action-bar { padding: 28rpx 32rpx 0; }
 
 .draft-summary {
   padding: 0 16px 16px;
@@ -88,19 +90,92 @@ page { background-color: #f5f5f5; }
 
 .empty-state { text-align: center; color: #999; padding: 24px 0; font-size: 14px; }
 
+.scan-input-row {
+  min-height: 96rpx;
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 0 32rpx;
+  background: #fff;
+  border-top: 1rpx solid #f0f2f5;
+  box-sizing: border-box;
+}
+
+.scan-input-label {
+  width: 132rpx;
+  flex-shrink: 0;
+  color: #1f2933;
+  font-size: 30rpx;
+}
+
+.scan-input-control {
+  min-width: 0;
+  flex: 1;
+  height: 88rpx;
+  color: #1f2933;
+  font-size: 30rpx;
+}
+
+.scan-input-action {
+  flex-shrink: 0;
+  min-width: 128rpx;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8rpx;
+  color: #0052d9;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.scan-input-action:active {
+  opacity: 0.72;
+}
+
 .option-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  padding: 8px 16px 12px;
-  background: #fff;
+  gap: 12rpx;
+  padding: 12rpx 32rpx 20rpx;
+  background: #ffffff;
 }
 
-.dialog-option-row {
+.dialog-form-row {
+  min-height: 80rpx;
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 16rpx;
+  padding: 0 20rpx;
+  background: #f7f9fb;
+  border: 1rpx solid #e6e9ef;
+  border-radius: 12rpx;
+  box-sizing: border-box;
+}
+
+.dialog-form-input {
+  min-width: 0;
+  flex: 1;
+  height: 76rpx;
+  color: #1f2933;
+  font-size: 28rpx;
+}
+
+.dialog-form-action {
+  min-width: 88rpx;
+  color: #0052d9;
+  font-size: 26rpx;
+  font-weight: 600;
+  text-align: right;
+}
+
+.dialog-section-label {
+  display: block;
+  margin-bottom: 16rpx;
+  color: #1f2933;
+  font-size: 28rpx;
+  font-weight: 600;
 }
 
 .total-bar {
@@ -115,7 +190,32 @@ page { background-color: #f5f5f5; }
 }
 .total-amount { color: #e34d59; font-size: 18px; }
 
-.add-actions { padding: 0 16px; }
+.add-actions { margin-top: 8rpx; }
+
+.primary-flow-action,
+.secondary-flow-action {
+  padding: 0 32rpx;
+  margin-top: 32rpx;
+}
+
+.action-hint {
+  margin-bottom: 16rpx;
+  color: #667085;
+  font-size: 24rpx;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.paid-hint {
+  margin: 28rpx 32rpx 0;
+  padding: 18rpx 20rpx;
+  color: #2ba471;
+  font-size: 26rpx;
+  font-weight: 600;
+  text-align: center;
+  background: #f0fff4;
+  border-radius: 12rpx;
+}
 
 .popup-header {
   display: flex;
@@ -157,6 +257,31 @@ page { background-color: #f5f5f5; }
   font-weight: 500;
   padding: 0 16px;
   margin-bottom: 8px;
+}
+
+.search-hint-spaced {
+  margin-top: 32rpx;
+}
+
+.manual-entry-hint {
+  margin-top: 20rpx;
+  padding: 0 32rpx;
+  color: #98a2b3;
+  font-size: 24rpx;
+}
+
+.draft-form-group {
+  margin-top: 16rpx;
+}
+
+.popup-search-row {
+  display: flex;
+  gap: 16rpx;
+  padding: 24rpx 32rpx;
+}
+
+.popup-search {
+  flex: 1;
 }
 
 .search-bar {

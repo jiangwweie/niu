@@ -31,7 +31,6 @@ const emptyVehicleForm = (): VehicleForm => ({
 });
 
 const trimValue = (value?: string) => (value || '').trim();
-
 Page({
   data: {
     customerForm: emptyCustomerForm(),
@@ -53,8 +52,15 @@ Page({
 
   loadDictionaryOptions() {
     getDictItems('VEHICLE_MODEL')
-      .then(res => this.setData({ vehicleModelOptions: dictItemLabels(res.data, []) }))
-      .catch(() => this.setData({ vehicleModelOptions: [] }));
+      .then(res => {
+        const options = dictItemLabels(res.data, []);
+        this.setData({
+          vehicleModelOptions: options
+        });
+      })
+      .catch(() => this.setData({
+        vehicleModelOptions: []
+      }));
   },
 
   onCustomerFormChange(e: any) {
@@ -73,11 +79,55 @@ Page({
     });
   },
 
+  scanVehicleField(e: any) {
+    const field = e.currentTarget.dataset.field;
+    const label = field === 'batteryNo' ? '电池号' : '车架号';
+    wx.scanCode({
+      scanType: ['barCode', 'qrCode'],
+      success: (scanRes) => {
+        const scanValue = (scanRes.result || '').trim();
+        if (!scanValue) {
+          Toast({ context: this, selector: '#t-toast', message: `未识别到${label}`, icon: 'close-circle' });
+          return;
+        }
+        this.setData({
+          [`vehicleForm.${field}`]: scanValue,
+          successMessage: ''
+        });
+        Toast({ context: this, selector: '#t-toast', message: `${label}已填入`, icon: 'check-circle' });
+      },
+      fail: (err) => {
+        const msg = String(err?.errMsg || '');
+        Toast({
+          context: this,
+          selector: '#t-toast',
+          message: msg.includes('cancel') ? '扫码已取消' : `${label}扫码失败，可手动输入`,
+          icon: 'close-circle'
+        });
+      }
+    });
+  },
+
   onSelectVehicleModel(e: any) {
+    const value = e.currentTarget.dataset.value;
     this.setData({
-      'vehicleForm.model': e.currentTarget.dataset.value,
+      'vehicleForm.model': value,
       successMessage: ''
     });
+  },
+
+  onVehicleModelPickerChange(e: any) {
+    const index = Number(e.detail.value);
+    const value = this.data.vehicleModelOptions[index];
+    if (!value) return;
+    this.setData({
+      'vehicleForm.model': value,
+      successMessage: ''
+    });
+  },
+
+  showVehicleModelEmptyTip() {
+    Toast({ context: this, selector: '#t-toast', message: '暂无门店车型，可直接输入', icon: 'info-circle' });
   },
 
   hasVehicleInput(): boolean {

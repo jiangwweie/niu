@@ -140,20 +140,15 @@
   bind:confirm="onConfirmCancel"
   bind:cancel="onCancelCancelDialog"
 >
-  <view slot="content" style="font-size: 14px; color: #666;">
-    <text style="display: block; margin-bottom: 12px;">取消工单将关闭此工单；如已预占库存，系统将自动释放。若已有收款，请后续处理退款。</text>
-    <view class="dialog-option-row" wx:if="{{cancelReasonOptions.length > 0}}">
-      <t-tag
-        wx:for="{{cancelReasonOptions}}"
-        wx:key="*this"
-        theme="{{cancelReason === item ? 'primary' : 'default'}}"
-        variant="{{cancelReason === item ? 'light' : 'outline'}}"
-        bind:tap="onSelectCancelReason"
-        data-value="{{item}}"
-      >{{item}}</t-tag>
+  <view slot="content" class="dialog-content">
+    <text class="dialog-desc">取消工单将关闭此工单；如已预占库存，系统将自动释放。若已有收款，请后续处理退款。</text>
+    <view class="dialog-form-row">
+      <input class="dialog-form-input" placeholder="请输入取消原因(必填)" value="{{cancelReason}}" bindinput="onCancelReasonChange" />
+      <picker wx:if="{{cancelReasonOptions.length > 0}}" mode="selector" range="{{cancelReasonOptions}}" bindchange="onCancelReasonPickerChange">
+        <view class="dialog-form-action">选择</view>
+      </picker>
     </view>
-    <t-input placeholder="请输入取消原因(必填)" value="{{cancelReason}}" bind:change="onCancelReasonChange" borderless style="background: #f5f5f5; border-radius: 4px; margin-bottom: 8px;" />
-    <t-input placeholder="可输入备注(选填)" value="{{cancelRemark}}" bind:change="onCancelRemarkChange" borderless style="background: #f5f5f5; border-radius: 4px;" />
+    <t-input placeholder="可输入备注(选填)" value="{{cancelRemark}}" bind:change="onCancelRemarkChange" borderless />
   </view>
 </t-dialog>
 
@@ -227,16 +222,13 @@
           </view>
         </view>
 
-        <t-input label="退款原因" placeholder="必填" value="{{refundForm.reason}}" bind:change="onRefundFormChange" data-field="reason" align="right" />
-        <view class="option-row" wx:if="{{refundReasonOptions.length > 0}}">
-          <t-tag
-            wx:for="{{refundReasonOptions}}"
-            wx:key="*this"
-            theme="{{refundForm.reason === item ? 'danger' : 'default'}}"
-            variant="{{refundForm.reason === item ? 'light' : 'outline'}}"
-            bind:tap="onSelectRefundReason"
-            data-value="{{item}}"
-          >{{item}}</t-tag>
+        <view class="niu-form-row">
+          <text class="niu-form-label">退款原因</text>
+          <input class="niu-form-input" placeholder="输入原因" value="{{refundForm.reason}}" bindinput="onRefundFormChange" data-field="reason" />
+          <picker wx:if="{{refundReasonOptions.length > 0}}" mode="selector" range="{{refundReasonOptions}}" bindchange="onRefundReasonPickerChange">
+            <view class="niu-form-action">选择</view>
+          </picker>
+          <view wx:else class="niu-form-action muted">选择</view>
         </view>
         <t-input label="备注" placeholder="选填" value="{{refundForm.remark}}" bind:change="onRefundFormChange" data-field="remark" align="right" />
       </t-cell-group>
@@ -257,22 +249,17 @@
   bind:confirm="onConfirmMarkRepairDone"
   bind:cancel="onCancelMarkRepairDone"
 >
-  <view slot="content" style="font-size: 14px; color: #666;">
-    <text style="display: block; margin-bottom: 12px;">标记维修完成后，工单配件库存将正式扣减，不能再普通取消工单。</text>
+  <view slot="content" class="dialog-content">
+    <text class="dialog-desc">标记维修完成后，工单配件库存将正式扣减，不能再普通取消工单。</text>
     <block wx:if="{{order.receivableAmount <= 0}}">
-      <text style="display: block; margin-bottom: 8px; font-weight: 500; color: #333;">应收为 0，请选择无需收款原因：</text>
-      <view style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">
-        <t-tag
-          wx:for="{{noChargeReasons}}"
-          wx:key="*this"
-          theme="{{noChargeReason === item ? 'primary' : 'default'}}"
-          variant="{{noChargeReason === item ? 'light' : 'outline'}}"
-          bind:tap="onSelectNoChargeReason"
-          data-val="{{item}}"
-        >{{item}}</t-tag>
+      <text class="dialog-section-label">应收为 0，请选择无需收款原因：</text>
+      <view class="dialog-form-row">
+        <input class="dialog-form-input" placeholder="无需收款原因(必填)" value="{{noChargeReason}}" bindinput="onNoChargeReasonChange" />
+        <picker wx:if="{{noChargeReasons.length > 0}}" mode="selector" range="{{noChargeReasons}}" bindchange="onNoChargeReasonPickerChange">
+          <view class="dialog-form-action">选择</view>
+        </picker>
       </view>
-      <t-input placeholder="无需收款原因(必填)" value="{{noChargeReason}}" bind:change="onNoChargeReasonChange" borderless style="background: #f5f5f5; border-radius: 4px; margin-bottom: 8px;" />
-      <t-input placeholder="无需收款备注(选填)" value="{{noChargeRemark}}" bind:change="onNoChargeRemarkChange" borderless style="background: #f5f5f5; border-radius: 4px;" />
+      <t-input placeholder="无需收款备注(选填)" value="{{noChargeRemark}}" bind:change="onNoChargeRemarkChange" borderless />
     </block>
   </view>
 </t-dialog>

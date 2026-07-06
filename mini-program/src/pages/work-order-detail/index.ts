@@ -223,6 +223,13 @@ Page({
     this.setData({ cancelReason: e.currentTarget.dataset.value });
   },
 
+  onCancelReasonPickerChange(e: any) {
+    const index = Number(e.detail.value);
+    const value = this.data.cancelReasonOptions[index];
+    if (!value) return;
+    this.setData({ cancelReason: value });
+  },
+
   onCancelRemarkChange(e: any) {
     this.setData({ cancelRemark: e.detail.value });
   },
@@ -390,6 +397,13 @@ Page({
     this.setData({ 'refundForm.reason': e.currentTarget.dataset.value });
   },
 
+  onRefundReasonPickerChange(e: any) {
+    const index = Number(e.detail.value);
+    const value = this.data.refundReasonOptions[index];
+    if (!value) return;
+    this.setData({ 'refundForm.reason': value });
+  },
+
   confirmRecordRefund() {
     if (this.data.refundLoading || !this.data.orderId) return;
 
@@ -470,6 +484,13 @@ Page({
 
   onSelectNoChargeReason(e: any) {
     this.setData({ noChargeReason: e.currentTarget.dataset.val });
+  },
+
+  onNoChargeReasonPickerChange(e: any) {
+    const index = Number(e.detail.value);
+    const value = this.data.noChargeReasons[index];
+    if (!value) return;
+    this.setData({ noChargeReason: value });
   },
 
   onConfirmMarkRepairDone() {

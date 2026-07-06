@@ -22,7 +22,7 @@
   </view>
 
   <!-- 状态筛选 tabs -->
-  <scroll-view scroll-x class="status-tabs">
+  <scroll-view scroll-x enable-flex class="status-tabs">
     <view
       wx:for="{{progressTabs}}"
       wx:key="value"

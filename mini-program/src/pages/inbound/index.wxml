@@ -61,16 +61,13 @@
       <t-input label="入库单价" type="digit" placeholder="选填，不能为负数" bind:change="onUnitCostChange" align="right" value="{{formData.unitCost}}" />
       <t-input label="扫码识别码" placeholder="选填，可绑定本次入库条码" bind:change="onBarcodeChange" align="right" value="{{formData.barcode}}" />
       <t-input label="库位备注" placeholder="选填" bind:change="onLocationChange" align="right" value="{{formData.locationRemark}}" />
-      <t-input label="入库原因" placeholder="选填" bind:change="onReasonChange" align="right" value="{{formData.reason}}" />
-      <view class="option-row" wx:if="{{inboundReasonOptions.length > 0}}">
-        <t-tag
-          wx:for="{{inboundReasonOptions}}"
-          wx:key="*this"
-          theme="{{formData.reason === item ? 'primary' : 'default'}}"
-          variant="{{formData.reason === item ? 'light' : 'outline'}}"
-          bind:tap="onSelectInboundReason"
-          data-value="{{item}}"
-        >{{item}}</t-tag>
+      <view class="niu-form-row">
+        <text class="niu-form-label">入库原因</text>
+        <input class="niu-form-input" placeholder="输入原因" bindinput="onReasonChange" value="{{formData.reason}}" />
+        <picker wx:if="{{inboundReasonOptions.length > 0}}" mode="selector" range="{{inboundReasonOptions}}" bindchange="onInboundReasonPickerChange">
+          <view class="niu-form-action">选择</view>
+        </picker>
+        <view wx:else class="niu-form-action muted">选择</view>
       </view>
       <t-input label="其他备注" placeholder="选填" bind:change="onRemarkChange" align="right" value="{{formData.remark}}" />
     </t-cell-group>
@@ -148,16 +145,13 @@
           value="{{createPartFormData.officialPartNo}}"
         />
         <t-input label="型号" placeholder="选填" bind:change="onCreatePartModelChange" value="{{createPartFormData.model}}" />
-        <t-input label="分类编码" placeholder="选填" bind:change="onCreatePartCategoryChange" value="{{createPartFormData.categoryCode}}" />
-        <view class="option-row" wx:if="{{partCategoryOptions.length > 0}}">
-          <t-tag
-            wx:for="{{partCategoryOptions}}"
-            wx:key="*this"
-            theme="{{createPartFormData.categoryCode === item ? 'primary' : 'default'}}"
-            variant="{{createPartFormData.categoryCode === item ? 'light' : 'outline'}}"
-            bind:tap="onSelectCreatePartCategory"
-            data-value="{{item}}"
-          >{{item}}</t-tag>
+        <view class="niu-form-row">
+          <text class="niu-form-label">分类</text>
+          <input class="niu-form-input" placeholder="输入分类" bindinput="onCreatePartCategoryChange" value="{{createPartFormData.categoryCode}}" />
+          <picker wx:if="{{partCategoryOptions.length > 0}}" mode="selector" range="{{partCategoryOptions}}" bindchange="onCreatePartCategoryPickerChange">
+            <view class="niu-form-action">选择</view>
+          </picker>
+          <view wx:else class="niu-form-action muted">选择</view>
         </view>
         <t-input label="扫码识别码" placeholder="扫码后自动带入，可用于后续识别" bind:change="" value="{{createPartFormData.externalBarcode}}" disabled />
         <t-input label="默认成本价" type="digit" placeholder="选填" bind:change="onCreatePartCostPriceChange" value="{{createPartFormData.costPrice}}" align="right" />
@@ -169,16 +163,13 @@
         <t-input label="入库数量" type="number" placeholder="必填，大于0" bind:change="onCreatePartInboundQtyChange" value="{{createPartFormData.inboundQuantity}}" align="right" />
         <t-input label="入库单价" type="digit" placeholder="选填" bind:change="onCreatePartUnitCostChange" value="{{createPartFormData.unitCost}}" align="right" />
         <t-input label="库位备注" placeholder="选填" bind:change="onCreatePartLocationChange" value="{{createPartFormData.locationRemark}}" align="right" />
-        <t-input label="入库原因" placeholder="选填" bind:change="onCreatePartReasonChange" value="{{createPartFormData.reason}}" align="right" />
-        <view class="option-row" wx:if="{{inboundReasonOptions.length > 0}}">
-          <t-tag
-            wx:for="{{inboundReasonOptions}}"
-            wx:key="*this"
-            theme="{{createPartFormData.reason === item ? 'primary' : 'default'}}"
-            variant="{{createPartFormData.reason === item ? 'light' : 'outline'}}"
-            bind:tap="onSelectCreatePartReason"
-            data-value="{{item}}"
-          >{{item}}</t-tag>
+        <view class="niu-form-row">
+          <text class="niu-form-label">入库原因</text>
+          <input class="niu-form-input" placeholder="输入原因" bindinput="onCreatePartReasonChange" value="{{createPartFormData.reason}}" />
+          <picker wx:if="{{inboundReasonOptions.length > 0}}" mode="selector" range="{{inboundReasonOptions}}" bindchange="onCreatePartReasonPickerChange">
+            <view class="niu-form-action">选择</view>
+          </picker>
+          <view wx:else class="niu-form-action muted">选择</view>
         </view>
         <t-input label="备注" placeholder="选填" bind:change="onCreatePartRemarkChange" value="{{createPartFormData.remark}}" align="right" />
       </t-cell-group>

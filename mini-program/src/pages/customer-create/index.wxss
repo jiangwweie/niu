@@ -95,12 +95,51 @@ page {
   border-radius: 12rpx;
 }
 
-.option-row {
+.scan-input-row {
+  min-height: 96rpx;
   display: flex;
-  flex-wrap: wrap;
-  gap: 12rpx;
-  padding: 12rpx 32rpx 20rpx;
+  align-items: center;
+  gap: 20rpx;
+  padding: 0 32rpx;
   background: #ffffff;
+  border-bottom: 1rpx solid #f0f2f5;
+  box-sizing: border-box;
+}
+
+.scan-input-label {
+  width: 132rpx;
+  flex-shrink: 0;
+  color: #1f2933;
+  font-size: 30rpx;
+}
+
+.scan-input-control {
+  min-width: 0;
+  flex: 1;
+  height: 88rpx;
+  color: #1f2933;
+  font-size: 30rpx;
+}
+
+.scan-input-control::placeholder {
+  color: #a0a7b2;
+}
+
+.scan-input-action {
+  flex-shrink: 0;
+  min-width: 128rpx;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8rpx;
+  color: #0052d9;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.scan-input-action:active {
+  opacity: 0.72;
 }
 
 .success-card {
@@ -143,4 +182,42 @@ page {
   display: flex;
   flex-direction: column;
   gap: 16rpx;
+}
+
+.entry-input-row {
+  min-height: 96rpx;
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 0 32rpx;
+  background: #ffffff;
+  border-bottom: 1rpx solid #f0f2f5;
+  box-sizing: border-box;
+}
+
+.entry-input-label {
+  width: 132rpx;
+  flex-shrink: 0;
+  color: #1f2933;
+  font-size: 30rpx;
+}
+
+.entry-input-control {
+  min-width: 0;
+  flex: 1;
+  height: 88rpx;
+  color: #1f2933;
+  font-size: 30rpx;
+}
+
+.entry-input-action {
+  min-width: 104rpx;
+  color: #0052d9;
+  font-size: 28rpx;
+  font-weight: 600;
+  text-align: right;
+}
+
+.entry-input-action.muted {
+  color: #98a2b3;
 }

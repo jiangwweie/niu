@@ -23,7 +23,7 @@
     </view>
 
     <!-- Vehicle Search -->
-    <view class="search-hint" style="margin-top: 16px;">
+    <view class="search-hint search-hint-spaced">
       <t-icon name="car" size="16" />
       <text>车辆信息</text>
     </view>
@@ -36,38 +36,44 @@
       </view>
     </view>
 
-    <view style="margin-top: 12px; font-size: 12px; color: #999; padding: 0 4px;">
+    <view class="manual-entry-hint">
       也可直接在下方手工录入客户/车辆信息
     </view>
 
-    <t-cell-group style="margin-top: 8px;">
+    <t-cell-group class="draft-form-group">
       <t-input label="客户姓名" placeholder="必填" value="{{draft.customerNameSnapshot}}" bind:change="onDraftChange" data-field="customerNameSnapshot" align="right" />
       <t-input label="手机号" placeholder="选填" value="{{draft.customerPhoneSnapshot}}" bind:change="onDraftChange" data-field="customerPhoneSnapshot" align="right" />
-      <t-input label="车型" placeholder="选填" value="{{draft.vehicleModelSnapshot}}" bind:change="onDraftChange" data-field="vehicleModelSnapshot" align="right" />
-      <view class="option-row" wx:if="{{vehicleModelOptions.length > 0}}">
-        <t-tag
-          wx:for="{{vehicleModelOptions}}"
-          wx:key="*this"
-          theme="{{draft.vehicleModelSnapshot === item ? 'primary' : 'default'}}"
-          variant="{{draft.vehicleModelSnapshot === item ? 'light' : 'outline'}}"
-          bind:tap="onSelectDraftOption"
-          data-field="vehicleModelSnapshot"
-          data-value="{{item}}"
-        >{{item}}</t-tag>
+      <view class="niu-form-row">
+        <text class="niu-form-label">车型</text>
+        <input class="niu-form-input" placeholder="输入车型" value="{{draft.vehicleModelSnapshot}}" bindinput="onDraftChange" data-field="vehicleModelSnapshot" />
+        <picker wx:if="{{vehicleModelOptions.length > 0}}" mode="selector" range="{{vehicleModelOptions}}" bindchange="onDraftVehicleModelPickerChange">
+          <view class="niu-form-action">选择</view>
+        </picker>
+        <view wx:else class="niu-form-action muted" bind:tap="showDraftPickerEmptyTip" data-label="车型">选择</view>
       </view>
-      <t-input label="车架号" placeholder="选填" value="{{draft.frameNoSnapshot}}" bind:change="onDraftChange" data-field="frameNoSnapshot" align="right" />
-      <t-input label="电池号" placeholder="选填" value="{{draft.batteryNoSnapshot}}" bind:change="onDraftChange" data-field="batteryNoSnapshot" align="right" />
-      <t-input label="维修项目" placeholder="必填" value="{{draft.repairItem}}" bind:change="onDraftChange" data-field="repairItem" align="right" />
-      <view class="option-row" wx:if="{{repairItemOptions.length > 0}}">
-        <t-tag
-          wx:for="{{repairItemOptions}}"
-          wx:key="*this"
-          theme="{{draft.repairItem === item ? 'primary' : 'default'}}"
-          variant="{{draft.repairItem === item ? 'light' : 'outline'}}"
-          bind:tap="onSelectDraftOption"
-          data-field="repairItem"
-          data-value="{{item}}"
-        >{{item}}</t-tag>
+      <view class="scan-input-row">
+        <text class="scan-input-label">车架号</text>
+        <input class="scan-input-control" placeholder="可扫码或手动输入" value="{{draft.frameNoSnapshot}}" bindinput="onDraftChange" data-field="frameNoSnapshot" />
+        <view class="scan-input-action" aria-role="button" bind:tap="scanDraftVehicleField" data-field="frameNoSnapshot">
+          <t-icon name="scan" size="32rpx" color="#0052d9" />
+          <text>扫码</text>
+        </view>
+      </view>
+      <view class="scan-input-row">
+        <text class="scan-input-label">电池号</text>
+        <input class="scan-input-control" placeholder="可扫码或手动输入" value="{{draft.batteryNoSnapshot}}" bindinput="onDraftChange" data-field="batteryNoSnapshot" />
+        <view class="scan-input-action" aria-role="button" bind:tap="scanDraftVehicleField" data-field="batteryNoSnapshot">
+          <t-icon name="scan" size="32rpx" color="#0052d9" />
+          <text>扫码</text>
+        </view>
+      </view>
+      <view class="niu-form-row">
+        <text class="niu-form-label">维修项目</text>
+        <input class="niu-form-input" placeholder="输入项目" value="{{draft.repairItem}}" bindinput="onDraftChange" data-field="repairItem" />
+        <picker wx:if="{{repairItemOptions.length > 0}}" mode="selector" range="{{repairItemOptions}}" bindchange="onDraftRepairItemPickerChange">
+          <view class="niu-form-action">选择</view>
+        </picker>
+        <view wx:else class="niu-form-action muted" bind:tap="showDraftPickerEmptyTip" data-label="维修项目">选择</view>
       </view>
       <t-input label="备注" placeholder="选填" value="{{draft.remark}}" bind:change="onDraftChange" data-field="remark" align="right" />
     </t-cell-group>
@@ -132,57 +138,55 @@
     </view>
 
     <!-- 添加费用明细 (DRAFT only) -->
-    <view class="add-actions" wx:if="{{workOrder.progressStatus === 'DRAFT'}}">
-      <t-button block theme="primary" variant="outline" icon="add" bind:tap="openAddItem" data-type="PART">添加配件费</t-button>
-      <t-button block theme="default" variant="outline" icon="add" bind:tap="openAddItem" data-type="LABOR" style="margin-top: 12px;">添加工时费</t-button>
-      <t-button block theme="default" variant="outline" icon="add" bind:tap="openAddItem" data-type="OTHER" style="margin-top: 12px;">添加其他费用</t-button>
+    <view class="niu-action-grid add-actions" wx:if="{{workOrder.progressStatus === 'DRAFT'}}">
+      <view class="niu-action-tile primary" aria-role="button" bind:tap="openAddItem" data-type="PART">
+        <t-icon name="add-circle" size="40rpx" color="#0052d9" />
+        <text>配件费</text>
+      </view>
+      <view class="niu-action-tile" aria-role="button" bind:tap="openAddItem" data-type="LABOR">
+        <t-icon name="add-circle" size="40rpx" color="#344054" />
+        <text>工时费</text>
+      </view>
+      <view class="niu-action-tile" aria-role="button" bind:tap="openAddItem" data-type="OTHER">
+        <t-icon name="add-circle" size="40rpx" color="#344054" />
+        <text>其他费用</text>
+      </view>
     </view>
 
     <!-- 提交工单 (DRAFT only) -->
-    <view class="submit-action" wx:if="{{workOrder.progressStatus === 'DRAFT'}}" style="margin-top: 24px; padding: 0 16px;">
-      <view style="font-size: 12px; color: #666; margin-bottom: 12px; text-align: center;">
-        提交后进入维修中，并预占相关库存。
-      </view>
+    <view class="primary-flow-action" wx:if="{{workOrder.progressStatus === 'DRAFT'}}">
+      <view class="action-hint">提交后进入维修中，并预占相关库存。</view>
       <t-button block theme="danger" size="large" bind:tap="confirmSubmitWorkOrder" loading="{{submitLoading}}">提交工单</t-button>
     </view>
 
     <!-- 标记维修完成 -->
-    <view wx:if="{{workOrder.canMarkRepairDone}}" style="margin-top: 24px; padding: 0 16px;">
-      <view style="font-size: 12px; color: #666; margin-bottom: 12px; text-align: center;">
-        标记维修完成后，工单配件库存将正式扣减，不能再普通取消工单。
-      </view>
+    <view class="primary-flow-action" wx:if="{{workOrder.canMarkRepairDone}}">
+      <view class="action-hint">标记维修完成后，工单配件库存将正式扣减。</view>
       <t-button block theme="primary" size="large" bind:tap="openMarkRepairDoneDialog" loading="{{markRepairDoneLoading}}">标记维修完成</t-button>
     </view>
 
     <!-- 交付关闭 -->
-    <view wx:if="{{workOrder.canDeliver}}" style="margin-top: 24px; padding: 0 16px;">
+    <view class="primary-flow-action" wx:if="{{workOrder.canDeliver}}">
       <t-button block theme="primary" size="large" bind:tap="openDeliverDialog" loading="{{deliverLoading}}">交付关闭</t-button>
     </view>
 
     <!-- 取消工单 -->
-    <view class="cancel-action" wx:if="{{workOrder.canCancel}}" style="margin-top: 24px; padding: 0 16px;">
-      <view style="font-size: 12px; color: #666; margin-bottom: 12px; text-align: center;">
-        取消工单将关闭此工单；如已预占库存，系统将自动释放。若已有收款，请后续处理退款。
-      </view>
+    <view class="secondary-flow-action" wx:if="{{workOrder.canCancel}}">
       <t-button block theme="default" variant="outline" size="large" bind:tap="openCancelDialog" loading="{{cancelLoading}}">取消工单</t-button>
     </view>
 
     <!-- 记录收款 -->
-    <view class="payment-action" wx:if="{{canShowRecordPayment}}" style="margin-top: 16px; padding: 0 16px;">
-      <view style="font-size: 12px; color: #666; margin-bottom: 12px; text-align: center;">
-        操作结果以系统校验为准。收款不改变工单进度状态。
-      </view>
+    <view class="primary-flow-action" wx:if="{{canShowRecordPayment}}">
+      <view class="action-hint">收款不改变工单进度状态。</view>
       <t-button block theme="primary" size="large" bind:tap="openPaymentDialog" loading="{{paymentLoading}}">记录收款</t-button>
     </view>
-    <view wx:if="{{showPaidInFullHint}}" style="margin-top: 16px; padding: 0 16px; text-align: center; color: #00a870; font-size: 13px;">
+    <view class="paid-hint" wx:if="{{showPaidInFullHint}}">
       已收齐
     </view>
 
     <!-- 记录退款 -->
-    <view class="refund-action" wx:if="{{canShowRecordRefund}}" style="margin-top: 16px; padding: 0 16px;">
-      <view style="font-size: 12px; color: #666; margin-bottom: 12px; text-align: center;">
-        退款上限以系统校验为准。
-      </view>
+    <view class="secondary-flow-action" wx:if="{{canShowRecordRefund}}">
+      <view class="action-hint">退款上限以系统校验为准。</view>
       <t-button block theme="danger" variant="outline" size="large" bind:tap="openRefundDialog" loading="{{refundLoading}}">记录退款</t-button>
     </view>
   </view>
@@ -263,17 +267,13 @@
         <t-input label="配件名称" placeholder="必填" value="{{tempPartForm.partName}}" bind:change="onTempPartFormChange" data-field="partName" align="right" />
         <t-input label="条码" placeholder="扫码值/选填" value="{{tempPartForm.barcode}}" bind:change="onTempPartFormChange" data-field="barcode" align="right" />
         <t-input label="型号" placeholder="选填" value="{{tempPartForm.model}}" bind:change="onTempPartFormChange" data-field="model" align="right" />
-        <t-input label="分类" placeholder="选填" value="{{tempPartForm.categoryCode}}" bind:change="onTempPartFormChange" data-field="categoryCode" align="right" />
-        <view class="option-row" wx:if="{{partCategoryOptions.length > 0}}">
-          <t-tag
-            wx:for="{{partCategoryOptions}}"
-            wx:key="*this"
-            theme="{{tempPartForm.categoryCode === item ? 'primary' : 'default'}}"
-            variant="{{tempPartForm.categoryCode === item ? 'light' : 'outline'}}"
-            bind:tap="onSelectTempPartOption"
-            data-field="categoryCode"
-            data-value="{{item}}"
-          >{{item}}</t-tag>
+        <view class="niu-form-row">
+          <text class="niu-form-label">分类</text>
+          <input class="niu-form-input" placeholder="输入分类" value="{{tempPartForm.categoryCode}}" bindinput="onTempPartFormChange" data-field="categoryCode" />
+          <picker wx:if="{{partCategoryOptions.length > 0}}" mode="selector" range="{{partCategoryOptions}}" bindchange="onTempPartCategoryPickerChange">
+            <view class="niu-form-action">选择</view>
+          </picker>
+          <view wx:else class="niu-form-action muted" bind:tap="showDraftPickerEmptyTip" data-label="配件分类">选择</view>
         </view>
         <t-input label="数量" type="number" placeholder="必填(>0)" value="{{tempPartForm.quantity}}" bind:change="onTempPartFormChange" data-field="quantity" align="right" />
         <t-input label="单位" placeholder="选填" value="{{tempPartForm.unit}}" bind:change="onTempPartFormChange" data-field="unit" align="right" />
@@ -327,17 +327,12 @@
   >
     <view slot="content" style="font-size: 14px; color: #666;">
       <text style="display: block; margin-bottom: 12px;">取消工单将关闭此工单；如已预占库存，系统将自动释放。若已有收款，请后续处理退款。</text>
-      <view class="dialog-option-row" wx:if="{{cancelReasonOptions.length > 0}}">
-        <t-tag
-          wx:for="{{cancelReasonOptions}}"
-          wx:key="*this"
-          theme="{{cancelReason === item ? 'primary' : 'default'}}"
-          variant="{{cancelReason === item ? 'light' : 'outline'}}"
-          bind:tap="onSelectCancelReason"
-          data-value="{{item}}"
-        >{{item}}</t-tag>
+      <view class="dialog-form-row">
+        <input class="dialog-form-input" placeholder="请输入取消原因(必填)" value="{{cancelReason}}" bindinput="onCancelReasonChange" />
+        <picker wx:if="{{cancelReasonOptions.length > 0}}" mode="selector" range="{{cancelReasonOptions}}" bindchange="onCancelReasonPickerChange">
+          <view class="dialog-form-action">选择</view>
+        </picker>
       </view>
-      <t-input placeholder="请输入取消原因(必填)" value="{{cancelReason}}" bind:change="onCancelReasonChange" borderless style="background: #f5f5f5; border-radius: 4px; margin-bottom: 8px;" />
       <t-input placeholder="可输入备注(选填)" value="{{cancelRemark}}" bind:change="onCancelRemarkChange" borderless style="background: #f5f5f5; border-radius: 4px;" />
     </view>
   </t-dialog>
@@ -408,16 +403,13 @@
           </view>
         </view>
 
-        <t-input label="退款原因" placeholder="必填" value="{{refundForm.reason}}" bind:change="onRefundFormChange" data-field="reason" align="right" />
-        <view class="option-row" wx:if="{{refundReasonOptions.length > 0}}">
-          <t-tag
-            wx:for="{{refundReasonOptions}}"
-            wx:key="*this"
-            theme="{{refundForm.reason === item ? 'danger' : 'default'}}"
-            variant="{{refundForm.reason === item ? 'light' : 'outline'}}"
-            bind:tap="onSelectRefundReason"
-            data-value="{{item}}"
-          >{{item}}</t-tag>
+        <view class="niu-form-row">
+          <text class="niu-form-label">退款原因</text>
+          <input class="niu-form-input" placeholder="输入原因" value="{{refundForm.reason}}" bindinput="onRefundFormChange" data-field="reason" />
+          <picker wx:if="{{refundReasonOptions.length > 0}}" mode="selector" range="{{refundReasonOptions}}" bindchange="onRefundReasonPickerChange">
+            <view class="niu-form-action">选择</view>
+          </picker>
+          <view wx:else class="niu-form-action muted" bind:tap="showDraftPickerEmptyTip" data-label="退款原因">选择</view>
         </view>
         <t-input label="备注" placeholder="选填" value="{{refundForm.remark}}" bind:change="onRefundFormChange" data-field="remark" align="right" />
       </t-cell-group>
@@ -440,18 +432,13 @@
     <view slot="content" style="font-size: 14px; color: #666;">
       <text style="display: block; margin-bottom: 12px;">标记维修完成后，工单配件库存将正式扣减，不能再普通取消工单。</text>
       <block wx:if="{{workOrder.receivableAmount <= 0}}">
-        <text style="display: block; margin-bottom: 8px; font-weight: 500; color: #333;">应收为 0，请选择无需收款原因：</text>
-        <view style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">
-          <t-tag
-            wx:for="{{noChargeReasons}}"
-            wx:key="*this"
-            theme="{{noChargeReason === item ? 'primary' : 'default'}}"
-            variant="{{noChargeReason === item ? 'light' : 'outline'}}"
-            bind:tap="onSelectNoChargeReason"
-            data-val="{{item}}"
-          >{{item}}</t-tag>
+        <text class="dialog-section-label">应收为 0，请选择无需收款原因：</text>
+        <view class="dialog-form-row">
+          <input class="dialog-form-input" placeholder="无需收款原因(必填)" value="{{noChargeReason}}" bindinput="onNoChargeReasonChange" />
+          <picker wx:if="{{noChargeReasons.length > 0}}" mode="selector" range="{{noChargeReasons}}" bindchange="onNoChargeReasonPickerChange">
+            <view class="dialog-form-action">选择</view>
+          </picker>
         </view>
-        <t-input placeholder="无需收款原因(必填)" value="{{noChargeReason}}" bind:change="onNoChargeReasonChange" borderless style="background: #f5f5f5; border-radius: 4px; margin-bottom: 8px;" />
         <t-input placeholder="无需收款备注(选填)" value="{{noChargeRemark}}" bind:change="onNoChargeRemarkChange" borderless style="background: #f5f5f5; border-radius: 4px;" />
       </block>
     </view>
@@ -477,8 +464,8 @@
       <text class="popup-title">搜索客户</text>
       <t-icon name="close" size="24" bind:tap="closeCustomerSearch" />
     </view>
-    <view style="padding: 12px 16px; display: flex; gap: 8px;">
-      <t-search style="flex: 1;" placeholder="姓名或手机号" value="{{customerSearchKeyword}}" bind:change="onCustomerSearchInput" bind:submit="onCustomerSearch" />
+    <view class="popup-search-row">
+      <t-search class="popup-search" placeholder="姓名或手机号" value="{{customerSearchKeyword}}" bind:change="onCustomerSearchInput" bind:submit="onCustomerSearch" />
       <t-button size="small" theme="primary" bind:tap="onCustomerSearch">搜索</t-button>
     </view>
     <scroll-view scroll-y class="search-result-list">
@@ -499,8 +486,8 @@
       <text class="popup-title">搜索车辆</text>
       <t-icon name="close" size="24" bind:tap="closeVehicleSearch" />
     </view>
-    <view style="padding: 12px 16px; display: flex; gap: 8px;">
-      <t-search style="flex: 1;" placeholder="车架号、车型或客户手机号" value="{{vehicleSearchKeyword}}" bind:change="onVehicleSearchInput" bind:submit="onVehicleSearch" />
+    <view class="popup-search-row">
+      <t-search class="popup-search" placeholder="车架号、车型或客户手机号" value="{{vehicleSearchKeyword}}" bind:change="onVehicleSearchInput" bind:submit="onVehicleSearch" />
     </view>
     <scroll-view scroll-y class="search-result-list">
       <view class="search-result-item" wx:for="{{vehicleSearchResults}}" wx:key="id" bind:tap="selectVehicle" data-item="{{item}}">

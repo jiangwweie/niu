@@ -258,13 +258,68 @@ Page({
 
   onDraftChange(e: any) {
     const field = e.currentTarget.dataset.field;
-    this.setData({ [`draft.${field}`]: e.detail.value });
+    const data: Record<string, unknown> = { [`draft.${field}`]: e.detail.value };
+    if (['vehicleModelSnapshot', 'frameNoSnapshot', 'batteryNoSnapshot'].includes(field)) {
+      data.selectedVehicleId = null;
+    }
+    this.setData(data);
+  },
+
+  scanDraftVehicleField(e: any) {
+    const field = e.currentTarget.dataset.field;
+    const label = field === 'batteryNoSnapshot' ? '电池号' : '车架号';
+    wx.scanCode({
+      scanType: ['barCode', 'qrCode'],
+      success: (scanRes) => {
+        const scanValue = (scanRes.result || '').trim();
+        if (!scanValue) {
+          Toast({ context: this, selector: '#t-toast', message: `未识别到${label}`, icon: 'close-circle' });
+          return;
+        }
+        this.setData({
+          [`draft.${field}`]: scanValue,
+          selectedVehicleId: null
+        });
+        Toast({ context: this, selector: '#t-toast', message: `${label}已填入`, icon: 'check-circle' });
+      },
+      fail: (err) => {
+        const msg = String(err?.errMsg || '');
+        Toast({
+          context: this,
+          selector: '#t-toast',
+          message: msg.includes('cancel') ? '扫码已取消' : `${label}扫码失败，可手动输入`,
+          icon: 'close-circle'
+        });
+      }
+    });
   },
 
   onSelectDraftOption(e: any) {
     const field = e.currentTarget.dataset.field;
     const value = e.currentTarget.dataset.value;
     this.setData({ [`draft.${field}`]: value });
+  },
+
+  onDraftVehicleModelPickerChange(e: any) {
+    const index = Number(e.detail.value);
+    const value = this.data.vehicleModelOptions[index];
+    if (!value) return;
+    this.setData({
+      'draft.vehicleModelSnapshot': value,
+      selectedVehicleId: null
+    });
+  },
+
+  onDraftRepairItemPickerChange(e: any) {
+    const index = Number(e.detail.value);
+    const value = this.data.repairItemOptions[index];
+    if (!value) return;
+    this.setData({ 'draft.repairItem': value });
+  },
+
+  showDraftPickerEmptyTip(e: any) {
+    const label = e.currentTarget.dataset.label || '选项';
+    Toast({ context: this, selector: '#t-toast', message: `暂无门店${label}，可直接输入`, icon: 'info-circle' });
   },
 
   saveDraft() {
@@ -726,6 +781,13 @@ Page({
     this.setData({ [`tempPartForm.${field}`]: value });
   },
 
+  onTempPartCategoryPickerChange(e: any) {
+    const index = Number(e.detail.value);
+    const value = this.data.partCategoryOptions[index];
+    if (!value) return;
+    this.setData({ 'tempPartForm.categoryCode': value });
+  },
+
   submitTempPartCharge() {
     if (this.data.tempPartSaving || !this.data.workOrderId) return;
     const form = this.data.tempPartForm;
@@ -1020,6 +1082,13 @@ Page({
     this.setData({ cancelReason: e.currentTarget.dataset.value });
   },
 
+  onCancelReasonPickerChange(e: any) {
+    const index = Number(e.detail.value);
+    const value = this.data.cancelReasonOptions[index];
+    if (!value) return;
+    this.setData({ cancelReason: value });
+  },
+
   onCancelRemarkChange(e: any) {
     this.setData({ cancelRemark: e.detail.value });
   },
@@ -1168,6 +1237,13 @@ Page({
     this.setData({ 'refundForm.reason': e.currentTarget.dataset.value });
   },
 
+  onRefundReasonPickerChange(e: any) {
+    const index = Number(e.detail.value);
+    const value = this.data.refundReasonOptions[index];
+    if (!value) return;
+    this.setData({ 'refundForm.reason': value });
+  },
+
   onSelectRefundMethod(e: any) {
     this.setData({ 'refundForm.refundMethod': e.currentTarget.dataset.val });
   },
@@ -1248,6 +1324,13 @@ Page({
 
   onSelectNoChargeReason(e: any) {
     this.setData({ noChargeReason: e.currentTarget.dataset.val });
+  },
+
+  onNoChargeReasonPickerChange(e: any) {
+    const index = Number(e.detail.value);
+    const value = this.data.noChargeReasons[index];
+    if (!value) return;
+    this.setData({ noChargeReason: value });
   },
 
   onConfirmMarkRepairDone() {

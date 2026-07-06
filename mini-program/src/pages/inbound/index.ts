@@ -259,6 +259,12 @@ Page({
   onCreatePartModelChange(e: any) { this.setData({ 'createPartFormData.model': e.detail.value }); },
   onCreatePartCategoryChange(e: any) { this.setData({ 'createPartFormData.categoryCode': e.detail.value }); },
   onSelectCreatePartCategory(e: any) { this.setData({ 'createPartFormData.categoryCode': e.currentTarget.dataset.value }); },
+  onCreatePartCategoryPickerChange(e: any) {
+    const index = Number(e.detail.value);
+    const value = this.data.partCategoryOptions[index];
+    if (!value) return;
+    this.setData({ 'createPartFormData.categoryCode': value });
+  },
   onCreatePartCostPriceChange(e: any) { this.setData({ 'createPartFormData.costPrice': e.detail.value }); },
   onCreatePartSalePriceChange(e: any) { this.setData({ 'createPartFormData.salePrice': e.detail.value }); },
   onCreatePartInboundQtyChange(e: any) { this.setData({ 'createPartFormData.inboundQuantity': e.detail.value }); },
@@ -266,6 +272,12 @@ Page({
   onCreatePartLocationChange(e: any) { this.setData({ 'createPartFormData.locationRemark': e.detail.value }); },
   onCreatePartReasonChange(e: any) { this.setData({ 'createPartFormData.reason': e.detail.value }); },
   onSelectCreatePartReason(e: any) { this.setData({ 'createPartFormData.reason': e.currentTarget.dataset.value }); },
+  onCreatePartReasonPickerChange(e: any) {
+    const index = Number(e.detail.value);
+    const value = this.data.inboundReasonOptions[index];
+    if (!value) return;
+    this.setData({ 'createPartFormData.reason': value });
+  },
   onCreatePartRemarkChange(e: any) { this.setData({ 'createPartFormData.remark': e.detail.value }); },
 
   cancelCreatePart() {
@@ -368,6 +380,12 @@ Page({
   onLocationChange(e: any) { this.setData({ 'formData.locationRemark': e.detail.value }); },
   onReasonChange(e: any) { this.setData({ 'formData.reason': e.detail.value }); },
   onSelectInboundReason(e: any) { this.setData({ 'formData.reason': e.currentTarget.dataset.value }); },
+  onInboundReasonPickerChange(e: any) {
+    const index = Number(e.detail.value);
+    const value = this.data.inboundReasonOptions[index];
+    if (!value) return;
+    this.setData({ 'formData.reason': value });
+  },
   onRemarkChange(e: any) { this.setData({ 'formData.remark': e.detail.value }); },
 
   submitInbound() {

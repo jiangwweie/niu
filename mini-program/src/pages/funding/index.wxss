@@ -1,19 +1,20 @@
 .container {
   min-height: 100vh;
-  background: #f5f7fa;
+  background: #f5f6f8;
 }
 
 .panel {
-  padding: 16px;
+  padding: 24rpx;
 }
 
 .notice {
-  padding: 12px;
-  margin-bottom: 12px;
-  color: #374151;
+  padding: 20rpx 24rpx;
+  margin-bottom: 24rpx;
+  color: #0052d9;
   background: #eef6ff;
-  border-radius: 6px;
+  border-radius: 12rpx;
   font-size: 26rpx;
+  line-height: 1.5;
 }
 
 .radio-line {
@@ -38,12 +39,11 @@
   margin-top: 32rpx;
 }
 
-.option-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12rpx;
-  padding: 12rpx 32rpx 20rpx;
-  background: #ffffff;
+.date-value {
+  min-width: 0;
+  flex: 1;
+  color: #1f2933;
+  font-size: 30rpx;
 }
 
 .file-box {
@@ -87,7 +87,8 @@
   margin-top: 16rpx;
   padding: 24rpx;
   background: #fff;
-  border-radius: 8rpx;
+  border-radius: 16rpx;
+  box-shadow: 0 2rpx 12rpx rgba(15, 23, 42, 0.04);
 }
 
 .card-title {

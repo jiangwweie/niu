@@ -25,19 +25,30 @@
       <text class="section-tag optional">选填</text>
     </view>
     <view class="section-tip">填写任意车辆信息后，需要同时填写车架号，避免车辆档案无法唯一识别。</view>
-    <t-input label="车型" placeholder="选填" value="{{vehicleForm.model}}" bind:change="onVehicleFormChange" data-field="model" align="right" />
-    <view class="option-row" wx:if="{{vehicleModelOptions.length > 0}}">
-      <t-tag
-        wx:for="{{vehicleModelOptions}}"
-        wx:key="*this"
-        theme="{{vehicleForm.model === item ? 'primary' : 'default'}}"
-        variant="{{vehicleForm.model === item ? 'light' : 'outline'}}"
-        bind:tap="onSelectVehicleModel"
-        data-value="{{item}}"
-      >{{item}}</t-tag>
+    <view class="entry-input-row">
+      <text class="entry-input-label">车型</text>
+      <input class="entry-input-control" placeholder="输入车型" value="{{vehicleForm.model}}" bindinput="onVehicleFormChange" data-field="model" />
+      <picker wx:if="{{vehicleModelOptions.length > 0}}" mode="selector" range="{{vehicleModelOptions}}" bindchange="onVehicleModelPickerChange">
+        <view class="entry-input-action">选择</view>
+      </picker>
+      <view wx:else class="entry-input-action muted" bind:tap="showVehicleModelEmptyTip">选择</view>
     </view>
-    <t-input label="车架号" placeholder="登记车辆时必填" value="{{vehicleForm.frameNo}}" bind:change="onVehicleFormChange" data-field="frameNo" align="right" />
-    <t-input label="电池号" placeholder="选填" value="{{vehicleForm.batteryNo}}" bind:change="onVehicleFormChange" data-field="batteryNo" align="right" />
+    <view class="scan-input-row">
+      <text class="scan-input-label">车架号</text>
+      <input class="scan-input-control" placeholder="可扫码或手动输入" value="{{vehicleForm.frameNo}}" bindinput="onVehicleFormChange" data-field="frameNo" />
+      <view class="scan-input-action" aria-role="button" bind:tap="scanVehicleField" data-field="frameNo">
+        <t-icon name="scan" size="32rpx" color="#0052d9" />
+        <text>扫码</text>
+      </view>
+    </view>
+    <view class="scan-input-row">
+      <text class="scan-input-label">电池号</text>
+      <input class="scan-input-control" placeholder="可扫码或手动输入" value="{{vehicleForm.batteryNo}}" bindinput="onVehicleFormChange" data-field="batteryNo" />
+      <view class="scan-input-action" aria-role="button" bind:tap="scanVehicleField" data-field="batteryNo">
+        <t-icon name="scan" size="32rpx" color="#0052d9" />
+        <text>扫码</text>
+      </view>
+    </view>
     <t-input label="车辆备注" placeholder="选填" value="{{vehicleForm.remark}}" bind:change="onVehicleFormChange" data-field="remark" align="right" />
   </view>
 
