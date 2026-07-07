@@ -14,4 +14,8 @@ public record ExcelImportDefinition(
         examples = examples == null ? List.of() : List.copyOf(examples);
         dropdowns = dropdowns == null ? Map.of() : Map.copyOf(dropdowns);
     }
+
+    public ExcelImportDefinition withDropdowns(Map<String, String[]> dropdowns) {
+        return new ExcelImportDefinition(templateFilename, errorFilenamePrefix, columns, examples, dropdowns);
+    }
 }

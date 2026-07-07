@@ -19,11 +19,13 @@ import java.util.Set;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.DataValidation;
 import org.apache.poi.ss.usermodel.DataFormat;
 import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.FillPatternType;
 import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.ss.usermodel.IndexedColors;
+import org.apache.poi.ss.usermodel.Name;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -39,6 +41,7 @@ public class ExcelSupport {
     public static final String STATUS_HEADER = "导入状态";
     public static final String ERROR_HEADER = "错误信息";
 
+    private static final String DROPDOWN_SHEET = "下拉选项";
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
     private static final Set<String> SYSTEM_HEADERS = Set.of("导入状态", "错误信息", "错误原因", "校验结果");
 
@@ -178,9 +181,6 @@ public class ExcelSupport {
                 Cell cell = header.createCell(i);
                 cell.setCellValue(column.displayTitle());
                 cell.setCellStyle(column.highlightRequired() ? requiredStyle : optionalStyle);
-                if (dropdowns.containsKey(column.key())) {
-                    addDropdown(dataSheet, i, dropdowns.get(column.key()));
-                }
             }
             int rowIndex = 1;
             for (List<String> example : examples) {
@@ -191,7 +191,8 @@ public class ExcelSupport {
             }
             dataSheet.createFreezePane(0, 1);
             autosize(dataSheet, columns.size());
-            writeInstructions(workbook, columns);
+            writeInstructions(workbook, columns, dropdowns);
+            writeDropdownSheet(workbook, dataSheet, columns, dropdowns);
             return new ExportFile(filename, toBytes(workbook));
         } catch (IOException e) {
             throw new BusinessException(ErrorCode.COMMON_INTERNAL_ERROR, "生成导入模板失败");
@@ -326,28 +327,96 @@ public class ExcelSupport {
         return style;
     }
 
-    private void addDropdown(Sheet sheet, int column, String[] values) {
+    private void addDropdown(Sheet sheet, int column, String formula) {
         XSSFDataValidationHelper helper = new XSSFDataValidationHelper((org.apache.poi.xssf.usermodel.XSSFSheet) sheet);
         CellRangeAddressList range = new CellRangeAddressList(1, 1000, column, column);
-        var validation = helper.createValidation(helper.createExplicitListConstraint(values), range);
+        DataValidation validation = helper.createValidation(helper.createFormulaListConstraint(formula), range);
         validation.setShowErrorBox(true);
+        validation.createErrorBox("请选择有效选项", "请从下拉列表中选择，或先到基础配置维护字典项。");
         sheet.addValidationData(validation);
     }
 
-    private void writeInstructions(Workbook workbook, List<ExcelColumn> columns) {
+    private void writeInstructions(Workbook workbook, List<ExcelColumn> columns, Map<String, String[]> dropdowns) {
         Sheet sheet = workbook.createSheet(INSTRUCTION_SHEET);
-        writeHeader(sheet.createRow(0), List.of("字段", "是否必填", "填写说明"));
+        writeHeader(sheet.createRow(0), List.of("字段", "是否必填", "填写说明", "可选值"));
         int rowIndex = 1;
         for (ExcelColumn column : columns) {
             Row row = sheet.createRow(rowIndex++);
             writeText(row, 0, column.displayTitle());
             writeText(row, 1, column.requiredLabel());
             writeText(row, 2, column.description());
+            writeText(row, 3, optionText(dropdowns.get(column.key())));
         }
         Row note = sheet.createRow(rowIndex + 1);
         writeText(note, 0, "导入失败说明");
         writeText(note, 1, "如导入失败，系统会返回错误文件。可直接在错误文件中修改，再重新上传。");
-        autosize(sheet, 3);
+        autosize(sheet, 4);
+    }
+
+    private String optionText(String[] values) {
+        if (values == null || values.length == 0) {
+            return "";
+        }
+        return "请从下拉选择：" + String.join("、", values);
+    }
+
+    private void writeDropdownSheet(Workbook workbook, Sheet dataSheet, List<ExcelColumn> columns,
+                                    Map<String, String[]> dropdowns) {
+        Map<String, String[]> normalizedDropdowns = new LinkedHashMap<>();
+        dropdowns.forEach((key, values) -> {
+            List<String> cleaned = values == null ? List.of() : List.of(values).stream()
+                    .filter(value -> value != null && !value.isBlank())
+                    .map(String::trim)
+                    .distinct()
+                    .toList();
+            if (!cleaned.isEmpty()) {
+                normalizedDropdowns.put(key, cleaned.toArray(String[]::new));
+            }
+        });
+        if (normalizedDropdowns.isEmpty()) {
+            return;
+        }
+        Sheet optionSheet = workbook.createSheet(DROPDOWN_SHEET);
+        int optionColumn = 0;
+        Map<String, String> formulas = new HashMap<>();
+        for (Map.Entry<String, String[]> entry : normalizedDropdowns.entrySet()) {
+            String[] values = entry.getValue();
+            for (int rowIndex = 0; rowIndex < values.length; rowIndex++) {
+                Row row = optionSheet.getRow(rowIndex);
+                if (row == null) {
+                    row = optionSheet.createRow(rowIndex);
+                }
+                row.createCell(optionColumn).setCellValue(values[rowIndex]);
+            }
+            String columnName = columnName(optionColumn);
+            String rangeName = dropdownRangeName(entry.getKey());
+            Name name = workbook.createName();
+            name.setNameName(rangeName);
+            name.setRefersToFormula("'" + DROPDOWN_SHEET + "'!$" + columnName + "$1:$" + columnName + "$" + values.length);
+            formulas.put(entry.getKey(), rangeName);
+            optionColumn++;
+        }
+        for (int columnIndex = 0; columnIndex < columns.size(); columnIndex++) {
+            String formula = formulas.get(columns.get(columnIndex).key());
+            if (formula != null) {
+                addDropdown(dataSheet, columnIndex, formula);
+            }
+        }
+        workbook.setSheetHidden(workbook.getSheetIndex(optionSheet), true);
+    }
+
+    private String dropdownRangeName(String key) {
+        return "DROPDOWN_" + key.replaceAll("[^A-Za-z0-9_]", "_").toUpperCase();
+    }
+
+    private String columnName(int zeroBasedIndex) {
+        StringBuilder result = new StringBuilder();
+        int index = zeroBasedIndex;
+        do {
+            result.insert(0, (char) ('A' + index % 26));
+            index = index / 26 - 1;
+        } while (index >= 0);
+        return result.toString();
     }
 
     private void removeSystemColumns(Sheet sheet, Row header) {

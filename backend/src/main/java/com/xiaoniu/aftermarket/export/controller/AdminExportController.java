@@ -119,13 +119,15 @@ public class AdminExportController {
     @GetMapping("/templates/customers")
     @PreAuthorize("hasAuthority('CUSTOMER_MANAGE')")
     public ResponseEntity<byte[]> customerTemplate() {
-        return toDownloadResponse(importExportService.customerTemplate());
+        CurrentUser user = requireCurrentUser();
+        return toDownloadResponse(importExportService.customerTemplate(user.storeId()));
     }
 
     @GetMapping("/templates/parts")
     @PreAuthorize("hasAuthority('PART_MANAGE')")
     public ResponseEntity<byte[]> partTemplate() {
-        return toDownloadResponse(importExportService.partTemplate());
+        CurrentUser user = requireCurrentUser();
+        return toDownloadResponse(importExportService.partTemplate(user.storeId()));
     }
 
     @PostMapping("/imports/customers")

@@ -6,9 +6,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 public interface AdminImportExportService {
 
-    ExportFile customerTemplate();
+    ExportFile customerTemplate(Long storeId);
 
-    ExportFile partTemplate();
+    ExportFile partTemplate(Long storeId);
 
     ExportFile exportCustomers(Long storeId, String customerName, String phone);
 

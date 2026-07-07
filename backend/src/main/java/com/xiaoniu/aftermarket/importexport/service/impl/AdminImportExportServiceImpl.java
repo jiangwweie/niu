@@ -18,6 +18,8 @@ import com.xiaoniu.aftermarket.customer.mapper.CustomerMapper;
 import com.xiaoniu.aftermarket.customer.mapper.VehicleMapper;
 import com.xiaoniu.aftermarket.customer.service.CustomerService;
 import com.xiaoniu.aftermarket.customer.service.VehicleService;
+import com.xiaoniu.aftermarket.dict.entity.SysDictItemEntity;
+import com.xiaoniu.aftermarket.dict.service.DictService;
 import com.xiaoniu.aftermarket.export.dto.ExportFile;
 import com.xiaoniu.aftermarket.importexport.dto.ImportProcessResult;
 import com.xiaoniu.aftermarket.importexport.dto.ImportResultResponse;
@@ -57,6 +59,8 @@ public class AdminImportExportServiceImpl implements AdminImportExportService {
     private static final int MAX_IMPORT_ROWS = 1000;
     private static final long MAX_IMPORT_BYTES = 5L * 1024 * 1024;
     private static final String CREATE_SOURCE_IMPORT = "IMPORT";
+    private static final String DICT_VEHICLE_MODEL = "VEHICLE_MODEL";
+    private static final String DICT_PART_CATEGORY = "PART_CATEGORY";
 
     private static final List<ExcelColumn> CUSTOMER_COLUMNS = List.of(
             column("customerName", "客户姓名", true, "必填，客户姓名，最多 64 字", "客户姓名*"),
@@ -104,6 +108,7 @@ public class AdminImportExportServiceImpl implements AdminImportExportService {
     private final CustomerService customerService;
     private final VehicleService vehicleService;
     private final PartService partService;
+    private final DictService dictService;
 
     public AdminImportExportServiceImpl(CustomerMapper customerMapper,
                                         VehicleMapper vehicleMapper,
@@ -111,7 +116,8 @@ public class AdminImportExportServiceImpl implements AdminImportExportService {
                                         PartBarcodeMapper partBarcodeMapper,
                                         CustomerService customerService,
                                         VehicleService vehicleService,
-                                        PartService partService) {
+                                        PartService partService,
+                                        DictService dictService) {
         this.customerMapper = customerMapper;
         this.vehicleMapper = vehicleMapper;
         this.partMapper = partMapper;
@@ -119,16 +125,23 @@ public class AdminImportExportServiceImpl implements AdminImportExportService {
         this.customerService = customerService;
         this.vehicleService = vehicleService;
         this.partService = partService;
+        this.dictService = dictService;
     }
 
     @Override
-    public ExportFile customerTemplate() {
-        return excel.template(CUSTOMER_IMPORT);
+    public ExportFile customerTemplate(Long storeId) {
+        return excel.template(CUSTOMER_IMPORT.withDropdowns(Map.of(
+                "model", dictLabels(DICT_VEHICLE_MODEL, storeId)
+        )));
     }
 
     @Override
-    public ExportFile partTemplate() {
-        return excel.template(PART_IMPORT);
+    public ExportFile partTemplate(Long storeId) {
+        return excel.template(PART_IMPORT.withDropdowns(Map.of(
+                "source", new String[]{"官方", "第三方"},
+                "model", dictLabels(DICT_VEHICLE_MODEL, storeId),
+                "categoryCode", dictLabels(DICT_PART_CATEGORY, storeId)
+        )));
     }
 
     @Override
@@ -503,6 +516,14 @@ public class AdminImportExportServiceImpl implements AdminImportExportService {
 
     private static ExcelColumn conditionalColumn(String key, String title, String description, String... aliases) {
         return new ExcelColumn(key, title, false, "条件必填", description, Set.of(aliases));
+    }
+
+    private String[] dictLabels(String typeCode, Long storeId) {
+        return dictService.listItemsByTypeCode(typeCode, storeId).stream()
+                .map(SysDictItemEntity::getItemName)
+                .filter(StringUtils::hasText)
+                .distinct()
+                .toArray(String[]::new);
     }
 
     private void applyContains(QueryWrapper<PartEntity> wrapper, String column, String value) {

@@ -306,6 +306,32 @@ class AdminExportControllerTest {
             assertEquals("车架号*", cellText(workbook.getSheet("导入数据"), 0, 3));
             assertEquals("填写说明", workbook.getSheetAt(1).getSheetName());
             assertEquals("条件必填", cellText(workbook.getSheet("填写说明"), 4, 1));
+            assertTrue(workbook.isSheetHidden(workbook.getSheetIndex("下拉选项")));
+            assertTrue(hasDropdown(workbook.getSheet("导入数据"), "DROPDOWN_MODEL"));
+            assertTrue(cellText(workbook.getSheet("填写说明"), 3, 3).contains("NQi"));
+        }
+    }
+
+    @Test
+    void partTemplateContainsDropdownsForEnumLikeFields() throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/admin/exports/templates/parts")
+                        .header(USER_HEADER, "1")
+                        .header(STORE_HEADER, "1"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", XLSX_CONTENT_TYPE))
+                .andReturn();
+
+        try (Workbook workbook = new XSSFWorkbook(new ByteArrayInputStream(result.getResponse().getContentAsByteArray()))) {
+            Sheet dataSheet = workbook.getSheet("导入数据");
+            Sheet instructionSheet = workbook.getSheet("填写说明");
+            assertEquals("配件来源*", cellText(dataSheet, 0, 0));
+            assertTrue(workbook.isSheetHidden(workbook.getSheetIndex("下拉选项")));
+            assertTrue(hasDropdown(dataSheet, "DROPDOWN_SOURCE"));
+            assertTrue(hasDropdown(dataSheet, "DROPDOWN_MODEL"));
+            assertTrue(hasDropdown(dataSheet, "DROPDOWN_CATEGORYCODE"));
+            assertTrue(cellText(instructionSheet, 1, 3).contains("官方"));
+            assertTrue(cellText(instructionSheet, 4, 3).contains("NQi"));
+            assertTrue(cellText(instructionSheet, 5, 3).contains("本店电池"));
         }
     }
 
@@ -506,6 +532,11 @@ class AdminExportControllerTest {
             return "";
         }
         return new DataFormatter().formatCellValue(cell);
+    }
+
+    private boolean hasDropdown(Sheet sheet, String formulaName) {
+        return sheet.getDataValidations().stream()
+                .anyMatch(validation -> formulaName.equals(validation.getValidationConstraint().getFormula1()));
     }
 
     private Map<String, Long> countBusinessTables() {
