@@ -354,8 +354,11 @@ public class ExcelSupport {
     }
 
     private String optionText(String[] values) {
-        if (values == null || values.length == 0) {
+        if (values == null) {
             return "";
+        }
+        if (values.length == 0) {
+            return "当前无可选值，可先到基础配置维护后重新下载模板";
         }
         return "请从下拉选择：" + String.join("、", values);
     }
