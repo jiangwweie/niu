@@ -33,15 +33,9 @@ export interface CreateVehiclePayload {
 
 export const searchCustomers = (keyword: string) => {
   const normalizedKeyword = normalizeSearchParam(keyword);
-  if (!normalizedKeyword) {
-    return Promise.resolve<ApiResponse<CustomerSearchResult[]>>({
-      code: 'SUCCESS',
-      message: 'success',
-      data: []
-    });
-  }
+  const query = normalizedKeyword ? `?keyword=${encodeURIComponent(normalizedKeyword)}` : '';
   return request<CustomerSearchResult[]>({
-    url: `/api/staff/customers/search?keyword=${encodeURIComponent(normalizedKeyword)}`,
+    url: `/api/staff/customers/search${query}`,
     method: 'GET'
   });
 };
@@ -71,16 +65,16 @@ export const listCustomerVehicles = (customerId: number) => {
 
 export const searchVehicles = (keyword: string, customerId?: number | null) => {
   const normalizedKeyword = normalizeSearchParam(keyword);
-  if (!normalizedKeyword) {
-    return Promise.resolve<ApiResponse<VehicleSearchResult[]>>({
-      code: 'SUCCESS',
-      message: 'success',
-      data: []
-    });
+  const params: string[] = [];
+  if (normalizedKeyword) {
+    params.push(`keyword=${encodeURIComponent(normalizedKeyword)}`);
   }
-  const customerParam = customerId ? `&customerId=${customerId}` : '';
+  if (customerId) {
+    params.push(`customerId=${customerId}`);
+  }
+  const query = params.length ? `?${params.join('&')}` : '';
   return request<VehicleSearchResult[]>({
-    url: `/api/staff/vehicles/search?keyword=${encodeURIComponent(normalizedKeyword)}${customerParam}`,
+    url: `/api/staff/vehicles/search${query}`,
     method: 'GET'
   });
 };

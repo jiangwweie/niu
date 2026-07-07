@@ -34,17 +34,14 @@ public class StaffCustomerController {
     @PreAuthorize("hasAuthority('CUSTOMER_VIEW')")
     @GetMapping("/search")
     public ApiResponse<List<CustomerSearchResult>> search(
-            @RequestParam String keyword) {
+            @RequestParam(required = false) String keyword) {
         CurrentUser user = requireCurrentUser();
         String normalizedKeyword = SearchKeywordUtils.normalize(keyword);
-        if (normalizedKeyword == null) {
-            return ApiResponse.success(List.of());
-        }
         CustomerPageQuery query = new CustomerPageQuery();
         query.setStoreId(user.storeId());
         query.setKeyword(normalizedKeyword);
         query.setPageNo(1);
-        query.setPageSize(20);
+        query.setPageSize(normalizedKeyword == null ? 5 : 20);
         PageResponse<CustomerResponse> page = customerService.pageQuery(query);
         List<CustomerSearchResult> results = page.records().stream()
                 .map(r -> new CustomerSearchResult(r.getId(), r.getCustomerName(), r.getPhone()))

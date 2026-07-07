@@ -29,33 +29,32 @@ public class StaffVehicleController {
     @PreAuthorize("hasAuthority('CUSTOMER_VIEW')")
     @GetMapping("/search")
     public ApiResponse<List<VehicleSearchResult>> search(
-            @RequestParam String keyword,
+            @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Long customerId) {
         CurrentUser user = requireCurrentUser();
         String normalizedKeyword = SearchKeywordUtils.normalize(keyword);
-        if (normalizedKeyword == null) {
-            return ApiResponse.success(List.of());
-        }
         VehiclePageQuery query = new VehiclePageQuery();
         query.setStoreId(user.storeId());
         query.setKeyword(normalizedKeyword);
         query.setCustomerId(customerId);
         query.setPageNo(1);
-        query.setPageSize(20);
+        query.setPageSize(normalizedKeyword == null ? 5 : 20);
         PageResponse<VehicleResponse> page = vehicleService.pageQuery(query);
         Map<Long, VehicleSearchResult> resultMap = new LinkedHashMap<>();
         page.records().forEach(r -> resultMap.put(r.getId(), toSearchResult(r)));
 
-        VehiclePageQuery phoneQuery = new VehiclePageQuery();
-        phoneQuery.setStoreId(user.storeId());
-        phoneQuery.setCustomerPhone(normalizedKeyword);
-        phoneQuery.setPageNo(1);
-        phoneQuery.setPageSize(20);
-        vehicleService.pageQuery(phoneQuery).records()
-                .forEach(r -> resultMap.putIfAbsent(r.getId(), toSearchResult(r)));
+        if (normalizedKeyword != null) {
+            VehiclePageQuery phoneQuery = new VehiclePageQuery();
+            phoneQuery.setStoreId(user.storeId());
+            phoneQuery.setCustomerPhone(normalizedKeyword);
+            phoneQuery.setPageNo(1);
+            phoneQuery.setPageSize(20);
+            vehicleService.pageQuery(phoneQuery).records()
+                    .forEach(r -> resultMap.putIfAbsent(r.getId(), toSearchResult(r)));
+        }
 
         List<VehicleSearchResult> results = resultMap.values().stream()
-                .limit(20)
+                .limit(normalizedKeyword == null ? 5 : 20)
                 .toList();
         return ApiResponse.success(results);
     }

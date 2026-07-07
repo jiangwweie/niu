@@ -469,13 +469,24 @@ class CustomerVehicleControllerTest {
     }
 
     @Test
-    void staffSearchCustomers_blankKeywordReturnsEmptyResults() throws Exception {
+    void staffSearchCustomers_withoutKeywordReturnsRecentFiveResults() throws Exception {
+        jdbcTemplate.execute("""
+            INSERT INTO customer (id, store_id, customer_name, phone, remark, created_at)
+            VALUES
+                (9101, 1, '最近客户1', '13800010101', '', TIMESTAMP '2099-07-07 10:01:00'),
+                (9102, 1, '最近客户2', '13800010102', '', TIMESTAMP '2099-07-07 10:02:00'),
+                (9103, 1, '最近客户3', '13800010103', '', TIMESTAMP '2099-07-07 10:03:00'),
+                (9104, 1, '最近客户4', '13800010104', '', TIMESTAMP '2099-07-07 10:04:00'),
+                (9105, 1, '最近客户5', '13800010105', '', TIMESTAMP '2099-07-07 10:05:00')
+            """);
+
         mockMvc.perform(get("/api/staff/customers/search")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithCustomerView())
-                        .param("keyword", "   "))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithCustomerView()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("SUCCESS"))
-                .andExpect(jsonPath("$.data", hasSize(0)));
+                .andExpect(jsonPath("$.data", hasSize(5)))
+                .andExpect(jsonPath("$.data[0].customerName").value("最近客户5"))
+                .andExpect(jsonPath("$.data[4].customerName").value("最近客户1"));
     }
 
     @Test
@@ -507,13 +518,24 @@ class CustomerVehicleControllerTest {
     }
 
     @Test
-    void staffSearchVehicles_blankKeywordReturnsEmptyResults() throws Exception {
+    void staffSearchVehicles_withoutKeywordReturnsRecentFiveResults() throws Exception {
+        jdbcTemplate.execute("""
+            INSERT INTO vehicle (id, store_id, customer_id, model, frame_no, battery_no, remark, created_at)
+            VALUES
+                (8101, 1, 9001, 'NQi', 'VIN-RECENT-001', 'BAT-101', '', TIMESTAMP '2099-07-07 10:01:00'),
+                (8102, 1, 9001, 'NQi', 'VIN-RECENT-002', 'BAT-102', '', TIMESTAMP '2099-07-07 10:02:00'),
+                (8103, 1, 9001, 'NQi', 'VIN-RECENT-003', 'BAT-103', '', TIMESTAMP '2099-07-07 10:03:00'),
+                (8104, 1, 9001, 'NQi', 'VIN-RECENT-004', 'BAT-104', '', TIMESTAMP '2099-07-07 10:04:00'),
+                (8105, 1, 9001, 'NQi', 'VIN-RECENT-005', 'BAT-105', '', TIMESTAMP '2099-07-07 10:05:00')
+            """);
+
         mockMvc.perform(get("/api/staff/vehicles/search")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithCustomerView())
-                        .param("keyword", "   "))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithCustomerView()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("SUCCESS"))
-                .andExpect(jsonPath("$.data", hasSize(0)));
+                .andExpect(jsonPath("$.data", hasSize(5)))
+                .andExpect(jsonPath("$.data[0].frameNo").value("VIN-RECENT-005"))
+                .andExpect(jsonPath("$.data[4].frameNo").value("VIN-RECENT-001"));
     }
 
     @Test

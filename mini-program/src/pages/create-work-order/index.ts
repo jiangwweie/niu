@@ -865,23 +865,33 @@ Page({
       if (normalizeSearchParam(this.currentCustomerKeyword)) {
         this.onCustomerSearch();
       } else {
-        this.setData({ customerSearchState: 'idle', customerSearchResults: [], customerSearchError: '' });
+        this.loadRecentCustomers();
       }
     }, 300) as unknown as number;
   },
 
-  onCustomerSearch() {
+  onCustomerSearch(e?: any) {
     const keyword = normalizeSearchParam(this.currentCustomerKeyword);
-    if (!keyword) {
+    if (!keyword && e) {
       Toast({ context: this, selector: '#t-toast', message: '请输入客户姓名或手机号', icon: 'close-circle' });
       return;
     }
     this.setData({ customerSearchState: 'loading', customerSearchError: '' });
-    searchCustomers(keyword).then(res => {
+    searchCustomers(keyword || '').then(res => {
       const results = res.data || [];
       this.setData({ customerSearchResults: results, customerSearchState: results.length > 0 ? 'success' : 'empty' });
     }).catch((err: Error) => {
       this.setData({ customerSearchState: 'error', customerSearchError: err.message || '搜索失败，请稍后重试' });
+    });
+  },
+
+  loadRecentCustomers() {
+    this.setData({ customerSearchState: 'loading', customerSearchError: '' });
+    searchCustomers('').then(res => {
+      const results = res.data || [];
+      this.setData({ customerSearchResults: results, customerSearchState: results.length > 0 ? 'recent' : 'empty' });
+    }).catch((err: Error) => {
+      this.setData({ customerSearchState: 'error', customerSearchError: err.message || '最近客户加载失败，请稍后重试' });
     });
   },
 
@@ -891,9 +901,10 @@ Page({
       customerSearchVisible: true,
       customerSearchKeyword: '',
       customerSearchResults: [],
-      customerSearchState: 'idle',
+      customerSearchState: 'loading',
       customerSearchError: ''
     });
+    this.loadRecentCustomers();
   },
 
   closeCustomerSearch() {
@@ -957,23 +968,33 @@ Page({
       if (normalizeSearchParam(this.currentVehicleKeyword)) {
         this.onVehicleSearch();
       } else {
-        this.setData({ vehicleSearchState: 'idle', vehicleSearchResults: [], vehicleSearchError: '' });
+        this.loadRecentVehicles();
       }
     }, 300) as unknown as number;
   },
 
-  onVehicleSearch() {
+  onVehicleSearch(e?: any) {
     const keyword = normalizeSearchParam(this.currentVehicleKeyword);
-    if (!keyword) {
+    if (!keyword && e) {
       Toast({ context: this, selector: '#t-toast', message: '请输入车架号、车型或客户手机号', icon: 'close-circle' });
       return;
     }
     this.setData({ vehicleSearchState: 'loading', vehicleSearchError: '' });
-    searchVehicles(keyword, this.data.selectedCustomerId).then(res => {
+    searchVehicles(keyword || '', this.data.selectedCustomerId).then(res => {
       const results = res.data || [];
       this.setData({ vehicleSearchResults: results, vehicleSearchState: results.length > 0 ? 'success' : 'empty' });
     }).catch((err: Error) => {
       this.setData({ vehicleSearchState: 'error', vehicleSearchError: err.message || '搜索失败，请稍后重试' });
+    });
+  },
+
+  loadRecentVehicles() {
+    this.setData({ vehicleSearchState: 'loading', vehicleSearchError: '' });
+    searchVehicles('', this.data.selectedCustomerId).then(res => {
+      const results = res.data || [];
+      this.setData({ vehicleSearchResults: results, vehicleSearchState: results.length > 0 ? 'recent' : 'empty' });
+    }).catch((err: Error) => {
+      this.setData({ vehicleSearchState: 'error', vehicleSearchError: err.message || '最近车辆加载失败，请稍后重试' });
     });
   },
 
@@ -983,9 +1004,10 @@ Page({
       vehicleSearchVisible: true,
       vehicleSearchKeyword: '',
       vehicleSearchResults: [],
-      vehicleSearchState: 'idle',
+      vehicleSearchState: 'loading',
       vehicleSearchError: ''
     });
+    this.loadRecentVehicles();
   },
 
   closeVehicleSearch() {

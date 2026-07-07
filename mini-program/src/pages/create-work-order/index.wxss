@@ -301,6 +301,12 @@ page { background-color: #f5f6f8; }
   padding: 0 16px;
 }
 
+.result-section-title {
+  padding: 10px 0 4px;
+  font-size: 12px;
+  color: #8a8f99;
+}
+
 .search-result-item {
   padding: 12px 0;
   border-bottom: 1px solid #f0f0f0;
