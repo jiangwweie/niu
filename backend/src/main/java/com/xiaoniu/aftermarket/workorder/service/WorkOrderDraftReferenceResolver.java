@@ -11,11 +11,15 @@ import com.xiaoniu.aftermarket.workorder.dto.CreateDraftWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.DraftSnapshotWritable;
 import com.xiaoniu.aftermarket.workorder.dto.UpdateWorkOrderDraftCommand;
 import java.time.LocalDateTime;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 @Service
 public class WorkOrderDraftReferenceResolver {
+
+    private static final Logger log = LoggerFactory.getLogger(WorkOrderDraftReferenceResolver.class);
 
     private final CustomerMapper customerMapper;
     private final VehicleMapper vehicleMapper;
@@ -28,7 +32,7 @@ public class WorkOrderDraftReferenceResolver {
     public void resolve(CreateDraftWorkOrderCommand command) {
         ResolvedDraftReference resolved = resolve(command.getStoreId(), command.getCustomerId(), command.getVehicleId());
         apply(command, resolved);
-        archiveManualSnapshot(command);
+        archiveManualSnapshotBestEffort(command);
     }
 
     public void resolve(UpdateWorkOrderDraftCommand command) {
@@ -38,7 +42,7 @@ public class WorkOrderDraftReferenceResolver {
         }
         ResolvedDraftReference resolved = resolve(command.getStoreId(), command.getCustomerId(), command.getVehicleId());
         apply(command, resolved);
-        archiveManualSnapshot(command);
+        archiveManualSnapshotBestEffort(command);
     }
 
     private ResolvedDraftReference resolve(Long storeId, Long customerId, Long vehicleId) {
@@ -86,6 +90,16 @@ public class WorkOrderDraftReferenceResolver {
         if (resolved.customer() != null) {
             command.setCustomerNameSnapshot(resolved.customer().getCustomerName());
             command.setCustomerPhoneSnapshot(resolved.customer().getPhone());
+        }
+    }
+
+    private void archiveManualSnapshotBestEffort(DraftSnapshotWritable command) {
+        try {
+            archiveManualSnapshot(command);
+        } catch (RuntimeException ex) {
+            log.warn("manual work order customer archive skipped storeId={} operatorId={} customerId={} vehicleId={} error={}",
+                    command.getStoreId(), command.getOperatorId(), command.getCustomerId(), command.getVehicleId(),
+                    ex.getClass().getSimpleName());
         }
     }
 

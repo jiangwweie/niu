@@ -884,6 +884,53 @@ class StaffControllerTest {
     }
 
     @Test
+    void staffCreateDraftStillSucceedsWhenManualVehicleArchiveConflicts() throws Exception {
+        jdbcTemplate.execute("""
+            INSERT INTO customer (id, store_id, customer_name, phone, remark)
+            VALUES (88001, 1, '已有车辆客户', '13900000001', '')
+            """);
+        jdbcTemplate.execute("""
+            INSERT INTO vehicle (id, store_id, customer_id, model, frame_no, battery_no, remark)
+            VALUES (88001, 1, 88001, 'NQi', 'CONFLICT-FRAME-001', '', '')
+            """);
+        String body = """
+                {
+                  "customerNameSnapshot": "冲突不阻塞客户",
+                  "customerPhoneSnapshot": "13912345679",
+                  "vehicleModelSnapshot": "冲突车型",
+                  "frameNoSnapshot": "CONFLICT-FRAME-001",
+                  "repairItem": "整车检测"
+                }
+                """;
+
+        mockMvc.perform(post("/api/staff/work-orders/drafts")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .contentType("application/json")
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.id").value(notNullValue()))
+                .andExpect(jsonPath("$.data.customerNameSnapshot").value("冲突不阻塞客户"))
+                .andExpect(jsonPath("$.data.frameNoSnapshot").value("CONFLICT-FRAME-001"));
+
+        Integer workOrderCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM work_order
+                WHERE store_id = 1
+                  AND customer_name_snapshot = '冲突不阻塞客户'
+                  AND frame_no_snapshot = 'CONFLICT-FRAME-001'
+                  AND deleted = 0
+                """, Integer.class);
+        Integer duplicateVehicleCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM vehicle WHERE store_id = 1 AND frame_no = 'CONFLICT-FRAME-001' AND deleted = 0",
+                Integer.class);
+
+        assertEquals(1, workOrderCount);
+        assertEquals(1, duplicateVehicleCount);
+    }
+
+    @Test
     void staffCreateDraftStoreIdFromContextNotBody() throws Exception {
         // Create draft as store 2, then verify it belongs to store 2
         String body = """
