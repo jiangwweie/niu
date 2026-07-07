@@ -10,7 +10,9 @@ import com.xiaoniu.aftermarket.customer.mapper.VehicleMapper;
 import com.xiaoniu.aftermarket.workorder.dto.CreateDraftWorkOrderCommand;
 import com.xiaoniu.aftermarket.workorder.dto.DraftSnapshotWritable;
 import com.xiaoniu.aftermarket.workorder.dto.UpdateWorkOrderDraftCommand;
+import java.time.LocalDateTime;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 @Service
 public class WorkOrderDraftReferenceResolver {
@@ -26,14 +28,17 @@ public class WorkOrderDraftReferenceResolver {
     public void resolve(CreateDraftWorkOrderCommand command) {
         ResolvedDraftReference resolved = resolve(command.getStoreId(), command.getCustomerId(), command.getVehicleId());
         apply(command, resolved);
+        archiveManualSnapshot(command);
     }
 
     public void resolve(UpdateWorkOrderDraftCommand command) {
-        if (command.getCustomerId() == null && command.getVehicleId() == null) {
+        if (command.getCustomerId() == null && command.getVehicleId() == null
+                && !StringUtils.hasText(command.getCustomerNameSnapshot())) {
             return;
         }
         ResolvedDraftReference resolved = resolve(command.getStoreId(), command.getCustomerId(), command.getVehicleId());
         apply(command, resolved);
+        archiveManualSnapshot(command);
     }
 
     private ResolvedDraftReference resolve(Long storeId, Long customerId, Long vehicleId) {
@@ -73,6 +78,7 @@ public class WorkOrderDraftReferenceResolver {
     private void apply(DraftSnapshotWritable command, ResolvedDraftReference resolved) {
         if (resolved.vehicle() != null) {
             command.setCustomerId(resolved.vehicle().getCustomerId());
+            command.setVehicleId(resolved.vehicle().getId());
             command.setVehicleModelSnapshot(resolved.vehicle().getModel());
             command.setFrameNoSnapshot(resolved.vehicle().getFrameNo());
             command.setBatteryNoSnapshot(resolved.vehicle().getBatteryNo());
@@ -81,6 +87,108 @@ public class WorkOrderDraftReferenceResolver {
             command.setCustomerNameSnapshot(resolved.customer().getCustomerName());
             command.setCustomerPhoneSnapshot(resolved.customer().getPhone());
         }
+    }
+
+    private void archiveManualSnapshot(DraftSnapshotWritable command) {
+        Long storeId = command.getStoreId();
+        if (storeId == null || !StringUtils.hasText(command.getCustomerNameSnapshot())) {
+            return;
+        }
+
+        Long customerId = command.getCustomerId();
+        if (customerId == null) {
+            CustomerEntity customer = findCustomerBySnapshot(storeId,
+                    command.getCustomerPhoneSnapshot(), command.getCustomerNameSnapshot());
+            if (customer == null) {
+                customer = createCustomerFromSnapshot(command);
+            }
+            customerId = customer.getId();
+            command.setCustomerId(customerId);
+        }
+
+        if (command.getVehicleId() == null && StringUtils.hasText(command.getFrameNoSnapshot())) {
+            VehicleEntity vehicle = findVehicleByFrameNo(storeId, command.getFrameNoSnapshot());
+            if (vehicle == null) {
+                vehicle = createVehicleFromSnapshot(command, customerId);
+            } else if (vehicle.getCustomerId() != null && !vehicle.getCustomerId().equals(customerId)) {
+                throw new BusinessException(ErrorCode.VEHICLE_NOT_IN_CUSTOMER);
+            }
+            command.setVehicleId(vehicle.getId());
+            command.setVehicleModelSnapshot(vehicle.getModel());
+            command.setFrameNoSnapshot(vehicle.getFrameNo());
+            command.setBatteryNoSnapshot(vehicle.getBatteryNo());
+        }
+    }
+
+    private CustomerEntity findCustomerBySnapshot(Long storeId, String phone, String customerName) {
+        if (StringUtils.hasText(phone)) {
+            CustomerEntity byPhone = customerMapper.selectOne(
+                    new LambdaQueryWrapper<CustomerEntity>()
+                            .eq(CustomerEntity::getStoreId, storeId)
+                            .eq(CustomerEntity::getPhone, phone.trim())
+                            .eq(CustomerEntity::getDeleted, 0)
+                            .last("LIMIT 1"));
+            if (byPhone != null) {
+                return byPhone;
+            }
+        }
+        if (!StringUtils.hasText(phone) && StringUtils.hasText(customerName)) {
+            return customerMapper.selectOne(
+                    new LambdaQueryWrapper<CustomerEntity>()
+                            .eq(CustomerEntity::getStoreId, storeId)
+                            .eq(CustomerEntity::getCustomerName, customerName.trim())
+                            .eq(CustomerEntity::getDeleted, 0)
+                            .last("LIMIT 1"));
+        }
+        return null;
+    }
+
+    private VehicleEntity findVehicleByFrameNo(Long storeId, String frameNo) {
+        return vehicleMapper.selectOne(
+                new LambdaQueryWrapper<VehicleEntity>()
+                        .eq(VehicleEntity::getStoreId, storeId)
+                        .eq(VehicleEntity::getFrameNo, frameNo.trim())
+                        .eq(VehicleEntity::getDeleted, 0)
+                        .last("LIMIT 1"));
+    }
+
+    private CustomerEntity createCustomerFromSnapshot(DraftSnapshotWritable command) {
+        LocalDateTime now = LocalDateTime.now();
+        CustomerEntity customer = new CustomerEntity();
+        customer.setStoreId(command.getStoreId());
+        customer.setCustomerName(command.getCustomerNameSnapshot().trim());
+        customer.setPhone(trimToNull(command.getCustomerPhoneSnapshot()));
+        customer.setCreatedBy(command.getOperatorId());
+        customer.setCreatedAt(now);
+        customer.setUpdatedBy(command.getOperatorId());
+        customer.setUpdatedAt(now);
+        customer.setDeleted(0);
+        customerMapper.insert(customer);
+        return customer;
+    }
+
+    private VehicleEntity createVehicleFromSnapshot(DraftSnapshotWritable command, Long customerId) {
+        LocalDateTime now = LocalDateTime.now();
+        VehicleEntity vehicle = new VehicleEntity();
+        vehicle.setStoreId(command.getStoreId());
+        vehicle.setCustomerId(customerId);
+        vehicle.setFrameNo(command.getFrameNoSnapshot().trim());
+        vehicle.setModel(trimToNull(command.getVehicleModelSnapshot()));
+        vehicle.setBatteryNo(trimToNull(command.getBatteryNoSnapshot()));
+        vehicle.setCreatedBy(command.getOperatorId());
+        vehicle.setCreatedAt(now);
+        vehicle.setUpdatedBy(command.getOperatorId());
+        vehicle.setUpdatedAt(now);
+        vehicle.setDeleted(0);
+        vehicleMapper.insert(vehicle);
+        return vehicle;
+    }
+
+    private String trimToNull(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        return value.trim();
     }
 
     private record ResolvedDraftReference(CustomerEntity customer, VehicleEntity vehicle) {

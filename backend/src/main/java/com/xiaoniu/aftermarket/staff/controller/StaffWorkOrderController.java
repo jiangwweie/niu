@@ -43,11 +43,9 @@ import com.xiaoniu.aftermarket.workorder.dto.WorkOrderQueryRequest;
 import com.xiaoniu.aftermarket.workorder.dto.WorkOrderQueryResponse;
 import com.xiaoniu.aftermarket.workorder.entity.WorkOrderEntity;
 import com.xiaoniu.aftermarket.workorder.mapper.WorkOrderMapper;
-import com.xiaoniu.aftermarket.workorder.service.WorkOrderDraftReferenceResolver;
 import com.xiaoniu.aftermarket.workorder.service.WorkOrderService;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -56,7 +54,6 @@ public class StaffWorkOrderController {
 
     private final WorkOrderService workOrderService;
     private final WorkOrderMapper workOrderMapper;
-    private final WorkOrderDraftReferenceResolver draftReferenceResolver;
     private final RecordPaymentApplicationService recordPaymentService;
     private final PaymentService paymentService;
     private final RecordRefundApplicationService recordRefundService;
@@ -65,7 +62,6 @@ public class StaffWorkOrderController {
 
     public StaffWorkOrderController(WorkOrderService workOrderService,
                                     WorkOrderMapper workOrderMapper,
-                                    WorkOrderDraftReferenceResolver draftReferenceResolver,
                                     RecordPaymentApplicationService recordPaymentService,
                                     PaymentService paymentService,
                                     RecordRefundApplicationService recordRefundService,
@@ -73,7 +69,6 @@ public class StaffWorkOrderController {
                                     AddTempPartChargeApplicationService addTempPartChargeService) {
         this.workOrderService = workOrderService;
         this.workOrderMapper = workOrderMapper;
-        this.draftReferenceResolver = draftReferenceResolver;
         this.recordPaymentService = recordPaymentService;
         this.paymentService = paymentService;
         this.recordRefundService = recordRefundService;
@@ -134,10 +129,6 @@ public class StaffWorkOrderController {
 
         command.setCustomerId(request.customerId());
         command.setVehicleId(request.vehicleId());
-        draftReferenceResolver.resolve(command);
-        if (!StringUtils.hasText(command.getCustomerNameSnapshot())) {
-            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "customerNameSnapshot不能为空");
-        }
 
         Long workOrderId = workOrderService.createDraft(command);
         WorkOrderDetailResponse detail = workOrderService.getById(workOrderId);
@@ -164,7 +155,6 @@ public class StaffWorkOrderController {
         command.setRepairItem(request.repairItem());
         command.setRemark(request.remark());
 
-        draftReferenceResolver.resolve(command);
         workOrderService.updateDraft(workOrderId, command);
         WorkOrderDetailResponse detail = workOrderService.getById(workOrderId);
         return ApiResponse.success(StaffWorkOrderDetail.from(detail));

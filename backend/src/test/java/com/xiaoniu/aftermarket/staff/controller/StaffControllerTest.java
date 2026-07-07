@@ -45,6 +45,8 @@ class StaffControllerTest {
         jdbcTemplate.execute("DELETE FROM refund_record WHERE store_id IN (1, 2)");
         jdbcTemplate.execute("DELETE FROM payment_record WHERE store_id IN (1, 2)");
         jdbcTemplate.execute("DELETE FROM work_order WHERE store_id IN (1, 2)");
+        jdbcTemplate.execute("DELETE FROM vehicle WHERE store_id IN (1, 2)");
+        jdbcTemplate.execute("DELETE FROM customer WHERE store_id IN (1, 2)");
         jdbcTemplate.execute("DELETE FROM part WHERE id IN (80001, 80002, 80003)");
 
         // Parts
@@ -120,6 +122,8 @@ class StaffControllerTest {
         jdbcTemplate.execute("DELETE FROM refund_record WHERE store_id IN (1, 2)");
         jdbcTemplate.execute("DELETE FROM payment_record WHERE store_id IN (1, 2)");
         jdbcTemplate.execute("DELETE FROM work_order WHERE store_id IN (1, 2)");
+        jdbcTemplate.execute("DELETE FROM vehicle WHERE store_id IN (1, 2)");
+        jdbcTemplate.execute("DELETE FROM customer WHERE store_id IN (1, 2)");
         jdbcTemplate.execute("DELETE FROM part WHERE id IN (80001, 80002, 80003)");
     }
 
@@ -829,6 +833,54 @@ class StaffControllerTest {
                 .andExpect(jsonPath("$.data.receivedAmount").value(0.0))
                 .andExpect(jsonPath("$.data.chargeItems").isArray())
                 .andExpect(jsonPath("$.data.chargeItems", hasSize(0)));
+    }
+
+    @Test
+    void staffCreateDraftArchivesManualCustomerAndVehicle() throws Exception {
+        String body = """
+                {
+                  "customerNameSnapshot": "自动建档客户",
+                  "customerPhoneSnapshot": "13912345678",
+                  "vehicleModelSnapshot": "NX马拉松",
+                  "frameNoSnapshot": "AUTO-FRAME-001",
+                  "batteryNoSnapshot": "AUTO-BATTERY-001",
+                  "repairItem": "整车检测"
+                }
+                """;
+
+        mockMvc.perform(post("/api/staff/work-orders/drafts")
+                        .header("X-User-Id", "1")
+                        .header("X-Store-Id", "1")
+                        .contentType("application/json")
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.customerId").value(notNullValue()))
+                .andExpect(jsonPath("$.data.vehicleId").value(notNullValue()))
+                .andExpect(jsonPath("$.data.customerNameSnapshot").value("自动建档客户"))
+                .andExpect(jsonPath("$.data.frameNoSnapshot").value("AUTO-FRAME-001"));
+
+        Integer customerCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM customer WHERE store_id = 1 AND phone = '13912345678' AND deleted = 0",
+                Integer.class);
+        Integer vehicleCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM vehicle WHERE store_id = 1 AND frame_no = 'AUTO-FRAME-001' AND deleted = 0",
+                Integer.class);
+        Integer linkedWorkOrderCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM work_order wo
+                JOIN customer c ON c.id = wo.customer_id
+                JOIN vehicle v ON v.id = wo.vehicle_id
+                WHERE wo.store_id = 1
+                  AND wo.customer_name_snapshot = '自动建档客户'
+                  AND c.phone = '13912345678'
+                  AND v.frame_no = 'AUTO-FRAME-001'
+                  AND wo.deleted = 0
+                """, Integer.class);
+
+        assertEquals(1, customerCount);
+        assertEquals(1, vehicleCount);
+        assertEquals(1, linkedWorkOrderCount);
     }
 
     @Test
@@ -1971,7 +2023,6 @@ class StaffControllerTest {
                         .content(draftBody))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.storeId").doesNotExist())
-                .andExpect(jsonPath("$.data.customerId").doesNotExist())
                 .andExpect(jsonPath("$.data.vehicleId").doesNotExist())
                 .andReturn().getResponse().getContentAsString();
 
@@ -1997,7 +2048,6 @@ class StaffControllerTest {
                         .header("X-Store-Id", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.storeId").doesNotExist())
-                .andExpect(jsonPath("$.data.customerId").doesNotExist())
                 .andExpect(jsonPath("$.data.vehicleId").doesNotExist())
                 .andExpect(jsonPath("$.data.chargeItems[0].costPriceSnapshot").doesNotExist())
                 .andExpect(jsonPath("$.data.chargeItems[0].lineCostAmount").doesNotExist())

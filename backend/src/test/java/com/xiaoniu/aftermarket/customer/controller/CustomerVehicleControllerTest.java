@@ -1,6 +1,7 @@
 package com.xiaoniu.aftermarket.customer.controller;
 
 import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -706,7 +707,7 @@ class CustomerVehicleControllerTest {
     }
 
     @Test
-    void createDraft_withoutCustomerIdOrVehicleId_stillWorks() throws Exception {
+    void createDraft_withoutCustomerIdOrVehicleId_archivesManualCustomerAndVehicle() throws Exception {
         mockMvc.perform(post("/api/staff/work-orders/drafts")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenWithWorkOrderCreate())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -716,7 +717,29 @@ class CustomerVehicleControllerTest {
                                 + "\"repairItem\":\"手工录入维修\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("SUCCESS"))
-                .andExpect(jsonPath("$.data.customerId").doesNotExist())
-                .andExpect(jsonPath("$.data.vehicleId").doesNotExist());
+                .andExpect(jsonPath("$.data.customerId").value(notNullValue()))
+                .andExpect(jsonPath("$.data.vehicleId").value(notNullValue()));
+
+        Integer customerCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM customer WHERE store_id = 1 AND phone = '13800009999' AND deleted = 0",
+                Integer.class);
+        Integer vehicleCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM vehicle WHERE store_id = 1 AND frame_no = 'MANUAL-VIN-001' AND deleted = 0",
+                Integer.class);
+        Integer linkedWorkOrderCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM work_order wo
+                JOIN customer c ON c.id = wo.customer_id
+                JOIN vehicle v ON v.id = wo.vehicle_id
+                WHERE wo.store_id = 1
+                  AND wo.customer_name_snapshot = '手工录入客户'
+                  AND c.phone = '13800009999'
+                  AND v.frame_no = 'MANUAL-VIN-001'
+                  AND wo.deleted = 0
+                """, Integer.class);
+
+        assertEquals(1, customerCount);
+        assertEquals(1, vehicleCount);
+        assertEquals(1, linkedWorkOrderCount);
     }
 }

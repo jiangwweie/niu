@@ -36,6 +36,8 @@ class WorkOrderControllerTest {
         jdbcTemplate.execute("DELETE FROM inventory_stock WHERE store_id IN (1, 2)");
         jdbcTemplate.execute("DELETE FROM payment_record WHERE store_id IN (1, 2)");
         jdbcTemplate.execute("DELETE FROM work_order WHERE store_id IN (1, 2)");
+        jdbcTemplate.execute("DELETE FROM vehicle WHERE store_id IN (1, 2)");
+        jdbcTemplate.execute("DELETE FROM customer WHERE store_id IN (1, 2)");
         jdbcTemplate.execute("DELETE FROM part WHERE id IN (9001, 9002)");
         jdbcTemplate.execute("DELETE FROM sequence_daily WHERE seq_type = 'WORK_ORDER'");
 

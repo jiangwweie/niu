@@ -50,6 +50,7 @@ import com.xiaoniu.aftermarket.workorder.entity.WorkOrderStatusLogEntity;
 import com.xiaoniu.aftermarket.workorder.mapper.WorkOrderChargeItemMapper;
 import com.xiaoniu.aftermarket.workorder.mapper.WorkOrderMapper;
 import com.xiaoniu.aftermarket.workorder.mapper.WorkOrderStatusLogMapper;
+import com.xiaoniu.aftermarket.workorder.service.WorkOrderDraftReferenceResolver;
 import com.xiaoniu.aftermarket.workorder.service.WorkOrderService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -78,18 +79,20 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     private final PaymentAmountService paymentAmountService;
     private final CashierStatusService cashierStatusService;
     private final OfficialAfterSalesMapper officialAfterSalesMapper;
+    private final WorkOrderDraftReferenceResolver draftReferenceResolver;
 
     public WorkOrderServiceImpl(WorkOrderMapper workOrderMapper,
                                 WorkOrderChargeItemMapper chargeItemMapper,
                                 WorkOrderStatusLogMapper statusLogMapper,
                                 SequenceService sequenceService,
-	                                PartMapper partMapper,
-                                    PartService partService,
-	                                InventoryStockMapper inventoryStockMapper,
-	                                InventoryFlowMapper inventoryFlowMapper,
-	                                PaymentAmountService paymentAmountService,
-                                    CashierStatusService cashierStatusService,
-	                                OfficialAfterSalesMapper officialAfterSalesMapper) {
+                                PartMapper partMapper,
+                                PartService partService,
+                                InventoryStockMapper inventoryStockMapper,
+                                InventoryFlowMapper inventoryFlowMapper,
+                                PaymentAmountService paymentAmountService,
+                                CashierStatusService cashierStatusService,
+                                OfficialAfterSalesMapper officialAfterSalesMapper,
+                                WorkOrderDraftReferenceResolver draftReferenceResolver) {
         this.workOrderMapper = workOrderMapper;
         this.chargeItemMapper = chargeItemMapper;
         this.statusLogMapper = statusLogMapper;
@@ -101,11 +104,16 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         this.paymentAmountService = paymentAmountService;
         this.cashierStatusService = cashierStatusService;
         this.officialAfterSalesMapper = officialAfterSalesMapper;
+        this.draftReferenceResolver = draftReferenceResolver;
     }
 
     @Override
     @Transactional
     public Long createDraft(CreateDraftWorkOrderCommand command) {
+        draftReferenceResolver.resolve(command);
+        if (!StringUtils.hasText(command.getCustomerNameSnapshot())) {
+            throw new BusinessException(ErrorCode.COMMON_BAD_REQUEST, "customerNameSnapshot不能为空");
+        }
         // 草稿阶段仅创建工单和收费项，不预占库存，避免用户放弃草稿时产生无效库存变动
         WorkOrderEntity entity = new WorkOrderEntity();
         entity.setStoreId(command.getStoreId());
@@ -155,6 +163,8 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         if (!WorkOrderStatus.DRAFT.getCode().equals(entity.getStatus())) {
             throw new BusinessException(ErrorCode.WORK_ORDER_NOT_DRAFT);
         }
+
+        draftReferenceResolver.resolve(command);
 
         if (command.getCustomerId() != null || command.getVehicleId() != null) {
             entity.setCustomerId(command.getCustomerId());

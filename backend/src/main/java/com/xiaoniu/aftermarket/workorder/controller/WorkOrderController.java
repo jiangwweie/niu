@@ -23,7 +23,6 @@ import com.xiaoniu.aftermarket.workorder.dto.UpdateWorkOrderDraftCommand;
 import com.xiaoniu.aftermarket.workorder.dto.WorkOrderDetailResponse;
 import com.xiaoniu.aftermarket.workorder.dto.WorkOrderQueryRequest;
 import com.xiaoniu.aftermarket.workorder.dto.WorkOrderQueryResponse;
-import com.xiaoniu.aftermarket.workorder.service.WorkOrderDraftReferenceResolver;
 import com.xiaoniu.aftermarket.workorder.service.WorkOrderService;
 import jakarta.validation.Valid;
 import java.time.LocalDateTime;
@@ -35,20 +34,17 @@ import org.springframework.web.bind.annotation.*;
 public class WorkOrderController {
 
     private final WorkOrderService workOrderService;
-    private final WorkOrderDraftReferenceResolver draftReferenceResolver;
     private final SubmitWorkOrderApplicationService submitService;
     private final CancelWorkOrderApplicationService cancelService;
     private final MarkRepairDoneWorkOrderApplicationService markRepairDoneService;
     private final DeliverWorkOrderApplicationService deliverService;
 
     public WorkOrderController(WorkOrderService workOrderService,
-                               WorkOrderDraftReferenceResolver draftReferenceResolver,
                                SubmitWorkOrderApplicationService submitService,
                                CancelWorkOrderApplicationService cancelService,
                                MarkRepairDoneWorkOrderApplicationService markRepairDoneService,
                                DeliverWorkOrderApplicationService deliverService) {
         this.workOrderService = workOrderService;
-        this.draftReferenceResolver = draftReferenceResolver;
         this.submitService = submitService;
         this.cancelService = cancelService;
         this.markRepairDoneService = markRepairDoneService;
@@ -126,7 +122,6 @@ public class WorkOrderController {
         command.setRepairItem(request.repairItem());
         command.setRemark(request.remark());
         command.setChargeItems(request.chargeItems());
-        draftReferenceResolver.resolve(command);
         Long workOrderId = workOrderService.createDraft(command);
         return ApiResponse.success(workOrderId);
     }
@@ -148,7 +143,6 @@ public class WorkOrderController {
         command.setBatteryNoSnapshot(request.batteryNoSnapshot());
         command.setRepairItem(request.repairItem());
         command.setRemark(request.remark());
-        draftReferenceResolver.resolve(command);
         workOrderService.updateDraft(workOrderId, command);
         return ApiResponse.success(null);
     }
