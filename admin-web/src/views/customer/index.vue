@@ -20,7 +20,20 @@
     <el-card shadow="never" class="table-card">
       <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
         <span style="color: #6b7280; font-size: 13px;">共 {{ total }} 条记录</span>
-        <el-button v-if="hasPermission('CUSTOMER_MANAGE')" type="primary" @click="openCreateDialog">新增客户</el-button>
+        <div class="toolbar-actions">
+          <ImportExportActions
+            :can-download-template="hasPermission('CUSTOMER_MANAGE')"
+            :can-import="hasPermission('CUSTOMER_MANAGE')"
+            :can-export="canExportCustomers"
+            :template-loading="templateLoading"
+            :import-loading="importLoading"
+            :export-loading="exportLoading"
+            @download-template="handleDownloadTemplate"
+            @import-file="handleImportFile"
+            @export-data="handleExport"
+          />
+          <el-button v-if="hasPermission('CUSTOMER_MANAGE')" type="primary" @click="openCreateDialog">新增客户</el-button>
+        </div>
       </div>
 
       <div class="table-wrapper">
@@ -130,13 +143,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { computed, ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
 import PageContainer from '@/components/PageContainer.vue';
+import ImportExportActions from '@/components/ImportExportActions.vue';
 import MoneyText from '@/components/MoneyText.vue';
 import { hasPermission } from '@/utils/permission';
 import { trimSearchFields } from '@/utils/searchParams';
+import {
+  downloadCustomerImportTemplate,
+  exportCustomers,
+  importCustomers,
+} from '@/api/export';
 import {
   getCustomerList, getCustomerDetail, createCustomer, updateCustomer, deleteCustomer,
   type CustomerListItem, type CustomerDetail,
@@ -147,9 +166,13 @@ import { formatDateTime } from '@/utils/formatDateTime';
 const router = useRouter();
 
 const loading = ref(false);
+const templateLoading = ref(false);
+const importLoading = ref(false);
+const exportLoading = ref(false);
 const total = ref(0);
 const tableData = ref<CustomerListItem[]>([]);
 const queryParams = reactive({ customerName: '', phone: '', pageNo: 1, pageSize: 20 });
+const canExportCustomers = computed(() => hasPermission('EXCEL_EXPORT') && hasPermission('CUSTOMER_VIEW'));
 
 // Dialog
 const dialogVisible = ref(false);
@@ -208,6 +231,40 @@ function handleReset() {
   queryParams.phone = '';
   queryParams.pageNo = 1;
   fetchData();
+}
+
+async function handleDownloadTemplate() {
+  templateLoading.value = true;
+  try {
+    await downloadCustomerImportTemplate();
+  } finally {
+    templateLoading.value = false;
+  }
+}
+
+async function handleExport() {
+  normalizeQueryParams();
+  exportLoading.value = true;
+  try {
+    await exportCustomers(queryParams);
+  } finally {
+    exportLoading.value = false;
+  }
+}
+
+async function handleImportFile(file: File) {
+  importLoading.value = true;
+  try {
+    const result = await importCustomers(file);
+    if (result.success) {
+      ElMessage.success(result.summary?.message || `导入成功，共 ${result.summary?.successRows ?? 0} 行`);
+      fetchData();
+    } else {
+      ElMessage.warning('导入未写入数据，已下载错误文件。请修改错误信息后重新上传。');
+    }
+  } finally {
+    importLoading.value = false;
+  }
 }
 
 function openCreateDialog() {
@@ -286,4 +343,10 @@ onMounted(() => fetchData());
 .search-actions { margin-left: auto; }
 .table-card { }
 .table-wrapper { overflow-x: auto; }
+.toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
 </style>

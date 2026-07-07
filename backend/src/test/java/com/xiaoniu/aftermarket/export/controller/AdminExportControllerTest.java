@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -25,6 +26,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -55,7 +58,10 @@ class AdminExportControllerTest {
         jdbcTemplate.execute("DELETE FROM inventory_flow WHERE store_id IN (1, 2)");
         jdbcTemplate.execute("DELETE FROM inventory_stock WHERE store_id IN (1, 2)");
         jdbcTemplate.execute("DELETE FROM work_order WHERE store_id IN (1, 2)");
-        jdbcTemplate.execute("DELETE FROM part WHERE id IN (9701, 9702)");
+        jdbcTemplate.execute("DELETE FROM part_barcode WHERE store_id IN (1, 2)");
+        jdbcTemplate.execute("DELETE FROM part WHERE store_id IN (1, 2)");
+        jdbcTemplate.execute("DELETE FROM vehicle WHERE store_id IN (1, 2)");
+        jdbcTemplate.execute("DELETE FROM customer WHERE store_id IN (1, 2)");
         jdbcTemplate.execute("DELETE FROM sequence_daily");
 
         jdbcTemplate.execute("""
@@ -104,6 +110,25 @@ class AdminExportControllerTest {
                                        confirmed_amount, status, submitted_at, confirmed_by, confirmed_at)
             VALUES (9799, 2, 'EXP-RB-STORE2', 99, '跨店报销', 999.00, 999.00, 'CONFIRMED',
                     CURRENT_TIMESTAMP, 201, CURRENT_TIMESTAMP)
+            """);
+        jdbcTemplate.execute("""
+            INSERT INTO customer (id, store_id, customer_name, phone, remark)
+            VALUES (9701, 1, '导出客户A', '13897010001', '客户备注')
+            """);
+        jdbcTemplate.execute("""
+            INSERT INTO vehicle (id, store_id, customer_id, model, frame_no, battery_no, remark)
+            VALUES (9701, 1, 9701, 'NQi', 'VIN-EXP-001', 'BAT-EXP-001', '车辆备注')
+            """);
+        jdbcTemplate.execute("""
+            INSERT INTO part (id, store_id, part_code, official_part_no, part_name, model, source,
+                              category_code, reference_cost_price, default_sale_price, default_barcode,
+                              location_remark, create_source, status, remark)
+            VALUES (9701, 1, 'OFF-EXP-001', 'OFF-EXP-001', '导出官方配件', 'NQi', 'OFFICIAL',
+                    '刹车类', 12.50, 30.00, 'BAR-EXP-001', 'A1', 'NORMAL', 'ENABLED', '配件备注')
+            """);
+        jdbcTemplate.execute("""
+            INSERT INTO part_barcode (id, store_id, part_id, barcode, barcode_type, is_primary, status)
+            VALUES (9701, 1, 9701, 'BAR-EXP-001', 'SYSTEM', 1, 'ENABLED')
             """);
     }
 
@@ -268,6 +293,174 @@ class AdminExportControllerTest {
     }
 
     @Test
+    void customerTemplateContainsRequiredMarkerAndInstructionSheet() throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/admin/exports/templates/customers")
+                        .header(USER_HEADER, "1")
+                        .header(STORE_HEADER, "1"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", XLSX_CONTENT_TYPE))
+                .andReturn();
+
+        try (Workbook workbook = new XSSFWorkbook(new ByteArrayInputStream(result.getResponse().getContentAsByteArray()))) {
+            assertEquals("客户姓名*", cellText(workbook.getSheet("导入数据"), 0, 0));
+            assertEquals("车架号*", cellText(workbook.getSheet("导入数据"), 0, 3));
+            assertEquals("填写说明", workbook.getSheetAt(1).getSheetName());
+            assertEquals("条件必填", cellText(workbook.getSheet("填写说明"), 4, 1));
+        }
+    }
+
+    @Test
+    void customerExportContainsCustomerAndVehicleSheets() throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/admin/exports/customers")
+                        .param("customerName", "导出客户")
+                        .header(USER_HEADER, "1")
+                        .header(STORE_HEADER, "1"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", XLSX_CONTENT_TYPE))
+                .andReturn();
+
+        try (Workbook workbook = new XSSFWorkbook(new ByteArrayInputStream(result.getResponse().getContentAsByteArray()))) {
+            assertEquals("客户档案", workbook.getSheetAt(0).getSheetName());
+            assertEquals("车辆明细", workbook.getSheetAt(1).getSheetName());
+            assertEquals("导出客户A", cellText(workbook.getSheetAt(0), 1, 0));
+            assertEquals("VIN-EXP-001", cellText(workbook.getSheetAt(1), 1, 3));
+        }
+    }
+
+    @Test
+    void partExportContainsFilteredParts() throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/admin/exports/parts")
+                        .param("partName", "官方")
+                        .header(USER_HEADER, "1")
+                        .header(STORE_HEADER, "1"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", XLSX_CONTENT_TYPE))
+                .andReturn();
+
+        Sheet sheet = readFirstSheet(result.getResponse().getContentAsByteArray());
+        assertEquals("配件编码", cellText(sheet, 0, 0));
+        assertEquals("OFF-EXP-001", cellText(sheet, 1, 0));
+        assertEquals("官方", cellText(sheet, 1, 1));
+    }
+
+    @Test
+    void customerImportCanAppendVehicleToExistingCustomer() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("file", "customers.xlsx", XLSX_CONTENT_TYPE,
+                customerImportWorkbook("导出客户A", "13897010001", "MQi", "VIN-IMPORT-001", "BAT-IMPORT-001"));
+
+        mockMvc.perform(multipart("/api/admin/exports/imports/customers")
+                        .file(file)
+                        .header(USER_HEADER, "1")
+                        .header(STORE_HEADER, "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.totalRows").value(1));
+
+        Long vehicles = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM vehicle WHERE store_id = 1 AND frame_no = 'VIN-IMPORT-001'", Long.class);
+        assertEquals(1L, vehicles);
+    }
+
+    @Test
+    void customerImportErrorReturnsReusableErrorWorkbookAndDoesNotWrite() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("file", "customers.xlsx", XLSX_CONTENT_TYPE,
+                customerImportWorkbook("张三", "13897019999", "NQi", "VIN-EXP-001", "BAT-NEW"));
+
+        MvcResult result = mockMvc.perform(multipart("/api/admin/exports/imports/customers")
+                        .file(file)
+                        .header(USER_HEADER, "1")
+                        .header(STORE_HEADER, "1"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", XLSX_CONTENT_TYPE))
+                .andReturn();
+
+        Sheet sheet = readFirstSheet(result.getResponse().getContentAsByteArray());
+        assertEquals("导入状态", cellText(sheet, 0, 7));
+        assertEquals("错误信息", cellText(sheet, 0, 8));
+        assertEquals("失败", cellText(sheet, 1, 7));
+        assertTrue(cellText(sheet, 1, 8).contains("车架号已存在"));
+        Long customers = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM customer WHERE store_id = 1 AND phone = '13897019999'", Long.class);
+        assertEquals(0L, customers);
+    }
+
+    @Test
+    void customerImportCanRetryWithEditedErrorWorkbook() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("file", "customers.xlsx", XLSX_CONTENT_TYPE,
+                customerImportWorkbook("张三", "13897019999", "NQi", "VIN-EXP-001", "BAT-NEW"));
+
+        MvcResult errorResult = mockMvc.perform(multipart("/api/admin/exports/imports/customers")
+                        .file(file)
+                        .header(USER_HEADER, "1")
+                        .header(STORE_HEADER, "1"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", XLSX_CONTENT_TYPE))
+                .andReturn();
+
+        byte[] correctedWorkbook;
+        try (Workbook workbook = new XSSFWorkbook(new ByteArrayInputStream(errorResult.getResponse().getContentAsByteArray()))) {
+            workbook.getSheetAt(0).getRow(1).getCell(3).setCellValue("VIN-RETRY-001");
+            correctedWorkbook = toBytes(workbook);
+        }
+
+        MockMultipartFile retry = new MockMultipartFile("file", "customers-error-fixed.xlsx", XLSX_CONTENT_TYPE,
+                correctedWorkbook);
+        mockMvc.perform(multipart("/api/admin/exports/imports/customers")
+                        .file(retry)
+                        .header(USER_HEADER, "1")
+                        .header(STORE_HEADER, "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.totalRows").value(1));
+
+        Long vehicles = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM vehicle WHERE store_id = 1 AND frame_no = 'VIN-RETRY-001'", Long.class);
+        assertEquals(1L, vehicles);
+    }
+
+    @Test
+    void partImportCreatesOfficialAndThirdPartyParts() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("file", "parts.xlsx", XLSX_CONTENT_TYPE,
+                partImportWorkbook());
+
+        mockMvc.perform(multipart("/api/admin/exports/imports/parts")
+                        .file(file)
+                        .header(USER_HEADER, "1")
+                        .header(STORE_HEADER, "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.totalRows").value(2));
+
+        Long official = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM part WHERE store_id = 1 AND part_code = 'OFF-IMPORT-001'", Long.class);
+        Long thirdParty = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM part WHERE store_id = 1 AND part_name = '导入第三方配件'", Long.class);
+        assertEquals(1L, official);
+        assertEquals(1L, thirdParty);
+    }
+
+    @Test
+    void partImportErrorReturnsWorkbookAndDoesNotWriteAnyRow() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("file", "parts.xlsx", XLSX_CONTENT_TYPE,
+                partImportErrorWorkbook());
+
+        MvcResult result = mockMvc.perform(multipart("/api/admin/exports/imports/parts")
+                        .file(file)
+                        .header(USER_HEADER, "1")
+                        .header(STORE_HEADER, "1"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", XLSX_CONTENT_TYPE))
+                .andReturn();
+
+        Sheet sheet = readFirstSheet(result.getResponse().getContentAsByteArray());
+        assertEquals("失败", cellText(sheet, 1, 10));
+        assertTrue(cellText(sheet, 1, 11).contains("官方配件必须填写官方品号"));
+        Long rows = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM part WHERE store_id = 1 AND part_name = '导入错误配件'", Long.class);
+        assertEquals(0L, rows);
+    }
+
+    @Test
     void exportWithoutCurrentUserFails() throws Exception {
         mockMvc.perform(get("/api/admin/exports/finance")
                         .param("reportType", "DAILY"))
@@ -328,5 +521,70 @@ class AdminExportControllerTest {
 
     private Long count(String table) {
         return jdbcTemplate.queryForObject("SELECT COUNT(*) FROM " + table + " WHERE store_id IN (1, 2)", Long.class);
+    }
+
+    private byte[] customerImportWorkbook(String customerName, String phone, String model,
+                                          String frameNo, String batteryNo) throws Exception {
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet("导入数据");
+            Row header = sheet.createRow(0);
+            String[] headers = {"客户姓名*", "手机号", "车型", "车架号（填写车辆时必填）*", "电池号", "客户备注", "车辆备注"};
+            for (int i = 0; i < headers.length; i++) {
+                header.createCell(i).setCellValue(headers[i]);
+            }
+            Row row = sheet.createRow(1);
+            row.createCell(0).setCellValue(customerName);
+            row.createCell(1).setCellValue(phone);
+            row.createCell(2).setCellValue(model);
+            row.createCell(3).setCellValue(frameNo);
+            row.createCell(4).setCellValue(batteryNo);
+            return toBytes(workbook);
+        }
+    }
+
+    private byte[] partImportWorkbook() throws Exception {
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet("导入数据");
+            writePartHeaders(sheet.createRow(0));
+            Row official = sheet.createRow(1);
+            official.createCell(0).setCellValue("官方");
+            official.createCell(1).setCellValue("导入官方配件");
+            official.createCell(2).setCellValue("OFF-IMPORT-001");
+            official.createCell(4).setCellValue("刹车类");
+            official.createCell(5).setCellValue(10.5);
+            official.createCell(6).setCellValue(20.5);
+            official.createCell(7).setCellValue("BAR-IMPORT-001");
+            Row third = sheet.createRow(2);
+            third.createCell(0).setCellValue("第三方");
+            third.createCell(1).setCellValue("导入第三方配件");
+            third.createCell(7).setCellValue("BAR-IMPORT-002");
+            return toBytes(workbook);
+        }
+    }
+
+    private byte[] partImportErrorWorkbook() throws Exception {
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet("导入数据");
+            writePartHeaders(sheet.createRow(0));
+            Row row = sheet.createRow(1);
+            row.createCell(0).setCellValue("官方");
+            row.createCell(1).setCellValue("导入错误配件");
+            row.createCell(7).setCellValue("BAR-EXP-001");
+            return toBytes(workbook);
+        }
+    }
+
+    private void writePartHeaders(Row header) {
+        String[] headers = {"配件来源*", "配件名称*", "官方品号（官方配件必填）*", "适用车型", "配件分类",
+                "成本价", "销售价", "条码", "库位", "备注"};
+        for (int i = 0; i < headers.length; i++) {
+            header.createCell(i).setCellValue(headers[i]);
+        }
+    }
+
+    private byte[] toBytes(Workbook workbook) throws Exception {
+        java.io.ByteArrayOutputStream outputStream = new java.io.ByteArrayOutputStream();
+        workbook.write(outputStream);
+        return outputStream.toByteArray();
     }
 }

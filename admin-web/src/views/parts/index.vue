@@ -48,6 +48,17 @@
           <span class="table-title">配件资料列表</span>
         </div>
         <div class="toolbar-right">
+          <ImportExportActions
+            :can-download-template="hasPermission('PART_MANAGE')"
+            :can-import="hasPermission('PART_MANAGE')"
+            :can-export="canExportParts"
+            :template-loading="templateLoading"
+            :import-loading="importLoading"
+            :export-loading="exportLoading"
+            @download-template="handleDownloadTemplate"
+            @import-file="handleImportFile"
+            @export-data="handleExport"
+          />
           <el-button v-if="canCreatePart" type="success" @click="openAddDialog">新增配件</el-button>
           <el-tooltip v-else content="新增配件需要 PART_CREATE 或 PART_MANAGE 权限，请使用门店管理员账号或调整角色权限。" placement="top">
             <span>
@@ -291,6 +302,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import JsBarcode from 'jsbarcode';
 import { useRoute, useRouter } from 'vue-router';
 import PageContainer from '@/components/PageContainer.vue';
+import ImportExportActions from '@/components/ImportExportActions.vue';
 import MoneyText from '@/components/MoneyText.vue';
 import { hasAnyPermission, hasPermission } from '@/utils/permission';
 import { trimSearchFields } from '@/utils/searchParams';
@@ -308,10 +320,16 @@ import {
 } from '@/api/parts';
 import type { PartViewRecord } from '@/api/parts';
 import { getDictionaryItems } from '@/api/dictionary';
+import {
+  downloadPartImportTemplate,
+  exportParts,
+  importParts,
+} from '@/api/export';
 
 const router = useRouter();
 const route = useRoute();
 const canCreatePart = computed(() => hasAnyPermission(['PART_CREATE', 'PART_MANAGE']));
+const canExportParts = computed(() => hasPermission('EXCEL_EXPORT') && hasPermission('PART_VIEW'));
 
 // 查询参数
 const queryParams = reactive({
@@ -328,6 +346,9 @@ const queryParams = reactive({
 });
 
 const loading = ref(false);
+const templateLoading = ref(false);
+const importLoading = ref(false);
+const exportLoading = ref(false);
 const tableData = ref<PartViewRecord[]>([]);
 const total = ref(0);
 const partCategoryOptions = ref<string[]>([]);
@@ -367,6 +388,40 @@ const handleReset = () => {
   queryParams.source = '';
   queryParams.status = '';
   handleSearch();
+};
+
+const handleDownloadTemplate = async () => {
+  templateLoading.value = true;
+  try {
+    await downloadPartImportTemplate();
+  } finally {
+    templateLoading.value = false;
+  }
+};
+
+const handleExport = async () => {
+  normalizeQueryParams();
+  exportLoading.value = true;
+  try {
+    await exportParts(queryParams);
+  } finally {
+    exportLoading.value = false;
+  }
+};
+
+const handleImportFile = async (file: File) => {
+  importLoading.value = true;
+  try {
+    const result = await importParts(file);
+    if (result.success) {
+      ElMessage.success(result.summary?.message || `导入成功，共 ${result.summary?.successRows ?? 0} 行`);
+      fetchData();
+    } else {
+      ElMessage.warning('导入未写入数据，已下载错误文件。请修改错误信息后重新上传。');
+    }
+  } finally {
+    importLoading.value = false;
+  }
 };
 
 // 配件详情抽屉
